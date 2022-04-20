@@ -1,4 +1,4 @@
-﻿Data/Veglines/*
+
 Data/Troon/Troon_metadata.pkl
 Data/ML_Test6/Veglines/ML_Test6_referenceLinedata/ML_Test6/Veglines/ML_Test6_referenceLine/Transect.shx
 Data/ML_Test6/Veglines/ML_Test6_referenceLinedata/ML_Test6/Veglines/ML_Test6_referenceLine/Transect.shp
@@ -23,8 +23,7 @@ Data/ML_Test6/Veglines/ML_Test6_referenceLine/Coast.shp
 Data/ML_Test6/Veglines/ML_Test6_referenceLine/Coast.prj
 Data/ML_Test6/Veglines/ML_Test6_referenceLine/Coast.dbf
 Data/ML_Test6/Veglines/ML_Test6_3000-12-30/ML_Test6_3000-12-30.shx
-Data/ML_Test6/Veglines/ML_Test6_3000-12-30/ML_Test6_3000-12-30.shp
-Data/ML_Test6/Veglines/ML_Test6_3000-12-30/ML_Test6_3000-12-30.dbf
+Data/ML_Test6/Veglines/ML_Test6_3000-12-30/ML_Test6_3000-12-30.shpData/ML_Test6/Veglines/ML_Test6_3000-12-30/ML_Test6_3000-12-30.dbf
 Data/ML_Test6/Veglines/ML_Test6_3000-12-30/ML_Test6_3000-12-30.cpg
 Data/ML_Test6/Veglines/ML_Test6_2018-06-25/ML_Test6_2018-06-25.shx
 Data/ML_Test6/Veglines/ML_Test6_2018-06-25/ML_Test6_2018-06-25.shp
@@ -65,13 +64,13 @@ Data/ML_Test6/Veglines/ML_Test6_2017-07-08/ML_Test6_2017-07-08.cpg
 Data/ML_Test6/Veglines/ML_Test6_2017-05-05/ML_Test6_2017-05-05.shx
 Data/ML_Test6/Veglines/ML_Test6_2017-05-05/ML_Test6_2017-05-05.shp
 Data/ML_Test6/Veglines/ML_Test6_2017-05-05/ML_Test6_2017-05-05.dbf
-Data/ML_Test6/Veglines/ML_Test6_2017-05-05/ML_Test6_2017-05-05.cpg
+Data/ML_Test6/Veglines/ML_Test6_2017-05-05/ML_Test6_2017-0pg
 Data/ML_Test6/Veglines/ML_Test6_2017-03-27/ML_Test6_2017-03-27.shx
 Data/ML_Test6/Veglines/ML_Test6_2017-03-27/ML_Test6_2017-03-27.shp
 Data/ML_Test6/Veglines/ML_Test6_2017-03-27/ML_Test6_2017-03-27.dbf
 Data/ML_Test6/Veglines/ML_Test6_2017-03-27/ML_Test6_2017-03-27.cpg
 Data/ML_Test6/Veglines/ML_Test6_2017-03-02/ML_Test6_2017-03-02.shx
-Data/ML_Test6/Veglines/ML_Test6_2017-03-02/ML_Test6_2017-03-02.shp
+Data/ML_Test6/Veglines/ML_Test6_2017-03-02/ML_Test6_2017-03-02.sp
 Data/ML_Test6/Veglines/ML_Test6_2017-03-02/ML_Test6_2017-03-02.dbf
 Data/ML_Test6/Veglines/ML_Test6_2017-03-02/ML_Test6_2017-03-02.cpg
 Data/ML_Test6/Veglines/ML_Test6_2017-01-29/ML_Test6_2017-01-29.shx
@@ -82,7 +81,7 @@ Data/ML_Test6/Veglines/ML_Test6_2016-12-05/ML_Test6_2016-12-05.shx
 Data/ML_Test6/Veglines/ML_Test6_2016-12-05/ML_Test6_2016-12-05.shp
 Data/ML_Test6/Veglines/ML_Test6_2016-12-05/ML_Test6_2016-12-05.dbf
 Data/ML_Test6/Veglines/ML_Test6_2016-12-05/ML_Test6_2016-12-05.cpg
-Data/ML_Test6/Veglines/ML_Test6_2016-11-26/ML_Test6_2016-11-26.shx
+Data/ML_Test6/Veglines/ML_Test6_2016-11-26/ML_Test6_2016-11-26.sh
 Data/ML_Test6/Veglines/ML_Test6_2016-11-26/ML_Test6_2016-11-26.shp
 Data/ML_Test6/Veglines/ML_Test6_2016-11-26/ML_Test6_2016-11-26.dbf
 Data/ML_Test6/Veglines/ML_Test6_2016-11-26/ML_Test6_2016-11-26.cpg
@@ -172,7 +171,7 @@ Data/ML_Test6/Veglines/ML_Test6_2014-07-25/ML_Test6_2014-07-25.dbf
 Data/ML_Test6/Veglines/ML_Test6_2014-07-25/ML_Test6_2014-07-25.cpg
 Data/ML_Test6/Veglines/ML_Test6_2014-07-09/ML_Test6_2014-07-09.shx
 Data/ML_Test6/Veglines/ML_Test6_2014-07-09/ML_Test6_2014-07-09.shp
-Data/ML_Test6/Veglines/ML_Test6_2014-07-09/ML_Test6_2014-07-09.dbf
+Data/ML_Test6/Veglines/ML_Test6_2014-07-09/ML_Test6_2014-07-09.bf
 Data/ML_Test6/Veglines/ML_Test6_2014-07-09/ML_Test6_2014-07-09.cpg
 Data/ML_Test6/Veglines/ML_Test6_2014-05-13/ML_Test6_2014-05-13.shx
 Data/ML_Test6/Veglines/ML_Test6_2014-05-13/ML_Test6_2014-05-13.shp
@@ -185,7 +184,7 @@ Data/ML_Test6/Veglines/ML_Test6_2014-03-26/ML_Test6_2014-03-26.cpg
 Data/ML_Test6/Veglines/ML_Test6_2013-12-29/ML_Test6_2013-12-29.shx
 Data/ML_Test6/Veglines/ML_Test6_2013-12-29/ML_Test6_2013-12-29.shp
 Data/ML_Test6/Veglines/ML_Test6_2013-12-29/ML_Test6_2013-12-29.dbf
-Data/ML_Test6/Veglines/ML_Test6_2013-12-29/ML_Test6_2013-12-29.cpg
+Data/ML_Test6/Veglines/ML_Test6_2013-12-29/ML_Test6_2013-12-29.cg
 Data/ML_Test6/Veglines/ML_Test6_2013-12-04/ML_Test6_2013-12-04.shx
 Data/ML_Test6/Veglines/ML_Test6_2013-12-04/ML_Test6_2013-12-04.shp
 Data/ML_Test6/Veglines/ML_Test6_2013-12-04/ML_Test6_2013-12-04.dbf
@@ -441,8 +440,7 @@ Data/ML_Test6/Veglines/ML_Test6_1997-04-05/ML_Test6_1997-04-05.cpg
 Data/ML_Test6/Veglines/ML_Test6_1997-02-07/ML_Test6_1997-02-07.shx
 Data/ML_Test6/Veglines/ML_Test6_1997-02-07/ML_Test6_1997-02-07.shp
 Data/ML_Test6/Veglines/ML_Test6_1997-02-07/ML_Test6_1997-02-07.dbf
-Data/ML_Test6/Veglines/ML_Test6_1997-02-07/ML_Test6_1997-02-07.cpg
-Data/ML_Test6/Veglines/ML_Test6_1996-09-25/ML_Test6_1996-09-25.shx
+Data/ML_Test6/Veglines/ML_Test6_1997-02-07/ML_Test6_1997-02-07.cpgData/ML_Test6/Veglines/ML_Test6_1996-09-25/ML_Test6_1996-09-25.shx
 Data/ML_Test6/Veglines/ML_Test6_1996-09-25/ML_Test6_1996-09-25.shp
 Data/ML_Test6/Veglines/ML_Test6_1996-09-25/ML_Test6_1996-09-25.dbf
 Data/ML_Test6/Veglines/ML_Test6_1996-09-25/ML_Test6_1996-09-25.cpg
