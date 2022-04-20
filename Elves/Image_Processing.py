@@ -27,6 +27,7 @@ import geopandas as gpd
 from shapely import geometry
 import ee
 import geemap
+import glob
 
 # CoastSat modules
 from Elves import Toolbox
@@ -338,27 +339,23 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     # Local images
     #=============================================================================================#
     else:
-        imgs = []
-        for i in range(len(filenames)):
-            imgs.append(ee.Image(filenames[i]))
-        Sentinel2 = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
         
-        
-        cloud_scoree = Sentinel2.getInfo().get('features')[fn]['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
+        # cloud cover check not relevant when using local data, set to 0%
+        cloud_scoree = 0.0
         
         if cloud_scoree > settings['cloud_thresh']:
             return None, None, None, None, None, None
         
-        # read 10m bands (R,G,B,NIR)        
-        img = ee.Image(Sentinel2.getInfo().get('features')[fn]['id'])
-              
+        # read all bands (R,G,B,NIR)        
+        img = rasterio.open(filenames[fn])
+        
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][3]['crs_transform'] # get transform info from Band4
+        georef = list(img.transform)[0:6] # get transform info from rasterio metadata
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        outProj = Proj(init=img.getInfo()['bands'][3]['crs'])
+        outProj = Proj(init=img.crs)
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
@@ -368,18 +365,39 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
             georef[3] = georef[3] + (15.5)
         
         
-        im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
-        if im10 is None:
+        im_ms = img.read()
+        if im_ms is None:
             return None, None, None, None, None, None
         
-        """
-        fn10 = fn[0]
-        data = gdal.Open(fn10, gdal.GA_ReadOnly)
-        georef = np.array(data.GetGeoTransform())
-        bands = [data.GetRasterBand(k + 1).ReadAsArray() for k in range(data.RasterCount)]
-        im10 = np.stack(bands, 2)
-        """
-        im10 = im10/10000 # TOA scaled to 10000
+        datepath = os.path.basename(filenames[fn])[0:8]
+        auxpath = os.path.dirname(filenames[fn])+'/cloudmasks/'
+        # Use filename date to search for matching cloud mask file in cloudmasks dir
+        if glob.glob(auxpath+datepath+'*') != []:
+            cloud_file = glob.glob(auxpath+datepath+'*')
+            with rasterio.open(cloud_file,'r') as ds:
+                cloud_mask = ds.read()
+        else:
+            # create empty cloud mask
+            cloud_mask = np.zeros(im_ms.shape).astype(bool)
+        
+        # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
+        im_nodata = np.zeros(cloud_mask.shape).astype(bool)
+        for k in range(im_ms.shape[2]):
+            im_inf = np.isin(im_ms[:,:,k], -np.inf)
+            im_nan = np.isnan(im_ms[:,:,k])
+            im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
+        # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
+        # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
+        im_zeros = np.ones(cloud_mask.shape).astype(bool)
+        for k in [1,3,4]: # loop through the Green, NIR and SWIR bands
+            im_zeros = np.logical_and(np.isin(im_ms[:,:,k],0), im_zeros)
+        # add zeros to im nodata
+        im_nodata = np.logical_or(im_zeros, im_nodata)   
+        # update cloud mask with all the nodata pixels
+        cloud_mask = np.logical_or(cloud_mask, im_nodata)
+        
+        # no extra image for Landsat 5 (they are all 30 m bands)
+        im_extra = []
         
     save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
     
