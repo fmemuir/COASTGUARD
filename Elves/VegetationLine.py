@@ -125,7 +125,7 @@ def extract_veglines(metadata, settings, polygon, dates):
             if cloud_cover > settings['cloud_thresh']:
                 continue
 
-            # calculate a buffer around the reference shoreline (if any has been digitised)
+            # calculate a buffer around the reference shoreline (FM: new way)
             # im_ref_buffer = create_shoreline_buffer(cloud_mask.shape, georef, image_epsg,
             #                                         pixel_size, settings, image_epsg)
             im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
