@@ -273,34 +273,42 @@ def calculate_features(im_ms, cloud_mask, im_bool):
     for k in range(1,im_ms.shape[2]):
         feature = np.expand_dims(im_ms[im_bool,k],axis=1)
         features = np.append(features, feature, axis=-1)
+    if im_ms.shape[2]>4: # FM: exception for if SWIR band doesn't exist
+        # SWIR-G
+        im_SWIRG = Toolbox.nd_index(im_ms[:,:,4], im_ms[:,:,1], cloud_mask)
+        features = np.append(features, np.expand_dims(im_SWIRG[im_bool],axis=1), axis=-1)
+        # SWIR-NIR
+        im_SWIRNIR = Toolbox.nd_index(im_ms[:,:,4], im_ms[:,:,3], cloud_mask)
+        features = np.append(features, np.expand_dims(im_SWIRNIR[im_bool],axis=1), axis=-1)
     # NIR-G
     im_NIRG = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
     features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
-    # SWIR-G
-    im_SWIRG = Toolbox.nd_index(im_ms[:,:,4], im_ms[:,:,1], cloud_mask)
-    features = np.append(features, np.expand_dims(im_SWIRG[im_bool],axis=1), axis=-1)
     # NIR-R
     im_NIRR = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     features = np.append(features, np.expand_dims(im_NIRR[im_bool],axis=1), axis=-1)
-    # SWIR-NIR
-    im_SWIRNIR = Toolbox.nd_index(im_ms[:,:,4], im_ms[:,:,3], cloud_mask)
-    features = np.append(features, np.expand_dims(im_SWIRNIR[im_bool],axis=1), axis=-1)
     # B-R
     im_BR = Toolbox.nd_index(im_ms[:,:,0], im_ms[:,:,2], cloud_mask)
     features = np.append(features, np.expand_dims(im_BR[im_bool],axis=1), axis=-1)
+    
     # calculate standard deviation of individual bands
     for k in range(im_ms.shape[2]):
         im_std =  Toolbox.image_std(im_ms[:,:,k], 1)
         features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
     # calculate standard deviation of the spectral indices
+    if im_ms.shape[2]>4: # FM: exception for if SWIR band doesn't exist
+        # SWIR-G   
+        im_std = Toolbox.image_std(im_SWIRG, 1)
+        features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+        #SWIR-NIR
+        im_std = Toolbox.image_std(im_SWIRNIR, 1)
+        features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # NIR-G
     im_std = Toolbox.image_std(im_NIRG, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
-    im_std = Toolbox.image_std(im_SWIRG, 1)
-    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # NIR-R
     im_std = Toolbox.image_std(im_NIRR, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
-    im_std = Toolbox.image_std(im_SWIRNIR, 1)
-    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    #B-R
     im_std = Toolbox.image_std(im_BR, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
