@@ -1122,7 +1122,21 @@ def daterange(date1, date2):
         
         
 def spaced_vertices(referenceLine):
-    
+    """
+    Equally space vertices of reference line to avoid gaps in image buffer.
+    FM Apr 2022
+
+    Parameters
+    ----------
+    referenceLine : array
+        Reference line coordinate array
+
+    Returns
+    -------
+    newreferenceLine : array
+        New reference line oordinate array with equally spaced vertices.
+
+    """
     referenceLineString = LineString(referenceLine)
     vertexdist = 10
     vertexdists = np.arange(0, referenceLineString.length, vertexdist)

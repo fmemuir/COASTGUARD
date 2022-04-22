@@ -9,6 +9,12 @@ import scipy
 import skimage.filters as filters
 import skimage.measure as measure
 import skimage.morphology as morphology
+from shapely import geometry
+from shapely.geometry import Point, LineString, Polygon
+import pandas as pd
+import geopandas as gpd
+import rasterio
+from rasterio import features
 
 # machine learning modules
 import sklearn
@@ -56,7 +62,7 @@ def extract_veglines(metadata, settings, polygon, dates):
     for satname in metadata.keys():
 
         # get images
-        filepath = Toolbox.get_filepath(settings['inputs'],satname)
+        #filepath = Toolbox.get_filepath(settings['inputs'],satname)
         filenames = metadata[satname]['filenames']
 
         # initialise the output variables
@@ -120,9 +126,10 @@ def extract_veglines(metadata, settings, polygon, dates):
                 continue
 
             # calculate a buffer around the reference shoreline (if any has been digitised)
-            im_ref_buffer = create_shoreline_buffer(cloud_mask.shape, georef, image_epsg,
-                                                    pixel_size, settings, image_epsg)
-
+            # im_ref_buffer = create_shoreline_buffer(cloud_mask.shape, georef, image_epsg,
+            #                                         pixel_size, settings, image_epsg)
+            im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
+            
             # classify image in 4 classes (sand, whitewater, water, other) with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask,
                                     min_beach_area_pixels, clf)
@@ -561,6 +568,23 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
     max_dist_ref_pixels = np.ceil(settings['max_dist_ref']/pixel_size)
     se = morphology.disk(max_dist_ref_pixels)
     im_buffer = morphology.binary_dilation(im_binary, se)
+    
+    return im_buffer
+
+
+def BufferShoreline(settings,georef,pixel_size,cloud_mask):
+    coords = []
+    ref_sl = settings['reference_shoreline'][:,:-1]
+    ref_sl_pix = Toolbox.convert_world2pix(ref_sl, georef)
+    ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
+    
+    for i in range(len(ref_sl_pix_rounded)):
+        coords.append((ref_sl_pix_rounded[i][0],ref_sl_pix_rounded[i][1]))
+    refLS = LineString(coords)
+    
+    refLSBuffer = gpd.GeoSeries(refLS).buffer(settings['max_dist_ref']/pixel_size)
+    refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
+    im_buffer = features.rasterize(refShapes,out_shape=cloud_mask.shape)
     
     return im_buffer
 

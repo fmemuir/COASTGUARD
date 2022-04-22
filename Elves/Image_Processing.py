@@ -348,6 +348,13 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         
         # read all bands (R,G,B,NIR)        
         img = rasterio.open(filenames[fn])
+                
+        im_ms = img.read()
+        if im_ms is None:
+            return None, None, None, None, None, None
+        # shape needs to be [row col band], so look for shape with small size
+        if im_ms.shape[0] < 10:
+            im_ms = np.transpose(im_ms, (1,2,0))
         
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
@@ -365,38 +372,42 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
             georef[3] = georef[3] + (15.5)
         
         
-        im_ms = img.read()
-        if im_ms is None:
-            return None, None, None, None, None, None
-        
         datepath = os.path.basename(filenames[fn])[0:8]
         auxpath = os.path.dirname(filenames[fn])+'/cloudmasks/'
         # Use filename date to search for matching cloud mask file in cloudmasks dir
         if glob.glob(auxpath+datepath+'*') != []:
             cloud_file = glob.glob(auxpath+datepath+'*')
-            with rasterio.open(cloud_file,'r') as ds:
-                cloud_mask = ds.read()
+            with rasterio.open(cloud_file[0],'r') as ds:
+                try:
+                    im_QA = ds.read(6) # PlanetScope cloud mask is band 6      
+                except:
+                    im_QA = ds.read()
+                if im_QA.shape[0] < 10:
+                    im_QA = np.transpose(im_QA, (1,2,0))
+                    im_QA = im_QA[:,:,0]
+                cloud_mask = im_QA
         else:
             # create empty cloud mask
+            im_QA = np.zeros(im_ms.shape).astype(bool)
             cloud_mask = np.zeros(im_ms.shape).astype(bool)
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
-        for k in range(im_ms.shape[2]):
+        for k in range(im_ms.shape[2]): # for each band in image
             im_inf = np.isin(im_ms[:,:,k], -np.inf)
             im_nan = np.isnan(im_ms[:,:,k])
             im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
-        # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
-        # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
+        # check if there are pixels with 0 intensity in any bands and add those
+        # to the cloud mask as otherwise they will cause errors when calculating band indices
         im_zeros = np.ones(cloud_mask.shape).astype(bool)
-        for k in [1,3,4]: # loop through the Green, NIR and SWIR bands
+        for k in range(im_ms.shape[2]): # loop through the bands
             im_zeros = np.logical_and(np.isin(im_ms[:,:,k],0), im_zeros)
         # add zeros to im nodata
         im_nodata = np.logical_or(im_zeros, im_nodata)   
         # update cloud mask with all the nodata pixels
         cloud_mask = np.logical_or(cloud_mask, im_nodata)
         
-        # no extra image for Landsat 5 (they are all 30 m bands)
+        # no extra local image
         im_extra = []
         
     save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
@@ -421,11 +432,11 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
     
     '''
     print(' \nsaving '+filenames)
-    im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask) # NIR and red bands
     try: # some sentinel images with 0 axis don't get caught before this
         im_RGB = rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
     except:
-        return
+        im_RGB = im_ms[:,:,:3]
     # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
     tifname = filenames.rsplit('/',1)[1] # get characters after last /
     transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
@@ -434,22 +445,31 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
     for imarray, imtype, bandno in zip([im_RGB, im_NDVI],['RGB.tif', 'NDVI.tif'],[3,1]):
         if bandno > 1:
             imarray_brc = np.moveaxis(imarray,2,0) # rasterio expects shape of (bands, rows, cols)
+            with rasterio.open(
+                os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype),
+                'w',
+                driver='GTiff',
+                height=imarray_brc.shape[1],
+                width=imarray_brc.shape[2],
+                count=bandno,
+                dtype=imarray_brc.dtype,
+                crs='EPSG:'+str(settings['output_epsg']),
+                transform=transform,
+            ) as tif:
+                tif.write(imarray_brc)
         else:
             imarray_brc = imarray
-        with rasterio.open(
-            os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype),
-            'w',
-            driver='GTiff',
-            height=im_ms.shape[0],
-            width=im_ms.shape[1],
-            count=bandno,
-            dtype=im_ms.dtype,
-            crs='EPSG:'+str(settings['output_epsg']),
-            transform=transform,
-        ) as tif:
-            if bandno > 1:
-                tif.write(imarray_brc)
-            else:
+            with rasterio.open(
+                os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype),
+                'w',
+                driver='GTiff',
+                height=imarray_brc.shape[0],
+                width=imarray_brc.shape[1],
+                count=bandno,
+                dtype=imarray_brc.dtype,
+                crs='EPSG:'+str(settings['output_epsg']),
+                transform=transform,
+            ) as tif:
                 tif.write(imarray_brc,1)
     
 
