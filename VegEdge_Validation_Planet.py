@@ -180,7 +180,9 @@ if os.path.isdir(direc) is False:
 
 # before downloading the images, check how many images are available for your inputs
 
-os.environ['PL_API_KEY']='b2e009c821244a03bca90264282cd5a9'
+print('Enter your Planet API key: ')
+os.environ['PL_API_KEY'] = input()
+print('Your API key is: ')
 Sat = Toolbox.PlanetImageRetrieval(inputs)
 
 Subset1 = Sat[0][45:63]

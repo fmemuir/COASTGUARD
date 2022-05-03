@@ -273,7 +273,7 @@ def calculate_features(im_ms, cloud_mask, im_bool):
     for k in range(1,im_ms.shape[2]):
         feature = np.expand_dims(im_ms[im_bool,k],axis=1)
         features = np.append(features, feature, axis=-1)
-    if im_ms.shape[2]>4: # FM: exception for if SWIR band doesn't exist
+    if im_ms.shape[2]>4: # FM: exception for if SWIR band doesn't exist 
         # SWIR-G
         im_SWIRG = Toolbox.nd_index(im_ms[:,:,4], im_ms[:,:,1], cloud_mask)
         features = np.append(features, np.expand_dims(im_SWIRG[im_bool],axis=1), axis=-1)
@@ -312,6 +312,8 @@ def calculate_features(im_ms, cloud_mask, im_bool):
     im_std = Toolbox.image_std(im_BR, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
+    # Total feature sets should be 20 for V+NIR+SWIR (5 bands)
+    # and 14 for V+NIR (4 bands)
     return features
 
 def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
@@ -358,7 +360,7 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     vec_mask = np.logical_or(vec_cloud, vec_nan)
     vec_features = vec_features[~vec_mask, :]
 
-    # classify pixels
+    # Luke: classify pixels
     new_vec_features = []
     
     for h in range(len(vec_features)):
