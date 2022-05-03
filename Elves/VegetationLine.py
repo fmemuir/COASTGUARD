@@ -150,7 +150,7 @@ def extract_veglines(metadata, settings, polygon, dates):
             # otherwise use find_wl_contours2 (traditional)
             else:
                 if sum(sum(im_labels[:,:,0])) < 10 : # minimum number of sand pixels
-                        # compute NDVI image (SWIR-G)
+                        # compute NDVI image (NIR-R)
                         im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
                         # find water contours on NDVI grayscale image
                         contours_nvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
@@ -316,6 +316,54 @@ def calculate_features(im_ms, cloud_mask, im_bool):
     # and 14 for V+NIR (4 bands)
     return features
 
+def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
+    """
+    Calculates features on the image that are used for the supervised classification. 
+    of vegetation. The features include band differences, normalized-difference indices and 
+    standard deviation on all image bands and indices.
+    Differs from original calculate_features() in that the indices used are for veg (and not water),
+    and only NIR is required (not SWIR).
+
+    FM 2022
+
+    Arguments:
+    -----------
+    im_ms: np.array
+        RGB + downsampled NIR and SWIR
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+    im_bool: np.array
+        2D array of boolean indicating where on the image to calculate the features
+
+    Returns:    
+    -----------
+    features: np.array
+        matrix containing each feature (columns) calculated for all
+        the pixels (rows) indicated in im_bool
+        
+    """
+
+    # add all the multispectral bands
+    features = np.expand_dims(im_ms[im_bool,0],axis=1)
+    for k in range(1,im_ms.shape[2]):
+        feature = np.expand_dims(im_ms[im_bool,k],axis=1)
+        features = np.append(features, feature, axis=-1)
+    # NDVI
+    im_NIRR = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRR[im_bool],axis=1), axis=-1)
+    
+    # calculate standard deviation of individual bands
+    for k in range(im_ms.shape[2]):
+        im_std =  Toolbox.image_std(im_ms[:,:,k], 1)
+        features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    
+    # calculate standard deviation of the spectral indices
+    # NDVI
+    im_std = Toolbox.image_std(im_NIRR, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+
+    return features
+
 def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
     Classifies every pixel in the image in one of 4 classes:
@@ -351,7 +399,7 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
 
     # calculate features
-    vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    vec_features = calculate_vegfeatures(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
     vec_features[np.isnan(vec_features)] = 1e-9 # NaN values are create when std is too close to 0
 
     # remove NaNs and cloudy pixels
@@ -360,13 +408,13 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     vec_mask = np.logical_or(vec_cloud, vec_nan)
     vec_features = vec_features[~vec_mask, :]
 
-    # Luke: classify pixels
-    new_vec_features = []
+    # # Luke: classify pixels
+    # new_vec_features = []
     
-    for h in range(len(vec_features)):
-        new_vec_features.append(vec_features[h][1::2])
+    # for h in range(len(vec_features)):
+    #     new_vec_features.append(vec_features[h][1::2])
     
-    labels = clf[0].predict(new_vec_features)
+    labels = clf[0].predict(vec_features)
 
     # recompose image
     vec_classif = np.nan*np.ones((cloud_mask.shape[0]*cloud_mask.shape[1]))
@@ -583,6 +631,28 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
 
 
 def BufferShoreline(settings,georef,pixel_size,cloud_mask):
+    """
+    Buffer reference line and utilise geopandas to generate boolean mask of where shoreline swath is.
+    More efficient and tuned to geospatial data than previous method of im_buffer generation.
+    FM 2022
+
+    Parameters
+    ----------
+    settings : dict
+        Process settings.
+    georef : list
+        Affine transformation matrix of satellite image.
+    pixel_size : float
+        Size of satellite pixel in metres.
+    cloud_mask : array
+        Boolean array masking out where clouds have been identified in satellite image.
+
+    Returns
+    -------
+    im_buffer : boolean array
+        Array with same dimensions as sat image, with True where buffered reference shoreline exists.
+
+    """
     coords = []
     ref_sl = settings['reference_shoreline'][:,:-1]
     ref_sl_pix = Toolbox.convert_world2pix(ref_sl, georef)
@@ -594,7 +664,9 @@ def BufferShoreline(settings,georef,pixel_size,cloud_mask):
     
     refLSBuffer = gpd.GeoSeries(refLS).buffer(settings['max_dist_ref']/pixel_size)
     refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
-    im_buffer = features.rasterize(refShapes,out_shape=cloud_mask.shape)
+    im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
+    # convert to bool
+    im_buffer = im_buffer_float > 0 
     
     return im_buffer
 
