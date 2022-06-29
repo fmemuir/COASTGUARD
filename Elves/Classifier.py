@@ -111,14 +111,22 @@ def label_images(metadata, polygon, Sat, settings):
 
     # loop through satellites
     for satname in metadata.keys():
-        filepath = Toolbox.get_filepath(settings['inputs'],satname)
-        filenames = metadata[satname]['filenames']
+        if satname == 'PSScene4Band':
+            filepath = os.path.dirname(metadata[satname]['filenames'])
+        else:
+            filepath = Toolbox.get_filepath(settings['inputs'],satname)
+        filenames = [metadata[satname]['filenames']]
         # loop through images
         for i in range(len(filenames)):
             # image filename
-            fn = Toolbox.get_filenames(filenames[i],filepath, satname)
+            fn = int(i)
+            if satname == 'PSScene4Band':
+                dates = [metadata[satname]['dates'],metadata[satname]['dates']]
+            else:
+                dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
+            
             # read and preprocess image
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, polygon, Sat, satname, settings['cloud_mask_issue'])
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
 
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),

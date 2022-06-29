@@ -410,7 +410,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         # no extra local image
         im_extra = []
         
-    save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
+    if os.getcwd() == '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastWatch-main/':
+        save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
     
     return im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata
 
