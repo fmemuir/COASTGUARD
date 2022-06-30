@@ -182,7 +182,7 @@ if os.path.isdir(direc) is False:
 
 print('Enter your Planet API key: ')
 os.environ['PL_API_KEY'] = input()
-print('Your API key is: ')
+print('Your API key is: '+os.environ['PL_API_KEY'])
 Sat = Toolbox.PlanetImageRetrieval(inputs)
 
 Subset1 = Sat[0][45:63]

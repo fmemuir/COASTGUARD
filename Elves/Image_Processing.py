@@ -348,10 +348,15 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         
         # read all bands (R,G,B,NIR)        
         img = rasterio.open(filenames[fn])
-                
         im_ms = img.read()
+        
         if im_ms is None:
             return None, None, None, None, None, None
+        
+        # scaling factor to convert to floating-point reflectance
+        if np.max(im_ms[:,:,0]) > 1:
+            im_ms = im_ms / 10000
+        
         # shape needs to be [row col band], so look for shape with small size
         if im_ms.shape[0] < 10:
             im_ms = np.transpose(im_ms, (1,2,0))
