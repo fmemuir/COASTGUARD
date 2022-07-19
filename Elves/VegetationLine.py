@@ -108,8 +108,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 continue
             
             # get image spatial reference system (epsg code) from metadata dict
-            image_epsg = settings['output_epsg']
-            image_epsg = metadata[satname]['epsg'][i]
+            image_epsg = int(metadata[satname]['epsg'][i])
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
                                     (cloud_mask.shape[0]*cloud_mask.shape[1]))
@@ -226,6 +225,9 @@ def extract_veglines(metadata, settings, polygon, dates):
     filepath = os.path.join(filepath_data, sitename)
     with open(os.path.join(filepath, sitename + '_output.pkl'), 'wb') as f:
         pickle.dump(output, f)
+    
+    with open(os.path.join(filepath, sitename + '_settings.pkl'), 'wb') as f:
+        pickle.dump(settings, f)
 
     with open(os.path.join(filepath, sitename + '_output_latlon.pkl'), 'wb') as f:
         pickle.dump(output_latlon, f)
@@ -737,6 +739,7 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
     contours_world = Toolbox.convert_pix2world(contours, georef)
     # convert world coordinates to desired spatial reference system
     contours_epsg = Toolbox.convert_epsg(contours_world, image_epsg, settings['output_epsg'])
+    #contours_epsg = contours_world
     
     contour_latlon = Toolbox.convert_epsg(contours_world, image_epsg, 4326)
     
@@ -1094,7 +1097,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
         ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
     if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
         bins = np.arange(np.nanmin(int_other), np.nanmax(int_other) + binwidth, binwidth)
-        ax4.hist(int_other, bins=bins, density=True, color='C4', label='other', alpha=0.5) 
+        ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
     
     # automatically map the shoreline based on the classifier if enough sand pixels
     if sum(sum(im_labels[:,:,0])) > 10:

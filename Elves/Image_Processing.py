@@ -346,7 +346,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         if cloud_scoree > settings['cloud_thresh']:
             return None, None, None, None, None, None
         
-        # read all bands (R,G,B,NIR)        
+        # read all bands (B,G,R,NIR)        
         img = rasterio.open(filenames[fn])
         im_ms = img.read()
         
@@ -1035,7 +1035,7 @@ def get_reference_sl(metadata, settings, polygon, dates):
                         break
                 pts_sl = np.delete(pts_sl,0,axis=0)
                 # convert world image coordinates to user-defined coordinate system
-                image_epsg = metadata[satname]['epsg'][0]
+                image_epsg = int(metadata[satname]['epsg'][0])
                 pts_coords = Toolbox.convert_epsg(pts_sl, image_epsg, 32630)#settings['output_epsg'])
                 # save the reference shoreline as .pkl
                 filepath = os.path.join(filepath_data, sitename)
