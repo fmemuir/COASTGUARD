@@ -401,7 +401,8 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
 
     # calculate features
-    vec_features = calculate_vegfeatures(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    #vec_features = calculate_vegfeatures(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
     vec_features[np.isnan(vec_features)] = 1e-9 # NaN values are create when std is too close to 0
 
     # remove NaNs and cloudy pixels
@@ -411,12 +412,15 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     vec_features = vec_features[~vec_mask, :]
 
     # # Luke: classify pixels
-    # new_vec_features = []
+    vec_features_new = []
     
-    # for h in range(len(vec_features)):
-    #     new_vec_features.append(vec_features[h][1::2])
+    for h in range(len(vec_features)):
+        if len(vec_features) == 20:
+            vec_features_new.append(vec_features[h][1::2])
+        else:
+            vec_features_new.append(np.concatenate((vec_features[h][1::2], vec_features[h][11:])))
     
-    labels = clf[0].predict(vec_features)
+    labels = clf[0].predict(vec_features_new)
 
     # recompose image
     vec_classif = np.nan*np.ones((cloud_mask.shape[0]*cloud_mask.shape[1]))
