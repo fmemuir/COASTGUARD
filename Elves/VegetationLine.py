@@ -353,6 +353,12 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     # NDVI
     im_NIRR = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     features = np.append(features, np.expand_dims(im_NIRR[im_bool],axis=1), axis=-1)
+    # NIR-G
+    im_NIRG = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
+    # R-G
+    im_RG = Toolbox.nd_index(im_ms[:,:,2], im_ms[:,:,1], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
     
     # calculate standard deviation of individual bands
     for k in range(im_ms.shape[2]):
@@ -362,6 +368,12 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     # calculate standard deviation of the spectral indices
     # NDVI
     im_std = Toolbox.image_std(im_NIRR, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # NIR-G
+    im_std = Toolbox.image_std(im_NIRG, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # R-G
+    im_std = Toolbox.image_std(im_RG, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
     return features
@@ -401,8 +413,8 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
 
     # calculate features
-    vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
-    #vec_features = calculate_vegfeatures(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    #vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    vec_features = calculate_vegfeatures(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
     vec_features[np.isnan(vec_features)] = 1e-9 # NaN values are create when std is too close to 0
 
     # remove NaNs and cloudy pixels
@@ -418,7 +430,8 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
         if len(vec_features) == 20:
             vec_features_new.append(vec_features[h][1::2])
         else:
-            vec_features_new.append(np.concatenate((vec_features[h][1::2], vec_features[h][11:])))
+            #vec_features_new.append(np.concatenate((vec_features[h][1::2], vec_features[h][11:])))
+            vec_features_new.append(vec_features[h][1:11])
     
     labels = clf[0].predict(vec_features_new)
 

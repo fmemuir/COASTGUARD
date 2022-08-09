@@ -25,7 +25,7 @@ from sklearn.metrics import confusion_matrix
 np.set_printoptions(precision=2)
 
 # CoastSat modules
-from Elves import Image_Processing, Shoreline, Toolbox
+from Elves import Image_Processing, Shoreline, Toolbox, VegetationLine
 
 class SelectFromImage(object):
     """
@@ -153,7 +153,7 @@ def label_images(metadata, polygon, Sat, settings):
             ax.axis('off')  
             ax.imshow(im_RGB)
             implot = ax.imshow(im_viz, alpha=0.6)            
-            filename = filenames[i][:filenames[i].find('.')][:-4] 
+            filename = filenames[0][i].rsplit('/',1)[1]
             ax.set_title(filename)
            
             ##############################################################
@@ -357,6 +357,266 @@ def label_images(metadata, polygon, Sat, settings):
                     
     # close figure when finished
     plt.close(fig)
+    
+def label_vegimages(metadata, polygon, Sat, settings):
+    """
+    Load satellite images and interactively label different classes (hard-coded)
+
+    FM 2022
+
+    Arguments:
+    -----------
+    metadata: dict
+        contains all the information about the satellite images that were downloaded
+    settings: dict with the following keys
+        'cloud_thresh': float
+            value between 0 and 1 indicating the maximum cloud fraction in 
+            the cropped image that is accepted    
+        'cloud_mask_issue': boolean
+            True if there is an issue with the cloud mask and sand pixels
+            are erroneously being masked on the images
+        'labels': dict
+            list of label names (key) and label numbers (value) for each class
+        'flood_fill': boolean
+            True to use the flood_fill functionality when labelling sand pixels
+        'tolerance': float
+            tolerance value for flood fill when labelling the sand pixels
+        'filepath_train': str
+            directory in which to save the labelled data
+        'inputs': dict
+            input parameters (sitename, filepath, polygon, dates, sat_list)
+                
+    Returns:
+    -----------
+    Stores the labelled data in the specified directory
+
+    """
+    
+    filepath_train = settings['filepath_train']
+    # initialize figure
+    fig,ax = plt.subplots(1,1,figsize=[17,10], tight_layout=True,sharex=True,
+                          sharey=True)
+    mng = plt.get_current_fig_manager()                                         
+    mng.window.showMaximized()
+
+    # loop through satellites
+    for satname in metadata.keys():
+        if satname == 'PSScene4Band':
+            filepath = os.path.dirname(metadata[satname]['filenames'])
+        else:
+            filepath = Toolbox.get_filepath(settings['inputs'],satname)
+        filenames = [metadata[satname]['filenames']]
+        # loop through images
+        for i in range(len(filenames)):
+            # image filename
+            fn = int(i)
+            if satname == 'PSScene4Band':
+                dates = [metadata[satname]['dates'],metadata[satname]['dates']]
+            else:
+                dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
+            
+            # read and preprocess image
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
+
+            # compute cloud_cover percentage (with no data pixels)
+            cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
+                                    (cloud_mask.shape[0]*cloud_mask.shape[1]))
+            if cloud_cover_combined > 0.99: # if 99% of cloudy pixels in image skip
+                continue
+
+            # remove no data pixels from the cloud mask (for example L7 bands of no data should not be accounted for)
+            cloud_mask_adv = np.logical_xor(cloud_mask, im_nodata)
+            # compute updated cloud cover percentage (without no data pixels)
+            cloud_cover = np.divide(sum(sum(cloud_mask_adv.astype(int))),
+                                    (sum(sum((~im_nodata).astype(int)))))
+            # skip image if cloud cover is above threshold
+            if cloud_cover > settings['cloud_thresh'] or cloud_cover == 1:
+                continue
+            # get individual RGB image
+            im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+            im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+            im_NDWI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
+            # initialise labels
+            im_viz = im_RGB.copy()
+            im_labels = np.zeros([im_RGB.shape[0],im_RGB.shape[1]])
+            # show RGB image
+            ax.axis('off')  
+            ax.imshow(im_RGB)
+            implot = ax.imshow(im_viz, alpha=0.6)            
+            filename = filenames[0][i].rsplit('/',1)[1]
+            ax.set_title(filename)
+           
+            ##############################################################
+            # select image to label
+            ##############################################################           
+            # set a key event to accept/reject the detections (see https://stackoverflow.com/a/15033071)
+            # this variable needs to be immuatable so we can access it after the keypress event
+            key_event = {}
+            def press(event):
+                # store what key was pressed in the dictionary
+                key_event['pressed'] = event.key
+            # let the user press a key, right arrow to keep the image, left arrow to skip it
+            # to break the loop the user can press 'escape'
+            while True:
+                btn_keep = ax.text(1.1, 0.9, 'keep ⇨', size=12, ha="right", va="top",
+                                    transform=ax.transAxes,
+                                    bbox=dict(boxstyle="square", ec='k',fc='w'))
+                btn_skip = ax.text(-0.1, 0.9, '⇦ skip', size=12, ha="left", va="top",
+                                    transform=ax.transAxes,
+                                    bbox=dict(boxstyle="square", ec='k',fc='w'))
+                btn_esc = ax.text(0.5, 0, '<esc> to quit', size=12, ha="center", va="top",
+                                    transform=ax.transAxes,
+                                    bbox=dict(boxstyle="square", ec='k',fc='w'))
+                fig.canvas.draw_idle()                         
+                fig.canvas.mpl_connect('key_press_event', press)
+                plt.waitforbuttonpress()
+                # after button is pressed, remove the buttons
+                btn_skip.remove()
+                btn_keep.remove()
+                btn_esc.remove()
+                
+                # keep/skip image according to the pressed key, 'escape' to break the loop
+                if key_event.get('pressed') == 'right':
+                    skip_image = False
+                    break
+                elif key_event.get('pressed') == 'left':
+                    skip_image = True
+                    break
+                elif key_event.get('pressed') == 'escape':
+                    plt.close()
+                    raise StopIteration('User cancelled labelling images')
+                else:
+                    plt.waitforbuttonpress()
+                    
+            # if user decided to skip show the next image
+            if skip_image:
+                ax.clear()
+                continue
+            # otherwise label this image
+            else:
+                # ##############################################################
+                # # digitize veg pixels
+                # ##############################################################
+                # ax.set_title('Click on veg pixels (flood fill activated, tolerance = %.2f)\nwhen finished press <Enter>'%settings['tolerance'])
+                # # create erase button, if you click there it delets the last selection
+                # btn_erase = ax.text(im_ms.shape[1], 0, 'Erase', size=20, ha='right', va='top',
+                #                     bbox=dict(boxstyle="square", ec='k',fc='w'))                
+                # fig.canvas.draw_idle()
+                # color_veg = settings['colors']['veg']
+                # veg_pixels = []
+                # while 1:
+                #     seed = ginput(n=1, timeout=0, show_clicks=True)
+                #     # if empty break the loop and go to next label
+                #     if len(seed) == 0:
+                #         break
+                #     else:
+                #         # round to pixel location
+                #         seed = np.round(seed[0]).astype(int)     
+                #     # if user clicks on erase, delete the last selection
+                #     if seed[0] > 0.95*im_ms.shape[1] and seed[1] < 0.05*im_ms.shape[0]:
+                #         if len(veg_pixels) > 0:
+                #             im_labels[veg_pixels[-1]] = 0
+                #             for k in range(im_viz.shape[2]):                              
+                #                 im_viz[veg_pixels[-1],k] = im_RGB[veg_pixels[-1],k]
+                #             implot.set_data(im_viz)
+                #             fig.canvas.draw_idle() 
+                #             del veg_pixels[-1]
+                            
+                #     # otherwise label the selected veg pixels
+                #     else:
+                #         # flood fill the NDVI and the NDWI
+                #         fill_NDVI = flood(im_NDVI, (seed[1],seed[0]), tolerance=settings['tolerance'])
+                #         fill_NDWI = flood(im_NDWI, (seed[1],seed[0]), tolerance=settings['tolerance'])
+                #         # compute the intersection of the two masks
+                #         fill_veg = np.logical_and(fill_NDVI, fill_NDWI)
+                #         im_labels[fill_veg] = settings['labels']['veg'] 
+                #         veg_pixels.append(fill_veg)
+                #         # show the labelled pixels
+                #         for k in range(im_viz.shape[2]):                              
+                #             im_viz[im_labels==settings['labels']['veg'],k] = color_veg[k]
+                #         implot.set_data(im_viz)
+                #         fig.canvas.draw_idle() 
+                        
+                # im_veg = im_viz.copy()
+                
+                ##############################################################
+                # digitize veg pixels (with lassos)
+                ##############################################################
+                color_veg = settings['colors']['veg']
+                ax.set_title('Click and hold to draw lassos and select veg pixels\nwhen finished press <Enter>')
+                fig.canvas.draw_idle() 
+                selector_veg = SelectFromImage(ax, implot, color_veg)
+                key_event = {}
+                while True:
+                    fig.canvas.draw_idle()                         
+                    fig.canvas.mpl_connect('key_press_event', press)
+                    plt.waitforbuttonpress()
+                    if key_event.get('pressed') == 'enter':
+                        selector_veg.disconnect()
+                        break
+                    elif key_event.get('pressed') == 'escape':
+                        selector_veg.array = im_viz.copy()
+                        implot.set_data(selector_veg.array)
+                        fig.canvas.draw_idle()                         
+                        selector_veg.implot = implot
+                        selector_veg.im_bool = np.zeros((selector_veg.array.shape[0], selector_veg.array.shape[1])) 
+                        selector_veg.ind=[]          
+                # update im_viz and im_labels
+                im_viz = selector_veg.array
+                selector_veg.im_bool = selector_veg.im_bool.astype(bool)
+                im_labels[selector_veg.im_bool] = settings['labels']['veg']
+                
+                im_veg = im_viz.copy()
+                
+                
+                ##############################################################
+                # digitize nonveg pixels (with lassos)
+                ##############################################################
+                color_nveg = settings['colors']['nonveg']
+                ax.set_title('Click and hold to draw lassos and select OTHER nveg pixels\nwhen finished press <Enter>')
+                fig.canvas.draw_idle() 
+                selector_nveg = SelectFromImage(ax, implot, color_nveg)
+                key_event = {}
+                while True:
+                    fig.canvas.draw_idle()                         
+                    fig.canvas.mpl_connect('key_press_event', press)
+                    plt.waitforbuttonpress()
+                    if key_event.get('pressed') == 'enter':
+                        selector_nveg.disconnect()
+                        break
+                    elif key_event.get('pressed') == 'escape':
+                        selector_nveg.array = im_veg
+                        implot.set_data(selector_nveg.array)
+                        fig.canvas.draw_idle()                         
+                        selector_nveg.implot = implot
+                        selector_nveg.im_bool = np.zeros((selector_nveg.array.shape[0], selector_nveg.array.shape[1])) 
+                        selector_nveg.ind=[]
+                # update im_viz and im_labels
+                im_viz = selector_nveg.array
+                selector_nveg.im_bool = selector_nveg.im_bool.astype(bool)
+                im_labels[selector_nveg.im_bool] = settings['labels']['nonveg']  
+                
+                # save labelled image
+                ax.set_title(filename)
+                fig.canvas.draw_idle()                         
+                fp = os.path.join(filepath_train,settings['inputs']['sitename'])
+                if not os.path.exists(fp):
+                    os.makedirs(fp)
+                fig.savefig(os.path.join(fp,filename+'.jpg'), dpi=150)
+                ax.clear()
+                
+                # save labels and features
+                features = dict([])
+                for key in settings['labels'].keys():
+                    im_bool = im_labels == settings['labels'][key]
+                    features[key] = VegetationLine.calculate_features(im_ms, cloud_mask, im_bool)
+                training_data = {'labels':im_labels, 'features':features, 'label_ids':settings['labels']}
+                with open(os.path.join(fp, filename + '.pkl'), 'wb') as f:
+                    pickle.dump(training_data,f)
+                    
+    # close figure when finished
+    plt.close(fig)
+
 
 def load_labels(train_sites, settings):
     """
@@ -384,13 +644,13 @@ def load_labels(train_sites, settings):
     filepath_train = settings['filepath_train']
     # initialize the features dict
     features = dict([])
-    n_features = 20
+    n_features = 20 # number of features corresponds to different bands and indices
     first_row = np.nan*np.ones((1,n_features))
     for key in settings['labels'].keys():
         features[key] = first_row
     # loop through each site 
     for site in train_sites:
-        sitename = site[:site.find('.')] 
+        sitename = settings['inputs']['sitename']
         filepath = os.path.join(filepath_train,sitename)
         if os.path.exists(filepath):
             list_files = os.listdir(filepath)
