@@ -218,8 +218,6 @@ for site in train_sites:
 # 
 # You can use the data that was labelled here and/or the original CoastSat training data.
 
-
-
 # load labelled images
 features = Classifier.load_labels(train_sites, settings)
 
