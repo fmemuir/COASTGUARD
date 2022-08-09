@@ -29,7 +29,7 @@ from skimage import morphology, transform
 from scipy import ndimage
 
 # CoastSat modules
-from Elves import Image_Processing, Toolbox, gdal_merge
+from Toolshed import Image_Processing, Toolbox, gdal_merge
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 

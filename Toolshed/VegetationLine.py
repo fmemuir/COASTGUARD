@@ -34,7 +34,7 @@ from datetime import datetime
 from pylab import ginput
 
 # CoastSat modules
-from Elves import Toolbox, Image_Processing
+from Toolshed import Toolbox, Image_Processing
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 

@@ -12,7 +12,7 @@ import sys
 import numpy as np
 from scipy.signal import savgol_filter
 from scipy.interpolate import splprep, splev
-#from Elves import Transect, Node
+#from Toolshed import Transect, Node
 from Node import *
 from Transect import *
 

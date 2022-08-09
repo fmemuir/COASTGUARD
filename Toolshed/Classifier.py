@@ -25,7 +25,7 @@ from sklearn.metrics import confusion_matrix
 np.set_printoptions(precision=2)
 
 # CoastSat modules
-from Elves import Image_Processing, Shoreline, Toolbox, VegetationLine
+from Toolshed import Image_Processing, Shoreline, Toolbox, VegetationLine
 
 class SelectFromImage(object):
     """

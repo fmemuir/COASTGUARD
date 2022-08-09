@@ -30,7 +30,7 @@ import geemap
 import glob
 
 # CoastSat modules
-from Elves import Toolbox
+from Toolshed import Toolbox
 
 from pyproj import Proj
 from pyproj import transform as Transf

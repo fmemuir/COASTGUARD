@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib import rcParams, cm
 
 # import other custom classes
-#from Elves import Node
+#from Toolshed import Node
 from Node import *
 
 from shapely.geometry import Point, LineString

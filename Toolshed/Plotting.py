@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 plt.ion()
 from datetime import datetime, timedelta
-from Elves import Toolbox, Transects
+from Toolshed import Toolbox, Transects
 
 from sklearn.metrics import mean_squared_error, r2_score
 import seaborn as sns; sns.set()
