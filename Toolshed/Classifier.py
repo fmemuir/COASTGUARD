@@ -610,7 +610,7 @@ def label_vegimages(metadata, polygon, Sat, settings):
                 features = dict([])
                 for key in settings['labels'].keys():
                     im_bool = im_labels == settings['labels'][key]
-                    features[key] = VegetationLine.calculate_features(im_ms, cloud_mask, im_bool)
+                    features[key] = VegetationLine.calculate_vegfeatures(im_ms, cloud_mask, im_bool)
                 training_data = {'labels':im_labels, 'features':features, 'label_ids':settings['labels']}
                 # save labels and features
                 with open(os.path.join(fp, filename + '.pkl'), 'wb') as f:

@@ -27,7 +27,7 @@ import matplotlib.dates as mdates
 plt.ion()
 from datetime import datetime, timezone, timedelta
 
-from Elves import Classifier, Download, Image_Processing, Shoreline, Toolbox, Transects, VegetationLine
+from Toolshed import Classifier, Download, Image_Processing, Shoreline, Toolbox, Transects, VegetationLine
 
 import mpl_toolkits as mpl
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
@@ -66,7 +66,7 @@ sys.path.insert(0, os.pardir)
 ee.Initialize()
 
 #%%
-os.chdir('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastWatch-main/Classification')
+os.chdir('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Classification')
 
 # plotting params
 plt.rcParams['font.size'] = 14
@@ -109,6 +109,9 @@ print('Sites for training:\n%s\n'%train_sites)
 sitename = 'Montrose'
 lonmin, lonmax = -2.49, -2.42
 latmin, latmax = 56.70, 56.75
+
+train_sites = [sitename]
+print('Sites for training:\n%s\n'%train_sites)
 
 #point = ee.Geometry.Point([lonmin, latmin]) 
 if latmin > latmax:
