@@ -605,12 +605,14 @@ def label_vegimages(metadata, polygon, Sat, settings):
                 fig.savefig(os.path.join(fp,filename+'.jpg'), dpi=150)
                 ax.clear()
                 
-                # save labels and features
+                # calculate features from band values and their indices (e.g. 20 for CoastSat with S2)
+                # 'features{class}(row,col) corresponds to {land type}(pixel values,bands/band indices)'
                 features = dict([])
                 for key in settings['labels'].keys():
                     im_bool = im_labels == settings['labels'][key]
                     features[key] = VegetationLine.calculate_features(im_ms, cloud_mask, im_bool)
                 training_data = {'labels':im_labels, 'features':features, 'label_ids':settings['labels']}
+                # save labels and features
                 with open(os.path.join(fp, filename + '.pkl'), 'wb') as f:
                     pickle.dump(training_data,f)
                     
