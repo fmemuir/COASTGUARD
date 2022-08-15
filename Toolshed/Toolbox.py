@@ -1117,6 +1117,10 @@ def Separate_TimeSeries_month(cross_distance, output, key):
     return Date_Organised, Month_Organised, Distance_Organised, DateArr, DistanceAvgArr
 
 def daterange(date1, date2):
+    """
+    Get formatted date range for two datetime dates.
+    FM Apr 2022
+    """
     for n in range(int(date2.year) - int(date1.year)+1):
         yield int(date1.year) + n
         
@@ -1134,7 +1138,7 @@ def spaced_vertices(referenceLine):
     Returns
     -------
     newreferenceLine : array
-        New reference line oordinate array with equally spaced vertices.
+        New reference line coordinate array with equally spaced vertices.
 
     """
     referenceLineString = LineString(referenceLine)
