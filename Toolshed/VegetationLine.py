@@ -124,10 +124,13 @@ def extract_veglines(metadata, settings, polygon, dates):
             if cloud_cover > settings['cloud_thresh']:
                 continue
 
-            # calculate a buffer around the reference shoreline (FM: new way)
-            # im_ref_buffer = create_shoreline_buffer(cloud_mask.shape, georef, image_epsg,
-            #                                         pixel_size, settings, image_epsg)
-            im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
+            # calculate a buffer around the reference shoreline
+            # TO DO: conditional for ref buffer that updates with each new line found
+            if i == 0:
+                im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,pixel_size,cloud_mask)
+            else:
+                im_ref_buffer = BufferShoreline(settings,output_shoreline,georef,pixel_size,cloud_mask)
+            # im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,pixel_size,cloud_mask)
             
             # classify image in 4 classes (sand, whitewater, water, other) with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask,
@@ -649,7 +652,7 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
     return im_buffer
 
 
-def BufferShoreline(settings,georef,pixel_size,cloud_mask):
+def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
     """
     Buffer reference line and utilise geopandas to generate boolean mask of where shoreline swath is.
     More efficient and tuned to geospatial data than previous method of im_buffer generation.
@@ -673,7 +676,7 @@ def BufferShoreline(settings,georef,pixel_size,cloud_mask):
 
     """
     coords = []
-    ref_sl = settings['reference_shoreline'][:,:-1]
+    ref_sl = refline[:,:-1]
     ref_sl_pix = Toolbox.convert_world2pix(ref_sl, georef)
     ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
     
