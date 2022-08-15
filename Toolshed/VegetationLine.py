@@ -162,7 +162,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                     contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
                     
                 # process the water contours into a shoreline
-                shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
+                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
     
 
                 if settings['check_detection'] or settings['save_figure']:
@@ -759,7 +759,7 @@ def ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings):
     # convert pixel coordinates to world coordinates
     contours_world = Toolbox.convert_pix2world(contours, georef)
     # world coordinates array to geoseries
-    contoursGS = gpd.GeoSeries(map(LineString,contours_world),crs=settings['projection_epsg'])
+    contoursGS = gpd.GeoSeries(map(LineString,contours_world),crs=image_epsg)
     # remove any lines that fall below the threshold length defined by user
     shoreline = contoursGS[contoursGS.length > settings['min_length_sl']]
     
@@ -1206,7 +1206,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     """
 
     # process the water contours into a shoreline
-    shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+    shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
     # convert shoreline to pixels
     if len(shoreline) > 0:
         sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shoreline,
@@ -1238,7 +1238,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
             # remove contours that contain NaNs (due to cloud pixels in the contour)
             contours = process_contours(contours) 
             # process the water contours into a shoreline
-            shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours, cloud_mask, georef, image_epsg, settings)
+            shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings)
             # convert shoreline to pixels
             if len(shoreline) > 0:
                 sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shoreline,
@@ -1425,7 +1425,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                     contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
                     
                 # process the water contours into a shoreline
-                shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
+                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
                 
 
                 if settings['check_detection'] or settings['save_figure']:
