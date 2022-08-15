@@ -1208,13 +1208,28 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
 
     # process the contours into a shoreline
     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
-    # shoreline dataframe back to array
-    shorelineArr=[ np.array(line.coords) for line in shoreline.geometry ]
+    
     # convert shoreline to pixels
+    # THIS NEEDS FIXED (AFFINE TRANSFORM)
     if len(shoreline) > 0:
-        sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shorelineArr, epsg, image_epsg)[:,[0,1]], georef)
+        # shoreline dataframe back to array
+        shorelineArr = [np.array(line.coords) for line in shoreline.geometry]
+        sl_pix = Toolbox.convert_world2pix(shorelineArr, georef)
     else: 
         sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+
+
+
+    # # transform world coordinates of shoreline into pixel coordinates
+    # # use try/except in case there are no coordinates to be transformed (shoreline = [])
+    # try:
+    #     sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shoreline,
+    #                                                                 settings['output_epsg'],
+    #                                                                 image_epsg)[:,[0,1]], georef)
+    # except:
+    #     # if try fails, just add nan into the shoreline vector so the next parts can still run
+    #     sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+
     # plot the shoreline on the images
     sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
     sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
