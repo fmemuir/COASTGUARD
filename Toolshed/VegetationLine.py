@@ -758,10 +758,6 @@ def ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings):
     
     # convert pixel coordinates to world coordinates
     contours_world = Toolbox.convert_pix2world(contours, georef)
-    # world coordinates array to geoseries
-    contoursGS = gpd.GeoSeries(map(LineString,contours_world),crs=image_epsg)
-    # remove any lines that fall below the threshold length defined by user
-    shoreline = contoursGS[contoursGS.length > settings['min_length_sl']]
     
     # remove any coordinates that fall within cloud pixels
     if sum(sum(cloud_mask)) > 0:
@@ -774,11 +770,16 @@ def ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings):
         coords_cloud = Toolbox.convert_epsg(Toolbox.convert_pix2world(idx_cloud, georef),
                                                image_epsg, settings['output_epsg'])[:,:-1]
         # only keep the shoreline points that are at least 30m from any cloud pixel
-        idx_keep = np.ones(len(shoreline)).astype(bool)
-        for k in range(len(shoreline)):
-            if np.any(np.linalg.norm(shoreline[k,:] - coords_cloud, axis=1) < 30):
+        idx_keep = np.ones(len(contours_world)).astype(bool)
+        for k in range(len(contours_world)):
+            if np.any(np.linalg.norm(contours_world[k,:] - coords_cloud, axis=1) < 30):
                 idx_keep[k] = False
-        shoreline = shoreline[idx_keep]
+        contours_world = contours_world[idx_keep]
+    
+    # world coordinates array to geoseries
+    contoursGS = gpd.GeoSeries(map(LineString,contours_world),crs=image_epsg)
+    # remove any lines that fall below the threshold length defined by user
+    shoreline = contoursGS[contoursGS.length > settings['min_length_sl']]
     
     # convert shorelines to different coord systems
     shoreline = shoreline.to_crs(settings['output_epsg'])
@@ -1195,7 +1196,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
             contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask,
                                                         buffer_size_pixels, im_ref_buffer)
         else:       
-            # find water contours on NDVI grayscale image
+            # find contours on NDVI grayscale image
             contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer)    
     except:
         print('Could not map shoreline so image was skipped')
@@ -1205,14 +1206,15 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
         return True,[],[], []
     """
 
-    # process the water contours into a shoreline
+    # process the contours into a shoreline
     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+    # shoreline dataframe back to array
+    shorelineArr=[ np.array(line.coords) for line in shoreline.geometry ]
     # convert shoreline to pixels
     if len(shoreline) > 0:
-        sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shoreline,
-                                                                    epsg,
-                                                                    image_epsg)[:,[0,1]], georef)
-    else: sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+        sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shorelineArr, epsg, image_epsg)[:,[0,1]], georef)
+    else: 
+        sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
     # plot the shoreline on the images
     sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
     sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
@@ -1221,7 +1223,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     ax4.legend(loc=1)
     plt.draw() # to update the plot
     # adjust the threshold manually by letting the user change the threshold
-    ax4.set_title('Click on the plot below to change the location of the threhsold and adjust the shoreline detection. When finished, press <Enter>')
+    ax4.set_title('Click on the plot below to change the threshold and adjust the line detection. When finished, press <Enter>')
     while True:  
         # let the user click on the threshold plot
         pt = ginput(n=1, show_clicks=True, timeout=-1)
