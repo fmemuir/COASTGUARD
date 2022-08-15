@@ -724,6 +724,68 @@ def process_contours(contours):
             contours_nonans.append(contours[k])
     
     return contours_nonans
+
+def ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings):
+    """
+    Converts contours from image coordinates to world coordinates and cleans them
+    based on distance to clouds and threshold length. Improvements to the
+    coordinate array conversion also made by incorporating geopandas. 
+
+    FM Aug 2022
+
+    Arguments:
+    -----------
+    contours: np.array or list of np.array
+        image contours as detected by the function find_contours
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+    georef: np.array
+        vector of 6 elements [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+    image_epsg: int
+        spatial reference system of the image from which the contours were extracted
+    settings: dict with the following keys
+        'output_epsg': int
+            output spatial reference system
+        'min_length_sl': float
+            minimum length of shoreline contour to be kept (in meters)
+
+    Returns:
+    -----------
+    shoreline: np.array
+        array of points with the X and Y coordinates of the shoreline
+
+    """
+    
+    # convert pixel coordinates to world coordinates
+    contours_world = Toolbox.convert_pix2world(contours, georef)
+    # world coordinates array to geoseries
+    contoursGS = gpd.GeoSeries(map(LineString,contours_world),crs=settings['projection_epsg'])
+    # remove any lines that fall below the threshold length defined by user
+    shoreline = contoursGS[contoursGS.length > settings['min_length_sl']]
+    
+    # remove any coordinates that fall within cloud pixels
+    if sum(sum(cloud_mask)) > 0:
+        # get the coordinates of the cloud pixels
+        idx_cloud = np.where(cloud_mask)
+        idx_cloud = np.array([(idx_cloud[0][k], idx_cloud[1][k]) for k in range(len(idx_cloud[0]))])
+        # convert to world coordinates and same epsg as the shoreline points
+        if idx_cloud.dtype == 'int64': # fix for S2 pix coords being int64 and unwriteable as float64
+            idx_cloud = idx_cloud.astype('float64')
+        coords_cloud = Toolbox.convert_epsg(Toolbox.convert_pix2world(idx_cloud, georef),
+                                               image_epsg, settings['output_epsg'])[:,:-1]
+        # only keep the shoreline points that are at least 30m from any cloud pixel
+        idx_keep = np.ones(len(shoreline)).astype(bool)
+        for k in range(len(shoreline)):
+            if np.any(np.linalg.norm(shoreline[k,:] - coords_cloud, axis=1) < 30):
+                idx_keep[k] = False
+        shoreline = shoreline[idx_keep]
+    
+    # convert shorelines to different coord systems
+    shoreline = shoreline.to_crs(settings['output_epsg'])
+    shoreline_latlon = shoreline.to_crs(settings['ref_epsg'])
+    shoreline_proj = shoreline.to_crs(settings['projection_epsg'])
+        
+    return shoreline, shoreline_latlon, shoreline_proj
     
 def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
     """
