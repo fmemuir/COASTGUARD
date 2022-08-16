@@ -45,26 +45,6 @@ import math
 ee.Initialize()
 
 
-#%% Define ROI using map
-
-
-"""
-OPTION 1: Generate a map. Use the polygon drawing tool on the left-hand side to 
-draw out the region of coast you're interested in.
-"""
-
-Map = geemap.Map(center=[0,0],zoom=2)
-Map.add_basemap('HYBRID')
-Map
-
-
-#%% 
-
-# Run this after hand digitising to capture the coordinates of the ref shore
-roi = Map.user_roi.geometries().getInfo()[0]['coordinates']
-polygon = [[roi[0][0],roi[0][3],roi[0][1],roi[0][2]]]
-point = ee.Geometry.Point(roi[0][0])
-
 
 #%% Define ROI using coordinates of a rectangle
 
@@ -239,16 +219,6 @@ with open(os.path.join(filepath, sitename, sitename + '_validation_metadata.pkl'
 # L8: 198 images, 16:42 (1002s) = 0.198 im/s OR 5 s/im
 # S2: 34 images (10% of 335), 5:54 (354s) = 0.096 im/s OR 10.4 s/im
 
-#%% Image Load-In
-"""
-OPTION 2: Populate metadata using pre-existing metadata.
-"""
-
-filepath = os.path.join(inputs['filepath'], sitename)
-with open(os.path.join(filepath, sitename + '_metadata.pkl'), 'rb') as f:
-    metadata = pickle.load(f)
-
-
 #%% Vegetation Edge Settings
 
 BasePath = 'Data/' + sitename + '/Veglines'
@@ -277,34 +247,6 @@ settings = {
     'hausdorff_threshold':3*(10**50)
 }
 
-
-
-#%% Vegetation Edge Reference Line Digitisation
-
-"""
-OPTION 1: Generate a map. Use the line drawing tool on the left-hand side to 
-trace along the reference vegetation edge.
-"""
-#Draw reference line onto the map then run the next cell
-
-Map = geemap.Map(center=[0,0],zoom=2)
-Map.add_basemap('HYBRID')
-Map
-
-#%%
-referenceLine = Map.user_roi.geometries().getInfo()[0]['coordinates']
-
-for i in range(len(referenceLine)):
-    #referenceLine[i][0], referenceLine[i][1] = referenceLine[i][1], referenceLine[i][0]
-    referenceLine[i] = list(referenceLine[i])
-
-ref_epsg = 4326
-referenceLine = Toolbox.convert_epsg(np.array(referenceLine),ref_epsg,image_epsg)
-referenceLine = Toolbox.spaced_vertices(referenceLine)
-
-settings['reference_shoreline'] = referenceLine
-settings['ref_epsg'] = ref_epsg
-settings['max_dist_ref'] = 500
 
 #%% Vegetation Edge Reference Line Load-In
 
