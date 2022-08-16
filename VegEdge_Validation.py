@@ -150,7 +150,7 @@ if os.path.isdir(direc) is False:
 
 # before downloading the images, check how many images are available for your inputs
 
-Download.check_images_available(inputs)
+#Download.check_images_available(inputs)
 
 
 #%% Image Download
@@ -259,8 +259,9 @@ the veg extraction.
 referenceLineShp = os.path.join(inputs['filepath'], 'StAndrews_refLine.shp')
 referenceLineDF = gpd.read_file(referenceLineShp)
 refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
-# swap latlon coordinates around and format into list
-referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
+# swap latlon coordinates (or don't? check this) around and format into list
+#referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
+referenceLineList = list([refLiney[i],refLinex[i]] for i in range(len(refLinex)))
 # convert to UTM zone for use with the satellite images
 ref_epsg = 4326
 referenceLine = Toolbox.convert_epsg(np.array(referenceLineList),ref_epsg,image_epsg)
