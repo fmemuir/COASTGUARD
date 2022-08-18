@@ -12,6 +12,7 @@ import pdb
 
 # other modules
 from osgeo import gdal, osr
+import pandas as pd
 import geopandas as gpd
 from shapely import geometry
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
@@ -1152,6 +1153,7 @@ def spaced_vertices(referenceLine):
 
 
 def AOI(lonmin, lonmax, latmin, latmax):
+    # Check if lat and long min and max are around the right way
     if latmin > latmax:
         print('Check your latitude min and max bounding box values!')
         oldlatmin = latmin
@@ -1164,6 +1166,18 @@ def AOI(lonmin, lonmax, latmin, latmax):
         oldlonmax = lonmax
         lonmin = oldlonmax
         lonmax = oldlonmin
+    
+    BBox = Polygon([[lonmin, latmin],
+                    [lonmax,latmin],
+                    [lonmax,latmax],
+                    [lonmin, latmax]])
+    BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs = {'init':'epsg:4326'})
+    # UK conversion only
+    BBoxGDF = BBoxGDF.to_crs('epsg:27700')
+    # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
+    if (BBoxGDF.area/(10*10))>262144:
+        print('Your bounding box is too big for Sentinel2 (%s too big)' % int((BBoxGDF.area/(10*10))-262144))
+    
         
     polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
     point = ee.Geometry.Point(polygon[0][0]) 
