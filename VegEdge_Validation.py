@@ -307,5 +307,7 @@ output = Toolbox.remove_duplicates(output) # removes duplicates (images taken on
 output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
+#%%
 
+Plotting.SatGIF(metadata,settings)
 

@@ -74,18 +74,16 @@ def SatGIF(metadata,settings):
             os.makedirs(filepath_jpg)
     # close all open figures
     plt.close('all')
-
-    # loop through satellite list
+    
+    ims_ms = []
+    ims_date = []
+    
+    # Loop through satellite list
     for satname in metadata.keys():
 
-        # get images
-        #filepath = Toolbox.get_filepath(settings['inputs'],satname)
+        # Get image metadata
         filenames = metadata[satname]['filenames']
         filedates = metadata[satname]['dates']
-        
-        ims_ms = []
-        ims_date = []
-        
         
         # loop through the images
         for i in range(len(filenames)):
@@ -102,36 +100,29 @@ def SatGIF(metadata,settings):
             if cloud_mask == []:
                 continue
             
-            ims_ms.append(im_ms)
+            # Create RGB version of each multiband array
+            im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+            
+            # Append image array and dates to lists for plotting
+            ims_ms.append(im_RGB)
             ims_date.append(filedates[i])
             
-    fig, ax = plt.subplots()
-    fig.set_tight_layout(True)
+    # Sort image arrays and dates by date
+    ims_date_sort, ims_ms_sort = (list(t) for t in zip(*sorted(zip(ims_date, ims_ms))))
     
-    # Plot a scatter that persists (isn't redrawn) and the initial line.
-    x = np.arange(0, 20, 0.1)
-    ax.scatter(x, x + np.random.normal(0, 3.0, len(x)))
-    line, = ax.plot(x, x - 5, 'r-', linewidth=2)
-    
-    def Update(im):
-        label = 'timestep {0}'.format(im)
-        print(label)
-        # Update the line and the axes (with a new xlabel). Return a tuple of
-        # "artists" that have to be redrawn for this frame.
-        line.set_ydata(x - 5 + im)
-        ax.set_xlabel(label)
-        return line, ax
-    
-    if __name__ == '__main__':
-        # FuncAnimation will call the 'update' function for each frame; here
-        # animating over 10 frames, with an interval of 200ms between frames.
-        anim = FuncAnimation(fig, Update, frames=np.arange(0, 10), interval=200)
-        if len(sys.argv) > 1 and sys.argv[1] == 'save':
-            anim.save(os.path.join(filepath_jpg, sitename + "_AnimatedLines.gif"), dpi=150, writer=PillowWriter(fps=25))
-        else:
-            # plt.show() will just loop the animation forever.
-            plt.show()
-                
+    # Set up figure for plotting
+    fig, ax = plt.subplots(figsize=(15, 15))
+    ax.grid(False)
+    # Set up function to be called repeatedly for FuncAnimation()
+    def animate(n):
+        ax.imshow(ims_ms_sort[n])
+        ax.set_title(ims_date_sort[n])
+
+    # Use FuncAnimation() which sets a figure and calls a function repeatedly for as many frames as you set
+    anim = FuncAnimation(fig=fig, func=animate, frames=len(ims_ms), interval=1, repeat=False)
+    # Save as GIF; fps controls the speed of refresh
+    anim.save(os.path.join(filepath_jpg, sitename + '_AnimatedImages.gif'),fps=3)
+
 
 
 def CoastPlot(settings, sitename):

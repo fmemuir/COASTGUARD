@@ -44,7 +44,18 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     
     point = ee.Geometry.Point(polygon[0][0]) 
         
-
+    """
+    FM: Problem still exists for ee_to_numpy where requests are limited to 262144 pixels (5120m for S2, 7680m for L5/7/8).
+    Potential solution may be to export full image to Google Drive then convert from there?
+    Example:
+    bbox = img.getInfo()['properties']['system:footprint']['coordinates']
+    task = ee.batch.Export.image.toDrive(img, 
+        scale=10000,
+        description='MOD09A1',
+        fileFormat='GeoTIFF',
+        region=bbox)
+    task.start()
+    """
     #=============================================================================================#
     # L5 images
     #=============================================================================================#
