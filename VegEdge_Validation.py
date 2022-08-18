@@ -18,7 +18,7 @@ import matplotlib.pyplot as plt
 from matplotlib import gridspec
 plt.ion()
 from datetime import datetime, timezone, timedelta
-from Toolshed import Download, Image_Processing, Shoreline, Toolbox, Transects, VegetationLine
+from Toolshed import Download, Image_Processing, Shoreline, Toolbox, Transects, VegetationLine, Plotting
 import mpl_toolkits as mpl
 from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
 from matplotlib.ticker import MaxNLocator
@@ -1238,12 +1238,5 @@ plt.show()
 
 # ## Analysis - Comparison with Field Data
 
-# In[ ]:
 
-
-# extract subset of veg lines that match the dates in the veg survey 
-
-for surveydate in unique(vegsurvey.Date):
-    matchdate = min(output['dates'], key=lambda x: abs(x - surveydate))
-    
 
