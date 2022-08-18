@@ -1149,3 +1149,23 @@ def spaced_vertices(referenceLine):
     newreferenceLine = np.asarray(newreferenceLineString)
     
     return newreferenceLine
+
+
+def AOI(lonmin, lonmax, latmin, latmax):
+    if latmin > latmax:
+        print('Check your latitude min and max bounding box values!')
+        oldlatmin = latmin
+        oldlatmax = latmax
+        latmin = oldlatmax
+        latmax = oldlatmin
+    if lonmin > lonmax:
+        print('Check your longitude min and max bounding box values!')
+        oldlonmin = lonmin
+        oldlonmax = lonmax
+        lonmin = oldlonmax
+        lonmax = oldlonmin
+        
+    polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
+    point = ee.Geometry.Point(polygon[0][0]) 
+    
+    return polygon, point

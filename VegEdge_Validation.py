@@ -80,21 +80,8 @@ latmin, latmax = 56.32641, 56.39814
 #latmin, latmax = 52.027039, 52.037448
 
 #point = ee.Geometry.Point([lonmin, latmin]) 
-if latmin > latmax:
-    print('Check your latitude min and max bounding box values!')
-    oldlatmin = latmin
-    oldlatmax = latmax
-    latmin = oldlatmax
-    latmax = oldlatmin
-if lonmin > lonmax:
-    print('Check your longitude min and max bounding box values!')
-    oldlonmin = lonmin
-    oldlonmax = lonmax
-    lonmin = oldlonmax
-    lonmax = oldlonmin
-    
-polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
-point = ee.Geometry.Point(polygon[0][0]) 
+
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
 
 #%% Image Settings
 
