@@ -46,10 +46,10 @@ ee.Initialize()
 
 
 
-#%% Define ROI using coordinates of a rectangle
+#%% Define AOI using coordinates of a rectangle
 
 """
-OPTION 2: ROI polygon is defined using coordinates of a bounding box (in WGS84).
+OPTION 2: AOI polygon is defined using coordinates of a bounding box (in WGS84).
 """
 
 ##ST ANDREWS WEST
@@ -78,8 +78,6 @@ latmin, latmax = 56.32641, 56.39814
 ##SHINGLE STREET
 #lonmin, lonmax = 1.446131, 1.460008
 #latmin, latmax = 52.027039, 52.037448
-
-#point = ee.Geometry.Point([lonmin, latmin]) 
 
 polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
 
