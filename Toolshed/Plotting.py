@@ -101,7 +101,12 @@ def SatGIF(metadata,settings):
                 continue
             
             # Create RGB version of each multiband array
-            im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+            try:
+                im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+                # Set clouds/nodata to white (rather than black)
+                im_RGB = np.where(np.isnan(im_RGB), 1.0, im_RGB)
+            except:
+                continue
             
             # Append image array and dates to lists for plotting
             ims_ms.append(im_RGB)
