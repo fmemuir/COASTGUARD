@@ -1485,6 +1485,49 @@ for i,key in enumerate(list(transect_proj.keys())):
 plt.show()
 
 #%% Mapping of Results
+#%% Save output veglines
+
+
+#Saves the veglines as shapefiles locally under Veglines.
+direc = os.path.join(filepath, 'veglines')
+geomtype = 'lines'
+name_prefix = 'Data/' + sitename + '/veglines/'
+
+if os.path.isdir(direc) is False:
+    os.mkdir(direc)
+
+Toolbox.save_shapefiles(output_proj, name_prefix, sitename, projection_epsg)
+
+# initialise the ref variable for storing line info in
+#ref_line = np.delete(settings['reference_shoreline'],2,1)
+#ref = {'dates':['3000-12-30'], 'shorelines':[ref_line], 'filename':[0], 'cloud_cover':[0], 'geoaccuracy':[0], 'idx':[0], 'Otsu_threshold':[0], 'satname':[0]}
+#Toolbox.save_shapefiles(ref, geomtype, name_prefix, sitename)
+
+#
+
+# In[ ]:
+
+
+fig, axs = plt.subplots(figsize=(10, 12))
+for i in range(len(Barz)):
+    axs.barh(np.arange(len(Barz[i]))+(i/5), Barz[i], align='center',height= 0.2,color=colours[i],label='Transects: '+str(transect_range[i][0])+"-"+str(transect_range[i][1]) )
+axs.plot([0]*100,np.arange(0,37,0.37),'-.',color='k')
+axs.set_xlabel("% Change Since 1984")
+#axs.set_xlim(-500,500)
+axs.set_yticks(np.arange(0,37,1))
+axs.set_yticklabels(list(np.array(d)[NaN_mask]))
+fig.text(0.25,0.85,"Accretion (Relative to 1984)")
+fig.text(0.58,0.85,"Erosion (Relative to 1984)")
+axs.legend(loc='lower right')
+for i in range(37):
+    axs.plot(np.arange(-500,500,10),[i-0.1]*100,'-.',color='k',alpha=0.7,linewidth=0.45)
+fig.savefig(os.path.join('Data/' + sitename + '/jpg_files/barBreakdown.jpg'), dpi=150)
+plt.show()
+
+
+# ## Analysis - Comparison with Field Data
+
+
 
 
 # Creates map object centred at ROI + adds compiled satellite image as base-layer
