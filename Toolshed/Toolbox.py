@@ -1185,3 +1185,22 @@ def AOI(lonmin, lonmax, latmin, latmax):
     point = ee.Geometry.Point(polygon[0][0]) 
     
     return polygon, point
+
+def GStoArr(shoreline):
+    """
+    Parameters
+    ----------
+    shoreline : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+    
+    FM Aug 2022
+    """
+
+    shorelineList = [np.array(line.coords) for line in shoreline.geometry]
+    shorelineArrList = [coord for line in shorelineList for coord in line]
+    shorelineArr = np.array(shorelineArrList)
+    return shorelineArr

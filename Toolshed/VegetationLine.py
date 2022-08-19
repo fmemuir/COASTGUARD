@@ -128,7 +128,8 @@ def extract_veglines(metadata, settings, polygon, dates):
             if i == 0: # if the first image in a sat set, use the ref shoreline
                 im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,pixel_size,cloud_mask)
             else: # otherwise use the most recent shoreline found, so buffer updates through time
-                im_ref_buffer = BufferShoreline(settings,output_shoreline,georef,pixel_size,cloud_mask)
+                output_shorelineArr = Toolbox.GStoArr(output_shoreline[-1])
+                im_ref_buffer = BufferShoreline(settings,output_shorelineArr,georef,pixel_size,cloud_mask)
             # im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
             
             # classify image in 4 classes (sand, whitewater, water, other) with NN classifier
@@ -676,7 +677,7 @@ def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
     """
     coords = []
     # refline = settings['reference_shoreline']
-    ref_sl = refline[:,:-1]
+    ref_sl = refline[:,:2]
     ref_sl_pix = Toolbox.convert_world2pix(ref_sl, georef)
     ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
     
@@ -930,9 +931,12 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     im_nvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
 
     # transform world coordinates of shoreline into pixel coordinates
+    # shoreline dataframe back to array
+    shorelineArr = Toolbox.GStoArr(shoreline)
+    
     # use try/except in case there are no coordinates to be transformed (shoreline = [])
     try:
-        sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shoreline,
+        sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shorelineArr,
                                                                     settings['output_epsg'],
                                                                     image_epsg)[:,[0,1]], georef)
     except:
@@ -1213,24 +1217,11 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # THIS NEEDS FIXED (AFFINE TRANSFORM)
     if len(shoreline) > 0:
         # shoreline dataframe back to array
-        shorelineList = [np.array(line.coords) for line in shoreline.geometry]
-        shorelineArrList = [coord for line in shorelineList for coord in line]
-        shorelineArr = np.array(shorelineArrList)
+        shorelineArr = Toolbox.GStoArr(shoreline)
         sl_pix = Toolbox.convert_world2pix(shorelineArr, georef)
     else: 
         sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
 
-
-
-    # # transform world coordinates of shoreline into pixel coordinates
-    # # use try/except in case there are no coordinates to be transformed (shoreline = [])
-    # try:
-    #     sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shoreline,
-    #                                                                 settings['output_epsg'],
-    #                                                                 image_epsg)[:,[0,1]], georef)
-    # except:
-    #     # if try fails, just add nan into the shoreline vector so the next parts can still run
-    #     sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
 
     # plot the shoreline on the images
     sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
@@ -1258,12 +1249,16 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
             contours = process_contours(contours) 
             # process the water contours into a shoreline
             shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings)
+            
+            
             # convert shoreline to pixels
             if len(shoreline) > 0:
-                sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shoreline,
+                shorelineArr = Toolbox.GStoArr(shoreline)
+                sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shorelineArr,
                                                                             epsg,
                                                                             image_epsg)[:,[0,1]], georef)
-            else: sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+            else: 
+                sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
             # update the plotted shorelines
             sl_plot1.set_offsets(sl_pix)
             sl_plot2.set_offsets(sl_pix)
