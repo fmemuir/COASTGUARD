@@ -98,6 +98,8 @@ def convert_world2pix(points, georef):
         array with 2 columns (X,Y)
     georef: np.array
         vector of 6 elements [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+        Xtr = xoff
+        Ytr = yoff
                 
     Returns:    
     -----------

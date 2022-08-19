@@ -162,7 +162,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                     
                 # process the water contours into a shoreline
                 shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
-    
+                # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
 
                 if settings['check_detection'] or settings['save_figure']:
                     date = metadata[satname]['dates'][i]
@@ -1208,12 +1208,14 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
 
     # process the contours into a shoreline
     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
-    
+    #shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
     # convert shoreline to pixels
     # THIS NEEDS FIXED (AFFINE TRANSFORM)
     if len(shoreline) > 0:
         # shoreline dataframe back to array
-        shorelineArr = [np.array(line.coords) for line in shoreline.geometry]
+        shorelineList = [np.array(line.coords) for line in shoreline.geometry]
+        shorelineArrList = [coord for line in shorelineList for coord in line]
+        shorelineArr = np.array(shorelineArrList)
         sl_pix = Toolbox.convert_world2pix(shorelineArr, georef)
     else: 
         sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
