@@ -45,7 +45,7 @@ ee.Initialize()
 
 #%%
 
-def SatGIF(metadata,settings):
+def SatGIF(metadata,settings,output):
     """
     Create animated GIF of sat images and their extracted shorelines.
     
@@ -78,12 +78,14 @@ def SatGIF(metadata,settings):
     ims_ms = []
     ims_date = []
     
+    
     # Loop through satellite list
     for satname in metadata.keys():
 
         # Get image metadata
         filenames = metadata[satname]['filenames']
         filedates = metadata[satname]['dates']
+        
         
         # loop through the images
         for i in range(len(filenames)):
@@ -112,8 +114,17 @@ def SatGIF(metadata,settings):
             ims_ms.append(im_RGB)
             ims_date.append(filedates[i])
             
+    shorelineArr = output['shorelines']
+    sl_date = output['dates']
+    
+    # shoreline dataframe back to array
+    #shorelineArr = Toolbox.GStoArr(shoreline)
+    sl_pix=[]
+    for line in shorelineArr:
+        sl_pix.append(Toolbox.convert_world2pix(shorelineArr, georef))
+    
     # Sort image arrays and dates by date
-    ims_date_sort, ims_ms_sort = (list(t) for t in zip(*sorted(zip(ims_date, ims_ms))))
+    ims_date_sort, ims_ms_sort = (list(t) for t in zip(*sorted(zip(ims_date, ims_ms), key=lambda x: x[0])))
     
     # Set up figure for plotting
     fig, ax = plt.subplots(figsize=(15, 15))
@@ -127,7 +138,6 @@ def SatGIF(metadata,settings):
     anim = FuncAnimation(fig=fig, func=animate, frames=len(ims_ms), interval=1, repeat=False)
     # Save as GIF; fps controls the speed of refresh
     anim.save(os.path.join(filepath_jpg, sitename + '_AnimatedImages.gif'),fps=3)
-
 
 
 def CoastPlot(settings, sitename):

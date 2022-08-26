@@ -294,5 +294,5 @@ output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%%
 
-Plotting.SatGIF(metadata,settings)
+Plotting.SatGIF(metadata,settings,output)
 
