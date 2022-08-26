@@ -1168,7 +1168,7 @@ def AOI(lonmin, lonmax, latmin, latmax):
         oldlonmax = lonmax
         lonmin = oldlonmax
         lonmax = oldlonmin
-    
+    # Create bounding box and convert it to a geodataframe
     BBox = Polygon([[lonmin, latmin],
                     [lonmax,latmin],
                     [lonmax,latmax],
@@ -1177,10 +1177,10 @@ def AOI(lonmin, lonmax, latmin, latmax):
     # UK conversion only
     BBoxGDF = BBoxGDF.to_crs('epsg:27700')
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
-    if (BBoxGDF.area/(10*10))>262144:
+    if (int(BBoxGDF.area)/(10*10))>262144:
         print('Your bounding box is too big for Sentinel2 (%s too big)' % int((BBoxGDF.area/(10*10))-262144))
     
-        
+    # Export as polygon and ee point for use in clipping satellite image requests
     polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
     point = ee.Geometry.Point(polygon[0][0]) 
     
