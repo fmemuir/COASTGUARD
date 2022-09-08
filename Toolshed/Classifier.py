@@ -646,7 +646,7 @@ def load_labels(train_sites, settings):
     filepath_train = settings['filepath_train']
     # initialize the features dict
     features = dict([])
-    n_features = 20 # number of features corresponds to different bands and indices
+    n_features = 16 # number of features corresponds to different bands and indices
     first_row = np.nan*np.ones((1,n_features))
     for key in settings['labels'].keys():
         features[key] = first_row

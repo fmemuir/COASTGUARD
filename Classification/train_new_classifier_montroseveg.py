@@ -252,7 +252,7 @@ for key in features.keys():
 # subsample randomly the land and water classes
 # as the most important class is 'sand', the number of samples should be close to the number of sand pixels
 n_samples = 5000
-for key in ['water', 'other land features']:
+for key in ['veg', 'nonveg']:
     features[key] =  features[key][np.random.choice(features[key].shape[0], n_samples, replace=False),:]
 # print classes again
 for key in features.keys():
@@ -314,17 +314,13 @@ SDS_classify.plot_confusion_matrix(y_test, y_pred,
 # train with all the data and save the final classifier
 classifier = MLPClassifier(hidden_layer_sizes=(100,50), solver='adam')
 classifier.fit(X,y)
-joblib.dump(classifier, os.path.join(filepath_models, 'NN_4classes_Landsat_test.pkl'))
+joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
 
 
-# ### 4. Evaluate the classifier
-# 
+#%%4. Evaluate the classifier
 # Load a classifier that you have trained (specify the classifiers filename) and evaluate it on the satellite images.
 # 
 # This section will save the output of the classification for each site in a directory named \evaluation.
-
-#%%
-
 
 # load and evaluate a classifier
 get_ipython().run_line_magic('matplotlib', 'qt')
