@@ -78,16 +78,17 @@ def extract_veglines(metadata, settings, polygon, dates):
         
         if satname in ['L5','L7','L8']:
             pixel_size = 15
-            clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
-
+            #clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
+            clf = joblib.load(os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
         elif satname == 'S2':
             pixel_size = 10
-            clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
-        
+            #clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
+            clf = joblib.load(os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
         else:
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
-            clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
-
+            #clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
+            clf = joblib.load(os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
+            
         # convert settings['min_beach_area'] and settings['buffer_size'] from metres to pixels
         buffer_size_pixels = np.ceil(settings['buffer_size']/pixel_size)
         min_beach_area_pixels = np.ceil(settings['min_beach_area']/pixel_size**2)
@@ -132,7 +133,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 im_ref_buffer = BufferShoreline(settings,output_shorelineArr,georef,pixel_size,cloud_mask)
             # im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
             
-            # classify image in 4 classes (sand, whitewater, water, other) with NN classifier
+            # classify image with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask,
                                     min_beach_area_pixels, clf)
             
@@ -154,14 +155,14 @@ def extract_veglines(metadata, settings, polygon, dates):
                 if sum(sum(im_labels[:,:,0])) < 10 : # minimum number of sand pixels
                         # compute NDVI image (NIR-R)
                         im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-                        # find water contours on NDVI grayscale image
+                        # find contours on NDVI grayscale image
                         contours_nvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
                         
                 else:
-                    # use classification to refine threshold and extract the sand/water interface
+                    # use classification to refine threshold and extract the veg/nonveg interface
                     contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
                     
-                # process the water contours into a shoreline
+                # process the contours into a shoreline
                 shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
                 # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
 
@@ -383,15 +384,11 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
 
 def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
-    Classifies every pixel in the image in one of 4 classes:
-        - sand                                          --> label = 1
-        - whitewater (breaking waves and swash)         --> label = 2
-        - water                                         --> label = 3
-        - other (vegetation, buildings, rocks...)       --> label = 0
+    Classifies every pixel in the image into classes.
 
     The classifier is a Neural Network that is already trained.
 
-    KV WRL 2018
+    FM Aug 2022
 
     Arguments:
     -----------
@@ -426,32 +423,35 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     vec_mask = np.logical_or(vec_cloud, vec_nan)
     vec_features = vec_features[~vec_mask, :]
 
-    # # Luke: classify pixels
-    vec_features_new = []
+    # # # Luke: classify pixels
+    # vec_features_new = []
     
-    for h in range(len(vec_features)):
-        if len(vec_features) == 20:
-            vec_features_new.append(vec_features[h][1::2])
-        else:
-            #vec_features_new.append(np.concatenate((vec_features[h][1::2], vec_features[h][11:])))
-            vec_features_new.append(vec_features[h][1:11])
+    # for h in range(len(vec_features)):
+    #     if len(vec_features) == 20:
+    #         vec_features_new.append(vec_features[h][1::2])
+    #     else:
+    #         #vec_features_new.append(np.concatenate((vec_features[h][1::2], vec_features[h][11:])))
+    #         vec_features_new.append(vec_features[h][1:11])
     
-    labels = clf[0].predict(vec_features_new)
-
+    #labels = clf[0].predict(vec_features_new) # old classifier was subscriptable
+    labels = clf.predict(vec_features)
+    
     # recompose image
     vec_classif = np.nan*np.ones((cloud_mask.shape[0]*cloud_mask.shape[1]))
     vec_classif[~vec_mask] = labels
     im_classif = vec_classif.reshape((cloud_mask.shape[0], cloud_mask.shape[1]))
     # create a stack of boolean images for each label
-    im_sand = im_classif == 2
-    im_veg = im_classif == 3
-    im_water = im_classif == 1
-    im_urb = im_classif == 4
+    im_veg = im_classif == 1
+    im_nonveg = im_classif == 2
+    # im_sand = im_classif == 2
+    # im_veg = im_classif == 3
+    # im_water = im_classif == 1
+    # im_urb = im_classif == 4
     # remove small patches of sand or water that could be around the image (usually noise)
-    im_sand = morphology.remove_small_objects(im_sand, min_size=min_beach_area, connectivity=2)
-    im_water = morphology.remove_small_objects(im_water, min_size=min_beach_area, connectivity=2)
+    im_veg = morphology.remove_small_objects(im_veg, min_size=min_beach_area, connectivity=2)
+    im_nonveg = morphology.remove_small_objects(im_nonveg, min_size=min_beach_area, connectivity=2)
     
-    im_labels = np.stack((im_sand,im_veg,im_water,im_urb), axis=-1)
+    im_labels = np.stack((im_veg,im_nonveg), axis=-1)
 
     return im_classif, im_labels
 
@@ -1105,9 +1105,10 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
 
     # get NDVI pixel intensity in each class (for histogram plot)
     int_sand = im_ndvi[im_labels[:,:,0]]
-    int_ww = im_ndvi[im_labels[:,:,1]]
-    int_water = im_ndvi[im_labels[:,:,2]]
-    labels_other = np.logical_and(np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]),~im_labels[:,:,2])
+    int_veg = im_ndvi[im_labels[:,:,1]]
+    # int_water = im_ndvi[im_labels[:,:,2]]
+    # labels_other = np.logical_and(np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]),~im_labels[:,:,2])
+    labels_other = np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]) # for only veg/nonveg
     int_other = im_ndvi[labels_other]
     
     # create figure
@@ -1176,12 +1177,12 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     if len(int_sand) > 0 and sum(~np.isnan(int_sand)) > 0:
         bins = np.arange(np.nanmin(int_sand), np.nanmax(int_sand) + binwidth, binwidth)
         ax4.hist(int_sand, bins=bins, density=True, color=colours[0,:], label='Non-Vegetation')
-    if len(int_ww) > 0 and sum(~np.isnan(int_ww)) > 0:
-        bins = np.arange(np.nanmin(int_ww), np.nanmax(int_ww) + binwidth, binwidth)
-        ax4.hist(int_ww, bins=bins, density=True, color=colours[1,:], label='Vegetation', alpha=0.75) 
-    if len(int_water) > 0 and sum(~np.isnan(int_water)) > 0:
-        bins = np.arange(np.nanmin(int_water), np.nanmax(int_water) + binwidth, binwidth)
-        ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
+    if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
+        bins = np.arange(np.nanmin(int_veg), np.nanmax(int_veg) + binwidth, binwidth)
+        ax4.hist(int_veg, bins=bins, density=True, color=colours[1,:], label='Vegetation', alpha=0.75) 
+    # if len(int_water) > 0 and sum(~np.isnan(int_water)) > 0:
+    #     bins = np.arange(np.nanmin(int_water), np.nanmax(int_water) + binwidth, binwidth)
+    #     ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
     if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
         bins = np.arange(np.nanmin(int_other), np.nanmax(int_other) + binwidth, binwidth)
         ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
@@ -1367,8 +1368,9 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
         elif satname == 'S2':
             pixel_size = 10
             
-        clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
-
+        #clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0] # old veg classifier
+        clf = joblib.load(os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
+        
         # convert settings['min_beach_area'] and settings['buffer_size'] from metres to pixels
         buffer_size_pixels = np.ceil(settings['buffer_size']/pixel_size)
         min_beach_area_pixels = np.ceil(settings['min_beach_area']/pixel_size**2)
