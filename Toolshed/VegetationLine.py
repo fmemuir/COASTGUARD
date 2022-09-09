@@ -546,9 +546,9 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer,s
     
     # reshape labels into vectors
     vec_sand = im_labels[:,:,0].reshape(ncols*nrows)
-    vec_water = im_labels[:,:,2].reshape(ncols*nrows)
     vec_veg = im_labels[:,:,1].reshape(ncols*nrows)
-    vec_urb = im_labels[:,:,3].reshape(ncols*nrows)
+    #vec_water = im_labels[:,:,2].reshape(ncols*nrows)
+    #vec_urb = im_labels[:,:,3].reshape(ncols*nrows)
 
     # create a buffer around the sandy beach
     se = morphology.disk(buffer_size)
@@ -556,18 +556,18 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer,s
     vec_buffer = im_buffer.reshape(nrows*ncols)
 
     # select water/sand/swash pixels that are within the buffer
-    int_veg = vec_ind[np.logical_and(vec_buffer,vec_veg),:]
-    int_sand = vec_ind[np.logical_and(vec_buffer,vec_sand),:]
+    int_nonveg = vec_ind[np.logical_and(vec_buffer,vec_veg),:]
+    int_veg = vec_ind[np.logical_and(vec_buffer,vec_sand),:]
 
     # make sure both classes have the same number of pixels before thresholding
-    if len(int_veg) > 0 and len(int_sand) > 0:
-        if np.argmin([int_sand.shape[0],int_veg.shape[0]]) == 1:
-            int_sand = int_sand[np.random.choice(int_sand.shape[0],int_veg.shape[0], replace=False),:]
+    if len(int_nonveg) > 0 and len(int_veg) > 0:
+        if np.argmin([int_veg.shape[0],int_nonveg.shape[0]]) == 1:
+            int_veg = int_veg[np.random.choice(int_veg.shape[0],int_nonveg.shape[0], replace=False),:]
         else:
-            int_veg = int_veg[np.random.choice(int_veg.shape[0],int_sand.shape[0], replace=False),:]
+            int_nonveg = int_nonveg[np.random.choice(int_nonveg.shape[0],int_veg.shape[0], replace=False),:]
 
     # threshold the sand/water intensities
-    int_all = np.append(int_veg,int_sand, axis=0)
+    int_all = np.append(int_nonveg,int_veg, axis=0)
     t_nvi = filters.threshold_otsu(int_all[:,0])
     if satname=='S2':
         t_nvi+=0.09
@@ -992,11 +992,11 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     ax2.imshow(im_class)
     ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
     ax2.axis('off')
-    orange_patch = mpatches.Patch(color=colours[0,:], label='Non-Vegetation')
+    purple_patch = mpatches.Patch(color=colours[0,:], label='Non-Vegetation')
     green_patch = mpatches.Patch(color=colours[1,:], label='Vegetation')
     #blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
     black_line = mlines.Line2D([],[],color='#EAC435',linestyle='-', label='Vegetation Line')
-    ax2.legend(handles=[orange_patch,green_patch, black_line],
+    ax2.legend(handles=[purple_patch,green_patch, black_line],
                bbox_to_anchor=(1, 0.5), fontsize=10)
     ax2.set_title(date, fontweight='bold', fontsize=16)
 
@@ -1087,8 +1087,8 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # colours[1,:] = colorpalette[8]
     # colours[2,:] = colorpalette[0]
     # colours[3,:] = colorpalette[16]
-    colours[0,:] = colorpalette[14]  # non-veg
-    colours[1,:] = colorpalette[9]  # veg
+    colours[0,:] = colorpalette[9]  # veg
+    colours[1,:] = colorpalette[14]  # non-veg
     colours[2,:] = colorpalette[0] # water
     colours[3,:] = colorpalette[16] # other
     for k in range(0,im_labels.shape[2]):
@@ -1104,8 +1104,8 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     im_ndvi_buffer[~im_ref_buffer] = np.nan
 
     # get NDVI pixel intensity in each class (for histogram plot)
-    int_sand = im_ndvi[im_labels[:,:,0]]
-    int_veg = im_ndvi[im_labels[:,:,1]]
+    int_veg = im_ndvi[im_labels[:,:,0]]
+    int_nonveg = im_ndvi[im_labels[:,:,1]]
     # int_water = im_ndvi[im_labels[:,:,2]]
     # labels_other = np.logical_and(np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]),~im_labels[:,:,2])
     labels_other = np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]) # for only veg/nonveg
@@ -1152,11 +1152,11 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # plot image 2 (classification)
     ax2.imshow(im_class)
     ax2.axis('off')
-    orange_patch = mpatches.Patch(color=colours[0,:], label='Non-Vegetation')
-    green_patch = mpatches.Patch(color=colours[1,:], label='Vegetation')
+    purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
+    green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
     # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
     black_line = mlines.Line2D([],[],color='#EAC435',linestyle='-', label='Vegetation Line')
-    ax2.legend(handles=[orange_patch,green_patch, black_line],
+    ax2.legend(handles=[purple_patch,green_patch, black_line],
                bbox_to_anchor=(1.1, 0.5), fontsize=10)
     ax2.set_title(date_str, fontsize=12)
 
@@ -1174,12 +1174,12 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     ax4.set_facecolor('0.75')
     ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
     ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])
-    if len(int_sand) > 0 and sum(~np.isnan(int_sand)) > 0:
-        bins = np.arange(np.nanmin(int_sand), np.nanmax(int_sand) + binwidth, binwidth)
-        ax4.hist(int_sand, bins=bins, density=True, color=colours[0,:], label='Non-Vegetation')
     if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
         bins = np.arange(np.nanmin(int_veg), np.nanmax(int_veg) + binwidth, binwidth)
-        ax4.hist(int_veg, bins=bins, density=True, color=colours[1,:], label='Vegetation', alpha=0.75) 
+        ax4.hist(int_veg, bins=bins, density=True, color=colours[0,:], label='Vegetation')
+    if len(int_nonveg) > 0 and sum(~np.isnan(int_nonveg)) > 0:
+        bins = np.arange(np.nanmin(int_nonveg), np.nanmax(int_nonveg) + binwidth, binwidth)
+        ax4.hist(int_nonveg, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
     # if len(int_water) > 0 and sum(~np.isnan(int_water)) > 0:
     #     bins = np.arange(np.nanmin(int_water), np.nanmax(int_water) + binwidth, binwidth)
     #     ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
