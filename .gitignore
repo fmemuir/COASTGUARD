@@ -724,16 +724,7 @@ Data/ML_Test6/ML_Test6_output_latlon.pkl
 Data/ML_Test6/ML_Test6_output.pkl
 Data/ML_Test6/ML_Test6_transect_latlon.pkl
 Data/ML_Test6/ML_Test6_metadata.pkl
-Data/ML_Test6/jpg_files/transectsFull.png
-Data/ML_Test6/jpg_files/refEdge_Transects.png
-Data/ML_Test6/jpg_files/monthViolin.png
-Data/ML_Test6/jpg_files/monthScatter.png
-Data/ML_Test6/jpg_files/monthBox.png
-Data/ML_Test6/jpg_files/crossEdgeDistances.png
-Data/ML_Test6/jpg_files/avgYearlyVegPosition.png
-Data/ML_Test6/jpg_files/avgMonthlyVegPosition4.png
-Data/ML_Test6/jpg_files/avgMonthlyVegPosition3.png
-Data/ML_Test6/jpg_files/avgMonthlyVegPosition.png
+
 CoastWatch.ipynb
 .ipynb_checkpoints/CoastWatch-checkpoint.ipynb
 Data/
