@@ -551,10 +551,6 @@ def CoastPlot(settings, sitename):
     plt.savefig('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegSat_StAndrews_OtsuThresholdsViolin.png')
     plt.show()
     
-    #%% Validation MSE
-    
-          
-    
     
     #%%Plotting - Vegetation Edge
     
@@ -1063,6 +1059,12 @@ def CoastPlot(settings, sitename):
     fig.savefig(os.path.join('Data/' + sitename + '/jpg_files/barBreakdown.jpg'), dpi=150)
     plt.show()
     
+#%%
+# Plot transects with transition zone of veg to compare harsh vs dissipative boundaries
+
+
+
+
 #%%
 
 """
