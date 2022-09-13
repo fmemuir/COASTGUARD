@@ -126,16 +126,23 @@ def extract_veglines(metadata, settings, polygon, dates):
                 continue
 
             # calculate a buffer around the reference shoreline
+            im_ref_buffer_og = BufferShoreline(settings,settings['reference_shoreline'],georef,pixel_size,cloud_mask)
             if i == 0: # if the first image in a sat set, use the ref shoreline
-                im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,pixel_size,cloud_mask)
-            else: # otherwise use the most recent shoreline found, so buffer updates through time
-                output_shorelineArr = Toolbox.GStoArr(output_shoreline[-1])
-                im_ref_buffer = BufferShoreline(settings,output_shorelineArr,georef,pixel_size,cloud_mask)
-            # im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
+                im_ref_buffer = im_ref_buffer_og
+            else:
+                im_ref_buffer = im_ref_buffer_og
+            # otherwise use the most recent shoreline found, so buffer updates through time
+            # TO DO: figure out way to update refline ONLY if no gaps in previous line exist (length-based? based on number of coords?)
+            # elif output_shoreline[-1].length < im_ref_buffer_og: 
+            #     output_shorelineArr = Toolbox.GStoArr(output_shoreline[-1])
+            #     im_ref_buffer = BufferShoreline(settings,output_shorelineArr,georef,pixel_size,cloud_mask)
+            # # im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
             
             # classify image with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask,
                                     min_beach_area_pixels, clf)
+            # save classified image after classification takes place
+            Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
             
             # if adjust_detection is True, let the user adjust the detected shoreline
             if settings['adjust_detection']:
@@ -675,17 +682,12 @@ def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
         Array with same dimensions as sat image, with True where buffered reference shoreline exists.
 
     """
-    coords = []
-    # refline = settings['reference_shoreline']
-    ref_sl = refline[:,:2]
-    ref_sl_pix = Toolbox.convert_world2pix(ref_sl, georef)
-    ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
+    if type(refline) == np.ndarray:
+        refGS = Toolbox.ArrtoGS(refline, georef)
+    else: # if refline is read in as shapefile
+        refGS = gpd.GeoSeries(refline['geometry'])
     
-    for i in range(len(ref_sl_pix_rounded)):
-        coords.append((ref_sl_pix_rounded[i][0],ref_sl_pix_rounded[i][1]))
-    refLS = LineString(coords)
-    
-    refLSBuffer = gpd.GeoSeries(refLS).buffer(settings['max_dist_ref']/pixel_size)
+    refLSBuffer = refGS.buffer(settings['max_dist_ref']/pixel_size)
     refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
     im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
     # convert to bool

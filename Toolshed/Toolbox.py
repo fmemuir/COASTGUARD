@@ -1204,3 +1204,23 @@ def GStoArr(shoreline):
     shorelineArrList = [coord for line in shorelineList for coord in line]
     shorelineArr = np.array(shorelineArrList)
     return shorelineArr
+
+def ArrtoGS(refline,georef):
+    """
+    
+    FM Sept 2022
+
+
+    """
+    coords = []
+    ref_sl = refline[:,:2]
+    ref_sl_pix = convert_world2pix(ref_sl, georef)
+    
+    ref_sl_pix_rounded = np.round(ref_sl_pix).astype(int)
+    
+    for i in range(len(ref_sl_pix_rounded)):
+        coords.append((ref_sl_pix_rounded[i][0],ref_sl_pix_rounded[i][1]))
+    refLS = LineString(coords)
+    refGS = gpd.GeoSeries(refLS)
+    
+    return refGS
