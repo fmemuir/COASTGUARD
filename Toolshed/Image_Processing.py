@@ -488,7 +488,59 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
                 transform=transform,
             ) as tif:
                 tif.write(imarray_brc,1)
+  
+def save_ClassIm(im_ms, cloud_mask, georef, filenames, settings):
+    '''
+    Saves local georeferenced version of the classified image to be investigated in a GIS.
+    FM Sept 2022
+    Arguments:
+    --------
+    im_ms:
+        multispectral image array
+    cloud_mask:
+        cloud mask created from defined nodata pixels
     
+    '''
+    print(' \nsaving '+filenames)
+    im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask) # NIR and red bands
+    try: # some sentinel images with 0 axis don't get caught before this
+        im_RGB = rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+    except:
+        im_RGB = im_ms[:,:,:3]
+    # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+    tifname = filenames.rsplit('/',1)[1] # get characters after last /
+    transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
+    
+    # 3-band RGB array and 1-band NDVI
+    for imarray, imtype, bandno in zip([im_RGB, im_NDVI],['RGB.tif', 'NDVI.tif'],[3,1]):
+        if bandno > 1:
+            imarray_brc = np.moveaxis(imarray,2,0) # rasterio expects shape of (bands, rows, cols)
+            with rasterio.open(
+                os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype),
+                'w',
+                driver='GTiff',
+                height=imarray_brc.shape[1],
+                width=imarray_brc.shape[2],
+                count=bandno,
+                dtype=imarray_brc.dtype,
+                crs='EPSG:'+str(settings['output_epsg']),
+                transform=transform,
+            ) as tif:
+                tif.write(imarray_brc)
+        else:
+            imarray_brc = imarray
+            with rasterio.open(
+                os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype),
+                'w',
+                driver='GTiff',
+                height=imarray_brc.shape[0],
+                width=imarray_brc.shape[1],
+                count=bandno,
+                dtype=imarray_brc.dtype,
+                crs='EPSG:'+str(settings['output_epsg']),
+                transform=transform,
+            ) as tif:
+                tif.write(imarray_brc,1)
 
 def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """
