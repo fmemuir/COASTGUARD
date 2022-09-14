@@ -170,8 +170,8 @@ def extract_veglines(metadata, settings, polygon, dates):
                     contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
                     
                 # process the contours into a shoreline
+                # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)   
                 shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
-                # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
 
                 if settings['check_detection'] or settings['save_figure']:
                     date = metadata[satname]['dates'][i]
@@ -662,7 +662,6 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
 def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
     """
     Buffer reference line and utilise geopandas to generate boolean mask of where shoreline swath is.
-    More efficient and tuned to geospatial data than previous method of im_buffer generation.
     FM 2022
 
     Parameters
@@ -732,7 +731,8 @@ def ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings):
     """
     Converts contours from image coordinates to world coordinates and cleans them
     based on distance to clouds and threshold length. Improvements to the
-    coordinate array conversion also made by incorporating geopandas. 
+    coordinate array conversion also made by incorporating geopandas; instead of dealing
+    with broken shorelines as one long array of coords, multiline features are preserved. 
 
     FM Aug 2022
 
@@ -773,11 +773,26 @@ def ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings):
         coords_cloud = Toolbox.convert_epsg(Toolbox.convert_pix2world(idx_cloud, georef),
                                                image_epsg, settings['output_epsg'])[:,:-1]
         # only keep the shoreline points that are at least 30m from any cloud pixel
-        idx_keep = np.ones(len(contours_world)).astype(bool)
-        for k in range(len(contours_world)):
-            if np.any(np.linalg.norm(contours_world[k,:] - coords_cloud, axis=1) < 30):
-                idx_keep[k] = False
-        contours_world = contours_world[idx_keep]
+        if type(contours_world) == list: # for multilines; extra nested loop
+            idx_keep = [] # initialise indexes of coords to keep
+            for j in range(len(contours_world)):  # for every line feature
+                idx_keep.append(np.ones(len(contours_world[j][:])).astype(bool)) # length should be number of coord pairs
+                for k in range(len(contours_world[j])): # for every coord pair in each line feature
+                    if np.any(np.linalg.norm(contours_world[j][k] - coords_cloud, axis=1) < 30):
+                        idx_keep[j][k] = False
+            contours_world_list = [] # initialise contour list
+            for i in range(len(contours_world)): # for each multiline feature
+                contour_world = contours_world[i]
+                # only keep coords away from clouds in each line feature
+                contours_world_list.append(contour_world[idx_keep[i]])  
+            contour_world = contours_world_list    
+        elif type(contours_world) == np.ndarray:
+            # only keep the shoreline points that are at least 30m from any cloud pixel
+            idx_keep = np.ones(len(contours_world)).astype(bool)
+            for k in range(len(contours_world)): # for every coord pair in the one line feature
+                if np.any(np.linalg.norm(contours_world[k,:] - coords_cloud, axis=1) < 30):
+                    idx_keep[k] = False
+            contours_world = contours_world[idx_keep]
     
     # world coordinates array to geoseries
     contoursGS = gpd.GeoSeries(map(LineString,contours_world),crs=image_epsg)
