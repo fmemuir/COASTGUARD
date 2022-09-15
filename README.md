@@ -64,13 +64,22 @@ There are 7 main steps to setting up the vegetation extraction tool. You can see
 1. Import relevant packages (including initialising the `earthengine` tools);
 2. Define an area of interest;
 3. Define image parameters (start and end date, satellites, CRS/projections, sitename);
-4. Retrieve and save image collection metadata[^1];
+4. Retrieve and save image collection metadata*;
 5. Set coastal boundary parameters (cloud cover threshold, plotting flags, minimum area for contouring);
 6. Define a reference shore along which to create a buffer (boundaries will only be extracted along here);
 7. Run the main edge extraction function.
 
-[^1]: This is an update from the original CoastSat toolkit! Raw satellite images will **not** be downloaded, but merely the filenames will be passed to `geemap` and converted from the cloud server straight to `numpy` arrays. This is to save time and bandwidth. TIFs of true colour images and their classified and NDVI counterparts will however be exported throughout the process to be explored in a GIS environment.
+You can use the `CL_DriverTemplate.ipynb` or `CL_DriverTemplate.py` files to create a driver file for your own site.
 
+*<sub>This is an update from the original CoastSat toolkit! Raw satellite images will **not** be downloaded, but merely the filenames will be passed to `geemap` and converted from the cloud server straight to `numpy` arrays. This is to save time and bandwidth. TIFs of true colour images and their classified and NDVI counterparts will however be exported throughout the process to be explored in a GIS environment.</sub>
+
+The tool takes all the input settings the user has defined, and performs these steps:
+
+1. Preprocess each image in the metadata collection (downsample or pansharpen, mask clouds, clean nodata);
+2. Create buffer around reference shoreline (or most recent shore extracted, useful for dynamic shores and image collections over a long period);
+3. Classify image using the pre-trained neural network; 
+4. Show/adjust detected boundary between image classes (depending on if user has requested to be shown the interactive plot window);
+5. Export boundaries and relevant info to a `.pkl` file.
 
 ## Support
 
