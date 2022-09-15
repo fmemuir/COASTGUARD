@@ -917,6 +917,103 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
 # PLOTTING FUNCTIONS
 ###################################################################################################
 
+def PlotDetection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
+                   settings, date, satname):
+    sitename = settings['inputs']['sitename']
+    filepath_data = settings['inputs']['filepath']
+    # format date
+    if satname != 'S2':
+        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
+    else:
+        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
+
+    im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+    # compute classified image
+    im_class = np.copy(im_RGB)
+    cmap = cm.get_cmap('tab20c')
+    colorpalette = cmap(np.arange(0,17,1))
+    colours = np.zeros((4,4))
+    colours[0,:] = colorpalette[9]  # veg
+    colours[1,:] = colorpalette[14]  # non-veg
+    # colours[2,:] = colorpalette[0] # water
+    # colours[3,:] = colorpalette[16] # other
+    for k in range(0,im_labels.shape[2]):
+        im_class[im_labels[:,:,k],0] = colours[k,0]
+        im_class[im_labels[:,:,k],1] = colours[k,1]
+        im_class[im_labels[:,:,k],2] = colours[k,2]
+        #im_class[im_labels[:,:,k],3] = colours[k,3]
+
+    # compute NDVI grayscale image
+    im_nvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    # buffer NDVI using reference shoreline
+    im_ndvi_buffer = np.copy(im_ndvi)
+    im_ndvi_buffer[~im_ref_buffer] = np.nan
+
+    if plt.get_fignums():
+            # get open figure if it exists
+            fig = plt.gcf()
+            ax1 = fig.axes[0]
+            ax2 = fig.axes[1]
+            ax3 = fig.axes[2]
+    else:
+        # else create a new figure
+        fig = plt.figure()
+        fig.set_size_inches([18, 9])
+        mng = plt.get_current_fig_manager()
+        mng.window.showMaximized()
+
+        # according to the image shape, decide whether it is better to have the images
+        # in vertical subplots or horizontal subplots
+        if im_RGB.shape[1] > 2.5*im_RGB.shape[0]:
+            # vertical subplots
+            gs = gridspec.GridSpec(3, 1)
+            gs.update(bottom=0.03, top=0.97, left=0.03, right=0.97)
+            ax1 = fig.add_subplot(gs[0,0])
+            ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
+            ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
+        else:
+            # horizontal subplots
+            gs = gridspec.GridSpec(1, 3)
+            gs.update(bottom=0.05, top=0.95, left=0.05, right=0.95)
+            ax1 = fig.add_subplot(gs[0,0])
+            ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
+            ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
+
+    # change the color of nans to either black (0.0) or white (1.0) or somewhere in between
+    nan_color = 1.0
+    im_RGB = np.where(np.isnan(im_RGB), nan_color, im_RGB)
+    im_class = np.where(np.isnan(im_class), 1.0, im_class)
+
+    # create image 1 (RGB)
+    ax1.imshow(im_RGB)
+    im_ref_buffer_3d = np.repeat(im_ref_buffer[:,:,np.newaxis],3,axis=2)
+    im_RGB_masked = im_RGB * im_ref_buffer_3d
+    ax1.imshow(im_RGB_masked, alpha=0.3) # plot refline mask over top
+    
+    ax1.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
+    ax1.axis('off')
+    ax1.set_title(sitename, fontweight='bold', fontsize=16)
+
+    # create image 2 (classification)
+    ax2.imshow(im_class)
+    ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
+    ax2.axis('off')
+    purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
+    green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
+    # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
+    black_line = mlines.Line2D([],[],color='#EAC435',linestyle='-', label='Vegetation Line')
+    ax2.legend(handles=[purple_patch,green_patch, black_line],
+               bbox_to_anchor=(1.1, 0.5), fontsize=10)
+    ax2.set_title(date, fontweight='bold', fontsize=16)
+
+    # create image 3 (NDVI)
+    ndviplot = ax3.imshow(im_nvi, cmap='bwr')
+    ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
+    ax3.axis('off')
+    ax3.set_title(satname, fontweight='bold', fontsize=16)
+
+    return fig, ax1, ax2, ax3
+
 def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
                    settings, date, satname):
 
