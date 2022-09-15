@@ -2,7 +2,7 @@
 This module contains functions to analyze the 2D shorelines along shore-normal
 transects
     
-Author: Kilian Vos, Water Research Laboratory, University of New South Wales
+Martin Hurst, Freya Muir
 """
 
 # load modules
@@ -24,7 +24,8 @@ from pylab import ginput
 
 from Coast import *
 
-def produce_transects_all(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, BasePath):
+#%%
+def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, BasePath):
     
     for subdir, dirs, files in os.walk(BasePath):
         for direc in dirs:
@@ -70,7 +71,7 @@ def produce_transects_all(SmoothingWindowSize, NoSmooths, TransectSpacing, Dista
                     pickle.dump(CellCoast, PFile)
     return
 
-def produce_transects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, sitename, BasePath, RefShapePath):
+def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, sitename, BasePath, RefShapePath):
         
     FileSpec = RefShapePath
     ReprojSpec = BasePath + '/Baseline_Reproj.shp'

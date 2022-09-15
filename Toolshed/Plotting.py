@@ -185,7 +185,7 @@ def CoastPlot(settings, sitename):
         # Produces Transects for the reference line
         TransectSpec =  os.path.join(BasePath, 'Transect.shp')
         geo = gpd.read_file(TransectSpec)
-        Transects.produce_transects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['image_epsg'], sitename, BasePath, referenceLineShp)
+        Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['image_epsg'], sitename, BasePath, referenceLineShp)
         transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)
     
 
@@ -1078,10 +1078,10 @@ DistanceOffshore = 350
 BasePath = 'Data/' + sitename + '/Veglines'
 
 
-Transects.produce_transects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, image_epsg, sitename, BasePath, referenceLineShp)
+Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, image_epsg, sitename, BasePath, referenceLineShp)
 
 #(Optional) Produces transects for all produced lines
-#Transects.produce_transects_all(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, projection_epsg, BasePath)
+#Transects.ProduceTransects_all(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, projection_epsg, BasePath)
 
 
 #%% **Option 1**: Defines all transects in a library.
