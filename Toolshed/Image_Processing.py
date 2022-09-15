@@ -38,7 +38,7 @@ from pyproj import transform as Transf
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function to preprocess a satellite image (L5,L7,L8 or S2)
-def preprocess_single(fn, filenames, satname, settings, polygon, dates):
+def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs):
     
     cloud_mask_issue = settings['cloud_mask_issue']
     
@@ -426,7 +426,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         # no extra local image
         im_extra = []
         
-    if os.getcwd() == '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main':
+    if savetifs == True:
         save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
     
     return im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata

@@ -83,6 +83,7 @@ def SatGIF(metadata,settings,output):
     for satname in metadata.keys():
 
         # Get image metadata
+        ## need to fix: get this from output not metadata as some images get skipped by user
         filenames = metadata[satname]['filenames']
         filedates = metadata[satname]['dates']
         
@@ -94,7 +95,7 @@ def SatGIF(metadata,settings,output):
             
             # preprocess image to array (cloud mask + pansharpening/downsampling)
             fn = int(i)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
 
             if im_ms is None:
                 continue

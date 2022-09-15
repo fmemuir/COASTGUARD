@@ -100,7 +100,7 @@ def extract_veglines(metadata, settings, polygon, dates):
 
             # preprocess image (cloud mask + pansharpening/downsampling)
             fn = int(i)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=True)
 
             if im_ms is None:
                 continue
