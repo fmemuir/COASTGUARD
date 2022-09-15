@@ -922,6 +922,11 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
 
     sitename = settings['inputs']['sitename']
     filepath_data = settings['inputs']['filepath']
+    # format date
+    if satname != 'S2':
+        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
+    else:
+        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
 
     im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
     # compute classified image
@@ -929,14 +934,10 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     cmap = cm.get_cmap('tab20c')
     colorpalette = cmap(np.arange(0,17,1))
     colours = np.zeros((4,4))
-    # colours[0,:] = colorpalette[5]
-    # colours[1,:] = np.array([204/255,1,1,1])
-    # colours[2,:] = np.array([0,91/255,1,1])
-    # colours[3,:] = np.array([0,0.5,0.2,1])
-    colours[0,:] = colorpalette[14]  # non-veg
-    colours[1,:] = colorpalette[9]  # veg
-    colours[2,:] = colorpalette[0] # water
-    colours[3,:] = colorpalette[16] # other
+    colours[0,:] = colorpalette[9]  # veg
+    colours[1,:] = colorpalette[14]  # non-veg
+    # colours[2,:] = colorpalette[0] # water
+    # colours[3,:] = colorpalette[16] # other
     for k in range(0,im_labels.shape[2]):
         im_class[im_labels[:,:,k],0] = colours[k,0]
         im_class[im_labels[:,:,k],1] = colours[k,1]
@@ -1009,12 +1010,12 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     ax2.imshow(im_class)
     ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
     ax2.axis('off')
-    purple_patch = mpatches.Patch(color=colours[0,:], label='Non-Vegetation')
-    green_patch = mpatches.Patch(color=colours[1,:], label='Vegetation')
-    #blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
+    purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
+    green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
+    # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
     black_line = mlines.Line2D([],[],color='#EAC435',linestyle='-', label='Vegetation Line')
     ax2.legend(handles=[purple_patch,green_patch, black_line],
-               bbox_to_anchor=(1, 0.5), fontsize=10)
+               bbox_to_anchor=(1.1, 0.5), fontsize=10)
     ax2.set_title(date, fontweight='bold', fontsize=16)
 
     # create image 3 (NDVI)
@@ -1093,21 +1094,17 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
     else:
         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
+    
     im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-
     # compute classified image
     im_class = np.copy(im_RGB)
     cmap = cm.get_cmap('tab20c')
     colorpalette = cmap(np.arange(0,17,1))
     colours = np.zeros((4,4))
-    # colours[0,:] = colorpalette[4]
-    # colours[1,:] = colorpalette[8]
-    # colours[2,:] = colorpalette[0]
-    # colours[3,:] = colorpalette[16]
     colours[0,:] = colorpalette[9]  # veg
     colours[1,:] = colorpalette[14]  # non-veg
-    colours[2,:] = colorpalette[0] # water
-    colours[3,:] = colorpalette[16] # other
+    # colours[2,:] = colorpalette[0] # water
+    # colours[3,:] = colorpalette[16] # other
     for k in range(0,im_labels.shape[2]):
         im_class[im_labels[:,:,k],0] = colours[k,0]
         im_class[im_labels[:,:,k],1] = colours[k,1]
@@ -1148,9 +1145,6 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
         ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
         ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
         ax4 = fig.add_subplot(gs[1,:])
-    ##########################################################################
-    # to do: rotate image if too wide
-    ##########################################################################
 
     # change the color of nans to either black (0.0) or white (1.0) or somewhere in between
     nan_color = 1.0
