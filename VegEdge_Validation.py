@@ -80,12 +80,10 @@ latmin, latmax = 56.32641, 56.39814
 #latmin, latmax = 52.027039, 52.037448
 
 polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
-
-#%% Image Settings
-
-
 # it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
+
+#%% Image Settings
 
 # directory where the data will be stored
 filepath = os.path.join(os.getcwd(), 'Data')
