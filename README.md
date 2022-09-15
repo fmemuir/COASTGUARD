@@ -6,8 +6,6 @@ CoastLearn is a Python toolkit for coastal monitoring and modelling using machin
 
 ## Usage
 
-## Examples
-
 ## Installation
 
 ### 1.1 Download the code
@@ -60,6 +58,20 @@ A web browser will open; log in with the GMail account you used to sign up to GE
 
 **Remember!**: Always run `conda activate coastlearn` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing. 
 
+## Run-through Example
+There are 7 main steps to setting up the vegetation extraction tool. You can see [this paper]() for a flowchart and more info on the methodology. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
+
+1. Import relevant packages (including initialising the `earthengine` tools);
+2. Define an area of interest;
+3. Define image parameters (start and end date, satellites, CRS/projections, sitename);
+4. Retrieve and save image collection metadata[^1];
+5. Set coastal boundary parameters (cloud cover threshold, plotting flags, minimum area for contouring);
+6. Define a reference shore along which to create a buffer (boundaries will only be extracted along here);
+7. Run the main edge extraction function.
+
+[^1]: This is an update from the original CoastSat toolkit! Raw satellite images will **not** be downloaded, but merely the filenames will be passed to `geemap` and converted from the cloud server straight to `numpy` arrays. This is to save time and bandwidth. TIFs of true colour images and their classified and NDVI counterparts will however be exported throughout the process to be explored in a GIS environment.
+
+
 ## Support
 
 ## Roadmap
@@ -68,4 +80,4 @@ A web browser will open; log in with the GMail account you used to sign up to GE
 We are in testing phase and not currently taking contributions, but please [reach out to Freya](mailto:f.muir.1@research.gla.ac.uk) with suggestions!
 
 ## Authors and acknowledgements
-This tool is heavily based on work by Kilian Vos at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir and Martin Hurst, and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger. Please see these papers for more details:
+This tool is heavily based on work by Kilian Vos ([github: kvos](https://github.com/kvos)) at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir and Martin Hurst, and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger. Please see these papers for more information:
