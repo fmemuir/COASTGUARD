@@ -24,7 +24,7 @@ from pylab import ginput
 
 from Coast import *
 
-#%%
+
 def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, BasePath):
     
     for subdir, dirs, files in os.walk(BasePath):

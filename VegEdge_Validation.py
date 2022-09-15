@@ -6,7 +6,6 @@
 
 #%% Imports and Initialisation
 
-
 import os
 import numpy as np
 import pickle
@@ -15,36 +14,15 @@ warnings.filterwarnings("ignore")
 import matplotlib
 matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
 plt.ion()
-from datetime import datetime, timezone, timedelta
-from Toolshed import Download, Image_Processing, Shoreline, Toolbox, Transects, VegetationLine, Plotting
-import mpl_toolkits as mpl
-from mpl_toolkits.axes_grid1.inset_locator import zoomed_inset_axes, mark_inset
-from matplotlib.ticker import MaxNLocator
-import matplotlib.dates as mdates
-from sklearn.datasets import load_diabetes
-from sklearn.metrics import mean_squared_error, r2_score
+from datetime import datetime
+from Toolshed import Download, Toolbox, VegetationLine, Plotting
+
 import seaborn as sns; sns.set()
-import math
-import geemap
 import ee
-import pprint
-from shapely import geometry
-from shapely.geometry import Point, LineString
-import pandas as pd
 import geopandas as gpd
-import matplotlib.cm as cm
-import pyproj
-from IPython.display import clear_output
-import scipy
-from scipy import optimize
-import csv
-import math
 
 ee.Initialize()
-
-
 
 #%% Define AOI using coordinates of a rectangle
 
