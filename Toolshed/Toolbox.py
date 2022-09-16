@@ -1026,35 +1026,36 @@ def PlanetMetadata(sat_list, Sat, filepath_data, sitename):
         
     return metadata
 
-def save_shapefiles(output, geomtype, name_prefix, sitename):
+def SaveShapefiles(output, geomtype, name_prefix, sitename):
 
-    # FM: simplification of shapefile output
-    output_geom = gpd.GeoSeries(map(MultiPoint,output['shorelines']))
+    '''
+    FM Apr 2022
+    '''
     
-    outputGDF = gpd.GeoDataFrame(output, crs='EPSG:27700', geometry=output_geom)
+    # for shores stored as array of coords; export as mulitpoint
+    if type(output['shorelines'][0]) == np.ndarray:
+        # map to multipoint
+        output_geom = gpd.GeoSeries(map(MultiPoint,output['shorelines']))
+        # create geodataframe with geometry from output multipoints
+        outputGDF = gpd.GeoDataFrame(output, crs='EPSG:27700', geometry=output_geom)
+        # drop duplicate shorelines column
+        outputsGDF = outputGDF.drop('shorelines', axis=1)
+    else:    
+        DFlist = []
+        for i in range(len(output['shorelines'])): # for each image + associated metadata
+            # create geodataframe of individual features from each geoseries (i.e. feature collection)
+            outputGDF = gpd.GeoDataFrame(geometry=output['shorelines'][i])
+            for key in output.keys(): # for each column
+                # add column to geodataframe with repeated metadata
+                outputGDF[key] = output[key][i]
+            # add formatted geodataframe to list of all geodataframes
+            DFlist.append(outputGDF)
+            # concatenate to one GDF with individual lines exploded out
+            outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=DFlist[0].crs)
+            outputsGDF = outputsGDF.drop('shorelines', axis=1)
+            
+    outputsGDF.to_file(name_prefix + sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp')
     
-    outputGDF = outputGDF.drop('shorelines', axis=1)
-    
-    outputGDF.to_file(name_prefix + sitename + str(min(output['dates'])) + '_' + str(min(output['dates'])) + '_veglines.shp')
-    
-    
-    
-    # for i in range(len(output['shorelines'])):
-    #     filename = name_prefix + "/" + sitename + '_' + str(output['dates'][i])
-    
-    #     if len(output['shorelines'][i])==0:
-    #         continue
-        
-        # shore = dict([])
-        
-        # if output['dates'][i] == '3000-12-30':
-        #     filename = name_prefix + '/' + sitename + '_referenceLine'
-
-        # shore = {'dates':[output['dates'][i]], 'shorelines':[output['shorelines'][i]], 'filename':[output['filename'][i]], 'cloud_cover':[output['cloud_cover'][i]], 'idx':[output['idx'][i]], 'Otsu_threshold':[output['Otsu_threshold'][i]], 'satname':[output['satname'][i]]}
-
-        # gdf = output_to_gdf(shore, geomtype)
-    
-        # gdf.to_file(filename)
     
     return
 

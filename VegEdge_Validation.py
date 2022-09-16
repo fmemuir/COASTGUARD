@@ -182,7 +182,7 @@ with open(os.path.join(filepath, sitename, sitename + '_validation_metadata.pkl'
 
 #%% Vegetation Edge Settings
 
-BasePath = 'Data/' + sitename + '/Veglines'
+BasePath = 'Data/' + sitename + '/veglines'
 
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
@@ -268,15 +268,10 @@ output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Save the veglines as shapefiles locally
-direc = os.path.join(filepath, 'veglines')
-geomtype = 'lines'
-name_prefix = 'Data/' + sitename + '/veglines/'
 
-if os.path.isdir(direc) is False:
-    os.mkdir(direc)
 
 # Save output veglines 
-Toolbox.save_shapefiles(output_proj, name_prefix, sitename, settings['projection_epsg'])
+Toolbox.SaveShapefiles(output_proj, BasePath, sitename, settings['projection_epsg'])
 
 
 #%%
