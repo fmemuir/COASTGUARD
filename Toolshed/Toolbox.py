@@ -1026,7 +1026,7 @@ def PlanetMetadata(sat_list, Sat, filepath_data, sitename):
         
     return metadata
 
-def SaveShapefiles(output, geomtype, name_prefix, sitename):
+def SaveShapefiles(output, name_prefix, sitename, epsg):
 
     '''
     FM Apr 2022
@@ -1037,7 +1037,7 @@ def SaveShapefiles(output, geomtype, name_prefix, sitename):
         # map to multipoint
         output_geom = gpd.GeoSeries(map(MultiPoint,output['shorelines']))
         # create geodataframe with geometry from output multipoints
-        outputGDF = gpd.GeoDataFrame(output, crs='EPSG:27700', geometry=output_geom)
+        outputGDF = gpd.GeoDataFrame(output, crs='EPSG:'+str(epsg), geometry=output_geom)
         # drop duplicate shorelines column
         outputsGDF = outputGDF.drop('shorelines', axis=1)
     else:    
@@ -1054,7 +1054,7 @@ def SaveShapefiles(output, geomtype, name_prefix, sitename):
             outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=DFlist[0].crs)
             outputsGDF = outputsGDF.drop('shorelines', axis=1)
             
-    outputsGDF.to_file(name_prefix + sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp')
+    outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp'))
     
     
     return

@@ -273,7 +273,6 @@ output_proj = Toolbox.remove_duplicates(output_proj)
 # Save output veglines 
 Toolbox.SaveShapefiles(output_proj, BasePath, sitename, settings['projection_epsg'])
 
-
 #%%
 
 Plotting.SatGIF(metadata,settings,output)
