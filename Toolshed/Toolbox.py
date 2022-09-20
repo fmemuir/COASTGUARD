@@ -1127,6 +1127,47 @@ def daterange(date1, date2):
     """
     for n in range(int(date2.year) - int(date1.year)+1):
         yield int(date1.year) + n
+
+    
+def neardate(satdates,veridate):
+    return min(satdates, key=lambda x: abs(x - veridate))
+
+def NearestDates(surveys,metadata,sat_list):
+    """
+    
+    Print image dates from full sat metadata that fall nearest to validation dates.
+    
+    surveys : GeoDataFrame
+        Shapefile of validation lines read in using geopandas
+    metadata : dict
+        Satellite image metadata
+    sat_list : list
+        List of desired satellite platforms as strings
+    
+        
+    FM Sept 2022
+    """
+    
+    veridates = list(surveys.Date.unique())
+    
+    nearestdates = dict.fromkeys(sat_list)
+    nearestIDs = dict.fromkeys(sat_list)
+
+    for sat in sat_list:
+        print(sat,'SATELLITE')
+        satdates=[]
+        nearestdate = []
+        nearestID = []
+        for veridate in veridates:
+            print('verification:\t',veridate)
+            veridate = datetime.strptime(veridate,'%Y-%m-%d')
+            for satdate in metadata[sat]['dates']:
+                satdates.append(datetime.strptime(satdate,'%Y-%m-%d'))
+            nearestdate.append(datetime.strftime(neardate(satdates,veridate),'%Y-%m-%d'))
+            nearestID.append(metadata[sat]['dates'].index(datetime.strftime(neardate(satdates,veridate),'%Y-%m-%d')))
+            print('nearest:\t\t',neardate(satdates,veridate))
+        nearestdates[sat] = nearestdate
+        nearestIDs[sat] = nearestID     
         
         
 def spaced_vertices(referenceLine):

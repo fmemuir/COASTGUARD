@@ -123,34 +123,13 @@ Sat = Toolbox.image_retrieval(inputs)
 metadata = Toolbox.metadata_collection(sat_list, Sat, filepath, sitename)
 
 #%%  Metadata filtering using validation dates only
-veridates = list(vegsurvey.Date.unique())
-def neardate(satdates,veridate):
-    return min(satdates, key=lambda x: abs(x - veridate))
 
-nearestdates = dict.fromkeys(sat_list)
-nearestIDs = dict.fromkeys(sat_list)
-
-for sat in sat_list:
-    print(sat,'sat')
-    satdates=[]
-    nearestdate = []
-    nearestID = []
-    for veridate in veridates:
-        print('verification:\t',veridate)
-        veridate = datetime.strptime(veridate,'%Y-%m-%d')
-        for satdate in metadata[sat]['dates']:
-            satdates.append(datetime.strptime(satdate,'%Y-%m-%d'))
-        nearestdate.append(datetime.strftime(neardate(satdates,veridate),'%Y-%m-%d'))
-        nearestID.append(metadata[sat]['dates'].index(datetime.strftime(neardate(satdates,veridate),'%Y-%m-%d')))
-        print('nearest:\t\t',neardate(satdates,veridate))
-    nearestdates[sat] = nearestdate
-    nearestIDs[sat] = nearestID
-
+Toolbox.NearestDates(vegsurvey,metadata,sat_list)
 
 #%%
 L5 = dict.fromkeys(metadata['L5'].keys())
-L8 = dict.fromkeys(metadata['L5'].keys())
-S2 = dict.fromkeys(metadata['L5'].keys())
+L8 = dict.fromkeys(metadata['L8'].keys())
+S2 = dict.fromkeys(metadata['S2'].keys())
 
 #must use extend() instead of append() for ranges of values
 for satkey in dict.fromkeys(metadata['L5'].keys()):
@@ -167,14 +146,9 @@ for satkey in dict.fromkeys(metadata['L5'].keys()):
     S2[satkey].extend(metadata['S2'][satkey][405:424])
     S2[satkey].extend(metadata['S2'][satkey][490:507])
     
-    
-
 metadata = {'L5':L5,'L8':L8,'S2':S2}
 with open(os.path.join(filepath, sitename, sitename + '_validation_metadata.pkl'), 'wb') as f:
     pickle.dump(metadata, f)
-
-#for nearestd in nearestdate:
-#    print([i for i, x in enumerate(metadata['S2']['dates']) if x == nearestd])
 
 # L5: 12 images (28% of 44), 1:27 (87s) = 0.138 im/s OR 7.25 im/s
 # L8: 198 images, 16:42 (1002s) = 0.198 im/s OR 5 s/im
