@@ -6,6 +6,7 @@ import pdb
 import scipy
 
 # image processing modules
+import ee
 import skimage.filters as filters
 import skimage.measure as measure
 import skimage.morphology as morphology
@@ -45,6 +46,9 @@ def extract_veglines(metadata, settings, polygon, dates):
     ref_line = np.delete(settings['reference_shoreline'],2,1)
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
+    # clf_model = 'MLPClassifier_Veg_S2.pkl'
+    clf_model = 'DornochSummer_MLPClassifier_Veg_S2.pkl'
+    
     # initialise output structure
     output = dict([])
     output_latlon = dict([])
@@ -76,18 +80,16 @@ def extract_veglines(metadata, settings, polygon, dates):
         output_idxkeep = []    # index that were kept during the analysis (cloudy images are skipped)
         output_t_ndvi = []    # NDVI threshold used to map the shoreline
         
+        # get pixel size from dimensions in first image
         if satname in ['L5','L7','L8']:
-            pixel_size = 15
-            #clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
-            clf = joblib.load(os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
+            pixel_size = ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0] / 2 # after downsampling
         elif satname == 'S2':
-            pixel_size = 10
-            #clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
-            clf = joblib.load(os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
+            ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0]
         else:
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
-            #clf = joblib.load(os.path.join(filepath_models, 'Model1.pkl'))[0]
-            clf = joblib.load(os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
+        
+        # load in trained classifier pkl file
+        clf = joblib.load(os.path.join(filepath_models, clf_model))
             
         # convert settings['min_beach_area'] and settings['buffer_size'] from metres to pixels
         buffer_size_pixels = np.ceil(settings['buffer_size']/pixel_size)
