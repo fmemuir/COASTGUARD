@@ -126,7 +126,7 @@ def label_images(metadata, polygon, Sat, settings):
                 dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
             
             # read and preprocess image
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
 
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
@@ -416,7 +416,7 @@ def label_vegimages(metadata, polygon, Sat, settings):
                 dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
             
             # read and preprocess image
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
 
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
@@ -836,7 +836,7 @@ def evaluate_classifier(classifier, metadata, polygon, Sat, settings):
             # image filename
             fn = Toolbox.get_filenames(filenames[i],filepath, satname)
             # read and preprocess image
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, polygon, Sat, satname, settings['cloud_mask_issue'])
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, polygon, Sat, satname, settings['cloud_mask_issue'],savetifs=False)
             image_epsg = metadata[satname]['epsg'][i]
 
             # compute cloud_cover percentage (with no data pixels)

@@ -11,8 +11,8 @@
 
 
 # load modules
-get_ipython().run_line_magic('load_ext', 'autoreload')
-get_ipython().run_line_magic('autoreload', '2')
+# get_ipython().run_line_magic('load_ext', 'autoreload')
+# get_ipython().run_line_magic('autoreload', '2')
 import os, sys
 import glob
 import numpy as np
@@ -106,9 +106,14 @@ print('Sites for training:\n%s\n'%train_sites)
 
 
 ##ST ANDREWS EAST
-sitename = 'Montrose'
-lonmin, lonmax = -2.49, -2.42
-latmin, latmax = 56.70, 56.75
+# sitename = 'Montrose'
+# lonmin, lonmax = -2.49, -2.42
+# latmin, latmax = 56.70, 56.75
+
+sitename = 'Dornoch'
+lonmin, lonmax = -4.033, -3.996
+latmin, latmax = 57.855, 57.885
+
 
 train_sites = [sitename]
 print('Sites for training:\n%s\n'%train_sites)
@@ -142,7 +147,7 @@ if os.path.isdir(direc) is False:
 
 
 sat_list = ['S2']
-dates = ['2019-05-01', '2019-07-01']
+dates = ['2019-06-01', '2019-08-31']
 projection_epsg = 27700
 image_epsg = 32630
 

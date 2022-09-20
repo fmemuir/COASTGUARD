@@ -831,7 +831,7 @@ def save_jpg(metadata, settings, polygon, dates, **kwargs):
             # image filename
             fn = Toolbox.get_filenames(filenames[i],filepath, satname)
             # read and preprocess image
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = preprocess_single(fn, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = preprocess_single(fn, satname, settings, polygon, dates, savetifs=False)
 
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
@@ -931,7 +931,7 @@ def get_reference_sl(metadata, settings, polygon, dates):
             # read image
             fn = Toolbox.get_filenames(filenames[i],filepath, satname)
             fn=i
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = preprocess_single(fn, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = preprocess_single(fn, satname, settings, polygon, dates, savetifs=False)
             
             if (im_ms is None) or (cloud_mask is None):
                 continue
