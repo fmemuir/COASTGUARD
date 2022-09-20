@@ -1175,6 +1175,11 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
             else:
                 plt.waitforbuttonpress()
 
+    # if save_figure is True, save a .jpg under /jpg_files/detection
+    filepath = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
+    if settings['save_figure'] and not skip_image:
+        fig.savefig(os.path.join(filepath, date + '_' + satname + '.jpg'), dpi=150)
+
     # don't close the figure window, but remove all axes and settings, ready for next plot
     for ax in fig.axes:
         ax.clear()
@@ -1304,22 +1309,6 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     else:       
         # find water contours on NDVI grayscale image
         contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
-    """
-    try:
-        if sum(sum(im_labels[:,:,0])) > 10:
-            # use classification to refine threshold and extract the sand/water interface
-            contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask,
-                                                        buffer_size_pixels, im_ref_buffer)
-        else:       
-            # find contours on NDVI grayscale image
-            contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer)    
-    except:
-        print('Could not map shoreline so image was skipped')
-        # clear axes and return skip_image=True, so that image is skipped above
-        for ax in fig.axes:
-            ax.clear()
-        return True,[],[], []
-    """
 
     # process the contours into a shoreline
     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
