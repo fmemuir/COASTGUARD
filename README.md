@@ -10,7 +10,7 @@ The goal of this toolkit is to have a fully operational framework for predicting
 ### 1.1 Download the code
 The Python tool relies on packages downloaded through Anaconda and the Google Earth Engine API to run. The preliminary step is downloading this repository. You can do this either by clicking the <span style="color:white;background-color:#2EA043;">Code</span> button at the top and downloading + extracting the zipped folder, or by navigating to where you want to download it on your local machine and running 
 ```
-$ git clone https://github.com/fmemuir/CoastLearn-main.git
+git clone https://github.com/fmemuir/CoastLearn-main.git
 ```
 from a command line (if you have git command line tools installed).
 
