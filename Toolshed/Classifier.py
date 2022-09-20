@@ -405,7 +405,11 @@ def label_vegimages(metadata, polygon, Sat, settings):
             filepath = os.path.dirname(metadata[satname]['filenames'])
         else:
             filepath = Toolbox.get_filepath(settings['inputs'],satname)
-        filenames = [metadata[satname]['filenames']]
+        if len(metadata[satname]['filenames']) < 2: # for single images; for loop list needs to be nested
+            filenames = [metadata[satname]['filenames']]
+        else:
+            filenames = metadata[satname]['filenames']
+            
         # loop through images
         for i in range(len(filenames)):
             # image filename
@@ -443,7 +447,10 @@ def label_vegimages(metadata, polygon, Sat, settings):
             ax.axis('off')  
             ax.imshow(im_RGB)
             implot = ax.imshow(im_viz, alpha=0.6)            
-            filename = filenames[0][i].rsplit('/',1)[1]
+            if len(filenames) < 2: # for single image collections, see formatting note at start of satname loop
+                filename = filenames[0][i].rsplit('/',1)[1]
+            else:
+                filename = filenames[i].rsplit('/',1)[1]
             ax.set_title(filename)
            
             ##############################################################
@@ -646,7 +653,7 @@ def load_labels(train_sites, settings):
     filepath_train = settings['filepath_train']
     # initialize the features dict
     features = dict([])
-    n_features = 16 # number of features corresponds to different bands and indices
+    n_features = 16 # number of features corresponds to different bands and indices; coastsat is 20
     first_row = np.nan*np.ones((1,n_features))
     for key in settings['labels'].keys():
         features[key] = first_row

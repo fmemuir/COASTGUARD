@@ -26,6 +26,7 @@ from matplotlib import gridspec
 import matplotlib.dates as mdates
 plt.ion()
 from datetime import datetime, timezone, timedelta
+import timeit
 
 from Toolshed import Classifier, Download, Image_Processing, Shoreline, Toolbox, Transects, VegetationLine
 
@@ -91,7 +92,8 @@ settings ={'filepath_train':filepath_train, # folder where the labelled images w
                              # set to 0 to select one pixel at a time
             }
         
-# read kml files for the training sites
+
+#%% read kml files for the training sites
 filepath_sites = os.path.join(os.getcwd(), 'training_sites')
 #train_sites = [os.path.basename(x) for x in glob.glob(filepath_sites+'/*.kml')]
 train_sites = [os.path.basename(x) for x in glob.glob(filepath_sites+'/MONTROSE.kml')]
@@ -252,11 +254,13 @@ for key in features.keys():
     print('%s : %d pixels'%(key,len(features[key])))
 
 
-#%% [OPTIONAL] As the classes do not have the same number of pixels, it is good practice to subsample the very large classes (in this case 'water' and 'other land features'):
+#%% [OPTIONAL] Subsample
+#As the classes do not have the same number of pixels, it is good practice to subsample the very large classes 
+# (in this case 'veg' and 'other land features')
 
 # subsample randomly the land and water classes
 # as the most important class is 'sand', the number of samples should be close to the number of sand pixels
-n_samples = 5000
+n_samples = 10000
 for key in ['veg', 'nonveg']:
     features[key] =  features[key][np.random.choice(features[key].shape[0], n_samples, replace=False),:]
 # print classes again
@@ -288,9 +292,7 @@ classifier.fit(X_train,y_train)
 print('Accuracy: %0.4f' % classifier.score(X_test,y_test))
 
 
-# [OPTIONAL] A more robust evaluation is 10-fold cross-validation (may take a few minutes to run):
-
-#%%
+#%% [OPTIONAL] 10-fold cross-validation (may take a few minutes to run)
 
 
 # cross-validation
@@ -300,7 +302,7 @@ print('Accuracy: %0.4f (+/- %0.4f)' % (scores.mean(), scores.std() * 2))
 
 # Plot a confusion matrix:
 
-#%%
+#%% plot confusion matrix
 
 
 [1::2]# plot confusion matrix
@@ -313,14 +315,13 @@ SDS_classify.plot_confusion_matrix(y_test, y_pred,
 
 # When satisfied with the accuracy and confusion matrix, train the model using ALL the training data and save it:
 
-#%%
+#%% Train with all the data and save the final classifier
 
-
-# train with all the data and save the final classifier
+start_time = timeit.default_timer()
 classifier = MLPClassifier(hidden_layer_sizes=(100,50), solver='adam')
 classifier.fit(X,y)
-joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_S2.pkl'))
-
+joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
+print(str(round(timeit.default_timer() - start_time), 5) + ' seconds elapsed')
 
 #%%4. Evaluate the classifier
 # Load a classifier that you have trained (specify the classifiers filename) and evaluate it on the satellite images.
