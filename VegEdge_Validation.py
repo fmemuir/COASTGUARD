@@ -30,16 +30,18 @@ ee.Initialize()
 OPTION 2: AOI polygon is defined using coordinates of a bounding box (in WGS84).
 """
 
-##ST ANDREWS WEST
+#%%ST ANDREWS WEST
 sitename = 'StAndrewsWest'
 lonmin, lonmax = -2.89087, -2.84869
 latmin, latmax = 56.32641, 56.39814
 
 
-##ST ANDREWS EAST
-# sitename = 'StAndrewsEast'
-# lonmin, lonmax = -2.84869, -2.79878
-# latmin, latmax = 56.32641, 56.39814
+#%%ST ANDREWS EAST
+sitename = 'StAndrewsEast'
+lonmin, lonmax = -2.84869, -2.79878
+latmin, latmax = 56.32641, 56.39814
+
+#%%
 
 ##ST ANDREWS
 # lonmin, lonmax = -2.842023, -2.774955
@@ -56,6 +58,8 @@ latmin, latmax = 56.32641, 56.39814
 ##SHINGLE STREET
 #lonmin, lonmax = 1.446131, 1.460008
 #latmin, latmax = 52.027039, 52.037448
+
+#%%
 
 polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
 # it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
