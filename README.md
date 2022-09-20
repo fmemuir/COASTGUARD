@@ -2,9 +2,8 @@
 
 CoastLearn is a Python toolkit for coastal monitoring and modelling using machine learning approaches. Currently, the main toolset is for extracting coastal vegetation edges from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
 
-## Description
-
-## Usage
+## Description and Scope
+The goal of this toolkit is to have a fully operational framework for predicting coastal change, using machine learning techniques that are trained with satellite observations. We have a plethora of satellite imagery being generated every day to be used freely in a number of automated, API-based ways. These datasets are therefore well-suited to machine learning approaches which require a lot of data to train sufficiently. With just one satellite image, multiple indicators of coastal change can be automatically extracted such as wave breaking zones, wet-dry boundaries, high water marks and vegetation edges. These automatically extracted indicators can then be fed into a machine learning network which makes future predictions based on the past changes and relationships between these indicators. The result is an automated, early warning system for coastal erosion at a potentially global scale.
 
 ## Installation
 
@@ -62,7 +61,7 @@ A web browser will open; log in with the GMail account you used to sign up to GE
 There are 7 main steps to setting up the vegetation extraction tool. You can see [this paper]() for a flowchart and more info on the methodology. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
 
 1. Import relevant packages (including initialising the `earthengine` tools);
-2. Define an area of interest;
+2. Define an area of interest. For the time being, this must be **smaller than 262144 (512 x 512) pixels**, equivalent to 5.12 x 5.12 km for Sentinel and 7.68 x 7.68 km for Landsat;
 3. Define image parameters (start and end date, satellites, CRS/projections, sitename);
 4. Retrieve and save image collection metadata*;
 5. Set coastal boundary parameters (cloud cover threshold, plotting flags, minimum area for contouring);
@@ -79,7 +78,7 @@ The tool takes all the input settings the user has defined, and performs these s
 2. Create buffer around reference shoreline (or most recent shore extracted, useful for dynamic shores and image collections over a long period);
 3. Classify image using the pre-trained neural network; 
 4. Show/adjust detected boundary between image classes (depending on if user has requested to be shown the interactive plot window);
-5. Export boundaries and relevant info to a `.pkl` file.
+5. Export boundaries and relevant metadata to a `.pkl` file and a shapefile of lines.
 
 ## Support
 
