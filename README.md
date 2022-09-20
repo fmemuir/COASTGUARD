@@ -80,9 +80,8 @@ The tool takes all the input settings the user has defined, and performs these s
 4. Show/adjust detected boundary between image classes (depending on if user has requested to be shown the interactive plot window);
 5. Export boundaries and relevant metadata to a `.pkl` file and a shapefile of lines.
 
-## Support
-
 ## Roadmap
+This code is live and the master branch is being updated often (weekly). If you clone this repo, please update it regularly with `git pull`!
 
 ## Contributions
 We are in testing phase and not currently taking contributions, but please [reach out to Freya](mailto:f.muir.1@research.gla.ac.uk) with suggestions!
