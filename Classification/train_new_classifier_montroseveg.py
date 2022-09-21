@@ -112,7 +112,7 @@ print('Sites for training:\n%s\n'%train_sites)
 # lonmin, lonmax = -2.49, -2.42
 # latmin, latmax = 56.70, 56.75
 
-sitename = 'Dornoch'
+sitename = 'DornochWinter'
 lonmin, lonmax = -4.033, -3.996
 latmin, latmax = 57.855, 57.885
 
@@ -149,7 +149,7 @@ if os.path.isdir(direc) is False:
 
 
 sat_list = ['S2']
-dates = ['2019-06-01', '2019-08-31']
+dates = ['2019-12-01', '2020-02-28']
 projection_epsg = 27700
 image_epsg = 32630
 
@@ -321,7 +321,7 @@ start_time = timeit.default_timer()
 classifier = MLPClassifier(hidden_layer_sizes=(100,50), solver='adam')
 classifier.fit(X,y)
 joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
-print(str(round(timeit.default_timer() - start_time), 5) + ' seconds elapsed')
+print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
 #%%4. Evaluate the classifier
 # Load a classifier that you have trained (specify the classifiers filename) and evaluate it on the satellite images.
