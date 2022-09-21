@@ -120,22 +120,13 @@ latmin, latmax = 57.855, 57.885
 train_sites = [sitename]
 print('Sites for training:\n%s\n'%train_sites)
 
-#point = ee.Geometry.Point([lonmin, latmin]) 
-if latmin > latmax:
-    print('Check your latitude min and max bounding box values!')
-    oldlatmin = latmin
-    oldlatmax = latmax
-    latmin = oldlatmax
-    latmax = oldlatmin
-if lonmin > lonmax:
-    print('Check your longitude min and max bounding box values!')
-    oldlonmin = lonmin
-    oldlonmax = lonmax
-    lonmin = oldlonmax
-    lonmax = oldlonmin
-    
-polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
-point = ee.Geometry.Point(polygon[0][0]) 
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
+# it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
+polygon = Toolbox.smallest_rectangle(polygon)
+
+#%%
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
+# it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
 
 filepath = os.path.join(os.getcwd(), 'Data')
