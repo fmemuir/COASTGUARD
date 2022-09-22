@@ -690,6 +690,7 @@ def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
     else: # if refline is read in as shapefile
         refGS = gpd.GeoSeries(refline['geometry'])
     
+    # TO DO: Check why this gets divided by pixel_size
     refLSBuffer = refGS.buffer(settings['max_dist_ref']/pixel_size)
     refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
     im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
@@ -1103,13 +1104,13 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     im_RGB_masked = im_RGB * im_ref_buffer_3d
     ax1.imshow(im_RGB_masked, alpha=0.3) # plot refline mask over top
     
-    ax1.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
+    ax1.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=5)
     ax1.axis('off')
     ax1.set_title(sitename, fontweight='bold', fontsize=16)
 
     # create image 2 (classification)
     ax2.imshow(im_class)
-    ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
+    ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=5)
     ax2.axis('off')
     purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
     green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
@@ -1121,7 +1122,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
 
     # create image 3 (NDVI)
     ndviplot = ax3.imshow(im_nvi, cmap='bwr')
-    ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
+    ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=5)
     ax3.axis('off')
     ax3.set_title(satname, fontweight='bold', fontsize=16)
 
@@ -1326,9 +1327,10 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
 
 
     # plot the shoreline on the images
-    sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
-    sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
-    sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=3)
+    # TO DO: size pixels based on image size (small dots on small imagery!)
+    sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=5)
+    sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=5)
+    sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=5)
     t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
     ax4.legend(loc=1)
     plt.draw() # to update the plot
