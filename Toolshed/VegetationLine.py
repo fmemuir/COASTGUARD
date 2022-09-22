@@ -47,7 +47,7 @@ def extract_veglines(metadata, settings, polygon, dates):
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
     # clf_model = 'MLPClassifier_Veg_S2.pkl'
-    clf_model = 'DornochWinter_MLPClassifier_Veg_S2.pkl'
+    clf_model = 'DornochSummer_MLPClassifier_Veg_S2.pkl'
     
     # initialise output structure
     output = dict([])
@@ -83,8 +83,10 @@ def extract_veglines(metadata, settings, polygon, dates):
         # get pixel size from dimensions in first image
         if satname in ['L5','L7','L8']:
             pixel_size = 15
+            # ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0] / 2 # after downsampling
         elif satname == 'S2':
             pixel_size = 10
+            # ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0]
         else:
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
         
