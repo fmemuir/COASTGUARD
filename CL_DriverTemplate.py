@@ -51,6 +51,8 @@ polygon = Toolbox.smallest_rectangle(polygon)
 
 # directory where the data will be stored
 filepath = os.path.join(os.getcwd(), 'Data')
+if os.path.isdir(filepath) is False:
+    os.mkdir(filepath)
 
 # date range
 dates = ['2021-05-01', '2021-07-02']
