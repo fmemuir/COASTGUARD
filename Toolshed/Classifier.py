@@ -728,7 +728,7 @@ def format_training_data(features, classes, labels):
     
     return X, y
 
-def plot_confusion_matrix(y_true,y_pred,classes,normalize=False,cmap=plt.cm.Blues):
+def plot_confusion_matrix(y_true,y_pred,classes,normalize=False,cmap=plt.cm.Greens):
     """
     Function copied from the scikit-learn examples (https://scikit-learn.org/stable/)
     This function plots a confusion matrix.
@@ -748,7 +748,7 @@ def plot_confusion_matrix(y_true,y_pred,classes,normalize=False,cmap=plt.cm.Blue
     im = ax.imshow(cm, interpolation='nearest', cmap=cmap)
 #    ax.figure.colorbar(im, ax=ax)
     ax.set(xticks=np.arange(cm.shape[1]),
-           yticks=np.arange(cm.shape[0]), ylim=[3.5,-0.5],
+           yticks=np.arange(cm.shape[0]),
            xticklabels=classes, yticklabels=classes,
            ylabel='True label',
            xlabel='Predicted label')
@@ -756,7 +756,7 @@ def plot_confusion_matrix(y_true,y_pred,classes,normalize=False,cmap=plt.cm.Blue
     # rotate the tick labels and set their alignment.
     plt.setp(ax.get_xticklabels(), rotation=45, ha="right",
              rotation_mode="anchor")
-
+    
     # loop over data dimensions and create text annotations.
     fmt = '.2f' if normalize else 'd'
     thresh = cm.max() / 2.
@@ -766,6 +766,7 @@ def plot_confusion_matrix(y_true,y_pred,classes,normalize=False,cmap=plt.cm.Blue
                     ha="center", va="center",
                     color="white" if cm[i, j] > thresh else "black",
                     fontsize=12)
+    plt.grid(visible=False)
     fig.tight_layout()
     return ax
 

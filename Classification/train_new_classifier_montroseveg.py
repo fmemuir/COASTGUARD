@@ -125,9 +125,7 @@ polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
 polygon = Toolbox.smallest_rectangle(polygon)
 
 #%%
-polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
-# it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
-polygon = Toolbox.smallest_rectangle(polygon)
+
 
 filepath = os.path.join(os.getcwd(), 'Data')
 direc = os.path.join(filepath, sitename)
@@ -296,12 +294,11 @@ print('Accuracy: %0.4f (+/- %0.4f)' % (scores.mean(), scores.std() * 2))
 #%% plot confusion matrix
 
 
-[1::2]# plot confusion matrix
-get_ipython().run_line_magic('matplotlib', 'inline')
 y_pred = classifier.predict(X_test)
-SDS_classify.plot_confusion_matrix(y_test, y_pred,
-                                   classes=['other land features','sand','white-water','water'],
-                                   normalize=False);
+
+Classifier.plot_confusion_matrix(y_test, y_pred,
+                                    classes=['veg','nonveg'],
+                                    normalize=False);
 
 
 # When satisfied with the accuracy and confusion matrix, train the model using ALL the training data and save it:
@@ -321,17 +318,17 @@ print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
 # load and evaluate a classifier
 get_ipython().run_line_magic('matplotlib', 'qt')
-classifier = joblib.load(os.path.join(filepath_models, 'NN_4classes_Landsat_test.pkl'))
-settings['output_epsg'] = 3857
-settings['min_beach_area'] = 4500
-settings['buffer_size'] = 200
-settings['min_length_sl'] = 200
+classifier = joblib.load(os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
+settings['output_epsg'] = 32630
+settings['min_beach_area'] = 200
+settings['buffer_size'] = 250
+settings['min_length_sl'] = 500
 settings['cloud_thresh'] = 0.5
 # visualise the classified images
 for site in train_sites:
     settings['inputs']['sitename'] = site[:site.find('.')] 
     # load metadata
-    metadata = SDS_download.get_metadata(settings['inputs'])
+    metadata = Toolbox.metadata_collection(sat_list, Sat, filepath, sitename)
     # plot the classified images
-    SDS_classify.evaluate_classifier(classifier,metadata,settings)
+    Classifier.evaluate_classifier(classifier,metadata,settings)
 
