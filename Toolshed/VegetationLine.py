@@ -82,9 +82,9 @@ def extract_veglines(metadata, settings, polygon, dates):
         
         # get pixel size from dimensions in first image
         if satname in ['L5','L7','L8']:
-            pixel_size = ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0] / 2 # after downsampling
+            pixel_size = 15
         elif satname == 'S2':
-            ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0]
+            pixel_size = 10
         else:
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
         
