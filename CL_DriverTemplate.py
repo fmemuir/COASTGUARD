@@ -120,14 +120,17 @@ settings = {
 
 #%% Vegetation Edge Reference Line Load-In
 
+# reference line shapefile will be whatever line represents your coast best, saved in Data folder
 referenceLineShp = os.path.join(inputs['filepath'], 'SITE_reference_line.shp')
+# make sure this epsg matches the one for your reference shapefile
+ref_epsg = 4326
+
 referenceLineDF = gpd.read_file(referenceLineShp)
 refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
 # format latlon coords into list
 #referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
 referenceLineList = list([refLiney[i],refLinex[i]] for i in range(len(refLinex)))
 # convert to UTM zone for use with the satellite images
-ref_epsg = 4326
 referenceLine = Toolbox.convert_epsg(np.array(referenceLineList),ref_epsg,image_epsg)
 referenceLine = Toolbox.spaced_vertices(referenceLine)
 
