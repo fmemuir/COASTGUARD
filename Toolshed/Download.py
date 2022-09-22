@@ -466,7 +466,7 @@ def check_images_available(inputs):
 
     print('  Total: %d images'%sum_img)
 
-    return im_dict_T1, im_dict_T2
+    return
 
 
 def download_tif(image, polygon, bandsId, filepath):
