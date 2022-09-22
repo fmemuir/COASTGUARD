@@ -37,6 +37,7 @@ ee.Initialize()
 
 
 ##ST ANDREWS EAST
+# The points represent the corners of a bounding box that go around your site
 sitename = 'SITENAME'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
