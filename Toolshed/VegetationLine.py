@@ -363,7 +363,7 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     for k in range(1,im_ms.shape[2]):
         feature = np.expand_dims(im_ms[im_bool,k],axis=1)
         features = np.append(features, feature, axis=-1)
-    # NDVI
+    # NDVI (NIR - R)
     im_NIRR = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     features = np.append(features, np.expand_dims(im_NIRR[im_bool],axis=1), axis=-1)
     # NIR-G
@@ -379,7 +379,7 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
         features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
     
     # calculate standard deviation of the spectral indices
-    # NDVI
+    # NDVI  (NIR - R)
     im_std = Toolbox.image_std(im_NIRR, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
     # NIR-G
