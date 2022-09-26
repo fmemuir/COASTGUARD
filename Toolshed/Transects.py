@@ -79,6 +79,10 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
     CoastSpec = BasePath + '/Coast.shp'
     Filename2SaveCoast = BasePath + '/Coast.pydata'
     
+    if (SmoothingWindowSize % 2) == 0:
+        SmoothingWindowSize = SmoothingWindowSize + 1
+        print('Window size should be odd; changed to %s m' % SmoothingWindowSize)
+    
     shape = gpd.read_file(FileSpec)
     # change CRS to epsg 27700
     shape = shape.to_crs(epsg=27700)

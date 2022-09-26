@@ -16,7 +16,7 @@ matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 plt.ion()
 from datetime import datetime
-from Toolshed import Download, Toolbox, VegetationLine, Plotting
+from Toolshed import Download, Toolbox, VegetationLine, Plotting, Transects
 
 import seaborn as sns; sns.set()
 import ee
@@ -251,7 +251,19 @@ output_proj = Toolbox.remove_duplicates(output_proj)
 # Save output veglines 
 Toolbox.SaveShapefiles(output_proj, BasePath, sitename, settings['projection_epsg'])
 
-#%%
+#%% Create GIF of satellite images and related shorelines
 
 Plotting.SatGIF(metadata,settings,output)
 
+#%% Create Transects
+SmoothingWindowSize = 21 
+NoSmooths = 100
+TransectSpacing = 10
+DistanceInland = 350
+DistanceOffshore = 350
+BasePath = 'Data/' + sitename + '/veglines'
+# Produces Transects for the reference line
+TransectSpec =  os.path.join(BasePath, 'Transect.shp')
+geo = gpd.read_file(TransectSpec)
+Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['image_epsg'], sitename, BasePath, referenceLineShp)
+transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)
