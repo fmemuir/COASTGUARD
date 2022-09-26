@@ -691,7 +691,7 @@ def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
         refGS = gpd.GeoSeries(refline['geometry'])
     
     # TO DO: Check why this gets divided by pixel_size
-    refLSBuffer = refGS.buffer(settings['max_dist_ref']/pixel_size)
+    refLSBuffer = refGS.buffer(settings['max_dist_ref'])
     refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
     im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
     # convert to bool

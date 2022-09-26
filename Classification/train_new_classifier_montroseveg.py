@@ -112,7 +112,7 @@ print('Sites for training:\n%s\n'%train_sites)
 # lonmin, lonmax = -2.49, -2.42
 # latmin, latmax = 56.70, 56.75
 
-sitename = 'DornochWinter'
+sitename = 'DornochSummer'
 lonmin, lonmax = -4.033, -3.996
 latmin, latmax = 57.855, 57.885
 
@@ -138,7 +138,8 @@ if os.path.isdir(direc) is False:
 
 
 sat_list = ['S2']
-dates = ['2019-12-01', '2020-02-28']
+dates = ['2019-05-01', '2019-08-31']
+# dates = ['2019-12-01', '2020-02-28']
 projection_epsg = 27700
 image_epsg = 32630
 
@@ -203,7 +204,6 @@ metadata = Toolbox.metadata_collection(sat_list, Sat, filepath, sitename)
 
 
 # label the images with an interactive annotator
-get_ipython().run_line_magic('matplotlib', 'qt')
 for site in train_sites:
     settings['inputs']['sitename'] = sitename
     settings['cloud_mask_issue'] = False
@@ -219,6 +219,7 @@ for site in train_sites:
 
 # load labelled images
 features = Classifier.load_labels(train_sites, settings)
+
 
 
 #%% [OPTIONAL] original CoastSat data
@@ -332,3 +333,57 @@ for site in train_sites:
     # plot the classified images
     Classifier.evaluate_classifier(classifier,metadata,settings)
 
+
+
+
+
+#%% Seasonal specific tests
+settings['inputs']['sitename'] = 'DornochSummer'
+sumfeatures = Classifier.load_labels(train_sites, settings)
+settings['inputs']['sitename'] = 'DornochWinter'
+winfeatures = Classifier.load_labels(train_sites, settings)
+
+n_samples = 10000
+    
+for key in ['veg', 'nonveg']:
+    sumfeatures[key] =  sumfeatures[key][np.random.choice(sumfeatures[key].shape[0], n_samples, replace=False),:]
+# print classes again
+for key in sumfeatures.keys():
+    print('%s : %d pixels'%(key,len(sumfeatures[key])))
+for key in ['veg', 'nonveg']:
+    winfeatures[key] =  winfeatures[key][np.random.choice(winfeatures[key].shape[0], n_samples, replace=False),:]
+# print classes again
+for key in winfeatures.keys():
+    print('%s : %d pixels'%(key,len(winfeatures[key])))
+        
+classes = ['veg','nonveg']
+labels = [1,2]
+sumX,sumy = Classifier.format_training_data(sumfeatures, classes, labels)
+winX,winy = Classifier.format_training_data(winfeatures, classes, labels)
+
+#%% divide in train and test and evaluate the classifier on opposite season models
+sumX_train, sumX_test, sumy_train, sumy_test = train_test_split(sumX, sumy, test_size=0.3, shuffle=True, random_state=0)
+winX_train, winX_test, winy_train, winy_test = train_test_split(winX, winy, test_size=0.3, shuffle=True, random_state=0)
+
+#%%
+classifier = MLPClassifier(hidden_layer_sizes=(100,50), solver='adam')
+# train classifier on summer data
+classifier.fit(sumX_train,sumy_train)
+# test summer model on winter data
+print('Summer model on winter data Accuracy: %0.4f' % classifier.score(winX_test,winy_test))
+
+winy_pred = classifier.predict(winX_test)
+Classifier.plot_confusion_matrix(winy_test, winy_pred,
+                                    classes=['veg','nonveg'],
+                                    normalize=False);
+
+#%%
+# train classifier on winter data
+classifier.fit(winX_train,winy_train)
+# test winter model on summer data
+print('Winter model on summer data Accuracy: %0.4f' % classifier.score(sumX_test,sumy_test))
+
+sumy_pred = classifier.predict(sumX_test)
+Classifier.plot_confusion_matrix(sumy_test, sumy_pred,
+                                    classes=['veg','nonveg'],
+                                    normalize=False);
