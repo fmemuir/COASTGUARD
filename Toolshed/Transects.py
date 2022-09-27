@@ -22,7 +22,7 @@ from pyproj import Proj
 import skimage.transform as transform
 from pylab import ginput
 
-from Coast import *
+from Toolshed.Coast import *
 
 
 def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, BasePath):
@@ -75,7 +75,7 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
         
     FileSpec = RefShapePath
     ReprojSpec = BasePath + '/Baseline_Reproj.shp'
-    TransectSpec = BasePath + '/Transect.shp'
+    TransectSpec = os.path.join(BasePath, sitename+'_Transects.shp')
     CoastSpec = BasePath + '/Coast.shp'
     Filename2SaveCoast = BasePath + '/Coast.pydata'
     
@@ -108,6 +108,39 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
             pickle.dump(CellCoast, PFile)
             
     return
+    
+def GetIntersections(BasePath, TransectGDF, VeglineGDF):
+    
+    # Filename2SaveCoast = BasePath + '/Coast.pydata'
+    # with open(str(Filename2SaveCoast), 'rb') as PFile:
+    #     CellCoast = pickle.load(PFile)
+        
+    # HistoricalShorelinesShp = PathToVegShp
+    # CellCoast.ExtractSatShorePositions(HistoricalShorelinesShp)
+    
+    
+    # IntersectPoints = TransectGDF.unary_union.intersection(VeglineGDF.unary_union)
+    # IntersectPoints = gpd.GeoDataFrame(geometry=gpd.GeoSeries(IntersectPoints)).explode()
+    # IntersectGDF = gpd.sjoin(TransectGDF ,VeglineGDF)
+        
+    # TransectDict = TransectGDF.to_dict()
+    # TransectDict['distances'] = {}
+    # for T in range(len(TransectDict['TransectID'])):
+    #     TransectDict['distances'][T] = 
+    
+    columns_data = []
+    geoms = []
+    for _, _, ID, TrGeom in TransectGDF.itertuples():
+        for _,dates,filename,cloud,ids,otsu,satn,VGeom in VeglineGDF.itertuples():
+            Intersects = TrGeom.intersection(VGeom)
+            columns_data.append((ID,dates,filename,cloud,ids,otsu,satn))
+            geoms.append(Intersects)
+    AllIntersects = gpd.GeoDataFrame(columns_data,geometry=geoms,columns=['TransectID','dates','filename','cloud_cove','idx','Otsu_thres','satname'])
+    AllIntersectsS = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
+    AllIntersectsS['interpnt'] = AllIntersectsS['geometry']
+    interpnt
+    
+    return AllIntersects
     
 
 def compute_intersection(output, transects, settings, linetype):

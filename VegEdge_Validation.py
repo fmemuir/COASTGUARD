@@ -7,6 +7,7 @@
 #%% Imports and Initialisation
 
 import os
+import glob
 import numpy as np
 import pickle
 import warnings
@@ -262,8 +263,21 @@ TransectSpacing = 10
 DistanceInland = 350
 DistanceOffshore = 350
 BasePath = 'Data/' + sitename + '/veglines'
+VeglineShp = glob.glob(BasePath+'/*veglines.shp')
+VeglineGDF = gpd.read_file(VeglineShp[0])
 # Produces Transects for the reference line
-TransectSpec =  os.path.join(BasePath, 'Transect.shp')
-geo = gpd.read_file(TransectSpec)
-Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['image_epsg'], sitename, BasePath, referenceLineShp)
-transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)
+TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
+
+if os.path.isfile(TransectSpec) is False:
+    Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
+else:
+    TransectGDF = gpd.read_file(TransectSpec)
+    TransectGDF = TransectGDF.drop(['Cliff_H', 'Cliff_S', 'Rocky', 'Bar_FH',
+           'Bar_FS', 'Bar_BH', 'Bar_BS', 'Bar_ToeW', 'Bar_TopW', 'Bar_Volume',
+           'Crest_Elev', 'ST_W_low', 'ST_V_low', 'ST_W_med', 'ST_V_med',
+           'ST_W_high', 'ST_V_high', 'LT_W_low', 'LT_V_low', 'LT_W_med',
+           'LT_V_med', 'LT_W_high', 'LT_V_high'], axis=1)
+#%%
+
+Transects.GetIntersections(BasePath,TransectGDF, VeglineGDF)
+# transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)

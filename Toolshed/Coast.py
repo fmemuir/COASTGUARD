@@ -2131,6 +2131,8 @@ class Coast:
                         IntersectionYears.append(int(NearestLine.Surv_End_D))
                     elif "versiondat" in NearestLine:
                         IntersectionYears.append(int(NearestLine.versiondat[0:4]))
+                    elif "dates" in NearestLine:
+                        IntersectionYears.append(int(NearestLine.Dates))
                     else:
                         sys.exit("Couldnt find survey year for MHWS historic shoreline position")
                 
