@@ -109,38 +109,48 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
             
     return
     
-def GetIntersections(BasePath, TransectGDF, VeglineGDF):
+def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     
-    # Filename2SaveCoast = BasePath + '/Coast.pydata'
-    # with open(str(Filename2SaveCoast), 'rb') as PFile:
-    #     CellCoast = pickle.load(PFile)
-        
-    # HistoricalShorelinesShp = PathToVegShp
-    # CellCoast.ExtractSatShorePositions(HistoricalShorelinesShp)
-    
-    
-    # IntersectPoints = TransectGDF.unary_union.intersection(VeglineGDF.unary_union)
-    # IntersectPoints = gpd.GeoDataFrame(geometry=gpd.GeoSeries(IntersectPoints)).explode()
-    # IntersectGDF = gpd.sjoin(TransectGDF ,VeglineGDF)
-        
-    # TransectDict = TransectGDF.to_dict()
-    # TransectDict['distances'] = {}
-    # for T in range(len(TransectDict['TransectID'])):
-    #     TransectDict['distances'][T] = 
-    
-    columns_data = []
-    geoms = []
+   
+    # initialise where each intersection between lines and transects will be saved
+    ColumnData = []
+    Geoms = []
+    # for each row/feature in transect
     for _, _, ID, TrGeom in TransectGDF.itertuples():
-        for _,dates,filename,cloud,ids,otsu,satn,VGeom in VeglineGDF.itertuples():
-            Intersects = TrGeom.intersection(VGeom)
-            columns_data.append((ID,dates,filename,cloud,ids,otsu,satn))
-            geoms.append(Intersects)
-    AllIntersects = gpd.GeoDataFrame(columns_data,geometry=geoms,columns=['TransectID','dates','filename','cloud_cove','idx','Otsu_thres','satname'])
-    AllIntersectsS = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
-    AllIntersectsS['interpnt'] = AllIntersectsS['geometry']
-    interpnt
+        # for each row/feature shoreline
+        for _,dates,filename,cloud,ids,otsu,satn,SGeom in ShorelineGDF.itertuples():
+            # calculate intersections between each transect and shoreline
+            Intersects = TrGeom.intersection(SGeom)
+            ColumnData.append((ID,dates,filename,cloud,ids,otsu,satn))
+            Geoms.append(Intersects)
+    # create GDF from appended lists of intersections        
+    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','filename','cloud_cove','idx','Otsu_thres','satname'])
+    # remove any rows with no intersections
+    AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
+    # duplicate geom column to save point intersections
+    AllIntersects['interpnt'] = AllIntersects['geometry']
+    # take only first point on any transects which intersected a single shoreline more than once
+    for inter in range(len(AllIntersects)):
+        if AllIntersects['interpnt'][inter].geom_type == 'MultiPoint':
+            AllIntersects['interpnt'][inter] = AllIntersects['interpnt'][0]
+    AllIntersects = AllIntersects.drop('geometry',axis=1)
+    # attribute join on transect ID to get transect geometry back
+    AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     
-    return AllIntersects
+    # initialise distances of intersections 
+    distances = []
+    # for each intersection
+    for i in range(len(AllIntersects)):
+        # calculate distance of intersection along transect
+        distances.append(np.sqrt( (AllIntersects['interpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + (AllIntersects['interpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
+    AllIntersects['distances'] = distances
+    
+    TransectDict = TransectGDF.to_dict()
+    for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
+        TransectDict[Key] = {}
+    for i in range(len(TransectGDF['TransectID'])):
+        AllIntersects.loc[AllIntersects['TransectID']=='0']
+    return 
     
 
 def compute_intersection(output, transects, settings, linetype):
