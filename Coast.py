@@ -948,7 +948,7 @@ class Coast:
                 WriteTransect = [np.column_stack([X,Y]).tolist()]
 
                 # Create the record this could become a function in transect object...
-                Record = [str(Line.ID), str(Transect.ID), Transect.CliffHeight, Transect.CliffSlope, 
+                Record = [int(Line.ID), int(Transect.ID), Transect.CliffHeight, Transect.CliffSlope, 
                             Transect.Rocky,
                             Transect.FrontHeight, Transect.FrontSlope, 
                             Transect.BackHeight, Transect.BackSlope,
