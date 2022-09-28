@@ -980,6 +980,64 @@ class Coast:
         f.write(self.Projection)
         f.close()
     
+    def WriteTransectsShp(self, TransectsShp):
+
+        """
+        Writes the transects of a Coast object to polyline shape file
+
+        simplified attribute table for use with only shoreline intersects.
+
+        FM Sept 2022
+
+        """
+
+        # print action to screen
+        print("Coast.WriteTransectsShp: Writing coastal transects and attributes to a shapefile")
+
+        # open new shapefile        
+        WL = shapefile.Writer(TransectsShp,shapeType=shapefile.POLYLINE)
+        
+        # Check length of extreme water levels
+        if len(self.ExtremeWaterLevels) != 3:
+            self.ExtremeWaterLevels = [[],[],[]]
+
+        # Create Fields
+        Fields = [('DeletionFlag','C',1,0), ['LineID', 'N', 3, 0], ['TransectID', 'N', 5, 0]]
+
+        
+        WL.fields = Fields[1:]
+
+        
+        for Line in self.CoastLines:
+            for Transect in Line.Transects:
+
+                # get transect node positions
+                X, Y = Transect.get_XY()
+                
+                WriteTransect = [np.column_stack([X,Y]).tolist()]
+
+                # Create the record this could become a function in transect object...
+                Record = [int(Line.ID), int(Transect.ID)]
+
+                # write transect and record
+                WL.line(WriteTransect)
+                try:
+                    WL.record(*Record) 
+                except:
+                    print(Transect.ID)
+                    print(Record)
+                    #print(Transect.ExtremeWidths)
+                    sys.exit()
+                
+        
+        # close the shapefiles and clean up
+        WL.close()
+            
+        # create the projection file    
+        f = open(TransectsShp.rstrip("shp")+"prj","w")
+        f.write(self.Projection)
+        f.close()
+    
     def WriteFutureTransectsShp(self, TransectsShp):
 
         """
