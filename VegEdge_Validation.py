@@ -208,7 +208,8 @@ referenceLine = Toolbox.spaced_vertices(referenceLine)
 
 settings['reference_shoreline'] = referenceLine
 settings['ref_epsg'] = ref_epsg
-settings['max_dist_ref'] = 100
+# This unit is in pixels
+settings['max_dist_ref'] = 10
 
 
 #%% Vegetation Line Extraction
@@ -275,5 +276,5 @@ else:
 
 #%%
 
-Transects.GetIntersections(BasePath,TransectGDF, VeglineGDF)
+TransectDict = Transects.GetIntersections(TransectGDF, VeglineGDF)
 # transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)

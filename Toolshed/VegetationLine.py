@@ -94,6 +94,7 @@ def extract_veglines(metadata, settings, polygon, dates):
         clf = joblib.load(os.path.join(filepath_models, clf_model))
             
         # convert settings['min_beach_area'] and settings['buffer_size'] from metres to pixels
+        # TO DO: figure out why these exist
         buffer_size_pixels = np.ceil(settings['buffer_size']/pixel_size)
         min_beach_area_pixels = np.ceil(settings['min_beach_area']/pixel_size**2)
 
@@ -130,7 +131,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 continue
 
             # calculate a buffer around the reference shoreline
-            im_ref_buffer_og = BufferShoreline(settings,settings['reference_shoreline'],georef,pixel_size,cloud_mask)
+            im_ref_buffer_og = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
             if i == 0: # if the first image in a sat set, use the ref shoreline
                 im_ref_buffer = im_ref_buffer_og
             else:
@@ -663,7 +664,7 @@ def create_shoreline_buffer(im_shape, georef, image_epsg, pixel_size, settings, 
     return im_buffer
 
 
-def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
+def BufferShoreline(settings,refline,georef,cloud_mask):
     """
     Buffer reference line and utilise geopandas to generate boolean mask of where shoreline swath is.
     FM 2022
@@ -674,8 +675,6 @@ def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
         Process settings.
     georef : list
         Affine transformation matrix of satellite image.
-    pixel_size : float
-        Size of satellite pixel in metres.
     cloud_mask : array
         Boolean array masking out where clouds have been identified in satellite image.
 
@@ -690,7 +689,6 @@ def BufferShoreline(settings,refline,georef,pixel_size,cloud_mask):
     else: # if refline is read in as shapefile
         refGS = gpd.GeoSeries(refline['geometry'])
     
-    # TO DO: Check why this gets divided by pixel_size
     refLSBuffer = refGS.buffer(settings['max_dist_ref'])
     refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
     im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
