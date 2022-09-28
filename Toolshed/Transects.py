@@ -102,16 +102,34 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
         
         CellCoast.BuiltTransects = True
             
-        CellCoast.WriteTransectsShp(TransectSpec)
+        CellCoast.WriteSimpleTransectsShp(TransectSpec)
             
         with open(str(Filename2SaveCoast), 'wb') as PFile:
             pickle.dump(CellCoast, PFile)
             
     return
     
-def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
+def GetIntersections(TransectGDF, ShorelineGDF):
+    '''
+    New intersection between transects and shorelines, based on geopandas GDFs/shapefiles 
+    rather than shorelines represented as points.
+    FM Sept 2022
+
+    Parameters
+    ----------
     
-   
+    TransectGDF : GeoDataFrame
+        Transect GDF created from .
+    ShorelineGDF : GeoDataFrame
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    '''
+     
+    print("performing intersections between transects")
     # initialise where each intersection between lines and transects will be saved
     ColumnData = []
     Geoms = []
@@ -137,6 +155,7 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     
+    print("formatting back into dict...")
     # initialise distances of intersections 
     distances = []
     # for each intersection
@@ -148,8 +167,30 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     TransectDict = TransectGDF.to_dict()
     for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
         TransectDict[Key] = {}
-    for i in range(len(TransectGDF['TransectID'])):
-        AllIntersects.loc[AllIntersects['TransectID']=='0']
+    
+    dates=[]
+    filename=[]
+    cloud_cove=[]
+    idx=[]
+    Otsu_thres=[]
+    satname = []
+    for Key, TrKey, KeyName in zip([dates,filename,cloud_cove,idx,Otsu_thres,satname],
+                                   [datesT,filenameT,cloud_coveT,idxT,Otsu_thresT,satnameT],
+                                   ['dates','filename','cloud_cove','idx','Otsu_thres','satname']):
+        for Tr in range(len(TransectGDF['TransectID'])):
+            # per-transect lists of values
+            datesT = []
+            filenameT=[]
+            cloud_coveT=[]
+            idxT=[]
+            Otsu_thresT=[]
+            satnameT = []
+            # for each matching intersection on a single transect
+            for i in range(len(AllIntersects.loc[AllIntersects['TransectID']==Tr])):
+                TrKey.append(AllIntersects[KeyName].loc[i])
+            Key.append(TrKey)
+        TransectDict[KeyName] = Key
+    
     return 
     
 
