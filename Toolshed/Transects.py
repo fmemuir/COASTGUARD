@@ -22,7 +22,7 @@ from pyproj import Proj
 import skimage.transform as transform
 from pylab import ginput
 
-from Coast import *
+from Toolshed.Coast import *
 
 
 def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, BasePath):
@@ -168,30 +168,31 @@ def GetIntersections(TransectGDF, ShorelineGDF):
     for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
         TransectDict[Key] = {}
     
+
     dates=[]
     filename=[]
     cloud_cove=[]
     idx=[]
     Otsu_thres=[]
     satname = []
-    for Key, TrKey, KeyName in zip([dates,filename,cloud_cove,idx,Otsu_thres,satname],
-                                   [datesT,filenameT,cloud_coveT,idxT,Otsu_thresT,satnameT],
-                                   ['dates','filename','cloud_cove','idx','Otsu_thres','satname']):
-        for Tr in range(len(TransectGDF['TransectID'])):
-            # per-transect lists of values
-            datesT = []
-            filenameT=[]
-            cloud_coveT=[]
-            idxT=[]
-            Otsu_thresT=[]
-            satnameT = []
-            # for each matching intersection on a single transect
+    for Tr in range(len(TransectGDF['TransectID'])):
+        # per-transect lists of values
+        datesT = []
+        filenameT=[]
+        cloud_coveT=[]
+        idxT=[]
+        Otsu_thresT=[]
+        satnameT = []
+        # for each matching intersection on a single transect
+        for Key, TrKey, KeyName in zip([dates,filename,cloud_cove,idx,Otsu_thres,satname],
+                                       [datesT,filenameT,cloud_coveT,idxT,Otsu_thresT,satnameT],
+                                       ['dates','filename','cloud_cove','idx','Otsu_thres','satname']):
             for i in range(len(AllIntersects.loc[AllIntersects['TransectID']==Tr])):
                 TrKey.append(AllIntersects[KeyName].loc[i])
             Key.append(TrKey)
-        TransectDict[KeyName] = Key
     
-    return 
+    
+    return TransectDict
     
 
 def compute_intersection(output, transects, settings, linetype):
