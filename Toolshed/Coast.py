@@ -948,7 +948,7 @@ class Coast:
                 WriteTransect = [np.column_stack([X,Y]).tolist()]
 
                 # Create the record this could become a function in transect object...
-                Record = [str(Line.ID), str(Transect.ID), Transect.CliffHeight, Transect.CliffSlope, 
+                Record = [int(Line.ID), int(Transect.ID), Transect.CliffHeight, Transect.CliffSlope, 
                             Transect.Rocky,
                             Transect.FrontHeight, Transect.FrontSlope, 
                             Transect.BackHeight, Transect.BackSlope,
@@ -960,6 +960,64 @@ class Coast:
                             Transect.ExtremeTotalWidths[0], Transect.ExtremeTotalVolumes[0],
                             Transect.ExtremeTotalWidths[1], Transect.ExtremeTotalVolumes[1],
                             Transect.ExtremeTotalWidths[2], Transect.ExtremeTotalVolumes[2]]
+
+                # write transect and record
+                WL.line(WriteTransect)
+                try:
+                    WL.record(*Record) 
+                except:
+                    print(Transect.ID)
+                    print(Record)
+                    #print(Transect.ExtremeWidths)
+                    sys.exit()
+                
+        
+        # close the shapefiles and clean up
+        WL.close()
+            
+        # create the projection file    
+        f = open(TransectsShp.rstrip("shp")+"prj","w")
+        f.write(self.Projection)
+        f.close()
+    
+    def WriteSimpleTransectsShp(self, TransectsShp):
+
+        """
+        Writes the transects of a Coast object to polyline shape file
+
+        simplified attribute table for use with only shoreline intersects.
+
+        FM Sept 2022
+
+        """
+
+        # print action to screen
+        print("Coast.WriteSimpleTransectsShp: Writing coastal transects and attributes to a shapefile")
+
+        # open new shapefile        
+        WL = shapefile.Writer(TransectsShp,shapeType=shapefile.POLYLINE)
+        
+        # Check length of extreme water levels
+        if len(self.ExtremeWaterLevels) != 3:
+            self.ExtremeWaterLevels = [[],[],[]]
+
+        # Create Fields
+        Fields = [('DeletionFlag','C',1,0), ['LineID', 'N', 3, 0], ['TransectID', 'N', 5, 0]]
+
+        
+        WL.fields = Fields[1:]
+
+        
+        for Line in self.CoastLines:
+            for Transect in Line.Transects:
+
+                # get transect node positions
+                X, Y = Transect.get_XY()
+                
+                WriteTransect = [np.column_stack([X,Y]).tolist()]
+
+                # Create the record this could become a function in transect object...
+                Record = [int(Line.ID), int(Transect.ID)]
 
                 # write transect and record
                 WL.line(WriteTransect)
@@ -2132,7 +2190,7 @@ class Coast:
                     elif "versiondat" in NearestLine:
                         IntersectionYears.append(int(NearestLine.versiondat[0:4]))
                     elif "dates" in NearestLine:
-                        IntersectionYears.append(int(NearestLine.Dates))
+                        IntersectionYears.append(int(NearestLine.dates))
                     else:
                         sys.exit("Couldnt find survey year for MHWS historic shoreline position")
                 
@@ -2315,6 +2373,221 @@ class Coast:
                             Transect.HistoricShorelinesDistances[Index].append(Distance)
                 """
 
+    def ExtractSatShorePositions(self,HistoricalShorelinesShp,Reset=False, AllowMultiples=False):
+    
+        """
+        Function to find nearest historic shoreline position on each transect
+        and add nodes to transect dictionary by date
+    
+        MDH, August 2019
+    
+        Parameters
+        ----------
+        HistoricalShorelineShp : string
+            Filename for polyline shapfile containing historical shoreline positions
+        Reset : bool
+            Resets all historical shoreline positions
+        """
+        print("Coast.ExtractSatShorePositions: Finding historical shoreline positions from ", end="")
+        print(Path(HistoricalShorelinesShp).name)
+    
+        # set a distance to look inland to check for intersections
+        LookDistance = 0.
+    
+        # read shapefile using geopandas
+        GDF = gp.read_file(HistoricalShorelinesShp)
+        Lines = GDF['geometry']
+        
+        if len(Lines) == 0:
+            print("No Lines")
+            import pdb
+            pdb.set_trace()
+            return
+        
+        # catch situation where only one line
+        MultiLines = []
+    
+        if len(Lines) == 1:
+            MultiLines = Lines[0]
+    
+        # deal with invalid geometries on the fly? This is messy!
+        else:
+            for Line in Lines:
+                if not Line:
+                    continue
+                elif Line.geom_type == "LineString":
+                    MultiLines.append(Line)
+                elif Line.geom_type == "MultiLineString":
+                    for SubLine in Line:
+                        if SubLine.geom_type == "LineString":
+                            MultiLines.append(SubLine)
+    
+            MultiLines = MultiLineString(MultiLines)    
+            #MultiLines = MultiLineString([Line for Line in Lines if Line.geom_type == "LineString"])
+            
+        if not MultiLines:
+            print("No Lines")
+            return
+        
+        for Line in self.CoastLines:
+            
+            for Transect in Line.Transects:
+                
+                if Reset:
+                    Transect.ResetHistoricShorelines()
+                    
+                # extend transect line inland to look for intersection
+                #Calculate start and end nodes and generate Transect
+                X1 = Transect.EndNode.X + LookDistance * np.sin( np.radians( Transect.Orientation ) )
+                Y1 = Transect.EndNode.Y + LookDistance * np.cos( np.radians( Transect.Orientation ) )
+                TransectLine = LineString(((Transect.StartNode.X,Transect.StartNode.Y),(X1,Y1)))
+            
+                # intersect with historical shoreline
+                Intersections = TransectLine.intersection(MultiLines)
+                
+                # catch no intersections and flag for deletion?
+                if Intersections.geom_type == "GeometryCollection":
+                    Transect.DeleteFlag = True
+                    continue
+    
+    
+                # store multiple intersections if so
+                if Intersections.geom_type is "MultiPoint":
+                    CoastPoint = Point(Transect.CoastNode.X, Transect.CoastNode.Y)
+                    Distances = [IntersectPoint.distance(CoastPoint) for IntersectPoint in Intersections]
+                    Index = Distances.index(min(Distances))
+                    Indices = np.argsort(np.array(Distances))
+                    Distances = np.array(Distances)[Indices]
+                    IntersectionsList = [Intersections[i] for i in Indices]
+                    
+                else:
+                    # check if this is a new endnode by intersecting with line from startnode to endnode
+                    Distance = Transect.LineString.distance(Intersections)
+                    Intersection = Intersections
+                    IntersectionsList = [Intersection,]
+                
+                IntersectionDates = []
+                
+                # loop through intersections and add to struct
+                for Intersection in IntersectionsList:
+                    #print(Intersection.wkt, end=", ")
+                    # use minimum of line.distance to find line
+                    # need date attribute if rates are to be calculated
+                    Distances = Lines.distance(Intersection)
+                    # print(Distances.idxmin())
+                    import pdb
+                    try:
+                        NearestLine = GDF.iloc[Distances.idxmin()]
+                    except:
+                        continue
+                
+                    # check it hasnt already been read
+                    if "dates" in NearestLine:
+                        IntersectionDates.append(NearestLine.dates)
+                    else:
+                        sys.exit("Couldnt find survey year for MHWS historic shoreline position")
+                
+                if not AllowMultiples:
+                    
+                    CoastPoint = Point(Transect.CoastNode.X, Transect.CoastNode.Y)
+                    TempDistances = [IntersectionPoint.distance(CoastPoint) for IntersectionPoint in IntersectionsList]
+                    IntersectionIndex = TempDistances.index(min(TempDistances))
+                    Intersection = IntersectionsList[IntersectionIndex]
+                    Year = IntersectionDates[IntersectionIndex]
+                    
+                    if Year not in Transect.HistoricShorelinesYears:
+                        
+                        # add year to transect
+                        Index = bisect.bisect(Transect.HistoricShorelinesYears, Year)
+                        Transect.HistoricShorelinesYears.insert(Index, Year)
+                        
+                        # add shoreline position
+                        Position = Node(Intersection.x,Intersection.y)
+                        Positions = [Position,]
+                        Transect.HistoricShorelinesPositions.insert(Index, Positions)
+                        
+                        # add distance
+                        Distances = [Transect.StartNode.get_Distance(Position),]
+                        Transect.HistoricShorelinesDistances.insert(Index, Distances)
+                        
+                        # add source info
+                        Transect.HistoricShorelinesSources.insert(Index, Path(HistoricalShorelinesShp).name)
+                    
+                        
+                    else:
+                        
+                        # find and either add or replace depending on proximity
+                        Index = Transect.HistoricShorelinesYears.index(Year)
+                        Position = Node(Intersection.x,Intersection.y)
+                        
+                        MinDistance = 1000.
+                        
+                        for OldPosition in Transect.HistoricShorelinesPositions[Index]:
+                            Distance = OldPosition.get_Distance(Position)
+                            if Distance < MinDistance:
+                                MinDistance = Distance
+                        
+                        if MinDistance > 1.:
+                        
+                            # add to transect
+                            Transect.HistoricShorelinesPositions[Index].append(Position)
+                            Transect.HistoricShorelinesDistances[Index].append(Distance)
+    
+                else:
+                
+                    # loop through unique years
+                    UniqueYears = list(set(IntersectionDates))
+                    for Year in UniqueYears:
+                            
+                        # isolate intersections for this year
+                        Indices = [i for i, ThisYear in enumerate(IntersectionDates) if ThisYear == Year]
+                        TempIntersectionsList = [IntersectionsList[i] for i in Indices]
+                        CoastPoint = Point(Transect.CoastNode.X, Transect.CoastNode.Y)
+                        TempDistances = [IntersectionPoint.distance(CoastPoint) for IntersectionPoint in TempIntersectionsList]
+                        IntersectionIndex = TempDistances.index(min(TempDistances))
+                        Intersection = TempIntersectionsList[IntersectionIndex]
+    
+                        if Year not in Transect.HistoricShorelinesYears:
+                            
+                            # add year to transect
+                            Index = bisect.bisect(Transect.HistoricShorelinesYears, Year)
+                            Transect.HistoricShorelinesYears.insert(Index, Year)
+                            
+                            # add shoreline position
+                            Position = Node(Intersection.x,Intersection.y)
+                            Positions = [Position,]
+                            Transect.HistoricShorelinesPositions.insert(Index, Positions)
+                            
+                            # add distance
+                            Distances = [Transect.StartNode.get_Distance(Position),]
+                            Transect.HistoricShorelinesDistances.insert(Index, Distances)
+                            
+                            # add source info
+                            Transect.HistoricShorelinesSources.insert(Index, Path(HistoricalShorelinesShp).name)
+                            
+                            # add error
+                            Transect.HistoricShorelinesErrors.insert(Index, Error)
+                            
+                        else:
+                            
+                            # find and either add or replace depending on proximity
+                            Index = Transect.HistoricShorelinesYears.index(Year)
+                            Position = Node(Intersection.x,Intersection.y)
+                            
+                            MinDistance = 1000.
+                            
+                            for OldPosition in Transect.HistoricShorelinesPositions[Index]:
+                                Distance = OldPosition.get_Distance(Position)
+                                if Distance < MinDistance:
+                                    MinDistance = Distance
+                            
+                            if MinDistance > 1.:
+                            
+                                # add to transect
+                                Transect.HistoricShorelinesPositions[Index].append(Position)
+                                Transect.HistoricShorelinesDistances[Index].append(Distance)
+    
+    
 
     def ExtractMLWS(self,MLWSShp):
 

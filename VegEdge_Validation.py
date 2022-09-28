@@ -272,11 +272,7 @@ if os.path.isfile(TransectSpec) is False:
     Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
 else:
     TransectGDF = gpd.read_file(TransectSpec)
-    TransectGDF = TransectGDF.drop(['Cliff_H', 'Cliff_S', 'Rocky', 'Bar_FH',
-           'Bar_FS', 'Bar_BH', 'Bar_BS', 'Bar_ToeW', 'Bar_TopW', 'Bar_Volume',
-           'Crest_Elev', 'ST_W_low', 'ST_V_low', 'ST_W_med', 'ST_V_med',
-           'ST_W_high', 'ST_V_high', 'LT_W_low', 'LT_V_low', 'LT_W_med',
-           'LT_V_med', 'LT_W_high', 'LT_V_high'], axis=1)
+
 #%%
 
 Transects.GetIntersections(BasePath,TransectGDF, VeglineGDF)

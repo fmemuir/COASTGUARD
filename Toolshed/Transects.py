@@ -22,7 +22,7 @@ from pyproj import Proj
 import skimage.transform as transform
 from pylab import ginput
 
-from Toolshed.Coast import *
+from Coast import *
 
 
 def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, BasePath):
