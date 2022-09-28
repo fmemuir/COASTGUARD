@@ -15,6 +15,7 @@ Created on Thu Sep 15 13:08:30 2022
 
 
 import os
+import glob
 import numpy as np
 import pickle
 import warnings
@@ -24,7 +25,7 @@ matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 plt.ion()
 from datetime import datetime
-from Toolshed import Download, Toolbox, VegetationLine
+from Toolshed import Download, Toolbox, VegetationLine, Plotting, Transects
 import seaborn as sns; sns.set()
 import ee
 import geopandas as gpd
@@ -174,7 +175,34 @@ output = Toolbox.remove_duplicates(output) # removes duplicates (images taken on
 output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
-#%%
+#%% Save the veglines as shapefiles locally
+
+
+# Save output veglines 
+Toolbox.SaveShapefiles(output_proj, BasePath, sitename, settings['projection_epsg'])
+
+#%% Create GIF of satellite images and related shorelines
 
 Plotting.SatGIF(metadata,settings,output)
 
+#%% Create Transects
+SmoothingWindowSize = 21 
+NoSmooths = 100
+TransectSpacing = 10
+DistanceInland = 350
+DistanceOffshore = 350
+BasePath = 'Data/' + sitename + '/veglines'
+VeglineShp = glob.glob(BasePath+'/*veglines.shp')
+VeglineGDF = gpd.read_file(VeglineShp[0])
+# Produces Transects for the reference line
+TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
+
+if os.path.isfile(TransectSpec) is False:
+    Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
+else:
+    TransectGDF = gpd.read_file(TransectSpec)
+
+#%%
+
+TransectDict = Transects.GetIntersections(TransectGDF, VeglineGDF)
+# transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)
