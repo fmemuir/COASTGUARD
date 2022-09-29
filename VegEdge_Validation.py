@@ -272,6 +272,7 @@ TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 if os.path.isfile(TransectSpec) is False:
     Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
 else:
+    print('Transects already exist and were loaded')
     TransectGDF = gpd.read_file(TransectSpec)
 
 #%%

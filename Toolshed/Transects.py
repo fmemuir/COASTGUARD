@@ -167,31 +167,29 @@ def GetIntersections(TransectGDF, ShorelineGDF):
     TransectDict = TransectGDF.to_dict()
     for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
         TransectDict[Key] = {}
+    TransectDict['interpnt'] = AllIntersects['interpnt']
+    TransectDict['distances'] = AllIntersects['distances']
     
 
-    dates=[]
-    filename=[]
-    cloud_cove=[]
-    idx=[]
-    Otsu_thres=[]
-    satname = []
-    for Tr in range(len(TransectGDF['TransectID'])):
-        # per-transect lists of values
-        datesT = []
-        filenameT=[]
-        cloud_coveT=[]
-        idxT=[]
-        Otsu_thresT=[]
-        satnameT = []
+    #initialise lists used for storing each transect's intersection values
+    dates, filename, cloud_cove, idx, Otsu_thres, satname, distances, interpnt = ([] for i in range(8)) # per-transect lists of values
+    
+    
+    Key = [dates,filename,cloud_cove,idx,Otsu_thres,satname, distances, interpnt]
+    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'interpnt']
+    
+    for i in range(len(Key)):
+        for Tr in range(len(TransectGDF['TransectID'])):
         # for each matching intersection on a single transect
-        for Key, TrKey, KeyName in zip([dates,filename,cloud_cove,idx,Otsu_thres,satname],
-                                       [datesT,filenameT,cloud_coveT,idxT,Otsu_thresT,satnameT],
-                                       ['dates','filename','cloud_cove','idx','Otsu_thres','satname']):
-            for i in range(len(AllIntersects.loc[AllIntersects['TransectID']==Tr])):
-                TrKey.append(AllIntersects[KeyName].loc[i])
-            Key.append(TrKey)
+            TrKey = []
+            for j in range(len(AllIntersects.loc[AllIntersects['TransectID']==Tr])):
+                TrKey.append(AllIntersects[KeyName[i]].loc[AllIntersects['TransectID']==Tr].iloc[j])
+            Key[i].append(TrKey)
+    
+        TransectDict[KeyName[i]] = Key[i]
     
     
+        
     return TransectDict
     
 
