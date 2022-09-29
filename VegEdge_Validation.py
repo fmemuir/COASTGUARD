@@ -277,5 +277,5 @@ else:
 
 #%%
 
-TransectDict = Transects.GetIntersections(TransectGDF, VeglineGDF)
+TransectDict = Transects.GetIntersections(BasePath, sitename, TransectGDF, VeglineGDF)
 # transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)
