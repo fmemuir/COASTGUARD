@@ -109,7 +109,7 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
             
     return
     
-def GetIntersections(BasePath, sitename, TransectGDF, ShorelineGDF):
+def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     '''
     New intersection between transects and shorelines, based on geopandas GDFs/shapefiles 
     rather than shorelines represented as points.
@@ -120,8 +120,6 @@ def GetIntersections(BasePath, sitename, TransectGDF, ShorelineGDF):
     ----------
     BasePath : str
         Path to shapefiles of transects.
-    sitename : str
-        Name of site.
     TransectGDF : GeoDataFrame
         GDF of shore-normal transects created.
     ShorelineGDF : GeoDataFrame
@@ -166,7 +164,9 @@ def GetIntersections(BasePath, sitename, TransectGDF, ShorelineGDF):
     # for each intersection
     for i in range(len(AllIntersects)):
         # calculate distance of intersection along transect
-        distances.append(np.sqrt( (AllIntersects['interpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + (AllIntersects['interpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
+        distances.append(np.sqrt( 
+            (AllIntersects['interpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + 
+            (AllIntersects['interpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
     AllIntersects['distances'] = distances
     
     TransectDict = TransectGDF.to_dict('list')
@@ -178,8 +178,7 @@ def GetIntersections(BasePath, sitename, TransectGDF, ShorelineGDF):
 
     #initialise lists used for storing each transect's intersection values
     dates, filename, cloud_cove, idx, Otsu_thres, satname, distances, interpnt = ([] for i in range(8)) # per-transect lists of values
-    
-    
+
     Key = [dates,filename,cloud_cove,idx,Otsu_thres,satname, distances, interpnt]
     KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'interpnt']
     
@@ -197,15 +196,50 @@ def GetIntersections(BasePath, sitename, TransectGDF, ShorelineGDF):
             Key[i].append(TrKey)
     
         TransectDict[KeyName[i]] = Key[i]
-    
-    # save to new shapefile with intersections on
-    TransectInterGDF = gpd.GeoDataFrame(TransectDict)
-    TransectInterGDF.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
-        
+ 
     return TransectDict
     
-def CalculateChanges():
 
+def SaveIntersections(TransectDict, BasePath, sitename, projection):
+    '''
+    Save transects with intersection info as shapefile.
+    FM Sept 2022
+
+    Parameters
+    ----------
+    TransectDict : dict
+        Transects with newly added intersection info.
+    BasePath : str
+        Path to shapefiles of transects.
+    sitename : str
+        Name of site.
+    projection : int
+        Projection EPSG code for saving transect shapefile.
+
+    Returns
+    -------
+    TransectInterGDF : GeoDataFrame
+        GDF of transects with intersection info.
+    '''
+    
+    
+    print('saving new transect shapefile ...')
+    
+    TransectInterGDF = gpd.GeoDataFrame(TransectDict, crs=str("EPSG:"+projection))
+    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'interpnt']
+    for Key in KeyName:
+        TransectInterGDF[Key] = TransectInterGDF[Key].astype(str)
+    TransectInterGDF = gpd.GeoDataFrame(TransectDict)
+    TransectInterGDF.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
+    
+    return TransectInterGDF
+    
+
+def CalculateChanges(TransectInterGDF):
+    
+    
+    
+    return
 
 def compute_intersection(output, transects, settings, linetype):
     """
