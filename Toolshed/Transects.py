@@ -153,7 +153,7 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
         if AllIntersects['interpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['interpnt'][inter] = AllIntersects['interpnt'][0]
+            AllIntersects['interpnt'][inter] = list(AllIntersects['interpnt'][inter])[0] # list() accesses individual points in MultiPoint
     AllIntersects = AllIntersects.drop('geometry',axis=1)
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
@@ -225,21 +225,32 @@ def SaveIntersections(TransectDict, BasePath, sitename, projection):
     
     print('saving new transect shapefile ...')
     
-    TransectInterGDF = gpd.GeoDataFrame(TransectDict, crs=str("EPSG:"+projection))
+    TransectInterGDF = gpd.GeoDataFrame(TransectDict, crs="EPSG:"+str(projection))
     KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'interpnt']
     for Key in KeyName:
         TransectInterGDF[Key] = TransectInterGDF[Key].astype(str)
-    TransectInterGDF = gpd.GeoDataFrame(TransectDict)
+    
     TransectInterGDF.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
+    
+    TransectInterGDF = gpd.GeoDataFrame(TransectDict)
     
     return TransectInterGDF
     
 
-def CalculateChanges(TransectInterGDF):
+def CalculateChanges(TransectDict,TransectInterGDF):
     
     
-    
-    return
+    TransectDict['normdists'] = TransectDict['distances']
+    # for each transect
+    for Tr in range(len(TransectDict['TransectID'])):
+        Dists = []
+        # for each intersection on each transect
+        for i, Dist in enumerate(TransectInterGDF['distances'][Tr]):
+            # intersection distance along transect minus midpoint distance gives +ve for seaward and -ve for landward
+            Dists.append(Dist - TransectInterGDF.geometry[Tr].length/2)
+        TransectDict['normdists'][Tr] = Dists
+                
+    return TransectDict
 
 def compute_intersection(output, transects, settings, linetype):
     """

@@ -281,4 +281,5 @@ TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
 #%%
 
 TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
-# transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)
+#%%
+TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
