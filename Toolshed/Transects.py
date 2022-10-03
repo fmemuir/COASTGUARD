@@ -144,6 +144,7 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
             Intersects = TrGeom.intersection(SGeom)
             ColumnData.append((ID,dates,filename,cloud,ids,otsu,satn))
             Geoms.append(Intersects)
+            
     # create GDF from appended lists of intersections        
     AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','filename','cloud_cove','idx','Otsu_thres','satname'])
     # remove any rows with no intersections
@@ -251,6 +252,81 @@ def CalculateChanges(TransectDict,TransectInterGDF):
         TransectDict['normdists'][Tr] = Dists
                 
     return TransectDict
+
+
+def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
+    
+    print('performing transect intersects on validation lines...')
+    ValidGDF = gpd.read_file(ValidationShp)
+    if DatesCol in ValidGDF.keys():
+        ValidGDF = ValidGDF[[DatesCol,'geometry']]
+    else:
+        print('No date column found - check your spelling')
+        return
+    # initialise where each intersection between lines and transects will be saved
+    ColumnData = []
+    Geoms = []
+     # for each row/feature in transect
+    for _, _, ID, TrGeom in TransectGDF.itertuples():
+         # for each row/feature shoreline
+        for _,dates,SGeom in ValidGDF.itertuples():
+             # calculate intersections between each transect and shoreline
+            Intersects = TrGeom.intersection(SGeom)
+            ColumnData.append((ID,dates))
+            Geoms.append(Intersects)
+            
+    # create GDF from appended lists of intersections        
+    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','Vdates'])
+    # remove any rows with no intersections
+    AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
+    # duplicate geom column to save point intersections
+    AllIntersects['Vinterpnt'] = AllIntersects['geometry']
+    # take only first point on any transects which intersected a single shoreline more than once
+    for inter in range(len(AllIntersects)):
+        if AllIntersects['interpnt'][inter].geom_type == 'MultiPoint':
+            AllIntersects['interpnt'][inter] = list(AllIntersects['interpnt'][inter])[0] # list() accesses individual points in MultiPoint
+    AllIntersects = AllIntersects.drop('geometry',axis=1)
+    # attribute join on transect ID to get transect geometry back
+    AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
+    
+    print("formatting back into dict...")
+    # initialise distances of intersections 
+    distances = []
+    # for each intersection
+    for i in range(len(AllIntersects)):
+        # calculate distance of intersection along transect
+        distances.append(np.sqrt( 
+            (AllIntersects['interpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + 
+            (AllIntersects['interpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
+    AllIntersects['Vdists'] = distances
+    
+    #initialise lists used for storing each transect's intersection values
+    Vdates,Vdists, Vinterpnt = ([] for i in range(3)) # per-transect lists of values
+
+    Key = [Vdates, Vdists, Vinterpnt]
+    KeyName = ['Vdates', 'Vdists', 'Vinterpnt']
+    ValidDict = TransectDict
+    
+    # for each column name
+    for i in range(len(Key)):
+        # for each transect
+        for Tr in range(len(TransectGDF['TransectID'])):
+            # refresh per-transect list
+            TrKey = []
+            # for each matching intersection on a single transect
+            for j in range(len(AllIntersects.loc[AllIntersects['TransectID']==Tr])):
+                # append each intersection value to a list for each transect
+                # iloc used so index doesn't restart at 0 each loop
+                TrKey.append(AllIntersects[KeyName[i]].loc[AllIntersects['TransectID']==Tr].iloc[j]) 
+            Key[i].append(TrKey)
+    
+        ValidDict[KeyName[i]] = Key[i]
+    
+    print('calculating distances between validation and sat lines...')
+    
+    
+    return
+
 
 def compute_intersection(output, transects, settings, linetype):
     """
