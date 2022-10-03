@@ -275,11 +275,17 @@ else:
     print('Transects already exist and were loaded')
     TransectGDF = gpd.read_file(TransectSpec)
 
-#%% Get intersections and save new shapefile
+#%% Get intersections
 
 TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
-#%%
+#%% Save newly intersected transects as shapefile
 
 TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
-#%%
+#%% Repopulate dict with intersection distances along transects normalised to transect midpoints
 TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+
+#%% VALIDATION
+
+# Name of date column in validation shapefile (case sesnsitive!) 
+DatesCol = 'Dates'
+
