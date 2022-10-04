@@ -1270,7 +1270,8 @@ def ArrtoGS(refline,georef):
 
 def NearDate(target,items):
     """
-    Find nearest date to target in list of datetimes.
+    Find nearest date to target in list of datetimes. Returns matching date 
+    only if match is within 3 months.
     
     FM Oct 2022
 
@@ -1282,8 +1283,14 @@ def NearDate(target,items):
         List of datetimes.
 
     """
+    nearestDate = min(items, key=lambda x: abs(x - target))
     
-    return items.index(min(items, key=lambda x: abs(x - target)))
+    # # if difference is longer than 6 months, no match exists  
+    # if abs((target - nearestDate).days) > 183: 
+    #     return
+    # else:
+    #     return nearestDate
+    return nearestDate
 
 
 def CalcDistance(Geom1,Geom2):
@@ -1308,10 +1315,8 @@ def CalcDistance(Geom1,Geom2):
     if Geom2.geom_type == 'LineString': # point distance from end of transect
         geom1geom2dist = np.sqrt( (Geom1.x - Geom2.coords[0][0])**2 + 
                                  (Geom1.y - Geom2.coords[0][1])**2 )
-    elif Geom1.geom_type == 'LineString': # end of transect distance from point
+    else Geom1.geom_type == 'LineString': # end of transect distance from point
         geom1geom2dist = np.sqrt( (Geom1.coords[0][0] - Geom2.x)**2 + 
                                  (Geom1.coords[0][1] - Geom2.y)**2 )
-    else: # between two points
-        geom1geom2dist = Geom1.distance(Geom2)
         
     return geom1geom2dist
