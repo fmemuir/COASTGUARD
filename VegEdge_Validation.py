@@ -287,5 +287,9 @@ TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
 #%% VALIDATION
 
 # Name of date column in validation shapefile (case sesnsitive!) 
-DatesCol = 'Dates'
+DatesCol = 'Date'
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
+ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
+with open(os.path.join(filepath, sitename + '_valid_dict.pkl'), 'wb') as f:
+        pickle.dump(ValidDict, f)
 
