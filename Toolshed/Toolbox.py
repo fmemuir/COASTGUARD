@@ -1266,3 +1266,52 @@ def ArrtoGS(refline,georef):
     refGS = gpd.GeoSeries(refLS)
     
     return refGS
+
+
+def NearDate(target,items):
+    """
+    Find nearest date to target in list of datetimes.
+    
+    FM Oct 2022
+
+    Parameters
+    ----------
+    target : datetime
+        Target datetime to find nearest date to.
+    items : list
+        List of datetimes.
+
+    """
+    
+    return items.index(min(items, key=lambda x: abs(x - target)))
+
+
+def CalcDistance(Geom1,Geom2):
+    """
+    Calculate distance between two shapely geoms, either using a point and line
+    (endpoint coordinate of line is used), or two points. 
+    FM Oct 2022
+
+    Parameters
+    ----------
+    Geom1 : Point or LineString
+        First location.
+    Geom2 : Point or LineString
+        Second location.
+
+    Returns
+    -------
+    geom1geom2dist : float64
+        Distance between two points (in metres).
+
+    """
+    if Geom2.geom_type == 'LineString': # point distance from end of transect
+        geom1geom2dist = np.sqrt( (Geom1.x - Geom2.coords[0][0])**2 + 
+                                 (Geom1.y - Geom2.coords[0][1])**2 )
+    elif Geom1.geom_type == 'LineString': # end of transect distance from point
+        geom1geom2dist = np.sqrt( (Geom1.coords[0][0] - Geom2.x)**2 + 
+                                 (Geom1.coords[0][1] - Geom2.y)**2 )
+    else: # between two points
+        geom1geom2dist = Geom1.distance(Geom2)
+        
+    return geom1geom2dist

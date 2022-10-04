@@ -22,6 +22,7 @@ from pyproj import Proj
 import skimage.transform as transform
 from pylab import ginput
 
+from Toolshed import Toolbox
 from Toolshed.Coast import *
 
 
@@ -255,6 +256,29 @@ def CalculateChanges(TransectDict,TransectInterGDF):
 
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
+    """
+    Intersects transects with validation lines from shapefile, matches date of
+    each validation line to nearest sat line, and calculates distance along 
+    transect between them.
+    FM Oct 2022
+
+    Parameters
+    ----------
+    ValidationShp : str
+        File path to validation line shapefile.
+    DatesCol : str
+        Name of attribute field where dates are stored.
+    TransectGDF : GeoDataFrame
+        Transect GDF with no attributes, just geometries.
+    TransectDict : dict
+        Transect dictionary with attributes.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+        
+    """
     
     print('performing transect intersects on validation lines...')
     ValidGDF = gpd.read_file(ValidationShp)
@@ -295,9 +319,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     # for each intersection
     for i in range(len(AllIntersects)):
         # calculate distance of intersection along transect
-        distances.append(np.sqrt( 
-            (AllIntersects['interpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + 
-            (AllIntersects['interpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
+        distances.append(CalcDistance(AllIntersects['interpnt'][i], AllIntersects['geometry'][i]))
     AllIntersects['Vdists'] = distances
     
     #initialise lists used for storing each transect's intersection values
@@ -305,7 +327,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
 
     Key = [Vdates, Vdists, Vinterpnt]
     KeyName = ['Vdates', 'Vdists', 'Vinterpnt']
-    ValidDict = TransectDict
+    ValidDict = TransectDict.copy()
     
     # for each column name
     for i in range(len(Key)):
@@ -324,8 +346,22 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     
     print('calculating distances between validation and sat lines...')
     
+    # for each transect
+    for Tr in range(len(TransectGDF['TransectID'])):
+        # dates into transect-specific list
+        VDateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['Vdates'][Tr]]
+        DateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['dates'][Tr]]
+        # find index of closest sat date to each validation date
+        for D, VDate in enumerate(VDateList):
+            DateIndex = Toolbox.NearDate(VDate,DateList)
+            # use date index to identify matching distance along transect
+            Toolbox.CalcDistance(ValidDict['interpnt'][Tr][DateIndex], ValidDict['geometry'][Tr][D])
+            
+        
     
     return
+
+
 
 
 def compute_intersection(output, transects, settings, linetype):
