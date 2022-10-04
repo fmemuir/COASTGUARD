@@ -174,8 +174,8 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     TransectDict = TransectGDF.to_dict('list')
     for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
         TransectDict[Key] = {}
-    TransectDict['interpnt'] = AllIntersects['interpnt']
-    TransectDict['distances'] = AllIntersects['distances']
+    TransectDict['interpnt'] = AllIntersects['interpnt'].copy()
+    TransectDict['distances'] = AllIntersects['distances'].copy()
     
 
     #initialise lists used for storing each transect's intersection values
@@ -242,7 +242,7 @@ def SaveIntersections(TransectDict, BasePath, sitename, projection):
 def CalculateChanges(TransectDict,TransectInterGDF):
     
     
-    TransectDict['normdists'] = TransectDict['distances']
+    TransectDict['normdists'] = TransectDict['distances'].copy()
     # for each transect
     for Tr in range(len(TransectDict['TransectID'])):
         Dists = []
@@ -307,8 +307,8 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     AllIntersects['Vinterpnt'] = AllIntersects['geometry']
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
-        if AllIntersects['interpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['interpnt'][inter] = list(AllIntersects['interpnt'][inter])[0] # list() accesses individual points in MultiPoint
+        if AllIntersects['Vinterpnt'][inter].geom_type == 'MultiPoint':
+            AllIntersects['Vinterpnt'][inter] = list(AllIntersects['Vinterpnt'][inter])[0] # list() accesses individual points in MultiPoint
     AllIntersects = AllIntersects.drop('geometry',axis=1)
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
@@ -319,7 +319,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     # for each intersection
     for i in range(len(AllIntersects)):
         # calculate distance of intersection along transect
-        distances.append(CalcDistance(AllIntersects['interpnt'][i], AllIntersects['geometry'][i]))
+        distances.append(Toolbox.CalcDistance(AllIntersects['Vinterpnt'][i], AllIntersects['geometry'][i]))
     AllIntersects['Vdists'] = distances
     
     #initialise lists used for storing each transect's intersection values
@@ -345,21 +345,28 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
         ValidDict[KeyName[i]] = Key[i]
     
     print('calculating distances between validation and sat lines...')
-    
+    ValidDict['valsatdist'] = ValidDict['TransectID'].copy()
     # for each transect
     for Tr in range(len(TransectGDF['TransectID'])):
         # dates into transect-specific list
         VDateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['Vdates'][Tr]]
         DateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['dates'][Tr]]
         # find index of closest sat date to each validation date
+        ValSatDists = []
         for D, VDate in enumerate(VDateList):
-            DateIndex = Toolbox.NearDate(VDate,DateList)
+            # index of matching nearest date
+            if DateList != []:
+                DateIndex = DateList.index(Toolbox.NearDate(VDate,DateList))
+            else:
+                continue
             # use date index to identify matching distance along transect
-            Toolbox.CalcDistance(ValidDict['interpnt'][Tr][DateIndex], ValidDict['geometry'][Tr][D])
+            # and calculate distance between two intersections (sat - validation means +ve is seaward/-ve is landward)
+            ValSatDists.append(ValidDict['distances'][Tr][DateIndex] - ValidDict['Vdists'][Tr][D])
             
+        ValidDict['valsatdist'][Tr] = ValSatDists
         
     
-    return
+    return ValidDict
 
 
 
