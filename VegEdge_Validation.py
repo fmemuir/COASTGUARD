@@ -290,12 +290,18 @@ TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
 # Name of date column in validation shapefile (case sesnsitive!) 
 DatesCol = 'Date'
 ValidationShp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
-ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
-with open(os.path.join(filepath, sitename + '_valid_dict.pkl'), 'wb') as f:
+if os.path.isfile(os.path.join(filepath, sitename + '_valid_dict.pkl')):
+    with open(os.path.join(filepath, sitename + '_valid_dict.pkl'), 'rb') as f:
+        ValidDict = pickle.load(f)
+else:
+    ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
+    with open(os.path.join(filepath, sitename + '_valid_dict.pkl'), 'wb') as f:
         pickle.dump(ValidDict, f)
 
-#%% Validation Plots
 
-Plotting.ValidViolin(ValidationShp,DatesCol)
+#%% Validation Plots
+# TransectIDs = (1294,1877) # start and end transect ID
+TransectIDs = (0,585) # start and end transect ID
+Plotting.ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs)
 
 
