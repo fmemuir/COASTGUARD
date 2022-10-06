@@ -17,26 +17,27 @@ import warnings
 from datetime import datetime, timedelta
 warnings.filterwarnings("ignore")
 
-import matplotlib
-matplotlib.use('Qt5Agg')
+import seaborn as sns
+sns.set(style='whitegrid') #sns.set(context='notebook', style='darkgrid', palette='deep', font='sans-serif', font_scale=1, color_codes=False, rc=None)
+import matplotlib as mpl
+mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
-from matplotlib.animation import FuncAnimation, PillowWriter
+from matplotlib.animation import FuncAnimation
 from matplotlib import gridspec
 plt.ion()
+
 from shapely import geometry
 from shapely.geometry import Point, LineString
 
 from Toolshed import Toolbox, Transects, Image_Processing
 
 from sklearn.metrics import mean_squared_error, r2_score
-import seaborn as sns; sns.set()
+
 import geemap
 import ee
 
 import pandas as pd
 import geopandas as gpd
-# import matplotlib.cm as cm
-# import pyproj
 
 import csv
 
@@ -142,10 +143,19 @@ def SatGIF(metadata,settings,output):
 
 
 
-def ValidViolin(ValidationShp,DatesCol,ValidDict):
+def ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
+
+    Parameters
+    ----------
+    ValidationShp : str
+        Path to validation lines shapefile.
+    DatesCol : str
+        Name of dates column in shapefile.
+    ValidDict : dict
+        Validation dictionary created from ValidateIntersects().
 
     """
     
@@ -155,10 +165,14 @@ def ValidViolin(ValidationShp,DatesCol,ValidDict):
     Vdates = ValidGDF[DatesCol].unique()
     for Vdate in Vdates:
         valsatdist = []
-        for Tr in range(585): # southeast
+        for Tr in range(TransectIDs[0],TransectIDs[1]): # southeast
             if Vdate in ValidDict['Vdates'][Tr]:
                 DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
-                valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                else:
+                    continue
             else:
                 continue
         # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
@@ -170,8 +184,20 @@ def ValidViolin(ValidationShp,DatesCol,ValidDict):
     df = pd.DataFrame(violinsrt)
     df = df.transpose()
     df.columns = violindatesrt
-    sns.set(rc = {'figure.figsize':(9,6)})
-    sns.violinplot(data = df, linewidth=1, palette = 'magma', orient='h')
+    
+    ax = sns.violinplot(data = df, linewidth=1, palette = 'magma', orient='h')
+    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
+
+    
+    
+
+    # ax.grid(False)
+    # ax.right_ax.grid(False)
+    
+    # ax.set_xticks([-50,-25,-10,-1,1,10,25,50],minor=True)
+    # ax.xaxis.grid(b=True, which='minor')
+    # ax.axhline(0, color='red', linewidth=0.5)
+    # plt.show()
 
 
 
