@@ -141,6 +141,40 @@ def SatGIF(metadata,settings,output):
     anim.save(os.path.join(filepath_jpg, sitename + '_AnimatedImages.gif'),fps=3)
 
 
+
+def ValidViolin(ValidationShp,DatesCol,ValidDict):
+    """
+    Violin plot showing distances between validation and satellite, for each date of validation line.
+    FM Oct 2022
+
+    """
+    
+    ValidGDF = gpd.read_file(ValidationShp)
+    violin = []
+    violindates = []
+    Vdates = ValidGDF[DatesCol].unique()
+    for Vdate in Vdates:
+        valsatdist = []
+        for Tr in range(585): # southeast
+            if Vdate in ValidDict['Vdates'][Tr]:
+                DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
+                valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
+        if valsatdist != []: 
+            violin.append(valsatdist)
+            violindates.append(Vdate)
+    # sort both dates and list of values by date
+    violindatesrt, violinsrt = [list(d) for d in zip(*sorted(zip(violindates, violin), key=lambda x: x[0]))]
+    df = pd.DataFrame(violinsrt)
+    df = df.transpose()
+    df.columns = violindatesrt
+    sns.set(rc = {'figure.figsize':(9,6)})
+    sns.violinplot(data = df, linewidth=1, palette = 'magma', orient='h')
+
+
+
 def CoastPlot(settings, sitename):
     
     filepath = os.path.join(settings['inputs']['filepath'], sitename)

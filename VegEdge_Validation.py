@@ -22,6 +22,7 @@ from Toolshed import Download, Toolbox, VegetationLine, Plotting, Transects
 import seaborn as sns; sns.set()
 import ee
 import geopandas as gpd
+import pandas as pd
 
 ee.Initialize()
 
@@ -292,4 +293,9 @@ ValidationShp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
 ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
 with open(os.path.join(filepath, sitename + '_valid_dict.pkl'), 'wb') as f:
         pickle.dump(ValidDict, f)
+
+#%% Validation Plots
+
+Plotting.ValidViolin(ValidationShp,DatesCol)
+
 
