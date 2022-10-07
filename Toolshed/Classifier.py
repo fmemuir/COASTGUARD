@@ -7,6 +7,7 @@ Author: Kilian Vos, Water Research Laboratory, University of New South Wales
 
 # load modules
 import os
+import glob
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
@@ -662,18 +663,20 @@ def load_labels(train_sites, settings):
         sitename = settings['inputs']['sitename']
         filepath = os.path.join(filepath_train,sitename)
         if os.path.exists(filepath):
-            list_files = os.listdir(filepath)
+            # FM: faster way to get just pkl files
+            list_files_pkl = glob.glob(filepath+'/*.pkl') 
+            # list_files = os.listdir(filepath)
         else:
             continue
         # make a new list with only the .pkl files (no .jpg)
-        list_files_pkl = []
-        for file in list_files:
-            if '.pkl' in file:
-                list_files_pkl.append(file)
+        # list_files_pkl = []
+        # for file in list_files:
+        #     if '.pkl' in file:
+        #         list_files_pkl.append(file)
         # load and append the training data to the features dict
         for file in list_files_pkl:
             # read file
-            with open(os.path.join(filepath, file), 'rb') as f:
+            with open( file, 'rb') as f:
                 labelled_data = pickle.load(f) 
             for key in labelled_data['features'].keys():
                 if len(labelled_data['features'][key])>0: # check that is not empty
