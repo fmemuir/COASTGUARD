@@ -267,13 +267,6 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         if im10 is None:
             return None, None, None, None, None, None
         
-        """
-        fn10 = fn[0]
-        data = gdal.Open(fn10, gdal.GA_ReadOnly)
-        georef = np.array(data.GetGeoTransform())
-        bands = [data.GetRasterBand(k + 1).ReadAsArray() for k in range(data.RasterCount)]
-        im10 = np.stack(bands, 2)
-        """
         im10 = im10/10000 # TOA scaled to 10000
 
         # if image contains only zeros (can happen with S2), skip the image
