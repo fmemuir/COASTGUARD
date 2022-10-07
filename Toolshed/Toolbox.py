@@ -1315,7 +1315,7 @@ def CalcDistance(Geom1,Geom2):
     if Geom2.geom_type == 'LineString': # point distance from end of transect
         geom1geom2dist = np.sqrt( (Geom1.x - Geom2.coords[0][0])**2 + 
                                  (Geom1.y - Geom2.coords[0][1])**2 )
-    else Geom1.geom_type == 'LineString': # end of transect distance from point
+    else: # end of transect distance from point
         geom1geom2dist = np.sqrt( (Geom1.coords[0][0] - Geom2.x)**2 + 
                                  (Geom1.coords[0][1] - Geom2.y)**2 )
         
