@@ -86,8 +86,8 @@ settings ={'filepath_train':filepath_train, # folder where the labelled images w
            'cloud_thresh':0.9, # percentage of cloudy pixels accepted on the image
            'cloud_mask_issue':False, # set to True if problems with the default cloud mask 
            'inputs':{'filepath':filepath_images}, # folder where the images are stored
-           'labels':{'veg':1,'non-veg':2}, # labels for the classifier
-           'colors':{'veg':[0.3, 0.65, 0.3],'non-veg':[0.58,0.51,0.8]},
+           'labels':{'veg':1,'nonveg':2}, # labels for the classifier
+           'colors':{'veg':[0.3, 0.65, 0.3],'nonveg':[0.58,0.51,0.8]},
            'tolerance':0.01, # this is the pixel intensity tolerance, when using flood fill for sandy pixels
                              # set to 0 to select one pixel at a time
             }
@@ -343,6 +343,7 @@ sumfeatures = Classifier.load_labels(train_sites, settings)
 settings['inputs']['sitename'] = 'DornochWinter'
 winfeatures = Classifier.load_labels(train_sites, settings)
 
+#%% 
 n_samples = 10000
     
 for key in ['veg', 'nonveg']:
@@ -378,6 +379,7 @@ Classifier.plot_confusion_matrix(winy_test, winy_pred,
                                     normalize=False);
 
 #%%
+classifier = MLPClassifier(hidden_layer_sizes=(100,50), solver='adam')
 # train classifier on winter data
 classifier.fit(winX_train,winy_train)
 # test winter model on summer data
