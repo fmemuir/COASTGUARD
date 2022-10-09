@@ -83,7 +83,7 @@ filepath_models = os.path.join(os.getcwd(), 'models')
 
 # settings
 settings ={'filepath_train':filepath_train, # folder where the labelled images will be stored
-           'cloud_thresh':0.9, # percentage of cloudy pixels accepted on the image
+           'cloud_thresh':0.5, # percentage of cloudy pixels accepted on the image
            'cloud_mask_issue':False, # set to True if problems with the default cloud mask 
            'inputs':{'filepath':filepath_images}, # folder where the images are stored
            'labels':{'veg':1,'nonveg':2}, # labels for the classifier
@@ -112,7 +112,7 @@ print('Sites for training:\n%s\n'%train_sites)
 # lonmin, lonmax = -2.49, -2.42
 # latmin, latmax = 56.70, 56.75
 
-sitename = 'DornochSummer'
+sitename = 'Dornoch'
 lonmin, lonmax = -4.033, -3.996
 latmin, latmax = 57.855, 57.885
 
@@ -137,8 +137,8 @@ if os.path.isdir(direc) is False:
 # In[49]:
 
 
-sat_list = ['S2']
-dates = ['2019-05-01', '2019-08-31']
+sat_list = ['L8','S2']
+dates = ['2019-01-01', '2019-12-31']
 # dates = ['2019-12-01', '2020-02-28']
 projection_epsg = 27700
 image_epsg = 32630
@@ -174,7 +174,7 @@ settings = {
     'ref_epsg': 4326,
     'max_dist_ref': 500,
     # general parameters:
-    'cloud_thresh': 0.9,        # threshold on maximum cloud cover
+    'cloud_thresh': 0.2,        # threshold on maximum cloud cover
     'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
     # quality control:
     'check_detection': True,    # if True, shows each shoreline detection to the user for validation
