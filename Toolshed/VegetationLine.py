@@ -1282,6 +1282,17 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
 
     # plot image 3 (NDVI)
     ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
+    
+    # FM: create transition zone mask
+    im_TZ = im_ndvi.copy()
+    for i in range(len(im_ndvi[:,0])):
+        for j in range(len(im_ndvi[0,:])):
+            if im_ndvi[i,j] > np.nanmin(int_veg) and im_ndvi[i,j] < np.nanmax(int_nonveg):
+                im_TZ[i,j] = np.nan
+            else:
+                im_TZ[i,j] = 1.0
+    # tzplot = ax3.imshow(im_TZ, cmap='tab10')       
+    
     ax3.axis('off')
     ax3.set_title('NDVI', fontsize=12)
     
@@ -1335,8 +1346,8 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=5)
     t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
     # FM: plot vert lines where edges of overlapping classes reach (transition zone)
-    TZmax = ax4.axvline(x=np.nanmin(int_veg),ls='--', c='r', lw=1.5, label='transition zone')
-    TZmin = ax4.axvline(x=np.nanmax(int_nonveg),ls='--', c='r', lw=1.5)
+    TZmax = ax4.axvline(x=np.nanmin(int_veg),ls='--', c='C1', lw=1.5, label='transition zone')
+    TZmin = ax4.axvline(x=np.nanmax(int_nonveg),ls='--', c='C1', lw=1.5)
     
     ax4.legend(loc=1)
     plt.draw() # to update the plot
