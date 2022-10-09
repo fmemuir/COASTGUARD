@@ -281,8 +281,44 @@ for i, layerparam in enumerate(layerparams):
     print('Accuracy with %s: %0.6f' % (str(layerparam), classifier.score(X_test,y_test)))
     print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
+#%%
+with open(os.path.join(filepath_train,'DornochScores.pkl'),'rb') as f:
+    scores, scores10k, scores10k2 = pickle.load(f)
+#%% Plot bar graph of accuracies
 
+fig, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(18, 6))
 
+# plot the same data on both axes
+ax.bar(scores10k['layers'],scores10k['accuracy'],width=0.5)
+ax2.bar(scores10k['layers'],scores10k['accuracy'],width=0.5)
+
+# zoom-in / limit the view to different portions of the data
+ax.set_ylim(0.992, 1.)  # outliers only
+ax2.set_ylim(0, 0.55)  # most of the data
+
+# hide the spines between ax and ax2
+ax.spines['bottom'].set_visible(False)
+ax2.spines['top'].set_visible(False)
+ax.xaxis.tick_top()
+ax.tick_params(labeltop=False)  # don't put tick labels at the top
+ax2.xaxis.tick_bottom()
+
+d = .008  # how big to make the diagonal lines in axes coordinates
+# arguments to pass to plot, just so we don't keep repeating them
+kwargs = dict(transform=ax.transAxes, color='k', clip_on=False)
+ax.plot((-d, +d), (-d, +d), **kwargs)        # top-left diagonal
+ax.plot((1 - d, 1 + d), (-d, +d), **kwargs)  # top-right diagonal
+
+kwargs.update(transform=ax2.transAxes)  # switch to the bottom axes
+ax2.plot((-d, +d), (1 - d, 1 + d), **kwargs)  # bottom-left diagonal
+ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
+
+# What's cool about this is that now if we vary the distance between
+# ax and ax2 via fig.subplots_adjust(hspace=...) or plt.subplot_tool(),
+# the diagonal lines will move accordingly, and stay right at the tips
+# of the spines they are 'breaking'
+
+plt.show()
 
 #%% [OPTIONAL] 10-fold cross-validation (may take a few minutes to run)
 
