@@ -227,7 +227,7 @@ for key in features.keys():
 
 # subsample randomly the land and water classes
 # as the most important class is 'sand', the number of samples should be close to the number of sand pixels
-n_samples = 5000
+n_samples = 10000
 for key in ['veg', 'nonveg']:
     features[key] =  features[key][np.random.choice(features[key].shape[0], n_samples, replace=False),:]
 # print classes again
@@ -266,16 +266,18 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle
 
 # hidden_layer_sizes default is (100,) which represents one layer with 100 nodes
 # goal is to cycle through different combinations to test accuracy
-layerparams = [(1,), (5,), (10,), (50,), (100,), (500,), 
-               (1,1), (5,5), (10,10), (50,50), (100,100), (500,500), 
-               (1,1,1), (5,5,5), (10,10,10), (50,50,50), (100,100,100), (500,500,500)]
-scores = pd.DataFrame(columns=['layers','accuracy','timeelapsed'])
+# layerparams = [(1,), (5,), (10,), (50,), (100,), (500,), 
+#                (1,1), (5,5), (10,10), (50,50), (100,100), (500,500), 
+#                (1,1,1), (5,5,5), (10,10,10), (50,50,50), (100,100,100), (500,500,500)]
+layerparams = [(50,10,50),(100,50,10,50,100),(500,100,50,10,50,100,500)]
+
+scores10k2 = pd.DataFrame(columns=['layers','accuracy','timeelapsed'])
 
 for i, layerparam in enumerate(layerparams):
     start_time = timeit.default_timer()
     classifier = MLPClassifier(hidden_layer_sizes=layerparam, solver='adam')
     classifier.fit(X_train,y_train)
-    scores.loc[i] = [str(layerparam), classifier.score(X_test,y_test), round(timeit.default_timer() - start_time, 5)]
+    scores10k2.loc[i] = [str(layerparam), classifier.score(X_test,y_test), round(timeit.default_timer() - start_time, 5)]
     print('Accuracy with %s: %0.6f' % (str(layerparam), classifier.score(X_test,y_test)))
     print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
