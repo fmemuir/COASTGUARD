@@ -230,11 +230,14 @@ X,y = Classifier.format_training_data(features, classes, labels)
 
 # divide in train and test and evaluate the classifier
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, random_state=0)
-start_time = timeit.default_timer()
-classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
-classifier.fit(X_train,y_train)
-print('Accuracy: %0.4f' % classifier.score(X_test,y_test))
-print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
+runs = []
+for i in range(10):
+    start_time = timeit.default_timer()
+    classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
+    classifier.fit(X_train,y_train)
+    runs.append(classifier.score(X_test,y_test))
+    print('Accuracy: %0.4f' % classifier.score(X_test,y_test))
+    print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
 
 
