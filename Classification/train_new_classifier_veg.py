@@ -199,28 +199,6 @@ features = Classifier.load_labels(train_sites, settings)
 
 
 
-#%% [OPTIONAL] original CoastSat data
-
-# you can also load the original CoastSat training data (and optionally merge it with your labelled data)
-with open(os.path.join(settings['filepath_train'], 'CoastSat_training_set_L8.pkl'), 'rb') as f:
-    features_original = pickle.load(f)
-for key in features_original.keys():
-    print('%s : %d pixels'%(key,len(features_original[key])))
-
-
-#%% Run this section to combine the original training data with your labelled data:
-
-
-# add the white-water data from the original training data
-features['white-water'] = np.append(features['white-water'], features_original['white-water'], axis=0)
-# or merge all the classes
-# for key in features.keys():
-#     features[key] = np.append(features[key], features_original[key], axis=0)
-#features = features_original 
-for key in features.keys():
-    print('%s : %d pixels'%(key,len(features[key])))
-
-
 #%% 4. Subsample
 #As the classes do not have the same number of pixels, it is good practice to subsample the very large classes 
 # (in this case 'veg' and 'other land features')
@@ -251,9 +229,9 @@ X,y = Classifier.format_training_data(features, classes, labels)
 
 
 # divide in train and test and evaluate the classifier
-start_time = timeit.default_timer()
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, random_state=0)
-classifier = MLPClassifier(hidden_layer_sizes=(100,50), solver='adam')
+start_time = timeit.default_timer()
+classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
 classifier.fit(X_train,y_train)
 print('Accuracy: %0.4f' % classifier.score(X_test,y_test))
 print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
@@ -283,7 +261,7 @@ for i, layerparam in enumerate(layerparams):
 
 #%%
 with open(os.path.join(filepath_train,'DornochScores.pkl'),'rb') as f:
-    scores, scores10k, scores10k2 = pickle.load(f)
+    scores, scores10k = pickle.load(f)
 #%% Plot bar graph of accuracies
 
 fig, (ax, ax2) = plt.subplots(2, 1, sharex=True, figsize=(18, 6))
@@ -302,6 +280,7 @@ ax2.spines['top'].set_visible(False)
 ax.xaxis.tick_top()
 ax.tick_params(labeltop=False)  # don't put tick labels at the top
 ax2.xaxis.tick_bottom()
+ax.set_ylabel('Accuracy')
 
 d = .008  # how big to make the diagonal lines in axes coordinates
 # arguments to pass to plot, just so we don't keep repeating them
@@ -318,7 +297,23 @@ ax2.plot((1 - d, 1 + d), (1 - d, 1 + d), **kwargs)  # bottom-right diagonal
 # the diagonal lines will move accordingly, and stay right at the tips
 # of the spines they are 'breaking'
 
+# plt.xticks(scores10k['layers'], scores10k['layers'])
+plt.tight_layout()
+plt.savefig(os.path.join(filepath_train,'VegTraining_Accuracies.png'))
 plt.show()
+
+fig = plt.figure(figsize=(18, 6))
+
+# plot the same data on both axes
+plt.bar(scores10k['layers'],scores10k['timeelapsed'],width=0.5, color='darkgray')
+plt.ylabel('Time elapsed to train (sec)')
+plt.xlabel('Model config.')
+
+plt.tight_layout()
+plt.savefig(os.path.join(filepath_train,'VegTraining_TimeElapsed.png'))
+plt.show()
+
+
 
 #%% [OPTIONAL] 10-fold cross-validation (may take a few minutes to run)
 
