@@ -209,8 +209,8 @@ referenceLine = Toolbox.spaced_vertices(referenceLine)
 
 settings['reference_shoreline'] = referenceLine
 settings['ref_epsg'] = ref_epsg
-# This unit is in pixels
-settings['max_dist_ref'] = 10
+# Distance to buffer reference line by (this is in metres)
+settings['max_dist_ref'] = 150
 
 
 #%% Vegetation Line Extraction
