@@ -29,6 +29,7 @@ from shapely.geometry import LineString
 import matplotlib.patches as mpatches
 import matplotlib.lines as mlines
 import matplotlib.cm as cm
+from matplotlib import colors
 from matplotlib import gridspec
 import pickle
 from datetime import datetime
@@ -152,6 +153,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                                     min_beach_area_pixels, clf)
             # save classified image after classification takes place
             Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
+            # Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
             
             # if adjust_detection is True, let the user adjust the detected shoreline
             if settings['adjust_detection']:
@@ -172,15 +174,15 @@ def extract_veglines(metadata, settings, polygon, dates):
                         # compute NDVI image (NIR-R)
                         im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
                         # find contours on NDVI grayscale image
-                        contours_nvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
+                        contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
                         
                 else:
                     # use classification to refine threshold and extract the veg/nonveg interface
-                    contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
+                    contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
                     
                 # process the contours into a shoreline
-                # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)   
-                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
+                # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)   
+                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
 
                 if settings['check_detection'] or settings['save_figure']:
                     date = metadata[satname]['dates'][i]
@@ -497,7 +499,7 @@ def find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname):
     -----------
     contours: list of np.arrays
         contains the coordinates of the contour lines
-    t_nvi: float
+    t_ndvi: float
         Otsu threshold used to map the contours
 
     """
@@ -544,10 +546,10 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer,s
 
     Returns:    
     -----------
-    contours_nvi: list of np.arrays
+    contours_ndvi: list of np.arrays
         contains the coordinates of the contour lines extracted from the
         NDVI (Modified Normalized Difference Water Index) image
-    t_nvi: float
+    t_ndvi: float
         Otsu sand/water threshold used to map the contours
 
     """
@@ -556,9 +558,9 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer,s
     ncols = cloud_mask.shape[1]
 
     # calculate Normalized Difference Modified Water Index (SWIR - G)
-    im_nvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     
-    vec_ind = im_nvi.reshape(nrows*ncols,1)
+    vec_ind = im_ndvi.reshape(nrows*ncols,1)
     
     # reshape labels into vectors
     vec_sand = im_labels[:,:,0].reshape(ncols*nrows)
@@ -584,23 +586,23 @@ def find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size, im_ref_buffer,s
 
     # threshold the sand/water intensities
     int_all = np.append(int_nonveg,int_veg, axis=0)
-    t_nvi = filters.threshold_otsu(int_all[:,0])
+    t_ndvi = filters.threshold_otsu(int_all[:,0])
     if satname=='S2':
-        t_nvi+=0.09
+        t_ndvi+=0.09
     else:
-        t_nvi=+0.205
+        t_ndvi=+0.205
     # find contour with MS algorithm
-    im_nvi_buffer = np.copy(im_nvi)
+    im_ndvi_buffer = np.copy(im_ndvi)
     ### This is the problematic bit
-    im_nvi_buffer[~im_ref_buffer] = np.nan
+    im_ndvi_buffer[~im_ref_buffer] = np.nan
     #contours_wi = measure.find_contours(im_wi_buffer, t_wi)
-    contours_nvi = measure.find_contours(im_nvi_buffer, t_nvi)
+    contours_ndvi = measure.find_contours(im_ndvi_buffer, t_ndvi)
     # remove contour points that are NaNs (around clouds)
     #contours_wi = process_contours(contours_wi)
-    contours_nvi = process_contours(contours_nvi)
+    contours_ndvi = process_contours(contours_ndvi)
 
     # only return NDVI contours and threshold
-    return contours_nvi, t_nvi
+    return contours_ndvi, t_ndvi
 
 ###################################################################################################
 # SHORELINE PROCESSING FUNCTIONS
@@ -693,7 +695,8 @@ def BufferShoreline(settings,refline,georef,cloud_mask):
     else: # if refline is read in as shapefile
         refGS = gpd.GeoSeries(refline['geometry'])
     
-    refLSBuffer = refGS.buffer(settings['max_dist_ref'])
+    buffDist = settings['max_dist_ref']/georef[1] # convert from metres to pixels using georef cell size
+    refLSBuffer = refGS.buffer(buffDist)
     refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
     im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
     # convert to bool
@@ -951,7 +954,7 @@ def PlotDetection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_e
         #im_class[im_labels[:,:,k],3] = colours[k,3]
 
     # compute NDVI grayscale image
-    im_nvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     # buffer NDVI using reference shoreline
     im_ndvi_buffer = np.copy(im_ndvi)
     im_ndvi_buffer[~im_ref_buffer] = np.nan
@@ -1008,13 +1011,13 @@ def PlotDetection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_e
     purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
     green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
     # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
-    black_line = mlines.Line2D([],[],color='#EAC435',linestyle='-', label='Vegetation Line')
+    black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
     ax2.legend(handles=[purple_patch,green_patch, black_line],
                bbox_to_anchor=(1.1, 0.5), fontsize=10)
     ax2.set_title(date, fontweight='bold', fontsize=16)
 
     # create image 3 (NDVI)
-    ndviplot = ax3.imshow(im_nvi, cmap='bwr')
+    ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
     ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
     ax3.axis('off')
     ax3.set_title(satname, fontweight='bold', fontsize=16)
@@ -1050,7 +1053,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
 
 
     # compute NDVI grayscale image
-    im_nvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
 
     # transform world coordinates of shoreline into pixel coordinates
     # shoreline dataframe back to array
@@ -1106,25 +1109,38 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     im_RGB_masked = im_RGB * im_ref_buffer_3d
     ax1.imshow(im_RGB_masked, alpha=0.3) # plot refline mask over top
     
-    ax1.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=5)
+    ax1.scatter(sl_pix[:,0], sl_pix[:,1], color='k', marker='.', s=5)
     ax1.axis('off')
     ax1.set_title(sitename, fontweight='bold', fontsize=16)
 
     # create image 2 (classification)
     ax2.imshow(im_class)
-    ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=5)
+    ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='k', marker='.', s=5)
     ax2.axis('off')
     purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
     green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
     # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
-    black_line = mlines.Line2D([],[],color='#EAC435',linestyle='-', label='Vegetation Line')
+    black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
     ax2.legend(handles=[purple_patch,green_patch, black_line],
                bbox_to_anchor=(1.1, 0.5), fontsize=10)
     ax2.set_title(date, fontweight='bold', fontsize=16)
 
     # create image 3 (NDVI)
-    ndviplot = ax3.imshow(im_nvi, cmap='bwr')
-    ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=5)
+    ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
+    int_veg = im_ndvi[im_labels[:,:,0]]
+    # FM: create transition zone mask
+    im_TZ = im_ndvi.copy()
+    TZbuffer = [np.nanmin(int_veg)-0.1, np.nanmin(int_veg)+0.1]
+    for i in range(len(im_ndvi[:,0])):
+        for j in range(len(im_ndvi[0,:])):
+            if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
+                im_TZ[i,j] = 1.0
+            else:
+                im_TZ[i,j] = np.nan
+    cmap = colors.ListedColormap(['orange'])
+    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
+    
+    ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='k', marker='.', s=5)
     ax3.axis('off')
     ax3.set_title(satname, fontweight='bold', fontsize=16)
 
@@ -1275,7 +1291,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
     green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
     # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
-    black_line = mlines.Line2D([],[],color='#EAC435',linestyle='-', label='Vegetation Line')
+    black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
     ax2.legend(handles=[purple_patch,green_patch, black_line],
                bbox_to_anchor=(1.1, 0.5), fontsize=10)
     ax2.set_title(date_str, fontsize=12)
@@ -1285,13 +1301,15 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     
     # FM: create transition zone mask
     im_TZ = im_ndvi.copy()
+    TZbuffer = [np.nanmin(int_veg)-0.1, np.nanmin(int_veg)+0.1]
     for i in range(len(im_ndvi[:,0])):
         for j in range(len(im_ndvi[0,:])):
-            if im_ndvi[i,j] > np.nanmin(int_veg) and im_ndvi[i,j] < np.nanmax(int_nonveg):
-                im_TZ[i,j] = np.nan
-            else:
+            if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
                 im_TZ[i,j] = 1.0
-    # tzplot = ax3.imshow(im_TZ, cmap='tab10')       
+            else:
+                im_TZ[i,j] = np.nan
+    cmap = colors.ListedColormap(['orange'])
+    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
     
     ax3.axis('off')
     ax3.set_title('NDVI', fontsize=12)
@@ -1341,13 +1359,14 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
 
     # plot the shoreline on the images
     # TO DO: size pixels based on image size (small dots on small imagery!)
-    sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=5)
-    sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=5)
-    sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='#EAC435', marker='.', s=5)
+    sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
+    sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
+    sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
     t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
     # FM: plot vert lines where edges of overlapping classes reach (transition zone)
-    TZmax = ax4.axvline(x=np.nanmin(int_veg),ls='--', c='C1', lw=1.5, label='transition zone')
-    TZmin = ax4.axvline(x=np.nanmax(int_nonveg),ls='--', c='C1', lw=1.5)
+    TZmin = ax4.axvline(x=TZbuffer[0],ls='--', c='C1', lw=1.5)
+    TZmax = ax4.axvline(x=TZbuffer[1],ls='--', c='C1', lw=1.5, label='transition zone')
+    
     
     ax4.legend(loc=1)
     plt.draw() # to update the plot
@@ -1437,6 +1456,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # if save_figure is True, save a .jpg under /jpg_files/detection
     if settings['save_figure'] and not skip_image:
         fig.savefig(os.path.join(filepath, date + '_' + satname + '.jpg'), dpi=150)
+        
 
     # don't close the figure window, but remove all axes and settings, ready for next plot
     for ax in fig.axes:
@@ -1554,14 +1574,14 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                         # compute NDVI image (SWIR-G)
                         im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
                         # find water contours on NDVI grayscale image
-                        contours_nvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
+                        contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
                         
                 else:
                     # use classification to refine threshold and extract the sand/water interface
-                    contours_nvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
+                    contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
                     
                 # process the water contours into a shoreline
-                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_nvi, cloud_mask, georef, image_epsg, settings)
+                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
                 
 
                 if settings['check_detection'] or settings['save_figure']:
