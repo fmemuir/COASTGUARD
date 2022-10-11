@@ -151,9 +151,9 @@ def extract_veglines(metadata, settings, polygon, dates):
             # classify image with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask,
                                     min_beach_area_pixels, clf)
-            # save classified image after classification takes place
+            # save classified image and transition zone mask after classification takes place
             Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
-            # Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
+            Image_Processing.save_TZone(im_ms, im_labels, cloud_mask, georef, filenames[fn], settings)
             
             # if adjust_detection is True, let the user adjust the detected shoreline
             if settings['adjust_detection']:

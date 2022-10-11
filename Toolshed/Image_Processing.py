@@ -514,6 +514,48 @@ def save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames, settings)
     ) as tif:
         tif.write(im_classif,1)
        
+def save_TZone(im_ms, im_labels, cloud_mask, georef, filenames, settings):
+    '''
+    Saves local georeferenced version of the transition zone to be investigated in a GIS.
+    FM Sept 2022
+    Arguments:
+    --------
+    im_ms:
+        multispectral image array
+    cloud_mask:
+        cloud mask created from defined nodata pixels
+    
+    '''
+    print(' \nsaving classified '+filenames)
+
+    # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+    tifname = filenames.rsplit('/',1)[1] # get characters after last /
+    transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
+    im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    int_veg = im_ndvi[im_labels[:,:,0]]
+    
+    im_TZ = im_ndvi.copy()
+    TZbuffer = [np.nanmin(int_veg)-0.1, np.nanmin(int_veg)+0.1]
+    for i in range(len(im_ndvi[:,0])):
+        for j in range(len(im_ndvi[0,:])):
+            if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
+                im_TZ[i,j] = 1.0
+            else:
+                im_TZ[i,j] = np.nan
+    
+    # Binary classified image
+    with rasterio.open(
+        os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+'CLASS.tif'),
+        'w',
+        driver='GTiff',
+        height=im_TZ.shape[0],
+        width=im_TZ.shape[1],
+        count=1,
+        dtype=im_TZ.dtype,
+        crs='EPSG:'+str(settings['output_epsg']),
+        transform=transform,
+    ) as tif:
+        tif.write(im_TZ,1)
 
 def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """
