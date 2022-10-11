@@ -526,7 +526,7 @@ def save_TZone(im_ms, im_labels, cloud_mask, georef, filenames, settings):
         cloud mask created from defined nodata pixels
     
     '''
-    print(' \nsaving classified '+filenames)
+    print(' \nsaving transition zone of '+filenames)
 
     # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
     tifname = filenames.rsplit('/',1)[1] # get characters after last /
@@ -545,7 +545,7 @@ def save_TZone(im_ms, im_labels, cloud_mask, georef, filenames, settings):
     
     # Binary classified image
     with rasterio.open(
-        os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+'CLASS.tif'),
+        os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+'TZ.tif'),
         'w',
         driver='GTiff',
         height=im_TZ.shape[0],

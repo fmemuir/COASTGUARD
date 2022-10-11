@@ -1122,7 +1122,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
     black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
     ax2.legend(handles=[purple_patch,green_patch, black_line],
-               bbox_to_anchor=(1.1, 0.5), fontsize=10)
+               bbox_to_anchor=(1, 1), fontsize=10)
     ax2.set_title(date, fontweight='bold', fontsize=16)
 
     # create image 3 (NDVI)
@@ -1141,7 +1141,13 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
     
     ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='k', marker='.', s=5)
+    
     ax3.axis('off')
+    orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.5)
+    ax3.legend(handles=[orange_patch],
+               bbox_to_anchor=(1, 1), fontsize=10) #bbox_to_anchor=(1.1, 0.5)
+    ax3.set_title('NDVI', fontsize=12)
+    fig.colorbar(ndviplot, ax=ax3, location='right', anchor=(0, 0.5), shrink=0.5)
     ax3.set_title(satname, fontweight='bold', fontsize=16)
 
     # additional options
@@ -1293,7 +1299,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
     black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
     ax2.legend(handles=[purple_patch,green_patch, black_line],
-               bbox_to_anchor=(1.1, 0.5), fontsize=10)
+               bbox_to_anchor=(1, 1), fontsize=10)
     ax2.set_title(date_str, fontsize=12)
 
     # plot image 3 (NDVI)
@@ -1312,7 +1318,12 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
     
     ax3.axis('off')
+    orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.5)
+    ax3.legend(handles=[orange_patch],
+               bbox_to_anchor=(1, 1), fontsize=10) #bbox_to_anchor=(1.1, 0.5)
     ax3.set_title('NDVI', fontsize=12)
+    fig.colorbar(ndviplot, ax=ax3, location='right', anchor=(0, 0.5), shrink=0.5)
+    
     
     # cb = plt.colorbar(ndviplot, ax=ax3)
     # cb.ax.tick_params(labelsize=10)
