@@ -452,7 +452,7 @@ def label_vegimages(metadata, polygon, Sat, settings):
                 filename = filenames[0][i].rsplit('/',1)[1]
             else:
                 filename = filenames[i].rsplit('/',1)[1]
-            ax.set_title(filename)
+            ax.set_title(metadata[satname]['dates'][i])
            
             ##############################################################
             # select image to label
@@ -628,7 +628,7 @@ def label_vegimages(metadata, polygon, Sat, settings):
     plt.close(fig)
 
 
-def load_labels(train_sites, settings):
+def load_labels(train_sites, settings, CoastOnly=False):
     """
     Load the labelled data from the different training sites
 
@@ -658,6 +658,8 @@ def load_labels(train_sites, settings):
     first_row = np.nan*np.ones((1,n_features))
     for key in settings['labels'].keys():
         features[key] = first_row
+    labelledmaps = []
+    imnames = []
     # loop through each site 
     for site in train_sites:
         sitename = settings['inputs']['sitename']
@@ -665,31 +667,46 @@ def load_labels(train_sites, settings):
         if os.path.exists(filepath):
             # FM: faster way to get just pkl files
             list_files_pkl = glob.glob(filepath+'/*.pkl') 
-            # list_files = os.listdir(filepath)
         else:
             continue
-        # make a new list with only the .pkl files (no .jpg)
-        # list_files_pkl = []
-        # for file in list_files:
-        #     if '.pkl' in file:
-        #         list_files_pkl.append(file)
         # load and append the training data to the features dict
         for file in list_files_pkl:
+            imnames.append(os.path.basename(file))
             # read file
             with open( file, 'rb') as f:
-                labelled_data = pickle.load(f) 
+                labelled_data = pickle.load(f)
+            
+            # # if only training and testing from coastal data
+            # if CoastOnly == True:
+            #     # load in and process reference line shapefile
+            #     referenceLineShp = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'], 'StAndrews_refLine.shp')
+            #     referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
+                
+                
+            #     for key in labelled_data['features'].keys():
+            #         if len(labelled_data['features'][key])>0: # check that is not empty
+            #             # append rows
+            #             features[key] = np.append(features[key],
+            #                         labelled_data['features'][key], axis=0)
+            #     labelledmaps.append(labelled_data['labels'])
+            # else:
             for key in labelled_data['features'].keys():
                 if len(labelled_data['features'][key])>0: # check that is not empty
                     # append rows
                     features[key] = np.append(features[key],
-                                labelled_data['features'][key], axis=0)  
+                                labelled_data['features'][key], axis=0)
+            labelledmaps.append(labelled_data['labels'])
+    
     # remove the first row (initialized with nans) and print how many pixels
     print('Number of pixels per class in training data:')
     for key in features.keys(): 
         features[key] = features[key][1:,:]
         print('%s : %d pixels'%(key,len(features[key])))
     
-    return features
+    # save label maps in new dict
+    labelmaps = {'filenames':imnames,'labelmaps':labelledmaps}
+    
+    return features, labelmaps
 
 def format_training_data(features, classes, labels):
     """
