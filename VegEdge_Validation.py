@@ -287,7 +287,7 @@ TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
 
 #%% VALIDATION
 
-# Name of date column in validation shapefile (case sesnsitive!) 
+# Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
 ValidationShp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
 if os.path.isfile(os.path.join(filepath, sitename + '_valid_dict.pkl')):
