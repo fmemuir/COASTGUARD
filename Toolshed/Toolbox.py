@@ -783,15 +783,19 @@ def image_retrieval(inputs):
     
     Sat = []
 
- 
+    if 'cloud_thresh' in inputs.keys():
+        cloud_thresh = int(inputs['cloud_thresh']*100)
+    else:
+        cloud_thresh = 80
+        
     if 'L5' in inputs['sat_list']:
         Landsat5 = ee.ImageCollection("LANDSAT/LT05/C01/T1_TOA").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1])
         Sat.append(Landsat5)
     if 'L8' in inputs['sat_list']:
-        Landsat8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', 95))
+        Landsat8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
         Sat.append(Landsat8)
     if 'S2' in inputs['sat_list']:
-        Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 80))
+        Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
         Sat.append(Sentinel2)
         
     return Sat
@@ -1119,6 +1123,38 @@ def Separate_TimeSeries_month(cross_distance, output, key):
         DistanceAvgArr.append(np.nanmean(newlist))#sum(newlist)/len(newlist))
     
     return Date_Organised, Month_Organised, Distance_Organised, DateArr, DistanceAvgArr
+
+def ProcessRefline(referenceLineShp,settings):
+    """
+    
+
+    Parameters
+    ----------
+    referenceLineShp : str
+        Filepath to refline shapefile.
+    settings : dict
+        settings dictionary.
+
+    Returns
+    -------
+    referenceLine : 
+        reference line coordinate array
+    ref_epsg : int
+        reference line EPSG ID
+
+    """
+    referenceLineDF = gpd.read_file(referenceLineShp)
+    refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
+    # swap latlon coordinates (or don't? check this) around and format into list
+    #referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
+    referenceLineList = list([refLiney[i],refLinex[i]] for i in range(len(refLinex)))
+    # convert to UTM zone for use with the satellite images
+    ref_epsg = int(str(referenceLineDF.crs)[5:])
+    image_epsg = settings['output_epsg']
+    referenceLine = convert_epsg(np.array(referenceLineList),ref_epsg,image_epsg)
+    referenceLine = spaced_vertices(referenceLine)
+    
+    return referenceLine, ref_epsg
 
 def daterange(date1, date2):
     """

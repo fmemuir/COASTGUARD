@@ -197,15 +197,7 @@ the veg extraction.
 
 #referenceLineShp = os.path.join(inputs['filepath'], sitename,'StAndrews_refLine.shp')
 referenceLineShp = os.path.join(inputs['filepath'], 'StAndrews_refLine.shp')
-referenceLineDF = gpd.read_file(referenceLineShp)
-refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
-# swap latlon coordinates (or don't? check this) around and format into list
-#referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
-referenceLineList = list([refLiney[i],refLinex[i]] for i in range(len(refLinex)))
-# convert to UTM zone for use with the satellite images
-ref_epsg = 4326
-referenceLine = Toolbox.convert_epsg(np.array(referenceLineList),ref_epsg,image_epsg)
-referenceLine = Toolbox.spaced_vertices(referenceLine)
+referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
 
 settings['reference_shoreline'] = referenceLine
 settings['ref_epsg'] = ref_epsg
