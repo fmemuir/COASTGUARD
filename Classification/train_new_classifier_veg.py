@@ -93,9 +93,9 @@ filepath_models = os.path.join(os.getcwd(), 'models')
 # lonmin, lonmax = -2.49, -2.42
 # latmin, latmax = 56.70, 56.75
 
-sitename = 'DornochSummer'
-lonmin, lonmax = -4.033, -3.996
-latmin, latmax = 57.855, 57.885
+sitename = 'Aberdeen'
+lonmin, lonmax = -2.098,-2.052
+latmin, latmax = 57.164,57.181 
 
 
 train_sites = [sitename]
@@ -118,12 +118,13 @@ if os.path.isdir(direc) is False:
 # In[49]:
 
 
-sat_list = ['S2']
-dates = ['2019-06-01', '2019-08-31']
+sat_list = ['L8','S2']
+dates = ['2019-02-01', '2019-11-30']
+# dates = ['2019-06-01', '2019-08-31']
 # dates = ['2019-12-01', '2020-02-28']
 projection_epsg = 27700
 image_epsg = 32630
-
+cloud_thresh = 0.3
 
 # put all the inputs into a dictionnary
 inputs = {
@@ -132,7 +133,8 @@ inputs = {
     'daterange':dates, 
     'sat_list': sat_list, 
     'sitename': sitename, 
-    'filepath':filepath_images
+    'filepath':filepath_images,
+    'cloud_thresh': cloud_thresh
 }
 
 Download.check_images_available(inputs)
@@ -151,7 +153,7 @@ settings = {
     'ref_epsg': 4326,
     'max_dist_ref': 500,
     # general parameters:
-    'cloud_thresh': 0.2,        # threshold on maximum cloud cover
+    'cloud_thresh': cloud_thresh,        # threshold on maximum cloud cover
     'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
     # quality control:
     'check_detection': True,    # if True, shows each shoreline detection to the user for validation
@@ -195,7 +197,7 @@ for site in train_sites:
 # You can use the data that was labelled here and/or the original CoastSat training data.
 
 # load labelled images
-features = Classifier.load_labels(train_sites, settings)
+features,labelmaps = Classifier.load_labels(train_sites, settings)
 
 
 
@@ -227,11 +229,12 @@ X,y = Classifier.format_training_data(features, classes, labels)
 #%% 5. Divide the dataset into train and test
 #train on 70% of the data and evaluate on the other 30%
 
-
+# test data comes from coast to avoid validation bias from strong veg pixels inland
+X, y
 # divide in train and test and evaluate the classifier
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, random_state=0)
 runs = []
-for i in range(10):
+for i in range(5):
     start_time = timeit.default_timer()
     classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
     classifier.fit(X_train,y_train)
@@ -343,7 +346,7 @@ Classifier.plot_confusion_matrix(y_test, y_pred,
 #%% 6. Train with all the data and save the final classifier
 
 start_time = timeit.default_timer()
-classifier = MLPClassifier(hidden_layer_sizes=(100,50), solver='adam')
+classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
 classifier.fit(X,y)
 joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
 print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
