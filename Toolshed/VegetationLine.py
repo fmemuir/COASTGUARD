@@ -1149,7 +1149,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     ax3.legend(handles=[orange_patch],
                bbox_to_anchor=(1, 1), fontsize=10) #bbox_to_anchor=(1.1, 0.5)
     ax3.set_title('NDVI', fontsize=12)
-    fig.colorbar(ndviplot, ax=ax3, location='right', anchor=(0, 0.5), shrink=0.5)
+    # plt.colorbar(ndviplot, ax=ax3, location='right', anchor=(0, 0.5), shrink=0.5)
     ax3.set_title(satname, fontweight='bold', fontsize=16)
 
     # additional options
@@ -1324,7 +1324,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     ax3.legend(handles=[orange_patch],
                bbox_to_anchor=(1, 1), fontsize=10) #bbox_to_anchor=(1.1, 0.5)
     ax3.set_title('NDVI', fontsize=12)
-    fig.colorbar(ndviplot, ax=ax3, location='right', anchor=(0, 0.5), shrink=0.5)
+    # cbar = plt.colorbar(mappable=ndviplot, cax=ax3) #location='right', anchor=(0, 0.5), shrink=0.5
     
     
     # cb = plt.colorbar(ndviplot, ax=ax3)
