@@ -76,7 +76,7 @@ filepath = os.path.join(os.getcwd(), 'Data')
 #dates = ['2021-05-01', '2021-07-02']
 
 # date range for valiation
-vegsurveyshp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
+vegsurveyshp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
 vegsurvey = gpd.read_file(vegsurveyshp)
 vegdatemin = vegsurvey.Date.min()
 vegdatemax = vegsurvey.Date.max()
@@ -142,14 +142,20 @@ for satkey in dict.fromkeys(metadata['L5'].keys()):
     L5[satkey] = [metadata['L5'][satkey][0]]
     L5[satkey].extend(metadata['L5'][satkey][20:22])
     L5[satkey].extend(metadata['L5'][satkey][45:47])
-    L8[satkey] = [metadata['L8'][satkey][41]]
+    L8[satkey] = [metadata['L8'][satkey][34]]
+    L8[satkey].append(metadata['L8'][satkey][41])
     L8[satkey].append(metadata['L8'][satkey][42])
+    L8[satkey].extend(metadata['L8'][satkey][57:59])
+    L8[satkey].append(metadata['L8'][satkey][118])
+    L8[satkey].extend(metadata['L8'][satkey][127:129])
     L8[satkey].extend(metadata['L8'][satkey][143:145])
     L8[satkey].append(metadata['L8'][satkey][153])
     L8[satkey].append(metadata['L8'][satkey][159])       
     S2[satkey] = metadata['S2'][satkey][127:148]
-    S2[satkey].extend(metadata['S2'][satkey][255:267])
-    S2[satkey].extend(metadata['S2'][satkey][405:424])
+    S2[satkey].extend(metadata['S2'][satkey][255:261])
+    S2[satkey].extend(metadata['S2'][satkey][264:268])
+    S2[satkey].extend(metadata['S2'][satkey][405:417])
+    S2[satkey].extend(metadata['S2'][satkey][420:424])
     S2[satkey].extend(metadata['S2'][satkey][490:507])
     
 metadata = {'L5':L5,'L8':L8,'S2':S2}

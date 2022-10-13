@@ -676,20 +676,19 @@ def load_labels(train_sites, settings, CoastOnly=False):
             with open( file, 'rb') as f:
                 labelled_data = pickle.load(f)
             
-            # # if only training and testing from coastal data
+            # if only training and testing from coastal data
             # if CoastOnly == True:
-            #     # load in and process reference line shapefile
-            #     referenceLineShp = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'], 'StAndrews_refLine.shp')
-            #     referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
-                
-                
-            #     for key in labelled_data['features'].keys():
-            #         if len(labelled_data['features'][key])>0: # check that is not empty
-            #             # append rows
-            #             features[key] = np.append(features[key],
-            #                         labelled_data['features'][key], axis=0)
-            #     labelledmaps.append(labelled_data['labels'])
-            # else:
+                # # load in and process reference line shapefile
+                # referenceLineShp = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'], 'StAndrews_refLine.shp')
+                # referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
+                # if sitename == 'Aberdeen':
+                #     labelled_data['labels'][:, 0:int(len(labelled_data['labels'][0])*0.3)] = 0
+                #     labelled_data['labels'][:, int(len(labelled_data['labels'][0])*0.55):] = 0
+                #     newfeatures = dict([])
+                #     for key in settings['labels'].keys():
+                #         im_bool = im_labels == settings['labels'][key]
+                #         newfeatures[key] = VegetationLine.calculate_vegfeatures(im_ms, cloud_mask, im_bool)
+            # else:    
             for key in labelled_data['features'].keys():
                 if len(labelled_data['features'][key])>0: # check that is not empty
                     # append rows

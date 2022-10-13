@@ -137,13 +137,6 @@ inputs = {
     'cloud_thresh': cloud_thresh
 }
 
-Download.check_images_available(inputs)
-
-
-#settings = {
-#    'filepath_train':filepath_train, # folder where the labelled images will be stored
-#    'labels':{'sand':1,'white-water':2,'water':3,'vegetation':4,'urban':5}, # labels for the classifier
-#    'colors':{'sand':[1, 0.65, 0],'white-water':[1,0,1],'water':[0.1,0.1,0.7],'other land features':[0.8,0.8,0.1]},
 settings = {
     'filepath_train':filepath_train, # folder where the labelled images will be stored
     'labels':{'veg':1,'nonveg':2}, # labels for the classifier
@@ -171,6 +164,8 @@ settings = {
     'hausdorff_threshold':3*(10**50)
 }
 
+#%%
+Download.check_images_available(inputs)
 
 #%% Populate metadata (or skip if it already exists)
 
@@ -198,7 +193,6 @@ for site in train_sites:
 
 # load labelled images
 features,labelmaps = Classifier.load_labels(train_sites, settings)
-
 
 
 #%% 4. Subsample
@@ -229,8 +223,6 @@ X,y = Classifier.format_training_data(features, classes, labels)
 #%% 5. Divide the dataset into train and test
 #train on 70% of the data and evaluate on the other 30%
 
-# test data comes from coast to avoid validation bias from strong veg pixels inland
-X, y
 # divide in train and test and evaluate the classifier
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle=True, random_state=0)
 runs = []
@@ -250,10 +242,10 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, shuffle
 
 # hidden_layer_sizes default is (100,) which represents one layer with 100 nodes
 # goal is to cycle through different combinations to test accuracy
-# layerparams = [(1,), (5,), (10,), (50,), (100,), (500,), 
-#                (1,1), (5,5), (10,10), (50,50), (100,100), (500,500), 
-#                (1,1,1), (5,5,5), (10,10,10), (50,50,50), (100,100,100), (500,500,500)]
-layerparams = [(50,10,50),(100,50,10,50,100),(500,100,50,10,50,100,500)]
+layerparams = [(1,), (5,), (10,), (50,), (100,), (500,), 
+                (1,1), (5,5), (10,10), (50,50), (100,100), (500,500), 
+                (1,1,1), (5,5,5), (10,10,10), (50,50,50), (100,100,100), (500,500,500)]
+# layerparams = [(50,10,50),(100,50,10,50,100),(500,100,50,10,50,100,500)]
 
 scores10k2 = pd.DataFrame(columns=['layers','accuracy','timeelapsed'])
 
@@ -357,7 +349,7 @@ print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 # This section will save the output of the classification for each site in a directory named \evaluation.
 
 # load and evaluate a classifier
-get_ipython().run_line_magic('matplotlib', 'qt')
+# get_ipython().run_line_magic('matplotlib', 'qt')
 classifier = joblib.load(os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
 settings['output_epsg'] = 32630
 settings['min_beach_area'] = 200
