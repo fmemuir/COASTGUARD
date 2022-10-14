@@ -1165,8 +1165,6 @@ def daterange(date1, date2):
         yield int(date1.year) + n
 
     
-def neardate(satdates,veridate):
-    return min(satdates, key=lambda x: abs(x - veridate))
 
 def NearestDates(surveys,metadata,sat_list):
     """
@@ -1184,7 +1182,7 @@ def NearestDates(surveys,metadata,sat_list):
     FM Sept 2022
     """
     
-    veridates = list(surveys.Date.unique())
+    veridates = sorted(list(surveys.Date.unique()))
     
     nearestdates = dict.fromkeys(sat_list)
     nearestIDs = dict.fromkeys(sat_list)
@@ -1199,12 +1197,19 @@ def NearestDates(surveys,metadata,sat_list):
             veridate = datetime.strptime(veridate,'%Y-%m-%d')
             for satdate in metadata[sat]['dates']:
                 satdates.append(datetime.strptime(satdate,'%Y-%m-%d'))
-            nearestdate.append(datetime.strftime(neardate(satdates,veridate),'%Y-%m-%d'))
-            nearestID.append(metadata[sat]['dates'].index(datetime.strftime(neardate(satdates,veridate),'%Y-%m-%d')))
-            print('nearest:\t\t',neardate(satdates,veridate))
+            
+            if abs((veridate - NearDate(veridate,satdates)).days) < 183: # within 6 months
+                print('nearest:\t\t',NearDate(veridate,satdates))
+                nearestdate.append(datetime.strftime(NearDate(veridate,satdates),'%Y-%m-%d'))
+                nearestID.append(metadata[sat]['dates'].index(datetime.strftime(NearDate(veridate,satdates),'%Y-%m-%d')))
+            else:
+                print('no image near in time.')
         nearestdates[sat] = nearestdate
         nearestIDs[sat] = nearestID     
+    
+    return nearestdates, nearestIDs
         
+    
         
 def spaced_vertices(referenceLine):
     """
@@ -1327,6 +1332,47 @@ def NearDate(target,items):
     # else:
     #     return nearestDate
     return nearestDate
+
+
+def TZValues(int_veg, int_nonveg):
+    """
+    Generate bounds for transition zone plot by finding the minimum NDVI value which could be veg,
+    and the NDVI value which is definitely veg (the point where the veg hist. freq. is greater than the nonveg hist. freq.)
+
+    Parameters
+    ----------
+    int_veg : array
+        NDVI pixel values classed as veg.
+    int_nonveg : array
+        NDVI pixel values classed as nonveg.
+
+    Returns
+    -------
+    [minval,maxval] : list
+        minimum and maximum transition zone bounds.
+
+    """
+    
+    bins = np.arange(-1, 1, 0.01) # start, stop, bin width
+    # create histogram but don't plot, use to access frequencies
+    xcounts, xbins, xbars = plt.hist(int_nonveg,bins=bins)
+    ycounts, ybins, ybars = plt.hist(int_veg,bins=bins)
+    # minimum transition zone value is first point where veg is defined
+    if np.nanmin(int_veg) > 0: # limit for weird images where veg NDVI values are classed below 0
+        minval = np.nanmin(int_veg)
+    else:
+        # first veg value that sits above significant frequency
+        minvalID = [idx for idx, element in enumerate(ycounts) if element>5][0] # threshold might need adjusting
+        minval = ybins[minvalID]
+        
+    # calculate differences between counts to find where veg rises above nonveg
+    countdiff = ycounts-xcounts
+    # get ID of first point where difference in frequencies rise above threshold (of 1)
+    countID = [idx for idx, element in enumerate(countdiff) if element>1][0]
+    # maximum value is 
+    maxval = ybins[countID]
+    
+    return [minval,maxval]
 
 
 def CalcDistance(Geom1,Geom2):
