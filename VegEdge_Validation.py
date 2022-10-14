@@ -216,7 +216,8 @@ OPTION 1: Run extraction tool and return output dates, lines, filenames and
 image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
-output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates)
+clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
+output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates,clf_model)
 
 # L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im
 # L8: 20 images (10% of 198), 4:23 (263s) = 0.08 im/s OR 13 s/im

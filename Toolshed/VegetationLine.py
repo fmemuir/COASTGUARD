@@ -41,14 +41,13 @@ from Toolshed import Toolbox, Image_Processing
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function for batch shoreline detection
-def extract_veglines(metadata, settings, polygon, dates):
+def extract_veglines(metadata, settings, polygon, dates, clf_model):
 
     sitename = settings['inputs']['sitename']
     ref_line = np.delete(settings['reference_shoreline'],2,1)
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
     # clf_model = 'MLPClassifier_Veg_S2.pkl'
-    clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
     # clf_model = 'DornochSummer_MLPClassifier_Veg_S2.pkl'
     
     # initialise output structure
