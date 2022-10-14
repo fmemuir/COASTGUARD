@@ -48,7 +48,8 @@ def extract_veglines(metadata, settings, polygon, dates):
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
     # clf_model = 'MLPClassifier_Veg_S2.pkl'
-    clf_model = 'DornochSummer_MLPClassifier_Veg_S2.pkl'
+    clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
+    # clf_model = 'DornochSummer_MLPClassifier_Veg_S2.pkl'
     
     # initialise output structure
     output = dict([])

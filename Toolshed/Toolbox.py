@@ -1355,8 +1355,9 @@ def TZValues(int_veg, int_nonveg):
     
     bins = np.arange(-1, 1, 0.01) # start, stop, bin width
     # create histogram but don't plot, use to access frequencies
-    xcounts, xbins, xbars = plt.hist(int_nonveg,bins=bins)
-    ycounts, ybins, ybars = plt.hist(int_veg,bins=bins)
+    xcounts, xbins = np.histogram(int_nonveg,bins=bins)
+    ycounts, ybins = np.histogram(int_veg,bins=bins)
+    
     # minimum transition zone value is first point where veg is defined
     if np.nanmin(int_veg) > 0: # limit for weird images where veg NDVI values are classed below 0
         minval = np.nanmin(int_veg)
@@ -1367,8 +1368,9 @@ def TZValues(int_veg, int_nonveg):
         
     # calculate differences between counts to find where veg rises above nonveg
     countdiff = ycounts-xcounts
-    # get ID of first point where difference in frequencies rise above threshold (of 1)
-    countID = [idx for idx, element in enumerate(countdiff) if element>1][0]
+    # get ID of first point where difference in frequencies rise above statistically significant threshold 
+    countthresh = int(np.nanmax(ycounts)/15)
+    countID = [idx for idx, element in enumerate(countdiff) if element>countthresh][0]
     # maximum value is 
     maxval = ybins[countID]
     
