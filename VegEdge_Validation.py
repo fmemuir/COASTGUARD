@@ -130,41 +130,34 @@ metadata = Toolbox.metadata_collection(sat_list, Sat, filepath, sitename)
 
 #%%  Metadata filtering using validation dates only
 
-Toolbox.NearestDates(vegsurvey,metadata,sat_list)
+nearestdates, nearestIDs = Toolbox.NearestDates(vegsurvey,metadata,sat_list)
 
 #%%
 L5 = dict.fromkeys(metadata['L5'].keys())
 L8 = dict.fromkeys(metadata['L8'].keys())
 S2 = dict.fromkeys(metadata['S2'].keys())
 
-#must use extend() instead of append() for ranges of values
+# list of indices reflecting chosen validation dates
+L5index = [0,20,21,45,46]
+L8index = [117,34,118,35,42,43,128,129,143,144,57,73,74,153,154,159,160,168,169,198,199,223,189]
+S2index = [41,42,43,44,45,46,47,48,49,50,133,134,135,136,137,138,139,140,141,142,143,144,257,258,259,260,261,262,263,411,412,413,414,415,416,417,505,506,507,508,509,619,620,621,622,623,624,948,949,950,951,952,953,954,1059,1060,1061,1062,1063]
+
 for satkey in dict.fromkeys(metadata['L5'].keys()):
-    L5[satkey] = [metadata['L5'][satkey][0]]
-    L5[satkey].extend(metadata['L5'][satkey][20:22])
-    L5[satkey].extend(metadata['L5'][satkey][45:47])
-    L8[satkey] = [metadata['L8'][satkey][34]]
-    L8[satkey].append(metadata['L8'][satkey][41])
-    L8[satkey].append(metadata['L8'][satkey][42])
-    L8[satkey].extend(metadata['L8'][satkey][57:59])
-    L8[satkey].append(metadata['L8'][satkey][118])
-    L8[satkey].extend(metadata['L8'][satkey][127:129])
-    L8[satkey].extend(metadata['L8'][satkey][143:145])
-    L8[satkey].append(metadata['L8'][satkey][153])
-    L8[satkey].append(metadata['L8'][satkey][159])       
-    S2[satkey] = metadata['S2'][satkey][127:148]
-    S2[satkey].extend(metadata['S2'][satkey][255:261])
-    S2[satkey].extend(metadata['S2'][satkey][264:268])
-    S2[satkey].extend(metadata['S2'][satkey][405:417])
-    S2[satkey].extend(metadata['S2'][satkey][420:424])
-    S2[satkey].extend(metadata['S2'][satkey][490:507])
-    
+    L5[satkey] = [metadata['L5'][satkey][L5index[0]]]
+    L8[satkey] = [metadata['L8'][satkey][L8index[0]]]
+    S2[satkey] = [metadata['S2'][satkey][S2index[0]]]
+    for i in L5index[1:]:
+        L5[satkey].append(metadata['L5'][satkey][i])
+    for j in L8index[1:]:
+        L8[satkey].append(metadata['L8'][satkey][j])
+    for k in S2index[1:]:
+        S2[satkey].append(metadata['S2'][satkey][k])
+
+            
 metadata = {'L5':L5,'L8':L8,'S2':S2}
 with open(os.path.join(filepath, sitename, sitename + '_validation_metadata.pkl'), 'wb') as f:
     pickle.dump(metadata, f)
 
-# L5: 12 images (28% of 44), 1:27 (87s) = 0.138 im/s OR 7.25 im/s
-# L8: 198 images, 16:42 (1002s) = 0.198 im/s OR 5 s/im
-# S2: 34 images (10% of 335), 5:54 (354s) = 0.096 im/s OR 10.4 s/im
 
 #%% Vegetation Edge Settings
 
