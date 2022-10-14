@@ -533,9 +533,11 @@ def save_TZone(im_ms, im_labels, cloud_mask, georef, filenames, settings):
     transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
     im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     int_veg = im_ndvi[im_labels[:,:,0]]
-    
+    int_nonveg = im_ndvi[im_labels[:,:,1]] 
+
     im_TZ = im_ndvi.copy()
-    TZbuffer = [np.nanmin(int_veg)-0.1, np.nanmin(int_veg)+0.1]
+    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
+    
     for i in range(len(im_ndvi[:,0])):
         for j in range(len(im_ndvi[0,:])):
             if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:

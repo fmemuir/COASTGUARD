@@ -1130,9 +1130,12 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     # create image 3 (NDVI)
     ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
     int_veg = im_ndvi[im_labels[:,:,0]]
+    int_nonveg = im_ndvi[im_labels[:,:,1]] 
+    
     # FM: create transition zone mask
     im_TZ = im_ndvi.copy()
-    TZbuffer = [np.nanmin(int_veg)-0.1, np.nanmin(int_veg)+0.1]
+    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
+    
     for i in range(len(im_ndvi[:,0])):
         for j in range(len(im_ndvi[0,:])):
             if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
@@ -1309,7 +1312,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     
     # FM: create transition zone mask
     im_TZ = im_ndvi.copy()
-    TZbuffer = [np.nanmin(int_veg)-0.1, np.nanmin(int_veg)+0.1]
+    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
     for i in range(len(im_ndvi[:,0])):
         for j in range(len(im_ndvi[0,:])):
             if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
@@ -1332,22 +1335,35 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # cb.set_label('NDVI values')
     
     # plot histogram of NDVI values
+    # FM: set max and min bin values to -1 and +1 (since using normalised difference index)
     binwidth = 0.01
     ax4.set_facecolor('0.75')
     ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
     ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])
     if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
-        bins = np.arange(np.nanmin(int_veg), np.nanmax(int_veg) + binwidth, binwidth)
+        bins = np.arange(-1, 1, binwidth)
         ax4.hist(int_veg, bins=bins, density=True, color=colours[0,:], label='Vegetation')
     if len(int_nonveg) > 0 and sum(~np.isnan(int_nonveg)) > 0:
-        bins = np.arange(np.nanmin(int_nonveg), np.nanmax(int_nonveg) + binwidth, binwidth)
+        bins = np.arange(-1, 1, binwidth)
         ax4.hist(int_nonveg, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
     # if len(int_water) > 0 and sum(~np.isnan(int_water)) > 0:
     #     bins = np.arange(np.nanmin(int_water), np.nanmax(int_water) + binwidth, binwidth)
     #     ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
     if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
-        bins = np.arange(np.nanmin(int_other), np.nanmax(int_other) + binwidth, binwidth)
+        bins = np.arange(-1, 1, binwidth)
         ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
+    # if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
+    #     bins = np.arange(np.nanmin(int_veg), np.nanmax(int_veg) + binwidth, binwidth)
+    #     ax4.hist(int_veg, bins=bins, density=True, color=colours[0,:], label='Vegetation')
+    # if len(int_nonveg) > 0 and sum(~np.isnan(int_nonveg)) > 0:
+    #     bins = np.arange(np.nanmin(int_nonveg), np.nanmax(int_nonveg) + binwidth, binwidth)
+    #     ax4.hist(int_nonveg, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
+    # # if len(int_water) > 0 and sum(~np.isnan(int_water)) > 0:
+    # #     bins = np.arange(np.nanmin(int_water), np.nanmax(int_water) + binwidth, binwidth)
+    # #     ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
+    # if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
+    #     bins = np.arange(np.nanmin(int_other), np.nanmax(int_other) + binwidth, binwidth)
+    #     ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
     
     # automatically map the shoreline based on the classifier if enough sand pixels
     if sum(sum(im_labels[:,:,0])) > 10:
@@ -1476,6 +1492,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
         ax.clear()
 
     return skip_image, shoreline, shoreline_latlon, shoreline_proj, t_ndvi
+
 
 def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, settings, polygon, dates):
 
