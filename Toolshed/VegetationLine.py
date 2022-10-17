@@ -109,11 +109,11 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=True)
 
             if im_ms is None:
-                print("Skipped: empty raster")
+                print(" - Skipped: empty raster")
                 continue
             
             if cloud_mask == []:
-                print("Skipped: no cloud mask available")
+                print(" - Skipped: no cloud mask available")
                 continue
             
             # get image spatial reference system (epsg code) from metadata dict
@@ -122,7 +122,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
                                     (cloud_mask.shape[0]*cloud_mask.shape[1]))
             if cloud_cover_combined > 0.95: # if 99% of cloudy pixels in image skip
-                print("Skipped: cloud cover over 95%")
+                print(" - Skipped: cloud cover over 95%")
                 continue
             # remove no data pixels from the cloud mask 
             # (for example L7 bands of no data should not be accounted for)
@@ -132,7 +132,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                                     (sum(sum((~im_nodata).astype(int)))))
             # skip image if cloud cover is above user-defined threshold
             if cloud_cover > settings['cloud_thresh']:
-                print("Skipped: cloud cover over user threshold")
+                print(" - Skipped: cloud cover over user threshold")
                 continue
 
             # calculate a buffer around the reference shoreline
