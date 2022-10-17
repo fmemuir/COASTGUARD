@@ -1362,15 +1362,22 @@ def TZValues(int_veg, int_nonveg):
     if np.nanmin(int_veg) > 0: # limit for weird images where veg NDVI values are classed below 0
         minval = np.nanmin(int_veg)
     else:
-        # first veg value that sits above significant frequency
-        minvalID = [idx for idx, element in enumerate(ycounts) if element>5][0] # threshold might need adjusting
+        # first veg value that sits above significant frequency (95%)
+        countthresh = int(np.nanmax(ycounts)*0.05)
+        minvalID = [idx for idx, element in enumerate(ycounts) if element>countthresh][0] # threshold might need adjusting
         minval = ybins[minvalID]
         
     # calculate differences between counts to find where veg rises above nonveg
     countdiff = ycounts-xcounts
     # get ID of first point where difference in frequencies rise above statistically significant threshold 
-    countthresh = int(np.nanmax(ycounts)/15)
-    countID = [idx for idx, element in enumerate(countdiff) if element>countthresh][0]
+    countthresh = int(np.nanmax(ycounts)*0.05)
+    countIDs = [idx for idx, element in enumerate(countdiff) if element>countthresh]
+    if countIDs == []: # for when veg never gets over nonveg freq.
+        countthresh = int(np.nanmax(ycounts)*0.1) # take first veg freq that surpasses 10% of max
+        countID = [idx for idx, element in enumerate(ycounts) if element>countthresh][0]
+    else:
+        countID = countIDs[0] # take first index
+        
     # maximum value is 
     maxval = ybins[countID]
     
