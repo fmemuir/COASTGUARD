@@ -121,23 +121,19 @@ settings = {
 
 #%% Vegetation Edge Reference Line Load-In
 
-# reference line shapefile will be whatever line represents your coast best, saved in Data folder
-referenceLineShp = os.path.join(inputs['filepath'], 'SITE_reference_line.shp')
-# make sure this epsg matches the one for your reference shapefile
-ref_epsg = 4326
+"""
+OPTION 2: Load in coordinates of reference line shapefile and format for use in
+the veg extraction.
+"""
 
-referenceLineDF = gpd.read_file(referenceLineShp)
-refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
-# format latlon coords into list
-#referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
-referenceLineList = list([refLiney[i],refLinex[i]] for i in range(len(refLinex)))
-# convert to UTM zone for use with the satellite images
-referenceLine = Toolbox.convert_epsg(np.array(referenceLineList),ref_epsg,image_epsg)
-referenceLine = Toolbox.spaced_vertices(referenceLine)
+#referenceLineShp = os.path.join(inputs['filepath'], sitename,'StAndrews_refLine.shp')
+referenceLineShp = os.path.join(inputs['filepath'], 'SITE_refLine.shp')
+referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
 
 settings['reference_shoreline'] = referenceLine
 settings['ref_epsg'] = ref_epsg
-settings['max_dist_ref'] = 100
+# Distance to buffer reference line by (this is in metres)
+settings['max_dist_ref'] = 150
 
 
 #%% Vegetation Line Extraction
@@ -202,7 +198,31 @@ if os.path.isfile(TransectSpec) is False:
 else:
     TransectGDF = gpd.read_file(TransectSpec)
 
-#%%
+#%% Get intersections
 
-TransectDict = Transects.GetIntersections(TransectGDF, VeglineGDF)
-# transect_latlon, transect_proj = Transects.stuffIntoLibrary(geo, settings['image_epsg'], settings['projection_epsg'], filepath, sitename)
+TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
+
+#%% Save newly intersected transects as shapefile
+
+TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
+#%% Repopulate dict with intersection distances along transects normalised to transect midpoints
+TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+
+#%% VALIDATION
+
+# Name of date column in validation shapefile (case sensitive!) 
+DatesCol = 'Date'
+ValidationShp = './Validation/SITE_ValidationVeglines.shp'
+if os.path.isfile(os.path.join(filepath, sitename + '_valid_dict.pkl')):
+    with open(os.path.join(filepath, sitename + '_valid_dict.pkl'), 'rb') as f:
+        ValidDict = pickle.load(f)
+else:
+    ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
+    with open(os.path.join(filepath, sitename + '_valid_dict.pkl'), 'wb') as f:
+        pickle.dump(ValidDict, f)
+
+
+#%% Validation Plots
+# TransectIDs = (1294,1877) # start and end transect ID
+TransectIDs = (0,585) # start and end transect ID
+Plotting.ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs)
