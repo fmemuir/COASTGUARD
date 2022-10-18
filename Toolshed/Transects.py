@@ -231,7 +231,9 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
             Key[i].append(TrKey)
     
         TransectDict[KeyName[i]] = Key[i]
- 
+    
+    print("TransectDict with intersections created.")
+        
     return TransectDict
     
 
@@ -269,6 +271,8 @@ def SaveIntersections(TransectDict, BasePath, sitename, projection):
     
     TransectInterGDF = gpd.GeoDataFrame(TransectDict)
     
+    print("Shapefile with sat intersections saved.")
+    
     return TransectInterGDF
     
 
@@ -284,7 +288,9 @@ def CalculateChanges(TransectDict,TransectInterGDF):
             # intersection distance along transect minus midpoint distance gives +ve for seaward and -ve for landward
             Dists.append(Dist - TransectInterGDF.geometry[Tr].length/2)
         TransectDict['normdists'][Tr] = Dists
-                
+    
+    print("TransectDict updated with distances between sat lines.")
+            
     return TransectDict
 
 
@@ -398,6 +404,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
             
         ValidDict['valsatdist'][Tr] = ValSatDists
         
+    print("TransectDict with intersections created.")
     
     return ValidDict
 
