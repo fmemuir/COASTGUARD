@@ -180,7 +180,11 @@ def ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs):
             violin.append(valsatdist)
             violindates.append(Vdate)
     # sort both dates and list of values by date
-    violindatesrt, violinsrt = [list(d) for d in zip(*sorted(zip(violindates, violin), key=lambda x: x[0]))]
+    if len(violindates) > 1:
+        violindatesrt, violinsrt = [list(d) for d in zip(*sorted(zip(violindates, violin), key=lambda x: x[0]))]
+    else:
+        violindatesrt = violindates
+        violinsrt = violin
     df = pd.DataFrame(violinsrt)
     df = df.transpose()
     df.columns = violindatesrt
