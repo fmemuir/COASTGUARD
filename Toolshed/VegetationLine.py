@@ -1191,6 +1191,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
             ax1 = fig.axes[0]
             ax2 = fig.axes[1]
             ax3 = fig.axes[2]
+            ax4 = fig.axes[3]
     else:
         # else create a new figure
         fig = plt.figure()
@@ -1201,19 +1202,26 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
         # according to the image shape, decide whether it is better to have the images
         # in vertical subplots or horizontal subplots
         if im_RGB.shape[1] > 2.5*im_RGB.shape[0]:
-            # vertical subplots
-            gs = gridspec.GridSpec(3, 1)
-            gs.update(bottom=0.03, top=0.97, left=0.03, right=0.97)
+            # vertical subplots (plot in rows)
+            gs = gridspec.GridSpec(4, 1)
+            gs.update(bottom=0.05, top=0.95, left=0.03, right=0.97)
             ax1 = fig.add_subplot(gs[0,0])
             ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
             ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
+            ax4 = fig.add_subplot(gs[3,0])
+            # gs = gridspec.GridSpec(3, 1)
+            # gs.update(bottom=0.03, top=0.97, left=0.03, right=0.97)
+            # ax1 = fig.add_subplot(gs[0,0])
+            # ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
+            # ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
         else:
-            # horizontal subplots
-            gs = gridspec.GridSpec(1, 3)
+            # horizontal subplots (plot in columns)
+            gs = gridspec.GridSpec(2, 3, height_ratios=[4,1])
             gs.update(bottom=0.05, top=0.95, left=0.05, right=0.95)
             ax1 = fig.add_subplot(gs[0,0])
             ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
             ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
+            ax4 = fig.add_subplot(gs[1,:])
 
     # change the color of nans to either black (0.0) or white (1.0) or somewhere in between
     nan_color = 1.0
@@ -1246,6 +1254,8 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
     int_veg = im_ndvi[im_labels[:,:,0]]
     int_nonveg = im_ndvi[im_labels[:,:,1]] 
+    labels_other = np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]) # for only veg/nonveg
+    int_other = im_ndvi[labels_other]
     
     # FM: create transition zone mask
     im_TZ = im_ndvi.copy()
@@ -1277,6 +1287,50 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     # cb.ax.tick_params(labelsize=10)
     # cb.set_label('NDVI values')
     #    ax3.set_anchor('W')
+
+    # plot histogram of NDVI values
+    # FM: set max and min bin values to -1 and +1 (since using normalised difference index)
+    binwidth = 0.01
+    ax4.set_facecolor('0.75')
+    ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
+    ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])
+    if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
+        bins = np.arange(-1, 1, binwidth)
+        ax4.hist(int_veg, bins=bins, density=True, color=colours[0,:], label='Vegetation')
+    if len(int_nonveg) > 0 and sum(~np.isnan(int_nonveg)) > 0:
+        bins = np.arange(-1, 1, binwidth)
+        ax4.hist(int_nonveg, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
+    if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
+        bins = np.arange(-1, 1, binwidth)
+        ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
+
+    contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    
+    # process the contours into a shoreline
+    shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+    #shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+    # convert shoreline to pixels
+    # THIS NEEDS FIXED (AFFINE TRANSFORM)
+    if len(shoreline) > 0:
+        # shoreline dataframe back to array
+        shorelineArr = Toolbox.GStoArr(shoreline)
+        sl_pix = Toolbox.convert_world2pix(shorelineArr, georef)
+    else: 
+        sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+    
+    # plot the shoreline on the images
+    # TO DO: size pixels based on image size (small dots on small imagery!)
+    sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
+    sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
+    sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
+    t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
+    # FM: plot vert lines where edges of overlapping classes reach (transition zone)
+    TZmin = ax4.axvline(x=TZbuffer[0],ls='--', c='C1', lw=1.5)
+    TZmax = ax4.axvline(x=TZbuffer[1],ls='--', c='C1', lw=1.5, label='transition zone')
+    
+    ax4.legend(loc=1)
+    plt.draw() # to update the plot
+
 
     # if check_detection is True, let user manually accept/reject the images
     skip_image = False
