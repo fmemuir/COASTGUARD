@@ -73,7 +73,37 @@ def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, Distanc
     return
 
 def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, proj, sitename, BasePath, RefShapePath):
-        
+    """
+    Produce shore-normal transects using CoastalMappingTools
+    FM Oct 2022
+
+    Parameters
+    ----------
+    SmoothingWindowSize : TYPE
+        DESCRIPTION.
+    NoSmooths : TYPE
+        DESCRIPTION.
+    TransectSpacing : TYPE
+        DESCRIPTION.
+    DistanceInland : TYPE
+        DESCRIPTION.
+    DistanceOffshore : TYPE
+        DESCRIPTION.
+    proj : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    BasePath : TYPE
+        DESCRIPTION.
+    RefShapePath : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TransectGDF : TYPE
+        DESCRIPTION.
+
+    """    
     FileSpec = RefShapePath
     ReprojSpec = BasePath + '/Baseline_Reproj.shp'
     TransectSpec = os.path.join(BasePath, sitename+'_Transects.shp')
@@ -108,7 +138,10 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
         with open(str(Filename2SaveCoast), 'wb') as PFile:
             pickle.dump(CellCoast, PFile)
             
-    return
+    TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
+    TransectGDF = gpd.read_file(TransectSpec)
+    
+    return TransectGDF
     
 def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     '''
