@@ -571,7 +571,7 @@ def FindShoreContours_Enhc(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     # make sure both classes have the same number of pixels before thresholding
     if len(int_veg) > 0 and len(int_nonveg) > 0:
         if np.argmin([int_veg.shape[0],int_nonveg.shape[0]]) == 1:
-            int_veg = int_veg[np.random.choice(int_veg.shape[0],int_nonveg.shape[0], replace=False),:]
+            int_veg = int_veg[np.random.choice(int_veg.shape[0],int_nonveg.shape[0], replace=False)]
         else:
             int_nonveg = int_nonveg[np.random.choice(int_nonveg.shape[0],int_veg.shape[0], replace=False)]
 
