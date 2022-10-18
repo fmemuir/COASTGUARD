@@ -1209,11 +1209,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
             ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
             ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
             ax4 = fig.add_subplot(gs[3,0])
-            # gs = gridspec.GridSpec(3, 1)
-            # gs.update(bottom=0.03, top=0.97, left=0.03, right=0.97)
-            # ax1 = fig.add_subplot(gs[0,0])
-            # ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
-            # ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
+
         else:
             # horizontal subplots (plot in columns)
             gs = gridspec.GridSpec(2, 3, height_ratios=[4,1])
