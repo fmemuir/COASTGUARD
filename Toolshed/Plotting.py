@@ -189,7 +189,11 @@ def ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs):
     df = df.transpose()
     df.columns = violindatesrt
     
-    ax = sns.violinplot(data = df, linewidth=1, palette = 'magma', orient='h')
+    if len(violindates) > 1:
+        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma', orient='h')
+    else:
+        ax = sns.violinplot(data = df, linewidth=1, orient='h')
+        
     ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
 
     
