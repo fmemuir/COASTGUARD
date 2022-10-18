@@ -194,7 +194,7 @@ VeglineGDF = gpd.read_file(VeglineShp[0])
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
 if os.path.isfile(TransectSpec) is False:
-    Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
+    TransectGDF = Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
 else:
     TransectGDF = gpd.read_file(TransectSpec)
 
