@@ -143,7 +143,7 @@ def SatGIF(metadata,settings,output):
 
 
 
-def ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs):
+def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -159,13 +159,20 @@ def ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs):
 
     """
     
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+    
     ValidGDF = gpd.read_file(ValidationShp)
     violin = []
     violindates = []
     Vdates = ValidGDF[DatesCol].unique()
     for Vdate in Vdates:
         valsatdist = []
-        for Tr in range(TransectIDs[0],TransectIDs[1]): # southeast
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['Vdates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
             if Vdate in ValidDict['Vdates'][Tr]:
                 DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
@@ -189,21 +196,39 @@ def ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs):
     df = df.transpose()
     df.columns = violindatesrt
     
+    f = plt.figure(figsize=(14, 6))
     if len(violindates) > 1:
-        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma', orient='h')
+        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma_r', orient='h')
     else:
-        ax = sns.violinplot(data = df, linewidth=1, orient='h')
+        ax = sns.violinplot(data = df, linewidth=1, orient='h',)
         
     ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
-
+    ax.set_title('Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1]))
     
+    # set axis limits to rounded maximum value of all violins (either +ve or -ve)
+    axlim = round(np.max([abs(df.min().min()),abs(df.max().max())]),-1)
+    ax.set_xlim(-axlim, axlim)
+    ax.set_xticks([-50,-25,-10,10,25,50],minor=True)
+    ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
+    median = ax.axvline(df.median().mean(), c='r', ls='-.')
+    mean = ax.axvline(df.mean().mean(), c='r', ls=':')
+    
+    handles = [median, mean]
+    labels = ['median', 'mean']
+    ax.legend(handles,labels)
+    
+    ax.set_axisbelow(False)
+    plt.tight_layout()
+    
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
     
 
     # ax.grid(False)
     # ax.right_ax.grid(False)
     
-    # ax.set_xticks([-50,-25,-10,-1,1,10,25,50],minor=True)
-    # ax.xaxis.grid(b=True, which='minor')
+    
     # ax.axhline(0, color='red', linewidth=0.5)
     # plt.show()
 
