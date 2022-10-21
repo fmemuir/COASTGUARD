@@ -208,7 +208,7 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
     axlim = round(np.max([abs(df.min().min()),abs(df.max().max())]),-1)
     ax.set_xlim(-axlim, axlim)
-    ax.set_xticks([-50,-25,-10,10,25,50],minor=True)
+    ax.set_xticks([-50,-30,-10,10,30,50],minor=True)
     ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     median = ax.axvline(df.median().mean(), c='r', ls='-.')
     mean = ax.axvline(df.mean().mean(), c='r', ls=':')
