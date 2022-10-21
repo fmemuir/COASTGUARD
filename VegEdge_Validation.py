@@ -298,12 +298,10 @@ if os.path.isfile(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl')
     with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'rb') as f:
         ValidDict = pickle.load(f)
 else:
-    ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
+    ValidDict = Transects.ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
     with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'wb') as f:
         pickle.dump(ValidDict, f)
 
-#%%
-ValidDict = Transects.ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
 
 #%% Validation Plots
 # TransectIDs = (1295,1741) # start and end transect ID
@@ -311,6 +309,7 @@ ValidDict = Transects.ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF
 
 # TransectIDs = (595,928) # start and end transect ID
 TransectIDs = (929,1294) # start and end transect ID
-Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
+# Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
+Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs)
 
 
