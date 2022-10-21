@@ -230,12 +230,12 @@ output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, s
 OPTION 2: Load in pre-existing output dates, lines, filenames and image properties.
 """
 
-filepath = os.path.join(inputs['filepath'], sitename)
-with open(os.path.join(filepath, sitename + '_output.pkl'), 'rb') as f:
+SiteFilepath = os.path.join(inputs['filepath'], sitename)
+with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
     output = pickle.load(f)
-with open(os.path.join(filepath, sitename + '_output_latlon.pkl'), 'rb') as f:
+with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
     output_latlon = pickle.load(f)
-with open(os.path.join(filepath, sitename + '_output_proj.pkl'), 'rb') as f:
+with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
     output_proj = pickle.load(f)
 
 
@@ -268,19 +268,26 @@ VeglineGDF = gpd.read_file(VeglineShp[0])
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
 if os.path.isfile(TransectSpec) is False:
-    Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
+    TransectGDF = Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
 else:
     print('Transects already exist and were loaded')
     TransectGDF = gpd.read_file(TransectSpec)
 
-#%% Get intersections
+#%% Create (or load) intersections with sat and validation lines per transect
 
-TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
-#%% Save newly intersected transects as shapefile
-
-TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
-#%% Repopulate dict with intersection distances along transects normalised to transect midpoints
-TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
+        TransectDict = pickle.load(f)
+else:
+    # Get intersections
+    TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
+    # Save newly intersected transects as shapefile
+    TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
+    # Repopulate dict with intersection distances along transects normalised to transect midpoints
+    TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectDict, f)
+    
 
 #%% VALIDATION
 
@@ -288,17 +295,22 @@ TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
 DatesCol = 'Date'
 ValidationShp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl')):
-    with open(os.path.join(filepath, sitename , sitename + '_valid_dict.pkl'), 'rb') as f:
+    with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'rb') as f:
         ValidDict = pickle.load(f)
 else:
     ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
-    with open(os.path.join(filepath, sitename , sitename + '_valid_dict.pkl'), 'wb') as f:
+    with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'wb') as f:
         pickle.dump(ValidDict, f)
 
+#%%
+ValidDict = Transects.ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
 
 #%% Validation Plots
-TransectIDs = (1295,1741) # start and end transect ID
+# TransectIDs = (1295,1741) # start and end transect ID
 # TransectIDs = (0,594) # start and end transect ID
+
+# TransectIDs = (595,928) # start and end transect ID
+TransectIDs = (929,1294) # start and end transect ID
 Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 
 
