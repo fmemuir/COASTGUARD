@@ -1198,12 +1198,13 @@ def NearestDates(surveys,metadata,sat_list):
             for satdate in metadata[sat]['dates']:
                 satdates.append(datetime.strptime(satdate,'%Y-%m-%d'))
             
-            if abs((veridate - NearDate(veridate,satdates)).days) < 183: # within 6 months
-                print('nearest:\t\t',NearDate(veridate,satdates))
+            print('nearest:\t\t',NearDate(veridate,satdates))
+            if NearDate(veridate,satdates) == False:
+                print('no image near in time.')
+            else:
                 nearestdate.append(datetime.strftime(NearDate(veridate,satdates),'%Y-%m-%d'))
                 nearestID.append(metadata[sat]['dates'].index(datetime.strftime(NearDate(veridate,satdates),'%Y-%m-%d')))
-            else:
-                print('no image near in time.')
+
         nearestdates[sat] = nearestdate
         nearestIDs[sat] = nearestID     
     
@@ -1326,12 +1327,12 @@ def NearDate(target,items):
     """
     nearestDate = min(items, key=lambda x: abs(x - target))
     
-    # # if difference is longer than 6 months, no match exists  
-    # if abs((target - nearestDate).days) > 183: 
-    #     return
-    # else:
-    #     return nearestDate
-    return nearestDate
+    # # if difference is longer than 3 months, no match exists  
+    if abs((target - nearestDate).days) > 91: 
+        return False
+    else:
+        return nearestDate
+    # return nearestDate
 
 
 def TZValues(int_veg, int_nonveg):
