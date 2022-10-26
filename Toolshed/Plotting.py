@@ -211,10 +211,9 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     ax.set_xticks([-50,-30,-10,10,30,50],minor=True)
     ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     median = ax.axvline(df.median().mean(), c='r', ls='-.')
-    mean = ax.axvline(df.mean().mean(), c='r', ls=':')
     
-    handles = [median, mean]
-    labels = ['median', 'mean']
+    handles = [median]
+    labels = ['median' + str(round(df.median().mean(),1)) + 'm']
     ax.legend(handles,labels)
     
     ax.set_axisbelow(False)
@@ -295,7 +294,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     median = ax.axvline(df.median().mean(), c='r', ls='-.')
     
     handles = [median]
-    labels = ['median']
+    labels = ['median = ' + str(round(df.median().mean(),1)) + 'm']
     ax.legend(handles,labels)
     
     ax.set_axisbelow(False)
