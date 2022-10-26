@@ -786,11 +786,14 @@ def image_retrieval(inputs):
     if 'cloud_thresh' in inputs.keys():
         cloud_thresh = int(inputs['cloud_thresh']*100)
     else:
-        cloud_thresh = 80
+        cloud_thresh = 90
         
     if 'L5' in inputs['sat_list']:
         Landsat5 = ee.ImageCollection("LANDSAT/LT05/C01/T1_TOA").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1])
         Sat.append(Landsat5)
+    if 'L7' in inputs['sat_list']:
+        Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
+        Sat.append(Landsat7)
     if 'L8' in inputs['sat_list']:
         Landsat8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
         Sat.append(Landsat8)
@@ -1359,14 +1362,17 @@ def TZValues(int_veg, int_nonveg):
     xcounts, xbins = np.histogram(int_nonveg,bins=bins)
     ycounts, ybins = np.histogram(int_veg,bins=bins)
     
+    
     # minimum transition zone value is first point where veg is defined
     if np.nanmin(int_veg) > 0: # limit for weird images where veg NDVI values are classed below 0
         minval = np.nanmin(int_veg)
     else:
         # first veg value that sits above significant frequency (95%)
+        # TO DO: try 3rd std dev
         countthresh = int(np.nanmax(ycounts)*0.05)
         minvalID = [idx for idx, element in enumerate(ycounts) if element>countthresh][0] # threshold might need adjusting
         minval = ybins[minvalID]
+        
         
     # calculate differences between counts to find where veg rises above nonveg
     countdiff = ycounts-xcounts
