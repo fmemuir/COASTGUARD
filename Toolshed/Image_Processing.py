@@ -141,10 +141,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         imgs = []
         for i in range(len(filenames)):
             imgs.append(ee.Image(filenames[i]))
-        Landsat7 = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'])
+        Landsat7 = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','B8','BQA'])
         
         img = ee.Image(Landsat7.getInfo().get('features')[fn]['id'])
-        im_ms = geemap.ee_to_numpy(img, bands = ['B1','B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
+        im_ms = geemap.ee_to_numpy(img, bands = ['B1','B2','B3','B4','B5', 'B8','BQA'], region=ee.Geometry.Polygon(polygon))
         
         
         if im_ms is None:
@@ -225,6 +225,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im_ms = im_ms_ps.copy()
         # the extra image is the 15m panchromatic band
         im_extra = im_pan
+        
+        
     #=============================================================================================#
     # L8 images
     #=============================================================================================#
@@ -281,7 +283,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         ncols = im_pan.shape[1]
 
         # create cloud mask
-        im_QA = im_ms[:,:,5]
+        # im_QA = im_ms[:,:,5] # B7=SWIR2
+        im_QA = im_ms[:,:,8]
         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
 
         # resize the image using bilinear interpolation (order 1)
