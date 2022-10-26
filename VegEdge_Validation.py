@@ -32,18 +32,17 @@ ee.Initialize()
 OPTION 2: AOI polygon is defined using coordinates of a bounding box (in WGS84).
 """
 
-#%%ST ANDREWS WEST
-sitename = 'StAndrewsWest'
-lonmin, lonmax = -2.89087, -2.84869
-latmin, latmax = 56.32641, 56.39814
-
-
 #%%ST ANDREWS EAST
 sitename = 'StAndrewsEast'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 
-#%%
+#%%ST ANDREWS WEST
+sitename = 'StAndrewsWest'
+lonmin, lonmax = -2.89087, -2.84869
+latmin, latmax = 56.32641, 56.39814
+
+#%% other sites
 
 ##ST ANDREWS
 # lonmin, lonmax = -2.842023, -2.774955
@@ -97,8 +96,8 @@ else:
 years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.strptime(dates[-1],'%Y-%m-%d')))
 
 # satellite missions
-# Input a list of containing any/all of 'L5', 'L8', 'S2'
-sat_list = ['L5','L8','S2']
+# Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
+sat_list = ['L5','L7','L8','S2']
 
 projection_epsg = 27700
 image_epsg = 32630
@@ -117,7 +116,7 @@ if os.path.isdir(direc) is False:
 
 # before downloading the images, check how many images are available for your inputs
 
-#Download.check_images_available(inputs)
+Download.check_images_available(inputs)
 
 
 #%% Image Download
@@ -134,32 +133,38 @@ nearestdates, nearestIDs = Toolbox.NearestDates(vegsurvey,metadata,sat_list)
 
 #%%
 L5 = dict.fromkeys(metadata['L5'].keys())
+L7 = dict.fromkeys(metadata['L7'].keys())
 L8 = dict.fromkeys(metadata['L8'].keys())
 S2 = dict.fromkeys(metadata['S2'].keys())
 
 #%% St Andrews East list of indices reflecting chosen validation dates
 L5index = [0,20,21,45,46]
+L7index = [0,1]
 L8index = [117,34,118,35,42,128,129,143,144,57,73,74,153,154,159,160,169,198,199]
 S2index = [41,42,43,44,45,46,47,48,49,50,133,134,135,136,137,138,139,140,141,142,143,144,257,258,259,260,261,262,263,411,412,413,414,415,416,417,505,506,507,508,509,619,620,621,622,623,624,948,949,950,951,952,953,954,1059,1060,1061,1062,1063]
 #%% St Andrews West
 L5index = [0,19,20,46,21]
+L7index = [0,1]
 L8index = [117,34,118,35,42,43,128,129,143,144,57,73,74,153,154,159,160,205,206,210,180]
 S2index = [41,42,43,44,133,134,135,136,137,138,139,140,141,142,143,144,257,258,259,260,261,262,263,411,412,413,414,415,416,417,505,506,507,508,509,834,835,836,837,838,839,840,947,948,949]
 #%%
 
 for satkey in dict.fromkeys(metadata['L5'].keys()):
     L5[satkey] = [metadata['L5'][satkey][L5index[0]]]
+    L7[satkey] = [metadata['L7'][satkey][L7index[0]]]
     L8[satkey] = [metadata['L8'][satkey][L8index[0]]]
     S2[satkey] = [metadata['S2'][satkey][S2index[0]]]
     for i in L5index[1:]:
         L5[satkey].append(metadata['L5'][satkey][i])
-    for j in L8index[1:]:
-        L8[satkey].append(metadata['L8'][satkey][j])
-    for k in S2index[1:]:
-        S2[satkey].append(metadata['S2'][satkey][k])
+    for j in L7index[1:]:
+        L7[satkey].append(metadata['L7'][satkey][j])    
+    for k in L8index[1:]:
+        L8[satkey].append(metadata['L8'][satkey][k])
+    for l in S2index[1:]:
+        S2[satkey].append(metadata['S2'][satkey][l])
 
             
-metadata = {'L5':L5,'L8':L8,'S2':S2}
+metadata = {'L5':L5, 'L7':L7, 'L8':L8, 'S2':S2}
 with open(os.path.join(filepath, sitename, sitename + '_validation_metadata.pkl'), 'wb') as f:
     pickle.dump(metadata, f)
 
@@ -303,12 +308,13 @@ else:
         pickle.dump(ValidDict, f)
 
 
-#%% Validation Plots
+# %% Validation Plots
 # TransectIDs = (1295,1741) # start and end transect ID
-# TransectIDs = (0,594) # start and end transect ID
+TransectIDs = (40,281) # excluding crossover at Swilcan
+# TransectIDs = (298,594) # excluding crossover at Out Head
 
 # TransectIDs = (595,928) # start and end transect ID
-TransectIDs = (929,1294) # start and end transect ID
+# TransectIDs = (929,1294) # start and end transect ID
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs)
 
