@@ -413,6 +413,7 @@ def ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     Intersects transects with validation lines from shapefile, matches date of
     each sat line to nearest valid. line, and calculates distance along 
     transect between them.
+    
     FM Oct 2022
 
     Parameters
