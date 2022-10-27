@@ -172,16 +172,13 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             else:
                 # compute NDVI image (NIR-R)
                 im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-                # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-                contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-                # if sum(sum(im_labels[:,:,0])) < 10 : # minimum number of sand pixels
-                #     # find contours on NDVI grayscale image
-                #     contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
-                        
-                # else:
-                #     # use classification to refine threshold and extract the veg/nonveg interface
-                #     contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
-                    
+
+                if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+                    print('(using weighted peaks for contouring)')
+                    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                else:
+                    contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+
                 # process the contours into a shoreline
                 # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)   
                 shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
@@ -1381,8 +1378,12 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
         bins = np.arange(-1, 1, binwidth)
         ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
 
-    # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+        print('(using weighted peaks for contouring)')
+        contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    else:
+        contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+        
     # process the contours into a shoreline
     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
     #shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
@@ -1612,7 +1613,11 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     #     ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
     
     
-    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+        print('(using weighted peaks for contouring)')
+        contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    else:
+        contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
     
     # automatically map the shoreline based on the classifier if enough sand pixels
     # if sum(sum(im_labels[:,:,0])) > 10:
@@ -1850,17 +1855,13 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
             # otherwise use find_wl_contours2 (traditional)
             else:
                 im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-                contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-                # if sum(sum(im_labels[:,:,0])) < 10 : # minimum number of sand pixels
-                #         # compute NDVI image (NIR - R)
-                #         im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-                #         # find water contours on NDVI grayscale image
-                #         contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
-                        
-                # else:
-                #     # use classification to refine threshold and extract the sand/water interface
-                #     contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
-                    
+                
+                if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+                    print('(using weighted peaks for contouring)')
+                    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                else:
+                    contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                
                 # process the water contours into a shoreline
                 shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
                 
