@@ -322,8 +322,7 @@ else:
 
 
 # %% Validation Plots
-# TransectIDs = (1295,1741) # start and end transect ID
-# TransectIDs = (39,281) # west sands to out head
+# TransectIDs = (40,281) # west sands to out head
 # TransectIDs = (312,594) # out head to easter kincaple
 # TransectIDs = (1365,1464) # leuchars to tentsmuir
 TransectIDs = (1465,1741) # tentsmuir

@@ -249,8 +249,10 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     violin = []
     violindates = []
     Sdates = SatGDF[DatesCol].unique()
+    
     for Sdate in Sdates:
         valsatdist = []
+        # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
             if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
@@ -278,6 +280,20 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     df = df.transpose()
     df.columns = violindatesrt
     
+    # initialise matching list of sat names for labelling
+    satnames = dict.fromkeys(violindatesrt)
+    # for each date in sorted list
+    for Sdate in violindatesrt:    
+        satmatch = []
+        for Tr in range(len(ValidDict['TransectID'])):
+            # loop through transects to find matching date from which to find satname
+            if Sdate not in ValidDict['dates'][Tr]:
+                continue
+            else:
+                satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
+        # cycling through transects leads to list of repeating satnames; take the unique entry
+        satnames[Sdate] = list(set(satmatch))[0]
+    
     f = plt.figure(figsize=(10, 8))
     if len(violindates) > 1:
         ax = sns.violinplot(data = df, linewidth=1, palette = 'magma_r', orient='h', cut=0)
@@ -293,11 +309,23 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     ax.set_xlim(-axlim, axlim)
     ax.set_xticks([-50,-30,-10,10,30,50],minor=True)
     ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
-    median = ax.axvline(df.median().mean(), c='r', ls='-.')
     
-    handles = [median]
-    labels = ['median = ' + str(round(df.median().mean(),1)) + 'm']
-    ax.legend(handles,labels)
+    # create specific median lines for specific platforms
+    medians = []
+    labels = []
+    # dataframe dates and matching satnames
+    satdf = pd.DataFrame(satnames, index=[0])
+    # for each platform name
+    uniquesats = set(list(satnames.values()))
+    colors = plt.cm.Blues(np.linspace(0.3, 1, len(uniquesats)))
+    for satname, c in zip(uniquesats, colors):
+        sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
+        sats = sats[0].tolist()
+        # get median of only the columns that match each sat name
+        medians.append(ax.axvline(df[sats].median().mean(), c=c, ls='-.'))
+        labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
+    
+    ax.legend(medians,labels)
     
     ax.set_axisbelow(False)
     plt.tight_layout()
