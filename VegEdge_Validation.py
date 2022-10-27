@@ -251,19 +251,23 @@ output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Slice up output for validation
-slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2017-07-24','2018-06-24','2019-01-28','2019-08-18','2021-07-01','2022-02-11']
+slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-01-28','2019-08-18','2021-07-01','2022-02-11']
 
 newoutputdict = output.copy()
 for key in output.keys():
     newoutput = []
     for slicedate in slicedates:
-        newoutput.append(output[key][output['dates'].index(slicedate)])
+        if slicedate == '2017-07-24':
+            newoutput.append(output[key][[i for i, x in enumerate(output['dates']) if x == slicedate][1]])        
+        else:
+            newoutput.append(output[key][output['dates'].index(slicedate)])
     newoutputdict[key] = newoutput
 
+output = newoutputdict.copy()
 #%% Save the veglines as shapefiles locally
 
 # Save output veglines 
-Toolbox.SaveShapefiles(output_proj, BasePath, sitename, settings['projection_epsg'])
+Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['projection_epsg'])
 
 #%% Create GIF of satellite images and related shorelines
 
@@ -319,8 +323,10 @@ else:
 
 # %% Validation Plots
 # TransectIDs = (1295,1741) # start and end transect ID
-TransectIDs = (40,281) # excluding crossover at Swilcan
-# TransectIDs = (298,594) # excluding crossover at Out Head
+# TransectIDs = (39,281) # west sands to out head
+# TransectIDs = (312,594) # out head to easter kincaple
+# TransectIDs = (1365,1464) # leuchars to tentsmuir
+TransectIDs = (1465,1741) # tentsmuir
 
 # TransectIDs = (595,928) # start and end transect ID
 # TransectIDs = (929,1294) # start and end transect ID

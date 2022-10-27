@@ -40,6 +40,7 @@ import pandas as pd
 import geopandas as gpd
 
 import csv
+import math
 
 ee.Initialize()
 
@@ -277,17 +278,18 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     df = df.transpose()
     df.columns = violindatesrt
     
-    f = plt.figure(figsize=(14, 6))
+    f = plt.figure(figsize=(10, 8))
     if len(violindates) > 1:
-        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma_r', orient='h')
+        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma_r', orient='h', cut=0)
     else:
-        ax = sns.violinplot(data = df, linewidth=1, orient='h',)
+        ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0)
         
     ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
     ax.set_title('Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1]))
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
-    axlim = round(np.max([abs(df.min().min()),abs(df.max().max())]),-1)
+    # round UP to nearest 10
+    axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
     ax.set_xlim(-axlim, axlim)
     ax.set_xticks([-50,-30,-10,10,30,50],minor=True)
     ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
