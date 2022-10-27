@@ -250,8 +250,17 @@ output = Toolbox.remove_duplicates(output) # removes duplicates (images taken on
 output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
-#%% Save the veglines as shapefiles locally
+#%% Slice up output for validation
+slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2017-07-24','2018-06-24','2019-01-28','2019-08-18','2021-07-01','2022-02-11']
 
+newoutputdict = output.copy()
+for key in output.keys():
+    newoutput = []
+    for slicedate in slicedates:
+        newoutput.append(output[key][output['dates'].index(slicedate)])
+    newoutputdict[key] = newoutput
+
+#%% Save the veglines as shapefiles locally
 
 # Save output veglines 
 Toolbox.SaveShapefiles(output_proj, BasePath, sitename, settings['projection_epsg'])
