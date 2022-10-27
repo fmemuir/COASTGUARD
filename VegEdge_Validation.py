@@ -311,7 +311,7 @@ else:
 
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl')):
     with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'rb') as f:
         ValidDict = pickle.load(f)
