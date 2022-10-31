@@ -1372,6 +1372,39 @@ def NearDate(target,items):
     # return nearestDate
 
 
+def TZValuesSTDV(int_veg, int_nonveg):
+    """
+    Generate bounds for transition zone plot by using the 3rd standard deviations of the two classes.
+    FM Oct 2022
+
+    Parameters
+    ----------
+    int_veg : array
+        NDVI pixel values classed as veg.
+    int_nonveg : array
+        NDVI pixel values classed as nonveg.
+
+    Returns
+    -------
+    [minval,maxval] : list
+        minimum and maximum transition zone bounds.
+
+    """
+    
+    bins = np.arange(-1, 1, 0.01) # start, stop, bin width
+    # create histogram but don't plot, use to access frequencies
+    nvcounts, nvbins = np.histogram(int_nonveg,bins=bins)
+    vcounts, vbins = np.histogram(int_veg,bins=bins)
+    
+    # first veg value that sits above significant frequency
+    minval = np.mean(int_veg)-(3*np.std(int_veg)) # 3 stdevs to the left
+           
+   # get ID of first point where difference in frequencies rise above statistically significant threshold 
+    maxval = np.mean(int_nonveg)+(3*np.std(int_nonveg)) # 3 stdevs to the left
+    
+    return [minval,maxval]
+
+
 def TZValues(int_veg, int_nonveg):
     """
     Generate bounds for transition zone plot by finding the minimum NDVI value which could be veg,
@@ -1393,34 +1426,31 @@ def TZValues(int_veg, int_nonveg):
     
     bins = np.arange(-1, 1, 0.01) # start, stop, bin width
     # create histogram but don't plot, use to access frequencies
-    xcounts, xbins = np.histogram(int_nonveg,bins=bins)
-    ycounts, ybins = np.histogram(int_veg,bins=bins)
+    nvcounts, nvbins = np.histogram(int_nonveg,bins=bins)
+    vcounts, vbins = np.histogram(int_veg,bins=bins)
     
+    ## minimum transition zone value is first point where veg is defined
+    ## first veg value that sits above significant frequency (5%)
+    # countthresh = int(np.nanmax(vcounts)*0.05)
+    # minvalID = [idx for idx, element in enumerate(vcounts) if element>countthresh][0]
+    # minval = vbins[minvalID]
     
-    # minimum transition zone value is first point where veg is defined
-    if np.nanmin(int_veg) > 0: # limit for weird images where veg NDVI values are classed below 0
-        minval = np.nanmin(int_veg)
-    else:
-        # first veg value that sits above significant frequency (95%)
-        # TO DO: try 3rd std dev
-        countthresh = int(np.nanmax(ycounts)*0.05)
-        minvalID = [idx for idx, element in enumerate(ycounts) if element>countthresh][0] # threshold might need adjusting
-        minval = ybins[minvalID]
-        
+    # 3rd standard dev to the left
+    minval = np.mean(int_veg) - (3*np.std(int_veg))
         
     # calculate differences between counts to find where veg rises above nonveg
-    countdiff = ycounts-xcounts
-    # get ID of first point where difference in frequencies rise above statistically significant threshold 
-    countthresh = int(np.nanmax(ycounts)*0.05)
+    countdiff = vcounts-nvcounts
+    # get ID of first point where difference in frequencies rise above statistically significant threshold (10%)
+    countthresh = int(np.nanmax(vcounts)*0.1)
     countIDs = [idx for idx, element in enumerate(countdiff) if element>countthresh]
-    if countIDs == []: # for when veg never gets over nonveg freq.
-        countthresh = int(np.nanmax(ycounts)*0.1) # take first veg freq that surpasses 10% of max
-        countID = [idx for idx, element in enumerate(ycounts) if element>countthresh][0]
+    if countIDs == []: # for when veg never surpasses nonveg freq.
+        countthresh = int(np.nanmax(vcounts)*0.1) # take first veg freq that surpasses 10% of max
+        countID = [idx for idx, element in enumerate(vcounts) if element>countthresh][0]
     else:
         countID = countIDs[0] # take first index
         
     # maximum value is 
-    maxval = ybins[countID]
+    maxval = vbins[countID]
     
     return [minval,maxval]
 
