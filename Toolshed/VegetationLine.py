@@ -656,7 +656,7 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
         peaks.append(values[list(probabilities).index(np.nanmax(probabilities))])
     
     # Calculate index value using weighted peaks (weighted towards nonveg)
-    t_ndi = float((0.33*peaks[0]) + (0.67*peaks[1]))
+    t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
         
     # find contour with Marching-Squares algorithm
     im_ndi_buffer = np.copy(im_ndi)
@@ -1403,8 +1403,8 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
     t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
     # FM: plot vert lines where edges of overlapping classes reach (transition zone)
-    TZmin = ax4.axvline(x=TZbuffer[0],ls='--', c='C1', lw=1.5)
-    TZmax = ax4.axvline(x=TZbuffer[1],ls='--', c='C1', lw=1.5, label='transition zone')
+    TZmin = ax4.axvline(x=TZbuffer[0],ls='--', c='#F2B47C', lw=1.5)
+    TZmax = ax4.axvline(x=TZbuffer[1],ls='--', c='#D4622A', lw=1.5, label='transition zone')
     
     ax4.legend(loc=1)
     plt.draw() # to update the plot
