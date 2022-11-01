@@ -321,6 +321,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     for satname, c in zip(uniquesats, colors):
         sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
         sats = sats[0].tolist()
+        # ax.get_xticklabels()[ax.get_xticklabels().index(sats)].set_color("red")
         # get median of only the columns that match each sat name
         medians.append(ax.axvline(df[sats].median().mean(), c=c, ls='-.'))
         labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
