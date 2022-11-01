@@ -657,6 +657,14 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     
     # Calculate index value using weighted peaks (weighted towards nonveg)
     t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
+    
+    # Condition for hazy images where stronger signal class has very skewed peak
+    if t_ndi < 0:
+        print('(threshold too low: using 0.5%ile instead)')
+        # if WP threshold is unreasonably low, use 0.5th percentile of weaker class
+        # Use %ile of whole image class, not just buffer zone
+        int_veg = vec_ndi[vec_veg]
+        t_ndi = np.percentile(int_veg,0.5)
         
     # find contour with Marching-Squares algorithm
     im_ndi_buffer = np.copy(im_ndi)
