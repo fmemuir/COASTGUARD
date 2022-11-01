@@ -185,7 +185,7 @@ settings = {
     'adjust_detection': False,  # if True, allows user to adjust the postion of each shoreline by changing the threhold
     'save_figure': True,        # if True, saves a figure showing the mapped shoreline for each image
     # [ONLY FOR ADVANCED USERS] shoreline detection parameters:
-    'min_beach_area': 200,     # minimum area (in metres^2) for an object to be labelled as a beach
+    'min_beach_area': 200,      # minimum area (in metres^2) for an object to be labelled as a beach
     'buffer_size': 250,         # radius (in metres) for buffer around sandy pixels considered in the shoreline detection
     'min_length_sl': 500,       # minimum length (in metres) of shoreline perimeter to be valid
     'cloud_mask_issue': False,  # switch this parameter to True if sand pixels are masked (in black) on many images  
