@@ -176,6 +176,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
                     print('(using weighted peaks for contouring)')
                     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                    # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                 else:
                     contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
 
@@ -642,7 +643,7 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     # Find the peaks of veg and nonveg classes using KDE
     bins = np.arange(-1, 1, 0.01) # start, stop, bin width
     peaks = []
-    for intdata in [int_veg, int_nonveg]:
+    for i, intdata in enumerate([int_veg, int_nonveg]):
         model = sklearn.neighbors.KernelDensity(bandwidth=0.01, kernel='gaussian')
         sample = intdata.reshape((len(intdata), 1))
         model.fit(sample)
@@ -653,19 +654,23 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
         probabilities = model.score_samples(values)
         probabilities = np.exp(probabilities)
         
-        peaks.append(values[list(probabilities).index(np.nanmax(probabilities))])
+        if i == 0: # class with weaker signal
+            # take value of band index where probability is max
+            peaks.append(values[list(probabilities).index(np.nanmax(probabilities))])
+        else:
+            # clip to > 0 to deal with sand peak only
+            clipbins = bins[bins>0]
+            clipprobs = probabilities[bins>0]
+            # find peaks of bimodal KDE using prominence
+            prom, _ = scipy.signal.find_peaks(clipprobs, prominence=0.5)
+            # always take first peak over 0 (corresponds to bare land/sand in veg classification)
+            peaks.append(clipbins[prom[0]])
+            
+            
     
     # Calculate index value using weighted peaks (weighted towards nonveg)
     t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
-    
-    # Condition for hazy images where stronger signal class has very skewed peak
-    if t_ndi < 0:
-        print('(threshold too low: using 0.5%ile instead)')
-        # if WP threshold is unreasonably low, use 0.5th percentile of weaker class
-        # Use %ile of whole image class, not just buffer zone
-        int_veg = vec_ndi[vec_veg]
-        t_ndi = np.percentile(int_veg,0.5)
-        
+            
     # find contour with Marching-Squares algorithm
     im_ndi_buffer = np.copy(im_ndi)
     im_ndi_buffer[~im_ref_buffer] = np.nan
@@ -1389,6 +1394,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
         print('(using weighted peaks for contouring)')
         contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+        # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
     else:
         contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
         
@@ -1624,6 +1630,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
         print('(using weighted peaks for contouring)')
         contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+        # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
     else:
         contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
     
@@ -1867,6 +1874,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                 if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
                     print('(using weighted peaks for contouring)')
                     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                    # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                 else:
                     contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                 
