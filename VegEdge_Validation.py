@@ -140,8 +140,8 @@ S2 = dict.fromkeys(metadata['S2'].keys())
 #%% St Andrews East list of indices reflecting chosen validation dates
 L5index = [0,20,21,45,46]
 L7index = [0,1]
-L8index = [117,34,118,35,42,128,129,143,144,57,73,74,153,154,159,160,169,198,199]
-S2index = [41,42,43,44,45,46,47,48,49,50,133,134,135,136,137,138,139,140,141,142,143,144,257,258,259,260,261,262,263,411,412,413,414,415,416,417,505,506,507,508,509,619,620,621,622,623,624,948,949,950,951,952,953,954,1059,1060,1061,1062,1063]
+L8index = [117,34,118,35,42,128,129,143,144,57,73,74,153,154,159,160,169,190,198,199]
+S2index = [41,42,43,44,133,134,135,136,137,138,139,140,141,142,143,144,257,258,259,260,261,262,263,411,412,413,414,415,416,417,505,506,507,508,509,619,620,621,622,623,624,948,949,950,951,952,953,954,1059,1060,1061,1062,1063]
 #%% St Andrews West
 L5index = [0,19,20,46,21]
 L7index = [0,1]
@@ -181,7 +181,7 @@ settings = {
     'cloud_thresh': 0.5,        # threshold on maximum cloud cover
     'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
     # quality control:
-    'check_detection': True,    # if True, shows each shoreline detection to the user for validation
+    'check_detection': False,    # if True, shows each shoreline detection to the user for validation
     'adjust_detection': False,  # if True, allows user to adjust the postion of each shoreline by changing the threhold
     'save_figure': True,        # if True, saves a figure showing the mapped shoreline for each image
     # [ONLY FOR ADVANCED USERS] shoreline detection parameters:
@@ -251,7 +251,8 @@ output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Slice up output for validation
-slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-01-28','2019-08-18','2021-07-01','2022-02-11']
+slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-02-04','2019-08-18','2021-07-01','2022-02-11']
+# slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-08-18','2021-07-01','2022-02-11']
 
 newoutputdict = output.copy()
 for key in output.keys():
