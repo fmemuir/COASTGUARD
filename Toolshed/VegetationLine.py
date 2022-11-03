@@ -189,7 +189,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                     if not settings['check_detection']:
                         plt.ioff() # turning interactive plotting off
                     skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,
-                                                image_epsg, georef, settings, date, satname)
+                                                image_epsg, georef, settings, date, satname,contours_ndvi, t_ndvi)
                         # if the user decides to skip the image, continue and do not save the mapped shoreline
                     if skip_image:
                         continue
@@ -663,11 +663,13 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
             clipprobs = probabilities[bins>0]
             # find peaks of bimodal KDE using prominence
             prom, _ = scipy.signal.find_peaks(clipprobs, prominence=0.5)
-            # always take first peak over 0 (corresponds to bare land/sand in veg classification)
-            peaks.append(clipbins[prom[0]])
+            if len(prom) == 0: # for marshland where no peak above 1 exists
+                prom, _ = scipy.signal.find_peaks(probabilities, prominence=0.5)
+                peaks.append(bins[prom[-1]])
+            else:    
+                # always take first peak over 0 (corresponds to bare land/sand in veg classification)
+                peaks.append(clipbins[prom[0]])
             
-            
-    
     # Calculate index value using weighted peaks (weighted towards nonveg)
     t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
             
@@ -1233,7 +1235,7 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
 
 
 def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
-                   settings, date, satname):
+                   settings, date, satname, contours_ndvi, t_ndvi):
 
     sitename = settings['inputs']['sitename']
     filepath_data = settings['inputs']['filepath']
@@ -1391,12 +1393,12 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
         bins = np.arange(-1, 1, binwidth)
         ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
 
-    if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
-        print('(using weighted peaks for contouring)')
-        contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-        # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-    else:
-        contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    # if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+    #     print('(using weighted peaks for contouring)')
+    #     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    #     # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+    # else:
+    #     contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
         
     # process the contours into a shoreline
     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
@@ -1887,7 +1889,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                     if not settings['check_detection']:
                         plt.ioff() # turning interactive plotting off
                     skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,
-                                                image_epsg, georef, settings, date, satname)
+                                                image_epsg, georef, settings, date, satname,contours_ndvi, t_ndvi)
                     # if the user decides to skip the image, continue and do not save the mapped shoreline
                     if skip_image:
                         continue
