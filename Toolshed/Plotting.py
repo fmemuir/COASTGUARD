@@ -316,12 +316,15 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     # dataframe dates and matching satnames
     satdf = pd.DataFrame(satnames, index=[0])
     # for each platform name
-    uniquesats = set(list(satnames.values()))
-    colors = plt.cm.Blues(np.linspace(0.3, 1, len(uniquesats)))
+    uniquesats = sorted(set(list(satnames.values())))
+    colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
     for satname, c in zip(uniquesats, colors):
         sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
         sats = sats[0].tolist()
-        # ax.get_xticklabels()[ax.get_xticklabels().index(sats)].set_color("red")
+        # get dataframe column indices for each date that matches the sat name
+        colind = [df.columns.get_loc(sat) for sat in sats]
+        # set the date axis label for each date to corresponding satname colour
+        [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
         # get median of only the columns that match each sat name
         medians.append(ax.axvline(df[sats].median().mean(), c=c, ls='-.'))
         labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
