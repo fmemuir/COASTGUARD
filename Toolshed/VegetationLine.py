@@ -178,7 +178,8 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                     # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                 else:
-                    contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                    # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
 
                 # process the contours into a shoreline
                 # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)   
@@ -587,32 +588,30 @@ def FindShoreContours_Enhc(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     # only return MNDWI contours and threshold
     return contours_ndi, t_ndi
 
-
-def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
+def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
     """
-    New robust method for extracting shorelines. Incorporates the NN classification
-    component to make the threshold specific to the inter-class interface. Uses 
-    Weighted Peaks method rather than Otsu. 
-    FM Oct 2022, adapted from KV WRL 2018
-    Arguments:
-    -----------
-    im_ms: np.array
-        RGB + downsampled NIR and SWIR
-    im_labels: np.array
-        3D image containing a boolean image for each class in the order (sand, swash, water)
-    cloud_mask: np.array
-        2D cloud mask with True where cloud pixels are
-    im_ref_buffer: np.array
-        binary image containing a buffer around the reference shoreline
-    Returns:    
-    -----------
-    contours_ndi: list of np.arrays
-        contains the coordinates of the contour lines extracted from the
-        Normalized Difference Index image
-    t_ndi: float
-        threshold used to map the contours
-    """
+    Create classified band index value vectors and clip them to coastal buffer.
+    FM Nov 2022
 
+    Parameters
+    ----------
+    cloud_mask : TYPE
+        DESCRIPTION.
+    im_ndi : TYPE
+        DESCRIPTION.
+    im_labels : TYPE
+        DESCRIPTION.
+    im_ref_buffer : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    int_veg : TYPE
+        DESCRIPTION.
+    int_nonveg : TYPE
+        DESCRIPTION.
+
+    """
     nrows = cloud_mask.shape[0]
     ncols = cloud_mask.shape[1]
     
@@ -639,7 +638,38 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
             int_veg = int_veg[np.random.choice(int_veg.shape[0],int_nonveg.shape[0], replace=False)]
         else:
             int_nonveg = int_nonveg[np.random.choice(int_nonveg.shape[0],int_veg.shape[0], replace=False)]
+            
+    return int_veg, int_nonveg
 
+
+def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
+    """
+    New robust method for extracting shorelines. Incorporates the NN classification
+    component to make the threshold specific to the inter-class interface. Uses 
+    Weighted Peaks method rather than Otsu. 
+    FM Oct 2022, adapted from KV WRL 2018
+    Arguments:
+    -----------
+    im_ms: np.array
+        RGB + downsampled NIR and SWIR
+    im_labels: np.array
+        3D image containing a boolean image for each class in the order (sand, swash, water)
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+    im_ref_buffer: np.array
+        binary image containing a buffer around the reference shoreline
+    Returns:    
+    -----------
+    contours_ndi: list of np.arrays
+        contains the coordinates of the contour lines extracted from the
+        Normalized Difference Index image
+    t_ndi: float
+        threshold used to map the contours
+    """
+    
+    # clip down classified band index values to coastal buffer
+    int_veg, int_nonveg = ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer)
+    
     # Find the peaks of veg and nonveg classes using KDE
     bins = np.arange(-1, 1, 0.01) # start, stop, bin width
     peaks = []
@@ -663,9 +693,13 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
             clipprobs = probabilities[bins>0]
             # find peaks of bimodal KDE using prominence
             prom, _ = scipy.signal.find_peaks(clipprobs, prominence=0.5)
-            if len(prom) == 0: # for marshland where no peak above 1 exists
-                prom, _ = scipy.signal.find_peaks(probabilities, prominence=0.5)
-                peaks.append(bins[prom[-1]])
+            if len(prom) == 0: # for marshland where no peak above NDVI = 0 exists
+                promlimit = 0.5
+                # decrease prominence til peak is found
+                while len(prom) == 0:
+                    prom, _ = scipy.signal.find_peaks(clipprobs, prominence=promlimit)
+                    promlimit -= 0.05 
+                peaks.append(clipbins[prom[0]])
             else:    
                 # always take first peak over 0 (corresponds to bare land/sand in veg classification)
                 peaks.append(clipbins[prom[0]])
@@ -1378,28 +1412,23 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     #    ax3.set_anchor('W')
 
     # plot histogram of NDVI values
-    # FM: set max and min bin values to -1 and +1 (since using normalised difference index)
+    # clip down classified band index values to coastal buffer
+    int_veg_clip, int_nonveg_clip = ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
+    
     binwidth = 0.01
     ax4.set_facecolor('0.75')
     ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
     ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])
-    if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
+    if len(int_veg_clip) > 0 and sum(~np.isnan(int_veg_clip)) > 0:
         bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_veg, bins=bins, density=True, color=colours[0,:], label='Vegetation')
-    if len(int_nonveg) > 0 and sum(~np.isnan(int_nonveg)) > 0:
+        ax4.hist(int_veg_clip, bins=bins, density=True, color=colours[0,:], label='Vegetation')
+    if len(int_nonveg_clip) > 0 and sum(~np.isnan(int_nonveg_clip)) > 0:
         bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_nonveg, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
-    if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
-        bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
-
-    # if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
-    #     print('(using weighted peaks for contouring)')
-    #     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-    #     # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-    # else:
-    #     contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-        
+        ax4.hist(int_nonveg_clip, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
+    # if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
+    #     bins = np.arange(-1, 1, binwidth)
+    #     ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
+     
     # process the contours into a shoreline
     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
     #shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
@@ -1634,8 +1663,9 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
         contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
         # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
     else:
-        contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-    
+        # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+        contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+
     # automatically map the shoreline based on the classifier if enough sand pixels
     # if sum(sum(im_labels[:,:,0])) > 10:
     #     # use classification to refine threshold and extract the sand/water interface
@@ -1878,8 +1908,9 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                     # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                 else:
-                    contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-                
+                    # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+
                 # process the water contours into a shoreline
                 shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
                 
