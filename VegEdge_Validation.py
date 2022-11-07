@@ -251,8 +251,11 @@ output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Slice up output for validation
+# east dates
 slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-02-04','2019-08-18','2021-07-01','2022-02-11']
-# slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-08-18','2021-07-01','2022-02-11']
+# west dates
+# slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-08-13','2021-07-01','2021-12-10','2022-02-11']
+
 
 newoutputdict = output.copy()
 for key in output.keys():
@@ -326,11 +329,40 @@ else:
 # TransectIDs = (40,281) # west sands to out head
 # TransectIDs = (312,594) # out head to easter kincaple
 # TransectIDs = (1365,1464) # leuchars to tentsmuir
-TransectIDs = (1465,1741) # tentsmuir
+# TransectIDs = (1465,1741) # tentsmuir
 
-# TransectIDs = (595,928) # start and end transect ID
-# TransectIDs = (929,1294) # start and end transect ID
+# TransectIDs = (595,672)
+# TransectIDs = (740,888) # start and end transect ID
+# TransectIDs = (972,1303) # start and end transect ID
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs)
 
+#%% Combined East and West
+with open(os.path.join(filepath, 'StAndrewsEast', 'StAndrewsEast' + '_valid_dict.pkl'), 'rb') as f:
+    EastValidDict = pickle.load(f)
+with open(os.path.join(filepath, 'StAndrewsWest', 'StAndrewsWest' + '_valid_dict.pkl'), 'rb') as f:
+    WestValidDict = pickle.load(f)
+
+FullValidDict = EastValidDict.copy()
+for keyname in FullValidDict.keys():
+    FullValidDict[keyname][586:1297] = WestValidDict[keyname][586:1297]
+
+#%%
+# West Sands errors
+TransectIDs = (40,281) # west sands to out head
+obs = FullValidDict['valsatdist'][TransectIDs[0]:TransectIDs[1]]
+pred = FullValidDict['valsatdist'][TransectIDs[0]:TransectIDs[1]]
+d = y - yhat
+mse_f = np.mean(d**2)
+mae_f = np.mean(abs(d))
+rmse_f = np.sqrt(mse_f)
+r2_f = 1-(sum(d**2)/sum((y-np.mean(y))**2))
+
+print('Transects %s to %s:' % (TransectIDs[0],TransectIDs[1]))
+print("Results of sklearn.metrics:")
+print("MAE:",mae)
+print("MSE:", mse)
+print("RMSE:", rmse)
+print("R-Squared:", r2)
+ 
 
