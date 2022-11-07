@@ -296,7 +296,13 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     
     f = plt.figure(figsize=(10, 8))
     if len(violindates) > 1:
-        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma_r', orient='h', cut=0)
+        # plot stacked violin plots
+        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma_r', orient='h', cut=0, inner='box')
+        # cut away bottom halves of violins
+        for violin in ax.collections:
+            bbox = violin.get_paths()[0].get_extents()
+            x0, y0, width, height = bbox.bounds
+            violin.set_clip_path(plt.Rectangle((x0, y0), width, height / 2, transform=ax.transData))
     else:
         ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0)
         
