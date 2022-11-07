@@ -316,53 +316,71 @@ else:
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
 ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
-if os.path.isfile(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl')):
-    with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'rb') as f:
+validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
+if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
+    with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'rb') as f:
         ValidDict = pickle.load(f)
 else:
-    ValidDict = Transects.ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
-    with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'wb') as f:
+    ValidDict = Transects.ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectDict)
+    with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'wb') as f:
         pickle.dump(ValidDict, f)
 
 
 # %% Validation Plots
 # TransectIDs = (40,281) # west sands to out head
-# TransectIDs = (312,594) # out head to easter kincaple
-# TransectIDs = (1365,1464) # leuchars to tentsmuir
-# TransectIDs = (1465,1741) # tentsmuir
+# TransectIDs = (312,415) # west out head
+# TransectIDs = (416,594) # easter kincaple
+# TransectIDs = (1365,1462) # leuchars to tentsmuir
+# TransectIDs = (1463,1636) # tentsmuir
+TransectIDs = (1637,1741) # tentsmuir
 
 # TransectIDs = (595,672)
 # TransectIDs = (740,888) # start and end transect ID
-# TransectIDs = (972,1303) # start and end transect ID
+# TransectIDs = (972,1297) # start and end transect ID
+
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs)
 
-#%% Combined East and West
-with open(os.path.join(filepath, 'StAndrewsEast', 'StAndrewsEast' + '_valid_dict.pkl'), 'rb') as f:
+#%% Combine East and West
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEast', 'validation','StAndrewsEast' + '_valid_dict.pkl'), 'rb') as f:
     EastValidDict = pickle.load(f)
-with open(os.path.join(filepath, 'StAndrewsWest', 'StAndrewsWest' + '_valid_dict.pkl'), 'rb') as f:
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWest', 'validation', 'StAndrewsWest' + '_valid_dict.pkl'), 'rb') as f:
     WestValidDict = pickle.load(f)
 
 FullValidDict = EastValidDict.copy()
 for keyname in FullValidDict.keys():
-    FullValidDict[keyname][586:1297] = WestValidDict[keyname][586:1297]
+    FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
 
-#%%
+#%% Error stats
+
+# TransectIDs = (40,281) # west sands to out head
+# TransectIDs = (312,415) # west out head
+# TransectIDs = (416,594) # easter kincaple
+# TransectIDs = (1365,1462) # leuchars to tentsmuir
+# TransectIDs = (1463,1636) # tentsmuir
+TransectIDs = (1637,1741) # tentsmuir
+
 # West Sands errors
-TransectIDs = (40,281) # west sands to out head
-obs = FullValidDict['valsatdist'][TransectIDs[0]:TransectIDs[1]]
-pred = FullValidDict['valsatdist'][TransectIDs[0]:TransectIDs[1]]
-d = y - yhat
-mse_f = np.mean(d**2)
-mae_f = np.mean(abs(d))
-rmse_f = np.sqrt(mse_f)
-r2_f = 1-(sum(d**2)/sum((y-np.mean(y))**2))
-
-print('Transects %s to %s:' % (TransectIDs[0],TransectIDs[1]))
-print("Results of sklearn.metrics:")
-print("MAE:",mae)
-print("MSE:", mse)
-print("RMSE:", rmse)
-print("R-Squared:", r2)
+# TransectIDs = (595,672)
+# TransectIDs = (740,888) # start and end transect ID
+# TransectIDs = (972,1303) # start and end transect ID
+Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
  
+#%% Full error stats
+# TransectIDs = (0,1741) # full
+# Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',FullValidDict,TransectIDs)
 
+#%% Full violin
+
+ClipValidDict = dict.fromkeys(FullValidDict.keys())
+for keyname in FullValidDict.keys():
+    ClipValidDict[keyname] = []
+    ClipValidDict[keyname].extend(FullValidDict[keyname][40:281])
+    ClipValidDict[keyname].extend(FullValidDict[keyname][312:672])
+    ClipValidDict[keyname].extend(FullValidDict[keyname][740:888])
+    ClipValidDict[keyname].extend(FullValidDict[keyname][972:1303])
+    ClipValidDict[keyname].extend(FullValidDict[keyname][1365:1741])
+
+TransectIDs = (0,len(ClipValidDict['dates'])) # full
+
+Plotting.SatViolin(sitename,VeglineShp[0],'dates',ClipValidDict,TransectIDs)
