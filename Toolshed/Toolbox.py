@@ -1364,8 +1364,8 @@ def NearDate(target,items):
     """
     nearestDate = min(items, key=lambda x: abs(x - target))
     
-    # # if difference is longer than 3 months, no match exists  
-    if abs((target - nearestDate).days) > 91: 
+    # # if difference is longer than 5 months, no match exists  
+    if abs((target - nearestDate).days) > 153: 
         return False
     else:
         return nearestDate
@@ -1485,7 +1485,88 @@ def TZValues(int_veg, int_nonveg):
     
     return [minval,maxval]
 
-
+def QuantifyErrors(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
+    
+    SatGDF = gpd.read_file(SatShp)
+    errordata = []
+    errordates = []
+    Sdates = SatGDF[DatesCol].unique()
+    
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+    
+    for Sdate in Sdates:
+        valsatdist = []
+        # for each transect in given range
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
+            if Sdate in ValidDict['dates'][Tr]:
+                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                else:
+                    continue
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so collection will be empty
+        if valsatdist != []: 
+            errordata.append(valsatdist)
+            errordates.append(Sdate)
+    # sort both dates and list of values by date
+    if len(errordates) > 1:
+        errordatesrt, errorsrt = [list(d) for d in zip(*sorted(zip(errordates, errordata), key=lambda x: x[0]))]
+    else:
+        errordatesrt = errordates
+        errorsrt = errordata
+    df = pd.DataFrame(errorsrt)
+    df = df.transpose()
+    df.columns = errordatesrt
+    
+    errordict = {'Date':[],'Count':[],'MAE':[],'RMSE':[]}
+    
+    print('Transects %s to %s:' % (TransectIDs[0],TransectIDs[1]))
+    totald = []
+    for date in df.columns:
+        d = df[date]
+        for i,datum in enumerate(d):
+            totald.append(datum)
+        mse_f = np.mean(d**2)
+        mae_f = np.mean(abs(d))
+        rmse_f = np.sqrt(mse_f)
+        # r2_f = 1-(sum(d**2)/sum((y-np.mean(y))**2))
+        print('For sat date %s:' % date)
+        print('Count: %s' % d.count())
+        print("MAE:",mae_f)
+        # print("MSE:", mse_f)
+        print("RMSE:", rmse_f)
+        # print("R-Squared:", r2)
+        if d.count() != 0:
+            errordict['Date'].append(date)
+            errordict['Count'].append(d.count())
+            errordict['MAE'].append(mae_f)
+            errordict['RMSE'].append(rmse_f)
+    totald = np.array(totald)
+    mse = np.mean(np.power(totald[~np.isnan(totald)], 2))
+    mae = np.mean(abs(totald[~np.isnan(totald)]))
+    rmse = np.sqrt(mse)
+    print('TOTAL')
+    print('Count: %s' % len(totald[~np.isnan(totald)]))
+    print("MAE:",mae)
+    # print("MSE:", mse)
+    print("RMSE:", rmse)
+    errordict['Date'].append('Total')
+    errordict['Count'].append(len(totald[~np.isnan(totald)]))
+    errordict['MAE'].append(mae)
+    errordict['RMSE'].append(rmse)
+    
+    errordf = pd.DataFrame(errordict)
+    savepath = os.path.join(filepath, sitename+'_Errors_Transects'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.csv')
+    errordf.to_csv(savepath, index=False)
+    
 def CalcDistance(Geom1,Geom2):
     """
     Calculate distance between two shapely geoms, either using a point and line
