@@ -408,7 +408,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     
     return ValidDict
 
-def ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
+def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectDict):
     """
     Intersects transects with validation lines from shapefile, matches date of
     each sat line to nearest valid. line, and calculates distance along 
@@ -433,6 +433,10 @@ def ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
         DESCRIPTION.
         
     """
+    
+    validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
+    if os.path.isdir(validpath) is False:
+        os.mkdir(validpath)
     
     print('performing transect intersects on validation lines...')
     ValidGDF = gpd.read_file(ValidationShp)
