@@ -153,7 +153,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                                     min_beach_area_pixels, clf)
             
             # if classified image comes back with almost no pixels in either class (<5%), skip
-            if np.count_nonzero(im_labels[:,:,0]) < 0.05 or np.count_nonzero(im_labels[:,:,1]) < 0.05:
+            if (np.count_nonzero(im_labels[:,:,0])/(len(im_labels) * len(im_labels[0]))) < 0.05 or (np.count_nonzero(im_labels[:,:,1])/(len(im_labels) * len(im_labels[0]))) < 0.05:
                 print(' - Skipped: classifier cannot find enough variety of classes')
                 continue
             
