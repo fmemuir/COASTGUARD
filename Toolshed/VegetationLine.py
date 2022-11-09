@@ -151,6 +151,11 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             # classify image with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask,
                                     min_beach_area_pixels, clf)
+            
+            # if classified image comes back with almost no pixels in either class (<5%), skip
+            if np.count_nonzero(im_labels[:,:,0]) < 0.05 or np.count_nonzero(im_labels[:,:,1]) < 0.05:
+                continue
+            
             # save classified image and transition zone mask after classification takes place
             Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
             Image_Processing.save_TZone(im_ms, im_labels, cloud_mask, georef, filenames[fn], settings)
