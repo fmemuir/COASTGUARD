@@ -40,11 +40,39 @@ from Toolshed import Toolbox, Image_Processing
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
-# Main function for batch shoreline detection
+# Main function for batch vegline detection
 def extract_veglines(metadata, settings, polygon, dates, clf_model):
+    """
+    Main function to extract vegetation edges from satellite imagery (Landsat 5-9, Sentinel-2 or local images).
+    
+    FM Aug 2022    
+    
+    Parameters
+    ----------
+    metadata : dict
+        DESCRIPTION.
+    settings : dict
+        DESCRIPTION.
+    polygon : TYPE
+        DESCRIPTION.
+    dates : TYPE
+        DESCRIPTION.
+    clf_model : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    output : dict
+        DESCRIPTION.
+    output_latlon : dict
+        DESCRIPTION.
+    output_proj : dict
+        DESCRIPTION.
+
+    """
 
     sitename = settings['inputs']['sitename']
-    ref_line = np.delete(settings['reference_shoreline'],2,1)
+    # ref_line = np.delete(settings['reference_shoreline'],2,1)
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
     # clf_model = 'MLPClassifier_Veg_S2.pkl'
@@ -61,7 +89,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
     # close all open figures
     plt.close('all')
 
-    print('Mapping shorelines:')
+    print('Mapping veglines:')
 
     # loop through satellite list
     for satname in metadata.keys():
@@ -72,17 +100,17 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
 
         # initialise the output variables
         output_timestamp = []  # datetime at which the image was acquired (UTC time)
-        output_shoreline = []  # vector of shoreline points
-        output_shoreline_latlon = []
-        output_shoreline_proj = []
-        output_filename = []   # filename of the images from which the shorelines where derived
+        output_vegline = []  # vector of vegline points
+        output_vegline_latlon = []
+        output_vegline_proj = []
+        output_filename = []   # filename of the images from which the veglines are derived
         output_cloudcover = [] # cloud cover of the images
         output_geoaccuracy = []# georeferencing accuracy of the images
         output_idxkeep = []    # index that were kept during the analysis (cloudy images are skipped)
-        output_t_ndvi = []    # NDVI threshold used to map the shoreline
+        output_t_ndvi = []    # NDVI threshold used to map the vegline
         
         # get pixel size from dimensions in first image
-        if satname in ['L5','L7','L8']:
+        if satname in ['L5','L7','L8','L9']:
             pixel_size = 15
             # ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0] / 2 # after downsampling
         elif satname == 'S2':
@@ -149,8 +177,11 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             # # im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
             
             # classify image with NN classifier
-            im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask,
-                                    min_beach_area_pixels, clf)
+            im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area_pixels, clf)
+            # if extracting shorelines alongside (using original CoastSat NN)
+            if settings['wetdry'] == True:
+                sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_S2_new.pkl'))
+                sh_classif, sh_labels = classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area_pixels, sh_clf)
             
             # if classified image comes back with almost no pixels in either class (<5%), skip
             if (np.count_nonzero(im_labels[:,:,0])/(len(im_labels) * len(im_labels[0]))) < 0.05 or (np.count_nonzero(im_labels[:,:,1])/(len(im_labels) * len(im_labels[0]))) < 0.05:
@@ -164,10 +195,10 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             # if adjust_detection is True, let the user adjust the detected shoreline
             if settings['adjust_detection']:
                 date = metadata[satname]['dates'][i]
-                skip_image, shoreline, shoreline_latlon, shoreline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels,
+                skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels,
                                                                   im_ref_buffer, image_epsg, georef,
                                                                   settings, date, satname, buffer_size_pixels, image_epsg)
-                # if the user decides to skip the image, continue and do not save the mapped shoreline
+                # if the user decides to skip the image, continue and do not save the mapped vegline
                 if skip_image:
                     continue
                 
@@ -187,28 +218,26 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                     # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
 
-                # process the contours into a shoreline
-                # shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)   
-                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+                # process the contours into a vegline
+                # vegline, vegline_latlon, vegline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)   
+                vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
 
                 if settings['check_detection'] or settings['save_figure']:
                     date = metadata[satname]['dates'][i]
                     if not settings['check_detection']:
                         plt.ioff() # turning interactive plotting off
-                    skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,
+                    skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
                                                 image_epsg, georef, settings, date, satname,contours_ndvi, t_ndvi)
-                        # if the user decides to skip the image, continue and do not save the mapped shoreline
+                        # if the user decides to skip the image, continue and do not save the mapped vegline
                     if skip_image:
                         continue
             
-            # if max(scipy.spatial.distance.directed_hausdorff(ref_line, shoreline, seed=0))>settings['hausdorff_threshold']:
-            #     continue
-         
+        
             # append to output variables
             output_timestamp.append(metadata[satname]['dates'][i])
-            output_shoreline.append(shoreline)
-            output_shoreline_latlon.append(shoreline_latlon)
-            output_shoreline_proj.append(shoreline_proj)
+            output_vegline.append(vegline)
+            output_vegline_latlon.append(vegline_latlon)
+            output_vegline_proj.append(vegline_proj)
             output_filename.append(filenames[i])
             output_cloudcover.append(cloud_cover)
             output_geoaccuracy.append(metadata[satname]['acc_georef'][i])
@@ -218,7 +247,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         # create dictionary of output
         output[satname] = {
                 'dates': output_timestamp,
-                'shorelines': output_shoreline,
+                'shorelines': output_vegline,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
@@ -228,7 +257,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
     
         output_latlon[satname] = {
                 'dates': output_timestamp,
-                'shorelines': output_shoreline_latlon,
+                'shorelines': output_vegline_latlon,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
@@ -237,14 +266,14 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         
         output_proj[satname] = {
                 'dates': output_timestamp,
-                'shorelines': output_shoreline_proj,
+                'shorelines': output_vegline_proj,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
                 'Otsu_threshold': output_t_ndvi,
                 }
         
-    # change the format to have one list sorted by date with all the shorelines (easier to use)
+    # change the format to have one list sorted by date with all the veglines (easier to use)
     output = Toolbox.merge_output(output)
     output_latlon = Toolbox.merge_output(output_latlon)
     output_proj = Toolbox.merge_output(output_proj)
@@ -269,6 +298,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         plt.close()
         
     return output, output_latlon, output_proj
+
 
 ###################################################################################################
 # IMAGE CLASSIFICATION FUNCTIONS
@@ -480,6 +510,64 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
 
     return im_classif, im_labels
 
+def classify_image_NN_shore(im_ms, cloud_mask, min_beach_area, clf):
+    """
+    Classifies every pixel in the image in one of 4 classes:
+        - sand                                          --> label = 1
+        - whitewater (breaking waves and swash)         --> label = 2
+        - water                                         --> label = 3
+        - other (vegetation, buildings, rocks...)       --> label = 0
+    The classifier is a Neural Network that is already trained.
+    KV WRL 2018
+    Arguments:
+    -----------
+    im_ms: np.array
+        Pansharpened RGB + downsampled NIR and SWIR
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+    min_beach_area: int
+        minimum number of pixels that have to be connected to belong to the SAND class
+    clf: joblib object
+        pre-trained classifier
+    Returns:    
+    -----------
+    im_classif: np.array
+        2D image containing labels
+    im_labels: np.array of booleans
+        3D image containing a boolean image for each class (im_classif == label)
+    """
+
+    # calculate features
+    vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    vec_features[np.isnan(vec_features)] = 1e-9 # NaN values are create when std is too close to 0
+
+    # remove NaNs and cloudy pixels
+    vec_cloud = cloud_mask.reshape(cloud_mask.shape[0]*cloud_mask.shape[1])
+    vec_nan = np.any(np.isnan(vec_features), axis=1)
+    vec_inf = np.any(np.isinf(vec_features), axis=1)    
+    vec_mask = np.logical_or(vec_cloud,np.logical_or(vec_nan,vec_inf))
+    vec_features = vec_features[~vec_mask, :]
+
+    # classify pixels
+    labels = clf.predict(vec_features)
+
+    # recompose image
+    vec_classif = np.nan*np.ones((cloud_mask.shape[0]*cloud_mask.shape[1]))
+    vec_classif[~vec_mask] = labels
+    im_classif = vec_classif.reshape((cloud_mask.shape[0], cloud_mask.shape[1]))
+
+    # create a stack of boolean images for each label
+    im_sand = im_classif == 1
+    im_swash = im_classif == 2
+    im_water = im_classif == 3
+    # remove small patches of sand or water that could be around the image (usually noise)
+    im_sand = morphology.remove_small_objects(im_sand, min_size=min_beach_area, connectivity=2)
+    im_water = morphology.remove_small_objects(im_water, min_size=min_beach_area, connectivity=2)
+
+    im_labels = np.stack((im_sand,im_swash,im_water), axis=-1)
+
+    return im_classif, im_labels
+
 ###################################################################################################
 # CONTOUR MAPPING FUNCTIONS
 ###################################################################################################
@@ -531,7 +619,7 @@ def FindShoreContours_Trad(im_ndi, cloud_mask, im_ref_buffer):
 
 def FindShoreContours_Enhc(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     """
-    New robust method for extracting shorelines. Incorporates the NN classification
+    New robust method for extracting veglines. Incorporates the NN classification
     component to refine the Otsu threshold and make it specific to the inter-class interface.
     FM Oct 2022, adapted from KV WRL 2018
     Arguments:
@@ -650,7 +738,7 @@ def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
 
 def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     """
-    New robust method for extracting shorelines. Incorporates the NN classification
+    New robust method for extracting veglines. Incorporates the NN classification
     component to make the threshold specific to the inter-class interface. Uses 
     Weighted Peaks method rather than Otsu. 
     FM Oct 2022, adapted from KV WRL 2018
