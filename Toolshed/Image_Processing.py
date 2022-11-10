@@ -232,14 +232,14 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
     #=============================================================================================#
     elif satname == 'L8':
         
-        #Landsat8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').filterBounds(point).filterDate(dates[0], dates[-1]).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'])
         imgs = []
         for i in range(len(filenames)):
             imgs.append(ee.Image(filenames[i]))
-        Landsat8 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'])
+        # B,G,R,NIR,SWIR1,PAN,TIR1,TIR2,QA
+        Landsat8 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'])
         
         img = ee.Image(Landsat8.getInfo().get('features')[fn]['id'])
-        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
+        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
         
         
         if im_ms is None:
@@ -262,7 +262,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][7]['crs_transform'] # get georef info from panchromatic band 
+        georef = img.getInfo()['bands'][5]['crs_transform'] # get georef info from panchromatic band 
         #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
@@ -283,7 +283,6 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         ncols = im_pan.shape[1]
 
         # create cloud mask
-        # im_QA = im_ms[:,:,5] # B7=SWIR2
         im_QA = im_ms[:,:,8]
         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
 
@@ -322,6 +321,102 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # the extra image is the 15m panchromatic band
         im_extra = im_pan
 
+
+    #=============================================================================================#
+    # L9 images
+    #=============================================================================================#
+    elif satname == 'L9':
+        
+        imgs = []
+        for i in range(len(filenames)):
+            imgs.append(ee.Image(filenames[i]))
+        # B,G,R,NIR,SWIR1,PAN,TIR1,TIR2,QA
+        Landsat9 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'])
+        
+        img = ee.Image(Landsat9.getInfo().get('features')[fn]['id'])
+        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
+        
+        
+        if im_ms is None:
+            return None, None, None, None, None, None
+        
+        cloud_scoree = Landsat9.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+        
+        if cloud_scoree > settings['cloud_thresh']:
+            return None, None, None, None, None, None
+        
+        cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
+
+        #Create a mask from the cloud score and combine it with the image mask.
+        mask = cloud_scored.select(['cloud']).lte(20);
+
+        #Apply the mask to the image and display the result.
+        masked = img.updateMask(mask);
+        
+        
+        # adjust georeferencing vector to the new image size
+        # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
+        # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+        georef = img.getInfo()['bands'][5]['crs_transform'] # get georef info from panchromatic band 
+        #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
+        x, y = polygon[0][3]
+        inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+        outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs'])
+        im_x, im_y = Transf(inProj, outProj, x, y)
+        georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+        
+        # Additional coregistering based on georef to OS (EPSG 27700) imagery
+        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+            georef[0] = georef[0] + (13.7)
+            georef[3] = georef[3] + (37.4)
+        
+        
+        im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
+        
+        # size of pan image
+        nrows = im_pan.shape[0]
+        ncols = im_pan.shape[1]
+
+        # create cloud mask
+        im_QA = im_ms[:,:,8]
+        cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
+
+        # resize the image using bilinear interpolation (order 1)
+        im_ms = im_ms[:,:,:5]
+        im_ms = transform.resize(im_ms,(nrows, ncols), order=1, preserve_range=True,
+                                 mode='constant')
+        # resize the image using nearest neighbour interpolation (order 0)
+        cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
+                                      mode='constant').astype('bool_')
+        # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
+        im_nodata = np.zeros(cloud_mask.shape).astype(bool)
+        for k in range(im_ms.shape[2]):
+            im_inf = np.isin(im_ms[:,:,k], -np.inf)
+            im_nan = np.isnan(im_ms[:,:,k])
+            im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
+        # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
+        # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
+        im_zeros = np.ones(cloud_mask.shape).astype(bool)
+        for k in [1,3,4]: # loop through the Green, NIR and SWIR bands
+            im_zeros = np.logical_and(np.isin(im_ms[:,:,k],0), im_zeros)
+        # add zeros to im nodata
+        im_nodata = np.logical_or(im_zeros, im_nodata)   
+        # update cloud mask with all the nodata pixels
+        cloud_mask = np.logical_or(cloud_mask, im_nodata)
+        
+        # pansharpen Blue, Green, Red (where there is overlapping with pan band in L8)
+        try:
+            im_ms_ps = pansharpen(im_ms[:,:,[0,1,2]], im_pan, cloud_mask)
+        except: # if pansharpening fails, keep downsampled bands (for long runs)
+            im_ms_ps = im_ms[:,:,[0,1,2]]
+        # add downsampled NIR and SWIR1 bands
+        im_ms_ps = np.append(im_ms_ps, im_ms[:,:,[3,4]], axis=2)
+
+        im_ms = im_ms_ps.copy()
+        # the extra image is the 15m panchromatic band
+        im_extra = im_pan
+        
+        
     #=============================================================================================#
     # S2 images
     #=============================================================================================#
@@ -435,7 +530,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im_extra = im20
         
     #=============================================================================================#
-    # Local images
+    # Local images i.e. PlanetScope
     #=============================================================================================#
     else:
         
