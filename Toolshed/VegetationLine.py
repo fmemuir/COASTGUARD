@@ -103,6 +103,9 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         output_vegline = []  # vector of vegline points
         output_vegline_latlon = []
         output_vegline_proj = []
+        output_shoreline = []  # vector of vegline points
+        output_shoreline_latlon = []
+        output_shoreline_proj = []
         output_filename = []   # filename of the images from which the veglines are derived
         output_cloudcover = [] # cloud cover of the images
         output_geoaccuracy = []# georeferencing accuracy of the images
@@ -202,10 +205,6 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 if skip_image:
                     continue
                 
-            # otherwise map the contours automatically with one of the two following functions:
-            
-            # if there are pixels in the 'sand' class --> use find_wl_contours1 (enhanced)
-            # otherwise use find_wl_contours2 (traditional)
             else:
                 # compute NDVI image (NIR-R)
                 im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
@@ -217,27 +216,44 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 else:
                     # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
                     contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                    
+                if settings['wetdry'] == True:
+                    im_ndwi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
+                    contours_ndwi, t_ndwi = FindShoreContours_Water(im_ndwi, sh_labels, cloud_mask, im_ref_buffer)
 
                 # process the contours into a vegline
                 # vegline, vegline_latlon, vegline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)   
                 vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+                if settings['wetdry'] == True:
+                    shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndwi, cloud_mask, georef, image_epsg, settings)
 
                 if settings['check_detection'] or settings['save_figure']:
                     date = metadata[satname]['dates'][i]
                     if not settings['check_detection']:
                         plt.ioff() # turning interactive plotting off
-                    skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
-                                                image_epsg, georef, settings, date, satname,contours_ndvi, t_ndvi)
+                    if settings['wetdry'] == True:
+                        skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
+                                                    image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
+                                                    sh_classif, sh_labels, contours_ndwi, t_ndwi)
+                    else:
+                        skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
+                                                    image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi)
+                        
+                        
                         # if the user decides to skip the image, continue and do not save the mapped vegline
                     if skip_image:
                         continue
             
-        
+
             # append to output variables
             output_timestamp.append(metadata[satname]['dates'][i])
             output_vegline.append(vegline)
             output_vegline_latlon.append(vegline_latlon)
             output_vegline_proj.append(vegline_proj)
+            if settings['wetdry'] == True:
+                output_shoreline.append(shoreline)
+                output_shoreline_latlon.append(shoreline_latlon)
+                output_shoreline_proj.append(shoreline_proj)
             output_filename.append(filenames[i])
             output_cloudcover.append(cloud_cover)
             output_geoaccuracy.append(metadata[satname]['acc_georef'][i])
@@ -248,6 +264,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         output[satname] = {
                 'dates': output_timestamp,
                 'shorelines': output_vegline,
+                'waterlines':output_shoreline,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
@@ -258,6 +275,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         output_latlon[satname] = {
                 'dates': output_timestamp,
                 'shorelines': output_vegline_latlon,
+                'waterlines':output_shoreline_latlon,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
@@ -267,11 +285,13 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         output_proj[satname] = {
                 'dates': output_timestamp,
                 'shorelines': output_vegline_proj,
+                'waterlines':output_shoreline_proj,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
                 'Otsu_threshold': output_t_ndvi,
                 }
+        
         
     # change the format to have one list sorted by date with all the veglines (easier to use)
     output = Toolbox.merge_output(output)
@@ -510,7 +530,7 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
 
     return im_classif, im_labels
 
-def classify_image_NN_shore(im_ms, cloud_mask, min_beach_area, clf):
+def classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
     Classifies every pixel in the image in one of 4 classes:
         - sand                                          --> label = 1
@@ -681,6 +701,74 @@ def FindShoreContours_Enhc(im_ndi, im_labels, cloud_mask, im_ref_buffer):
 
     # only return MNDWI contours and threshold
     return contours_ndi, t_ndi
+
+def FindShoreContours_Water(im_ndi, im_labels, cloud_mask, im_ref_buffer):
+    """
+    New robust method for extracting wet-dry boundaries. Incorporates the NN classification
+    component to refine the Otsu threshold and make it specific to the inter-class interface.
+    FM Oct 2022, adapted from KV WRL 2018
+    Arguments:
+    -----------
+    im_ms: np.array
+        RGB + downsampled NIR and SWIR
+    im_labels: np.array
+        3D image containing a boolean image for each class in the order (sand, swash, water)
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+    im_ref_buffer: np.array
+        binary image containing a buffer around the reference shoreline
+    Returns:    
+    -----------
+    contours_mwi: list of np.arrays
+        contains the coordinates of the contour lines extracted from the
+        MNDWI (Modified Normalized Difference Water Index) image
+    t_mwi: float
+        Otsu sand/water threshold used to map the contours
+    """
+
+    nrows = cloud_mask.shape[0]
+    ncols = cloud_mask.shape[1]
+    
+    # reshape spectral index image to vector
+    vec_ndi = im_ndi.reshape(nrows*ncols)
+
+    # reshape labels into vectors (0 is veg, 1 is nonveg)
+    vec_water = im_labels[:,:,2].reshape(ncols*nrows)
+    vec_nonwater = im_labels[:,:,0].reshape(ncols*nrows)
+
+    # use im_ref_buffer and dilate it by 5 pixels
+    se = morphology.disk(5)
+    im_ref_buffer_extra = morphology.binary_dilation(im_ref_buffer, se)
+    # create a buffer around the sandy beach
+    # vec_buffer = im_ref_buffer_extra.reshape(nrows*ncols)
+    # to catch low tide images where ref line prioritises veg, create dummy 'buffer' of all Trues
+    vec_buffer = np.full((nrows*ncols), True)
+
+    # select water/sand pixels that are within the buffer
+    int_water = vec_ndi[np.logical_and(vec_buffer,vec_water)]
+    int_nonwater = vec_ndi[np.logical_and(vec_buffer,vec_nonwater)]
+
+    # make sure both classes have the same number of pixels before thresholding
+    if len(int_water) > 0 and len(int_nonwater) > 0:
+        if np.argmin([int_water.shape[0],int_nonwater.shape[0]]) == 1:
+            int_water = int_water[np.random.choice(int_water.shape[0],int_nonwater.shape[0], replace=False)]
+        else:
+            int_nonwater = int_nonwater[np.random.choice(int_nonwater.shape[0],int_water.shape[0], replace=False)]
+
+    # threshold the sand/water intensities
+    int_all = np.append(int_water,int_nonwater, axis=0)
+    t_ndi = filters.threshold_otsu(int_all)
+
+    # find contour with Marching-Squares algorithm
+    im_ndi_buffer = np.copy(im_ndi)
+    # im_ndi_buffer[~im_ref_buffer] = np.nan
+    contours_ndi = measure.find_contours(im_ndi_buffer, t_ndi)
+    # remove contour points that are NaNs (around clouds)
+    contours_ndi = process_contours(contours_ndi)
+
+    # only return MNDWI contours and threshold
+    return contours_ndi, t_ndi
+
 
 def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
     """
@@ -1363,7 +1451,8 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
 
 
 def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
-                   settings, date, satname, contours_ndvi, t_ndvi):
+                   settings, date, satname, contours_ndvi, t_ndvi,
+                   sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
 
     sitename = settings['inputs']['sitename']
     filepath_data = settings['inputs']['filepath']
@@ -1374,37 +1463,33 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
 
     im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-    # compute classified image
+    # compute colours for classified image
     im_class = np.copy(im_RGB)
+    # sh_class = np.copy(im_RGB)
+    
     cmap = cm.get_cmap('tab20c')
     colorpalette = cmap(np.arange(0,17,1))
     colours = np.zeros((4,4))
+    # each row is RGBA for each class
     colours[0,:] = colorpalette[9]  # veg
-    colours[1,:] = colorpalette[14]  # non-veg
-    # colours[2,:] = colorpalette[0] # water
+    colours[1,:] = colorpalette[15]  # non-veg
+    colours[2,:] = colorpalette[1] # water
     # colours[3,:] = colorpalette[16] # other
-    for k in range(0,im_labels.shape[2]):
-        im_class[im_labels[:,:,k],0] = colours[k,0]
-        im_class[im_labels[:,:,k],1] = colours[k,1]
-        im_class[im_labels[:,:,k],2] = colours[k,2]
-        #im_class[im_labels[:,:,k],3] = colours[k,3]
-
+    
+    # set RGB levels for each class in image to the colours matching the classes above (using original RGB as template)
+    # for each class
+    for cl in range(0,im_labels.shape[2]):
+        # for each of the three colour values per class (R,G,B)
+        for ic, colour in enumerate(colours[cl,:3]):
+            # slice each class and each of the three colour arrays to set it to the matching class colours
+            im_class[im_labels[:,:,cl],ic] = colour
+        
+    if settings['wetdry'] == True:
+        for ic, colour in enumerate(colours[2,:3]):
+            im_class[sh_labels[:,:,2],ic] = colour
 
     # compute NDVI grayscale image (NIR - R)
     im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-
-    # transform world coordinates of shoreline into pixel coordinates
-    # shoreline dataframe back to array
-    shorelineArr = Toolbox.GStoArr(shoreline)
-    
-    # use try/except in case there are no coordinates to be transformed (shoreline = [])
-    try:
-        sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shorelineArr,
-                                                                    settings['output_epsg'],
-                                                                    image_epsg)[:,[0,1]], georef)
-    except:
-        # if try fails, just add nan into the shoreline vector so the next parts can still run
-        sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
 
     if plt.get_fignums():
             # get open figure if it exists
@@ -1451,19 +1536,23 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     im_RGB_masked = im_RGB * im_ref_buffer_3d
     ax1.imshow(im_RGB_masked, alpha=0.3) # plot refline mask over top
     
-    ax1.scatter(sl_pix[:,0], sl_pix[:,1], color='k', marker='.', s=5)
     ax1.axis('off')
     ax1.set_title(sitename, fontweight='bold', fontsize=16)
 
     # create image 2 (classification)
     ax2.imshow(im_class)
-    ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='k', marker='.', s=5)
+    # if settings['wetdry'] == True:
+    #     ax2.imshow(sh_class)
     ax2.axis('off')
     purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
     green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
-    # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
     black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
-    ax2.legend(handles=[purple_patch,green_patch, black_line],
+    if settings['wetdry'] == True:
+        blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
+        ax2handles = [purple_patch,green_patch,blue_patch,black_line]
+    else:
+        ax2handles = [purple_patch,green_patch,black_line]
+    ax2.legend(handles=ax2handles,
                bbox_to_anchor=(1, 1), fontsize=10)
     ax2.set_title(date, fontweight='bold', fontsize=16)
 
@@ -1486,8 +1575,6 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
                 im_TZ[i,j] = np.nan
     cmap = colors.ListedColormap(['orange'])
     tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
-    
-    ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='k', marker='.', s=5)
     
     ax3.axis('off')
     orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.5)
@@ -1523,24 +1610,38 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     #     bins = np.arange(-1, 1, binwidth)
     #     ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
      
-    # process the contours into a shoreline
-    shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
-    #shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+    # process the contours into a vegline
+    vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+    if settings['wetdry'] == True: # also process shoreline if available
+        shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndwi, cloud_mask, georef, image_epsg, settings)
+        
     # convert shoreline to pixels
     # THIS NEEDS FIXED (AFFINE TRANSFORM)
-    if len(shoreline) > 0:
+    if len(vegline) > 0:
         # shoreline dataframe back to array
-        shorelineArr = Toolbox.GStoArr(shoreline)
-        sl_pix = Toolbox.convert_world2pix(shorelineArr, georef)
+        veglineArr = Toolbox.GStoArr(vegline)
+        vl_pix = Toolbox.convert_world2pix(veglineArr, georef)
     else: 
-        sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
-    
+        vl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+        
+    if settings['wetdry'] == True:
+        if len(shoreline) > 0:
+            # shoreline dataframe back to array
+            shorelineArr = Toolbox.GStoArr(shoreline)
+            sl_pix = Toolbox.convert_world2pix(shorelineArr, georef)
+        else: 
+            sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+            
     # plot the shoreline on the images
     # TO DO: size pixels based on image size (small dots on small imagery!)
-    sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
-    sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
-    sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
+    vl_plot1 = ax1.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
+    vl_plot2 = ax2.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
+    vl_plot3 = ax3.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
     t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
+    if settings['wetdry'] == True:
+        sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
+        sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
+        sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
     # FM: plot vert lines where edges of overlapping classes reach (transition zone)
     TZmin = ax4.axvline(x=TZbuffer[0],ls='--', c='#F2B47C', lw=1.5)
     TZmax = ax4.axvline(x=TZbuffer[1],ls='--', c='#D4622A', lw=1.5, label='transition zone')
