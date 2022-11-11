@@ -297,14 +297,20 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     f = plt.figure(figsize=(10, 8))
     if len(violindates) > 1:
         # plot stacked violin plots
-        ax = sns.violinplot(data = df, linewidth=1, palette = 'magma_r', orient='h', cut=0, inner='box')
+        ax = sns.violinplot(data = df, linewidth=0, palette = 'magma_r', orient='h', cut=0, inner='quartile')
+        # set colour of inner quartiles to white dependent on colour ramp 
+        for l in ax.lines:
+            l.set_linestyle('--')
+            l.set_linewidth(1)
+            l.set_color('white')
+
         # cut away bottom halves of violins
-        for violin in ax.collections:
-            bbox = violin.get_paths()[0].get_extents()
-            x0, y0, width, height = bbox.bounds
-            violin.set_clip_path(plt.Rectangle((x0, y0), width, height / 2, transform=ax.transData))
+        # for violin in ax.collections:
+        #     bbox = violin.get_paths()[0].get_extents()
+        #     x0, y0, width, height = bbox.bounds
+        #     violin.set_clip_path(plt.Rectangle((x0, y0), width, height / 2, transform=ax.transData))
     else:
-        ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0)
+        ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
         
     ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
     ax.set_title('Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1]))
@@ -332,7 +338,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
         # set the date axis label for each date to corresponding satname colour
         [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
         # get median of only the columns that match each sat name
-        medians.append(ax.axvline(df[sats].median().mean(), c=c, ls='-.'))
+        medians.append(ax.axvline(df[sats].median().median(), c=c, ls='-.'))
         labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
     
     ax.legend(medians,labels)
