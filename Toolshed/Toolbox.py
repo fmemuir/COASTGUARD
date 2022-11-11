@@ -1069,6 +1069,7 @@ def SaveShapefiles(output, name_prefix, sitename, epsg):
 def SaveConvShapefiles(output, name_prefix, sitename, epsg):
 
     '''
+    Save converted shapefiles with multiple line features per date.
     FM Apr 2022
     '''
     
@@ -1096,6 +1097,41 @@ def SaveConvShapefiles(output, name_prefix, sitename, epsg):
             outputsGDF = outputsGDF.drop('shorelines', axis=1)
             
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp'))
+    
+    
+    return
+
+def SaveConvShapefiles_Water(output, name_prefix, sitename, epsg):
+
+    '''
+    Save converted shapefiles with multiple line features per date.
+    FM Apr 2022
+    '''
+    
+    # for shores stored as array of coords; export as mulitpoint
+    if type(output['waterlines'][0]) == np.ndarray:
+        # map to multipoint
+        output_geom = gpd.GeoSeries(map(MultiPoint,output['waterlines']))
+        # create geodataframe with geometry from output multipoints
+        outputGDF = gpd.GeoDataFrame(output, crs='EPSG:'+str(epsg), geometry=output_geom)
+        # drop duplicate shorelines column
+        outputsGDF = outputGDF.drop('waterlines', axis=1)
+    else:    
+        DFlist = []
+        for i in range(len(output['waterlines'])): # for each image + associated metadata
+            # create geodataframe of individual features from each geoseries (i.e. feature collection)
+            convlines = output['waterlines'][i].to_crs(str(epsg))
+            outputGDF = gpd.GeoDataFrame(geometry=convlines, crs=str(epsg))
+            for key in output.keys(): # for each column
+                # add column to geodataframe with repeated metadata
+                outputGDF[key] = output[key][i]
+            # add formatted geodataframe to list of all geodataframes
+            DFlist.append(outputGDF)
+            # concatenate to one GDF with individual lines exploded out
+            outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
+            outputsGDF = outputsGDF.drop('waterlines', axis=1)
+            
+    outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_waterlines.shp'))
     
     
     return
