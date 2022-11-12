@@ -1,9 +1,7 @@
 """
-This module contains all the functions needed to preprocess the satellite images
- before the shorelines can be extracted. This includes creating a cloud mask and
-pansharpening/downsampling the multispectral bands.
-
-Author: Kilian Vos, Water Research Laboratory, University of New South Wales
+This module contains functions needed to preprocess satellite images before processing through line extraction.
+Freya Muir, Nov 2022.
+Adapted from CoastSat: 
 """
 
 # load modules
@@ -168,7 +166,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
         georef = img.getInfo()['bands'][7]['crs_transform'] # get georef info from panchromatic band 
-        #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
+   
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
         outProj = Proj(init=Landsat7.getInfo().get('features')[0]['bands'][0]['crs'])
@@ -236,10 +234,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         for i in range(len(filenames)):
             imgs.append(ee.Image(filenames[i]))
         # B,G,R,NIR,SWIR1,PAN,TIR1,TIR2,QA
-        Landsat8 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'])
+        Landsat8 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'])
         
         img = ee.Image(Landsat8.getInfo().get('features')[fn]['id'])
-        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
+        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
         
         
         if im_ms is None:
