@@ -260,7 +260,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][5]['crs_transform'] # get georef info from panchromatic band 
+        georef = img.getInfo()['bands'][7]['crs_transform'] # get georef info from panchromatic band 
         #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
