@@ -1549,7 +1549,8 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
     if settings['wetdry'] == True:
         blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
-        ax2handles = [purple_patch,green_patch,blue_patch,black_line]
+        blue_line = mlines.Line2D([],[],color='b',linestyle='-', label='Water Line')
+        ax2handles = [purple_patch,green_patch,blue_patch,black_line,blue_line]
     else:
         ax2handles = [purple_patch,green_patch,black_line]
     ax2.legend(handles=ax2handles,
