@@ -273,6 +273,8 @@ output = newoutputdict.copy()
 
 # Save output veglines 
 Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['projection_epsg'])
+if settings['wetdry'] == True:
+    Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['projection_epsg'])
 
 #%% Create GIF of satellite images and related shorelines
 
