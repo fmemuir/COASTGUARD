@@ -1066,13 +1066,14 @@ def SaveShapefiles(output, name_prefix, sitename, epsg):
     
     return
 
-def SaveConvShapefiles(output, name_prefix, sitename, epsg):
+def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg):
 
     '''
     Save converted shapefiles with multiple line features per date.
     FM Apr 2022
     '''
     
+    output = outputOG.copy()
     # for shores stored as array of coords; export as mulitpoint
     if type(output['shorelines'][0]) == np.ndarray:
         # map to multipoint
@@ -1087,6 +1088,8 @@ def SaveConvShapefiles(output, name_prefix, sitename, epsg):
             # create geodataframe of individual features from each geoseries (i.e. feature collection)
             convlines = output['shorelines'][i].to_crs(str(epsg))
             outputGDF = gpd.GeoDataFrame(geometry=convlines, crs=str(epsg))
+            if 'waterlines' in output.keys():
+                del output['waterlines']
             for key in output.keys(): # for each column
                 # add column to geodataframe with repeated metadata
                 outputGDF[key] = output[key][i]
@@ -1101,13 +1104,13 @@ def SaveConvShapefiles(output, name_prefix, sitename, epsg):
     
     return
 
-def SaveConvShapefiles_Water(output, name_prefix, sitename, epsg):
+def SaveConvShapefiles_Water(outputOG, name_prefix, sitename, epsg):
 
     '''
     Save converted shapefiles with multiple line features per date.
     FM Apr 2022
     '''
-    
+    output = outputOG.copy()
     # for shores stored as array of coords; export as mulitpoint
     if type(output['waterlines'][0]) == np.ndarray:
         # map to multipoint
@@ -1122,6 +1125,8 @@ def SaveConvShapefiles_Water(output, name_prefix, sitename, epsg):
             # create geodataframe of individual features from each geoseries (i.e. feature collection)
             convlines = output['waterlines'][i].to_crs(str(epsg))
             outputGDF = gpd.GeoDataFrame(geometry=convlines, crs=str(epsg))
+            if 'shorelines' in output.keys():
+                del output['shorelines']
             for key in output.keys(): # for each column
                 # add column to geodataframe with repeated metadata
                 outputGDF[key] = output[key][i]
