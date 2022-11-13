@@ -1,9 +1,22 @@
 # CoastLearn
 
-CoastLearn is a Python toolkit for coastal monitoring and modelling using machine learning approaches. Currently, the main toolset is for extracting coastal vegetation edges from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
+CoastLearn is a Python toolkit for coastal monitoring and modelling using machine learning approaches. 
 
 ## Description and Scope
 The goal of this toolkit is to have a fully operational framework for predicting coastal change, using machine learning techniques that are trained with satellite observations. We have a plethora of satellite imagery being generated every day to be used freely in a number of automated, API-based ways. These datasets are therefore well-suited to machine learning approaches which require a lot of data to train sufficiently. With just one satellite image, multiple indicators of coastal change can be automatically extracted such as wave breaking zones, wet-dry boundaries, high water marks and vegetation edges. These automatically extracted indicators can then be fed into a machine learning network which makes future predictions based on the past changes and relationships between these indicators. The result is an automated, early warning system for coastal erosion at a potentially global scale.
+
+Currently, the main toolset is for extracting coastal vegetation edges from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
+
+## Enhancements
+Various improvements have been made to the toolkit to address more accurate approaches recently reported on, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the methods paper (), but include:
+
+* The use of geemap to download and process satellite imagery from Google Earth Engine entirely from within the cloud server;
+* Improved transect creation based on the Dynamic Coast project's Coastal Mapping Tools;
+* The use of geopandas to handle geospatial data (both loading in and exporting out) and for transect+shoreline intersections;
+* Beach width (the distance between vegetation edge and wet-dry line) extracted for each transect (based on calling of some of the original CoastSat functions to classify the water line);
+* Validation functions to quantify the error between satellite-derived vegetation edges and ground-truthed validation edges (from ground surveys or manual digitisation of aerial imagery);
+* Various plotting functions, such as violin plots for distances between satellite lines and validation lines, and GIFs of extracted edges and their respective satellite images.
+
 
 ## Installation
 
@@ -81,7 +94,7 @@ The tool takes all the input settings the user has defined, and performs these s
 5. Export boundaries and relevant metadata to a `.pkl` file and a shapefile of lines.
 
 ## Roadmap
-This code is live and the master branch is being updated often (weekly). If you clone this repo, please update it regularly with `git pull`!
+This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!
 
 ## Contributions
 We are in testing phase and not currently taking contributions, but please [reach out to Freya](mailto:f.muir.1@research.gla.ac.uk) with suggestions!
