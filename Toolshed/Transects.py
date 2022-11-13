@@ -266,13 +266,14 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
     # for each row/feature in transect
     for _, _, ID, TrGeom in TransectGDF.itertuples():
         # for each row/feature shoreline
-        for _,_,_,_,_,_,_,SGeom in WaterlineGDF.itertuples():
+        for _,dates,_,_,_,_,_,SGeom in WaterlineGDF.itertuples():
             # calculate intersections between each transect and shoreline
             Intersects = TrGeom.intersection(SGeom)
+            ColumnData.append((ID,dates))
             Geoms.append(Intersects)
             
     # create GDF from appended lists of intersections        
-    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID'])
+    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID', 'wldates'])
     # remove any rows with no intersections
     AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
     # duplicate geom column to save point intersections
@@ -296,18 +297,20 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
             (AllIntersects['wlinterpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
     AllIntersects['wldists'] = distances
     
-    WLTransectDict = TransectGDF.to_dict('list')
-    for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
-        WLTransectDict[Key] = {}
-    WLTransectDict['wlinterpnt'] = AllIntersects['wlinterpnt'].copy()
-    WLTransectDict['wldists'] = AllIntersects['wldists'].copy()
-    
+    # WLTransectDict = TransectGDF.to_dict('list')
+    # for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
+    #     WLTransectDict[Key] = {}
+    # WLTransectDict['wlinterpnt'] = AllIntersects['wlinterpnt'].copy()
+    # WLTransectDict['wldists'] = AllIntersects['wldists'].copy()
 
     #initialise lists used for storing each transect's intersection values
     dates, distances, interpnt = ([] for i in range(3)) # per-transect lists of values
 
     Key = [dates, distances, interpnt]
     KeyName = ['wldates','wldists', 'wlinterpnt']
+    
+    # for key in KeyName:
+    #     TransectDict[key] = []
     
     # for each column name
     for i in range(len(Key)):
@@ -322,9 +325,11 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
                 TrKey.append(AllIntersects[KeyName[i]].loc[AllIntersects['TransectID']==Tr].iloc[j]) 
             Key[i].append(TrKey)
     
-        WLTransectDict[KeyName[i]] = Key[i]
+        TransectDict[KeyName[i]] = Key[i]
         
-    TransectDict.append(WLTransectDict)
+    # for key in TransectDict.keys():
+    #     for wl in WLTransectDict[key]:
+    #         TransectDict[key].append(wl)
     
     # Create beach width attribute
     print('calculating distances between veg and water lines...')
@@ -339,12 +344,17 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
         for D, WLDate in enumerate(WLDateList):
             # index of matching nearest date
             if VLDateList != []:
-                DateIndex = DateList.index(Toolbox.NearDate(WLDate,VLDateList))
+                DateLoc = Toolbox.NearDate(WLDate,VLDateList)
+                if DateLoc == False:
+                    VLSLDists.append(np.nan)
+                    continue
+                else:
+                    DateIndex = VLDateList.index(DateLoc)
             else:
                 continue
             # use date index to identify matching distance along transect
-            # and calculate distance between two intersections (veg - water means +ve is seaward/-ve is landward)
-            VLSLDists.append(TransectDict['distances'][Tr][DateIndex] - TransectDict['wldists'][Tr][D])
+            # and calculate distance between two intersections (veg - water means +ve is veg measured seaward towards water)
+            VLSLDists.append(TransectDict['wldists'][Tr][D] - TransectDict['distances'][Tr][DateIndex])
             
         TransectDict['beachwidth'][Tr] = VLSLDists
     
