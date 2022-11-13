@@ -284,11 +284,15 @@ Plotting.SatGIF(metadata,settings,output)
 SmoothingWindowSize = 21 
 NoSmooths = 100
 TransectSpacing = 10
-DistanceInland = 350
-DistanceOffshore = 350
+# DistanceInland = 350
+# DistanceOffshore = 350
+DistanceInland = 150
+DistanceOffshore = 700
 BasePath = 'Data/' + sitename + '/veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
+WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
+WaterlineGDF = gpd.read_file(WaterlineShp[0])
 # Produces Transects for the reference line
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
@@ -301,6 +305,7 @@ else:
 #%% Create (or load) intersections with sat and validation lines per transect
 
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
+    print('TransectDict exists and was loaded')
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
         TransectDict = pickle.load(f)
 else:
@@ -310,9 +315,12 @@ else:
     TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+    if settings['wetdry'] == True:
+        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF)  
+        
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectDict, f)
-    
+      
 
 #%% VALIDATION
 
