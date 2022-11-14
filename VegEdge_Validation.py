@@ -83,7 +83,7 @@ vegdatemax = vegsurvey.Date.max()
 # vegdatemax = datetime.strftime(datetime.strptime(vegsurvey.Date.max(), '%Y-%m-%d') + timedelta(weeks=4),'%Y-%m-%d')
 dates = [vegdatemin, vegdatemax]
 # dates = list(vegsurvey.Date.unique())
-# dates = ['2018-11-01', '2019-08-14']
+# dates = ['2007-04-04', '2011-05-05']
 
 print(dates)
 
@@ -312,14 +312,16 @@ else:
     # Get intersections
     TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
     # Save newly intersected transects as shapefile
-    TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
+    TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
-    if settings['wetdry'] == True:
-        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF)  
-        
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump(TransectDict, f)
+    #%%
+# if settings['wetdry'] == True:
+#     TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF)  
+TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+    
+# with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+#     pickle.dump(TransectDict, f)
       
 
 #%% VALIDATION
