@@ -326,11 +326,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
             Key[i].append(TrKey)
     
         TransectDict[KeyName[i]] = Key[i]
-        
-    # for key in TransectDict.keys():
-    #     for wl in WLTransectDict[key]:
-    #         TransectDict[key].append(wl)
-    
+          
     # Create beach width attribute
     print('calculating distances between veg and water lines...')
     TransectDict['beachwidth'] = TransectDict['TransectID'].copy()
@@ -363,7 +359,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
     return TransectDict
     
 
-def SaveIntersections(TransectDict, BasePath, sitename, projection):
+def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     '''
     Save transects with intersection info as shapefile.
     FM Sept 2022
@@ -389,18 +385,107 @@ def SaveIntersections(TransectDict, BasePath, sitename, projection):
     print('saving new transect shapefile ...')
     
     TransectInterGDF = gpd.GeoDataFrame(TransectDict, crs="EPSG:"+str(projection))
-    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'interpnt']
+    
+    DateList = LinesGDF['dates'].unique()
+    
+    # for each unique date in satellitee-derived shorelines list
+    for Date in DateList:
+        # shortened date format to YYMMDD to fit in field heading
+        dateshort = Date[2:].replace('-','')
+        ColData = []
+        # for each transect
+        for Tr in range(len(TransectInterGDF)):
+            if Date in TransectInterGDF['dates'].iloc[Tr]:
+                # find matching distance along transect for  that date
+                DateIndex = TransectInterGDF['dates'].iloc[Tr].index(Date)
+                # append found distance to list which will make up a new attribute field of distances
+                ColData.append(TransectInterGDF['distances'].iloc[Tr][DateIndex])
+            else:
+                ColData.append(np.nan)
+        # attach back onto GDF as a new field per image date
+        TransectInterGDF[dateshort + 'dist'] = ColData
+            
+    TransectInterShp = TransectInterGDF.copy()
+    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances','interpnt']
     for Key in KeyName:
-        TransectInterGDF[Key] = TransectInterGDF[Key].astype(str)
+        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
-    TransectInterGDF.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
-    
-    TransectInterGDF = gpd.GeoDataFrame(TransectDict)
+    TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
     
     print("Shapefile with sat intersections saved.")
     
     return TransectInterGDF
     
+def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BasePath, sitename, projection):
+    '''
+    Save transects with beach width intersection info as shapefile.
+    FM Sept 2022
+
+    Parameters
+    ----------
+    TransectDict : dict
+        Transects with newly added intersection info.
+    BasePath : str
+        Path to shapefiles of transects.
+    sitename : str
+        Name of site.
+    projection : int
+        Projection EPSG code for saving transect shapefile.
+
+    Returns
+    -------
+    TransectInterGDF : GeoDataFrame
+        GDF of transects with intersection info.
+    '''
+    
+    
+    print('saving new transect shapefile ...')
+    
+    TransectInterGDF = gpd.GeoDataFrame(TransectDict, crs="EPSG:"+str(projection))
+    for Key in TransectInterGDFwDates.columns[11:]:
+        TransectInterGDF[Key] = TransectInterGDFwDates[Key]
+    
+    DateList = LinesGDF['dates'].unique()
+    
+    # for each unique date in satellite-derived shorelines list
+    for Date in DateList:
+        # shortened date format to YYMMDD to fit in field heading
+        dateshort = Date[2:].replace('-','')
+        DistColData = []
+        BWColData = []
+        # for each transect
+        for Tr in range(len(TransectInterGDF)):
+            if Date in TransectInterGDF['wldates'].iloc[Tr]:
+                # find matching distance along transect for that date
+                DateIndex = TransectInterGDF['wldates'].iloc[Tr].index(Date)
+                # append found distance to list which will make up a new attribute field of distances
+                DistColData.append(TransectInterGDF['wldists'].iloc[Tr][DateIndex])
+                if TransectInterGDF['beachwidth'].iloc[Tr] != []: # for rare transects where shoreline exists but width doesn't
+                    BWColData.append(TransectInterGDF['beachwidth'].iloc[Tr][DateIndex])
+                else:
+                    BWColData.append(np.nan)
+            else:
+                DistColData.append(np.nan)
+                BWColData.append(np.nan)
+        # attach back onto GDF as a new field per image date
+        TransectInterGDF[dateshort + 'wld'] = DistColData
+        TransectInterGDF[dateshort + 'bw'] = BWColData
+        
+            
+    
+    TransectInterShp = TransectInterGDF.copy()
+    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlinterpnt', 'beachwidth']
+    for Key in KeyName:
+        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+    
+    TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
+    
+    # TransectInterGDF = gpd.GeoDataFrame(TransectDict)
+    
+    print("Shapefile with sat intersections saved.")
+    
+    return TransectInterGDF
+
 
 def CalculateChanges(TransectDict,TransectInterGDF):
     
