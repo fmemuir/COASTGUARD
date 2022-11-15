@@ -236,10 +236,11 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
         
     return TransectDict
 
-def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
+def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, AvBeachSlope):
     
     '''
     Intersection between veglines and shorelines, based on geopandas GDFs/shapefiles.
+    Shorelines are tidally corrected using either a DEM of slopes or a single slope value for all transects.
     
     FM Sept 2022
 
@@ -296,22 +297,16 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
             (AllIntersects['wlinterpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + 
             (AllIntersects['wlinterpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
     AllIntersects['wldists'] = distances
-    
-    # WLTransectDict = TransectGDF.to_dict('list')
-    # for Key in AllIntersects.drop(['TransectID','geometry'],axis=1).keys():
-    #     WLTransectDict[Key] = {}
-    # WLTransectDict['wlinterpnt'] = AllIntersects['wlinterpnt'].copy()
-    # WLTransectDict['wldists'] = AllIntersects['wldists'].copy()
 
+    CorrectedDists = TidalCorrection(settings, output, AllIntersects['wldists'], AvBeachSlope)
+    AllIntersects['wlcorrdist'] = CorrectedDists
+    
     #initialise lists used for storing each transect's intersection values
-    dates, distances, interpnt = ([] for i in range(3)) # per-transect lists of values
+    dates, distances, corrdists, interpnt = ([] for i in range(3)) # per-transect lists of values
 
-    Key = [dates, distances, interpnt]
-    KeyName = ['wldates','wldists', 'wlinterpnt']
-    
-    # for key in KeyName:
-    #     TransectDict[key] = []
-    
+    Key = [dates, distances, corrdists, interpnt]
+    KeyName = ['wldates','wldists', 'wlcorrdist','wlinterpnt']
+       
     # for each column name
     for i in range(len(Key)):
         # for each transect
@@ -350,13 +345,72 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF):
                 continue
             # use date index to identify matching distance along transect
             # and calculate distance between two intersections (veg - water means +ve is veg measured seaward towards water)
-            VLSLDists.append(TransectDict['wldists'][Tr][D] - TransectDict['distances'][Tr][DateIndex])
+            VLSLDists.append(TransectDict['wlcorrdist'][Tr][D] - TransectDict['distances'][Tr][DateIndex])
             
         TransectDict['beachwidth'][Tr] = VLSLDists
     
     print("TransectDict with beach width and waterline intersections created.")
         
     return TransectDict
+    
+
+def TidalCorrection(settings, output, IntDistances, AvBeachSlope):
+
+    # load tidal data
+    tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+    tide_data = pd.read_csv(tidefilepath, parse_dates=['dates'])
+    dates_ts = [_.to_pydatetime() for _ in tide_data['dates']]
+    tides_ts = np.array(tide_data['tide'])
+    
+    # get the tide level corresponding to the time of sat image acquisition
+    dates_sat = output['times']
+    tides_sat = Toolbox.get_closest_datapoint(dates_sat, dates_ts, tides_ts)
+      
+    # tidal correction along each transect
+    # elevation at which you would like the shoreline time-series to be
+    RefElev = 0.0
+    
+    # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
+    DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
+    if os.path.exists(DEMpath):
+        MSL = 1.0
+        MHWS = 0.1
+        BeachSlope = GetBeachSlopes(MSL, MHWS, DEMpath)
+    else:
+        # if no DEM exists, use same slope value for all transects
+        BeachSlope = AvBeachSlope
+    
+    CorrIntDistances = []
+    
+    for Dist in IntDistances:
+        # calculate and apply cross-shore correction 
+        Correction = (tides_sat - RefElev) / BeachSlope
+        # correction is minus because transect dists are defined land to seaward
+        CorrIntDistances.append(Dist - Correction)
+    
+    return CorrIntDistances
+
+def GetBeachSlopes(MSL, MHWS, DEMpath):
+    """
+    Extract a list of cross-shore slopes from a DEM using provided water levels.
+    In development!
+    FM Nov 2022
+    
+    Parameters
+    ----------
+    MSL : TYPE
+        DESCRIPTION.
+    MHWS : TYPE
+        DESCRIPTION.
+    DEMpath : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
     
 
 def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
