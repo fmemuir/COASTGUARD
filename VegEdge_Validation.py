@@ -315,14 +315,14 @@ else:
     TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
-    #%%
-# if settings['wetdry'] == True:
-#     TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF)  
-TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
     
-# with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-#     pickle.dump(TransectDict, f)
-      
+    if settings['wetdry'] == True:
+        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF)  
+    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+        
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectDict, f)
+          
 
 #%% VALIDATION
 
@@ -330,6 +330,7 @@ TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, 
 DatesCol = 'Date'
 ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
+
 if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
     with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'rb') as f:
         ValidDict = pickle.load(f)
@@ -340,19 +341,16 @@ else:
 
 
 # %% Validation Plots
-# TransectIDs = (40,281) # west sands to out head
-# TransectIDs = (312,415) # west out head
-# TransectIDs = (416,594) # easter kincaple
-# TransectIDs = (1365,1462) # leuchars to tentsmuir
-# TransectIDs = (1463,1636) # tentsmuir
-TransectIDs = (1637,1741) # tentsmuir
-
-# TransectIDs = (595,672)
-# TransectIDs = (740,888) # start and end transect ID
-# TransectIDs = (972,1297) # start and end transect ID
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
+    
+# TransectIDList = [(595,672),(740,888),(972,1297)]
 
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
-Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs)
+
+for TransectIDs in TransectIDList:
+    PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
+    Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, )
+    
 
 #%% Combine East and West
 with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEast', 'validation','StAndrewsEast' + '_valid_dict.pkl'), 'rb') as f:
@@ -365,19 +363,13 @@ for keyname in FullValidDict.keys():
     FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
 
 #%% Error stats
+# East errors
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
 
-# TransectIDs = (40,281) # west sands to out head
-# TransectIDs = (312,415) # west out head
-# TransectIDs = (416,594) # easter kincaple
-# TransectIDs = (1365,1462) # leuchars to tentsmuir
-# TransectIDs = (1463,1636) # tentsmuir
-TransectIDs = (1637,1741) # tentsmuir
-
-# West Sands errors
-# TransectIDs = (595,672)
-# TransectIDs = (740,888) # start and end transect ID
-# TransectIDs = (972,1303) # start and end transect ID
-Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
+# West errors
+# TransectIDs = [(595,672),(740,888),(972,1303)] 
+for TransectIDs in TransectIDList:
+    Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
  
 #%% Full error stats
 # TransectIDs = (0,1741) # full
@@ -396,4 +388,4 @@ for keyname in FullValidDict.keys():
 
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
-Plotting.SatViolin(sitename,VeglineShp[0],'dates',ClipValidDict,TransectIDs)
+Plotting.SatViolin(sitename,VeglineShp[0],'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
