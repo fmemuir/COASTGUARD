@@ -26,6 +26,7 @@ from shapely import geometry
 import ee
 import geemap
 import glob
+from datetime import datetime
 
 # CoastSat modules
 from Toolshed import Toolbox
@@ -59,8 +60,6 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
     #=============================================================================================#
     if satname == 'L5':
         
-        #Landsat5 = ee.ImageCollection("LANDSAT/LT05/C01/T1_TOA").filterBounds(point).filterDate(dates[0], dates[-1]).select(['B1','B2','B3','B4','B5','BQA'])
-        # FM: alternative, make ImageCollection from metadata already defined
         imgs = []
         for i in range(len(filenames)):
             imgs.append(ee.Image(filenames[i]))
@@ -68,13 +67,14 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
             
         img = ee.Image(Landsat5.getInfo().get('features')[fn]['id'])
         cloud_scoree = Landsat5.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+        acqtime = datetime.utcfromtimestamp(Landsat5.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         im_ms = geemap.ee_to_numpy(img, bands = ['B1','B2','B3','B4','B5','BQA'], region=ee.Geometry.Polygon(polygon))
         
         if im_ms is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         if cloud_scoree > settings['cloud_thresh']:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         # down-sample to 15 m (half of the original pixel size)
         nrows = im_ms.shape[0]*2
@@ -143,15 +143,15 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         img = ee.Image(Landsat7.getInfo().get('features')[fn]['id'])
         im_ms = geemap.ee_to_numpy(img, bands = ['B1','B2','B3','B4','B5', 'B8','QA_PIXEL'], region=ee.Geometry.Polygon(polygon))
-        
+        acqtime = datetime.utcfromtimestamp(Landsat7.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         cloud_scoree = Landsat7.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
@@ -238,15 +238,15 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         img = ee.Image(Landsat8.getInfo().get('features')[fn]['id'])
         im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
-        
+        acqtime = datetime.utcfromtimestamp(Landsat8.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         cloud_scoree = Landsat8.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
@@ -333,15 +333,15 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         img = ee.Image(Landsat9.getInfo().get('features')[fn]['id'])
         im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
-        
+        acqtime = datetime.utcfromtimestamp(Landsat9.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         cloud_scoree = Landsat9.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
@@ -350,7 +350,6 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
 
         #Apply the mask to the image and display the result.
         masked = img.updateMask(mask);
-        
         
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
@@ -420,17 +419,16 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
     #=============================================================================================#
     elif satname == 'S2':
         
-        #Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(dates[0], dates[-1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
         imgs = []
         for i in range(len(filenames)):
             imgs.append(ee.Image(filenames[i]))
         Sentinel2 = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
         
-        
         cloud_scoree = Sentinel2.getInfo().get('features')[fn]['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
+        acqtime = datetime.utcfromtimestamp(Sentinel2.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if cloud_scoree > settings['cloud_thresh']:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         # read 10m bands (R,G,B,NIR)        
         img = ee.Image(Sentinel2.getInfo().get('features')[fn]['id'])
@@ -453,7 +451,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
         if im10 is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         im10 = im10/10000 # TOA scaled to 10000
 
@@ -473,7 +471,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im20 = geemap.ee_to_numpy(img, bands = ['B11'], region=ee.Geometry.Polygon(polygon))
         
         if im20 is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         im20 = im20[:,:,0]
         im20 = im20/10000 # TOA scaled to 10000
@@ -490,7 +488,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im60 = geemap.ee_to_numpy(img, bands = ['QA60'], region=ee.Geometry.Polygon(polygon))
         
         if im60 is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         im_QA = im60[:,:,0]
         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
@@ -499,7 +497,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
                                       mode='constant')
         
         if cloud_mask is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         # check if -inf or nan values on any band and create nodata image
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -536,14 +534,17 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         cloud_scoree = 0.0
         
         if cloud_scoree > settings['cloud_thresh']:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         # read all bands (B,G,R,NIR)        
         img = rasterio.open(filenames[fn])
         im_ms = img.read()
         
+        # filename should be in the format 'yyyymmdd_HHMMSS_'
+        acqtime = datetime.strftime(datetime.strptime(filenames[fn][9:15],'%H%M%S'),'%H:%M:%S.%f')
+        
         if im_ms is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         # scaling factor to convert to floating-point reflectance
         if np.max(im_ms[:,:,0]) > 1:
@@ -610,7 +611,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
     if savetifs == True:
         save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
     
-    return im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata
+    return im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime
 
 
 ###################################################################################################
@@ -1319,6 +1320,27 @@ def get_reference_sl(metadata, settings, polygon, dates):
     return pts_coords
 
 def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
+    """
+    In development
+    FM Nov 2022
+
+    Parameters
+    ----------
+    fn : TYPE
+        DESCRIPTION.
+    satname : TYPE
+        DESCRIPTION.
+    settings : TYPE
+        DESCRIPTION.
+    polygon : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    """
     
     cloud_mask_issue = settings['cloud_mask_issue']
     
@@ -1401,7 +1423,7 @@ def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
         
         
         if im_ms is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
@@ -1490,7 +1512,7 @@ def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
         im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
         
         if im10 is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         # read 10m bands (R,G,B,NIR)
         """
@@ -1518,7 +1540,7 @@ def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
         im20 = geemap.ee_to_numpy(img, bands = ['B11'], region=ee.Geometry.Polygon(polygon))
         
         if im20 is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         im20 = im20[:,:,0]
         im20 = im20/10000 # TOA scaled to 10000
@@ -1535,7 +1557,7 @@ def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
         im60 = geemap.ee_to_numpy(img, bands = ['QA60'], region=ee.Geometry.Polygon(polygon))
         
         if im60 is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         im_QA = im60[:,:,0]
         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
@@ -1544,7 +1566,7 @@ def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
                                       mode='constant')
         
         if cloud_mask is None:
-            return None, None, None, None, None, None
+            return None, None, None, None, None, None, None
         
         # check if -inf or nan values on any band and create nodata image
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
