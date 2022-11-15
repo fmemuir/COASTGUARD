@@ -24,6 +24,8 @@ mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib import gridspec
+import matplotlib.patches as mpatches
+from matplotlib.collections import PatchCollection
 plt.ion()
 
 from shapely import geometry
@@ -209,7 +211,7 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
     axlim = round(np.max([abs(df.min().min()),abs(df.max().max())]),-1)
     ax.set_xlim(-axlim, axlim)
-    ax.set_xticks([-50,-30,-10,10,30,50],minor=True)
+    ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
     ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     median = ax.axvline(df.median().mean(), c='r', ls='-.')
     
@@ -225,7 +227,7 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     print('figure saved under '+figpath)
     
 
-def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
+def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -295,12 +297,21 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
         satnames[Sdate] = list(set(satmatch))[0]
     
     f = plt.figure(figsize=(10, 8))
+    
+    patches = []
+    rect10 = mpatches.Rectangle((-10, -50), 20, 100)
+    rect15 = mpatches.Rectangle((-15, -50), 30, 100)
+    patches.append(rect10)
+    patches.append(rect15)
+    coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
+    
+    sns.set_style("whitegrid", {'axes.grid' : False})
     if len(violindates) > 1:
         # plot stacked violin plots
         ax = sns.violinplot(data = df, linewidth=0, palette = 'magma_r', orient='h', cut=0, inner='quartile')
-        # set colour of inner quartiles to white dependent on colour ramp 
+        ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
         for l in ax.lines:
-            l.set_linestyle('--')
+            l.set_linestyle('-')
             l.set_linewidth(1)
             l.set_color('white')
 
@@ -311,16 +322,17 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
         #     violin.set_clip_path(plt.Rectangle((x0, y0), width, height / 2, transform=ax.transData))
     else:
         ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
+        ax.add_collection(coll)
         
     ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
-    ax.set_title('Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1]))
+    ax.set_title(PlotTitle)
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
     # round UP to nearest 10
     axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
     ax.set_xlim(-axlim, axlim)
-    ax.set_xticks([-50,-30,-10,10,30,50],minor=True)
-    ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
+    # ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
+    # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
     # create specific median lines for specific platforms
     medians = []
@@ -338,9 +350,10 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
         # set the date axis label for each date to corresponding satname colour
         [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
         # get median of only the columns that match each sat name
-        medians.append(ax.axvline(df[sats].median().median(), c=c, ls='-.'))
+        medians.append(ax.axvline(df[sats].median().median(), c=c, ls='--'))
         labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
     
+    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
     ax.legend(medians,labels)
     
     ax.set_axisbelow(False)
