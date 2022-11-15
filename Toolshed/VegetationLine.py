@@ -99,18 +99,19 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         filenames = metadata[satname]['filenames']
 
         # initialise the output variables
-        output_timestamp = []  # datetime at which the image was acquired (UTC time)
-        output_vegline = []  # vector of vegline points
+        output_timestamp = []       # datetime at which the image was acquired (YYYY-MM-DD)
+        output_time = []            # UTC timestamp
+        output_vegline = []         # vector of vegline points
         output_vegline_latlon = []
         output_vegline_proj = []
-        output_shoreline = []  # vector of vegline points
+        output_shoreline = []       # vector of waterline points
         output_shoreline_latlon = []
         output_shoreline_proj = []
-        output_filename = []   # filename of the images from which the veglines are derived
-        output_cloudcover = [] # cloud cover of the images
-        output_geoaccuracy = []# georeferencing accuracy of the images
-        output_idxkeep = []    # index that were kept during the analysis (cloudy images are skipped)
-        output_t_ndvi = []    # NDVI threshold used to map the vegline
+        output_filename = []        # filename of the images from which the veglines are derived
+        output_cloudcover = []      # cloud cover of the images
+        output_geoaccuracy = []     # georeferencing accuracy of the images
+        output_idxkeep = []         # index that were kept during the analysis (cloudy images are skipped)
+        output_t_ndvi = []          # NDVI threshold used to map the vegline
         
         # get pixel size from dimensions in first image
         if satname in ['L5','L7','L8','L9']:
@@ -137,7 +138,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
 
             # preprocess image (cloud mask + pansharpening/downsampling)
             fn = int(i)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=True)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=True)
 
             if im_ms is None:
                 print(" - Skipped: empty raster")
@@ -247,6 +248,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
 
             # append to output variables
             output_timestamp.append(metadata[satname]['dates'][i])
+            output_time.append(acqtime)
             output_vegline.append(vegline)
             output_vegline_latlon.append(vegline_latlon)
             output_vegline_proj.append(vegline_proj)
@@ -263,6 +265,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         # create dictionary of output
         output[satname] = {
                 'dates': output_timestamp,
+                'times':output_time,
                 'shorelines': output_vegline,
                 'waterlines':output_shoreline,
                 'filename': output_filename,
@@ -274,6 +277,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
     
         output_latlon[satname] = {
                 'dates': output_timestamp,
+                'times':output_time,
                 'shorelines': output_vegline_latlon,
                 'waterlines':output_shoreline_latlon,
                 'filename': output_filename,
@@ -284,6 +288,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         
         output_proj[satname] = {
                 'dates': output_timestamp,
+                'times':output_time,
                 'shorelines': output_vegline_proj,
                 'waterlines':output_shoreline_proj,
                 'filename': output_filename,
