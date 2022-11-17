@@ -257,6 +257,10 @@ slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','
 # west dates
 # slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-08-13','2021-07-01','2021-12-10','2022-02-11']
 
+# if old otsu threshold name remains
+output = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output.items()}
+output_latlon = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_latlon.items()}
+output_proj = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_proj.items()}
 
 newoutputdict = output.copy()
 for key in output.keys():
@@ -316,12 +320,15 @@ else:
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
     
-    if settings['wetdry'] == True:
-        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF)  
-    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-        
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectDict, f)
+# %%  
+if settings['wetdry'] == True:
+    beachslope = 0.006 # tanBeta
+    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+    
+
           
 
 #%% VALIDATION
