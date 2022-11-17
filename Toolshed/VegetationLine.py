@@ -112,6 +112,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         output_geoaccuracy = []     # georeferencing accuracy of the images
         output_idxkeep = []         # index that were kept during the analysis (cloudy images are skipped)
         output_t_ndvi = []          # NDVI threshold used to map the vegline
+        output_t_ndwi = []          # NDWI threshold used to map the vegline
         
         # get pixel size from dimensions in first image
         if satname in ['L5','L7','L8','L9']:
@@ -256,6 +257,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 output_shoreline.append(shoreline)
                 output_shoreline_latlon.append(shoreline_latlon)
                 output_shoreline_proj.append(shoreline_proj)
+                output_t_ndwi.append(t_ndwi)
             output_filename.append(filenames[i])
             output_cloudcover.append(cloud_cover)
             output_geoaccuracy.append(metadata[satname]['acc_georef'][i])
@@ -271,7 +273,8 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
-                'Otsu_threshold': output_t_ndvi,
+                'vthreshold': output_t_ndvi,
+                'wthreshold': output_t_ndwi
                 }
         print('')
     
@@ -283,7 +286,8 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
-                'Otsu_threshold': output_t_ndvi,
+                'vthreshold': output_t_ndvi,
+                'wthreshold': output_t_ndwi
                 }
         
         output_proj[satname] = {
@@ -294,7 +298,8 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
-                'Otsu_threshold': output_t_ndvi,
+                'vthreshold': output_t_ndvi,
+                'wthreshold': output_t_ndwi
                 }
         
         
@@ -2147,7 +2152,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
-                'Otsu_threshold': output_t_ndvi,
+                'threshold': output_t_ndvi,
                 }
         print('')
     
@@ -2157,7 +2162,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
-                'Otsu_threshold': output_t_ndvi,
+                'threshold': output_t_ndvi,
                 }
         
         output_proj[satname] = {
@@ -2166,7 +2171,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
-                'Otsu_threshold': output_t_ndvi,
+                'threshold': output_t_ndvi,
                 }
     
     # close figure window if still open
