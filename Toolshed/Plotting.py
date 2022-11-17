@@ -294,6 +294,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
             else:
                 satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
         # cycling through transects leads to list of repeating satnames; take the unique entry
+        # TO DO: check if this works by just using output['dates']
         satnames[Sdate] = list(set(satmatch))[0]
     
     f = plt.figure(figsize=(10, 8))
