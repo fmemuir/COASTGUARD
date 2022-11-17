@@ -173,14 +173,14 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     # for each row/feature in transect
     for _, _, ID, TrGeom in TransectGDF.itertuples():
         # for each row/feature shoreline
-        for _,dates,filename,cloud,ids,otsu,satn,SGeom in ShorelineGDF.itertuples():
+        for _,dates,times,filename,cloud,ids,vthresh,satn,wthresh,SGeom in ShorelineGDF.itertuples():
             # calculate intersections between each transect and shoreline
             Intersects = TrGeom.intersection(SGeom)
-            ColumnData.append((ID,dates,filename,cloud,ids,otsu,satn))
+            ColumnData.append((ID,dates,times,filename,cloud,ids,vthresh,satn,wthresh))
             Geoms.append(Intersects)
             
     # create GDF from appended lists of intersections        
-    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','filename','cloud_cove','idx','Otsu_thres','satname'])
+    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','times','filename','cloud_cove','idx','vthreshold','satname','wthreshold'])
     # remove any rows with no intersections
     AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
     # duplicate geom column to save point intersections
@@ -212,10 +212,10 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     
 
     #initialise lists used for storing each transect's intersection values
-    dates, filename, cloud_cove, idx, Otsu_thres, satname, distances, interpnt = ([] for i in range(8)) # per-transect lists of values
+    dates, times, filename, cloud_cove, idx, vthreshold, wthreshold, satname, distances, interpnt = ([] for i in range(10)) # per-transect lists of values
 
-    Key = [dates,filename,cloud_cove,idx,Otsu_thres,satname, distances, interpnt]
-    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'interpnt']
+    Key = [dates,times,filename,cloud_cove,idx,vthreshold, wthreshold,satname, distances, interpnt]
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold', 'wthreshold','satname', 'distances', 'interpnt']
     
     # for each column name
     for i in range(len(Key)):
@@ -267,7 +267,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
     # for each row/feature in transect
     for _, _, ID, TrGeom in TransectGDF.itertuples():
         # for each row/feature shoreline
-        for _,dates,_,_,_,_,_,SGeom in WaterlineGDF.itertuples():
+        for _,dates,_,_,_,_,_,_,_,SGeom in WaterlineGDF.itertuples():
             # calculate intersections between each transect and shoreline
             Intersects = TrGeom.intersection(SGeom)
             ColumnData.append((ID,dates))
@@ -298,11 +298,11 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
             (AllIntersects['wlinterpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
     AllIntersects['wldists'] = distances
 
-    CorrectedDists = TidalCorrection(settings, output, AllIntersects['wldists'], AvBeachSlope)
+    CorrectedDists = TidalCorrection(settings, output, AllIntersects, AvBeachSlope)
     AllIntersects['wlcorrdist'] = CorrectedDists
     
     #initialise lists used for storing each transect's intersection values
-    dates, distances, corrdists, interpnt = ([] for i in range(3)) # per-transect lists of values
+    dates, distances, corrdists, interpnt = ([] for i in range(4)) # per-transect lists of values
 
     Key = [dates, distances, corrdists, interpnt]
     KeyName = ['wldates','wldists', 'wlcorrdist','wlinterpnt']
@@ -354,7 +354,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
     return TransectDict
     
 
-def TidalCorrection(settings, output, IntDistances, AvBeachSlope):
+def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
 
     # load tidal data
     tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
@@ -363,14 +363,26 @@ def TidalCorrection(settings, output, IntDistances, AvBeachSlope):
     tides_ts = np.array(tide_data['tide'])
     
     # get the tide level corresponding to the time of sat image acquisition
-    dates_sat = output['times']
-    tides_sat = Toolbox.get_closest_datapoint(dates_sat, dates_ts, tides_ts)
-      
+    dates_sat = []
+    for i in range(len(output['dates'])):
+        dates_sat_str = output['dates'][i] +' '+output['times'][i]
+        dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
+    
+    tide_sat = []
+    def find(item, lst):
+        start = 0
+        start = lst.index(item, start)
+        return start
+    for i,date in enumerate(dates_sat):
+        tide_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
+    tides_sat = np.array(tide_sat)
+         
     # tidal correction along each transect
     # elevation at which you would like the shoreline time-series to be
-    RefElev = 0.0
+    RefElev = 1.0
     
     # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
+    # TO DO: figure out way of running this per transect
     DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
     if os.path.exists(DEMpath):
         MSL = 1.0
@@ -382,9 +394,14 @@ def TidalCorrection(settings, output, IntDistances, AvBeachSlope):
     
     CorrIntDistances = []
     
-    for Dist in IntDistances:
+    dates_sat_d = []
+    for dt in dates_sat:
+        dates_sat_d.append(dt.date())
+    
+    for D, Dist in enumerate(IntersectDF['wldists']):
+        DateIndex = dates_sat_d.index(datetime.strptime(IntersectDF['wldates'][D], '%Y-%m-%d').date())
         # calculate and apply cross-shore correction 
-        Correction = (tides_sat - RefElev) / BeachSlope
+        Correction = (tides_sat[DateIndex] - RefElev) / BeachSlope
         # correction is minus because transect dists are defined land to seaward
         CorrIntDistances.append(Dist - Correction)
     
@@ -460,7 +477,8 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
         TransectInterGDF[dateshort + 'dist'] = ColData
             
     TransectInterShp = TransectInterGDF.copy()
-    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances','interpnt']
+
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances','interpnt']
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
@@ -525,12 +543,12 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
         TransectInterGDF[dateshort + 'wld'] = DistColData
         TransectInterGDF[dateshort + 'bw'] = BWColData
         
-            
-    
     TransectInterShp = TransectInterGDF.copy()
-    KeyName = ['dates','filename','cloud_cove','idx','Otsu_thres','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlinterpnt', 'beachwidth']
+    
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlinterpnt', 'beachwidth']
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+    
     
     TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
     
