@@ -145,8 +145,8 @@ S2index = [41,42,43,44,133,134,135,136,137,138,139,140,141,142,143,144,257,258,2
 #%% St Andrews West
 L5index = [0,19,20,46,21]
 L7index = [0,1]
-L8index = [117,34,118,35,42,43,128,129,143,144,57,73,74,153,154,159,160,205,206,210,180, 211,212,213]
-S2index = [41,42,43,44,133,134,135,136,137,138,139,140,141,142,143,144,257,258,259,260,261,262,263,411,412,413,414,415,416,417,505,506,507,508,509,834,835,836,837,838,839,840,947,948,949, 967,968,969,970,971,972,973,974,975,976,977,978,979]
+L8index = [117,34,118,35,42,43,128,129,143,144,57,73,74,153,154,159,160,205,206,210,180, 211,220,212,213]
+S2index = [41,42,43,44,133,134,135,136,137,138,139,140,141,142,143,144,257,258,259,260,261,262,263,411,412,413,414,415,416,417,505,506,507,508,509,834,835,836,837,838,839,840,947,948,949, 967,968,969,970,971,972,973,974,975,976,977,978,979,1003,1004,1005,1006]
 #%%
 
 for satkey in dict.fromkeys(metadata['L5'].keys()):
@@ -311,7 +311,7 @@ else:
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
     print('TransectDict exists and was loaded')
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
-        TransectDict = pickle.load(f)
+        TransectDict, TransectInterGDF = pickle.load(f)
 else:
     # Get intersections
     TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
@@ -319,17 +319,19 @@ else:
     TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+    if settings['wetdry'] == True:
+        beachslope = 0.04 # tanBeta
+        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+        TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
     
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump(TransectDict, f)
+        pickle.dump([TransectDict,TransectInterGDF], f)
 # %%  
 if settings['wetdry'] == True:
-    beachslope = 0.006 # tanBeta
+    beachslope = 0.04 # tanBeta
     TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
 TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
     
-
-          
 
 #%% VALIDATION
 
