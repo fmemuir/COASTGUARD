@@ -545,7 +545,7 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
         
     TransectInterShp = TransectInterGDF.copy()
     
-    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlinterpnt', 'beachwidth']
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','wlinterpnt', 'beachwidth']
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
