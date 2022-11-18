@@ -180,7 +180,7 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
             Geoms.append(Intersects)
             
     # create GDF from appended lists of intersections        
-    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','times','filename','cloud_cove','idx','vthreshold','satname','wthreshold'])
+    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname'])
     # remove any rows with no intersections
     AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
     # duplicate geom column to save point intersections
