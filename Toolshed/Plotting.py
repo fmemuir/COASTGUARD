@@ -297,7 +297,8 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         # TO DO: check if this works by just using output['dates']
         satnames[Sdate] = list(set(satmatch))[0]
     
-    f = plt.figure(figsize=(10, 8))
+    f = plt.figure(figsize=(8, 6))
+    sns.set(font_scale=1.2)
     
     patches = []
     rect10 = mpatches.Rectangle((-10, -50), 20, 100)
