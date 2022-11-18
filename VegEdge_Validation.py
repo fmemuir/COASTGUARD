@@ -253,9 +253,9 @@ output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Slice up output for validation
 # east dates
-slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-02-04','2019-08-18','2021-07-01','2022-02-11']
+# slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-02-04','2019-08-18','2021-07-01','2022-02-11']
 # west dates
-# slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-08-13','2021-07-01','2021-12-10','2022-02-11']
+slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-08-13','2021-07-01','2021-12-10','2022-02-11']
 
 # if old otsu threshold name remains
 output = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output.items()}
@@ -288,10 +288,10 @@ Plotting.SatGIF(metadata,settings,output)
 SmoothingWindowSize = 21 
 NoSmooths = 100
 TransectSpacing = 10
-# DistanceInland = 350
-# DistanceOffshore = 350
-DistanceInland = 150
-DistanceOffshore = 700
+DistanceInland = 100
+DistanceOffshore = 350
+# DistanceInland = 150 # East
+# DistanceOffshore = 700 # East
 BasePath = 'Data/' + sitename + '/veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
@@ -320,7 +320,8 @@ else:
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
     if settings['wetdry'] == True:
-        beachslope = 0.04 # tanBeta
+        beachslope = 0.02 # tanBeta StAnd W
+        # beachslope = 0.04 # tanBeta StAnE
         TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
         TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
     
@@ -350,16 +351,24 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
+# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
     
-# TransectIDList = [(595,672),(740,888),(972,1297)]
+TransectIDList = [(595,711),(726,889),(972,1297)]
 
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, )
+    Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
     
+#%% Error stats
+# East errors
+# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
+
+# West errors
+TransectIDList = [(595,711),(726,889),(972,1297)]
+for TransectIDs in TransectIDList:
+    Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
 
 #%% Combine East and West
 with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEast', 'validation','StAndrewsEast' + '_valid_dict.pkl'), 'rb') as f:
@@ -371,14 +380,7 @@ FullValidDict = EastValidDict.copy()
 for keyname in FullValidDict.keys():
     FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
 
-#%% Error stats
-# East errors
-TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
 
-# West errors
-# TransectIDs = [(595,672),(740,888),(972,1303)] 
-for TransectIDs in TransectIDList:
-    Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
  
 #%% Full error stats
 # TransectIDs = (0,1741) # full
