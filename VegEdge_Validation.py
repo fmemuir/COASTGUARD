@@ -397,6 +397,8 @@ TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
 Plotting.SatViolin(sitename,VeglineShp[0],'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
+Plotting.PlatformViolin(sitename, VeglineShp[0],'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+
 #%% Theshold plotting
 
 
