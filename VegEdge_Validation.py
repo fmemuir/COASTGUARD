@@ -253,11 +253,11 @@ output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Slice up output for validation
 # east dates
-# slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-02-04','2019-08-18','2021-07-01','2022-02-11']
-# west dates
-slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-08-13','2021-07-01','2021-12-10','2022-02-11']
+slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','2018-06-24','2019-02-04','2019-08-18','2021-07-01','2022-02-11']
+#%% west dates
+slicedates = ['2007-04-17','2011-04-28','2011-11-06','2015-09-30','2017-07-24','2018-06-24','2018-12-16','2019-08-13','2021-07-01','2022-02-11']
 
-# if old otsu threshold name remains
+#%% if old otsu threshold name remains
 output = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output.items()}
 output_latlon = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_latlon.items()}
 output_proj = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_proj.items()}
@@ -327,12 +327,7 @@ else:
     
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
-# %%  
-if settings['wetdry'] == True:
-    beachslope = 0.04 # tanBeta
-    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-    
+
 
 #%% VALIDATION
 
@@ -342,6 +337,7 @@ ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.s
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
 if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
+    print('ValidDict exists and was loaded')
     with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'rb') as f:
         ValidDict = pickle.load(f)
 else:
@@ -351,9 +347,9 @@ else:
 
 
 # %% Validation Plots
-# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
     
-TransectIDList = [(595,711),(726,889),(972,1297)]
+# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 
@@ -400,3 +396,17 @@ for keyname in FullValidDict.keys():
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
 Plotting.SatViolin(sitename,VeglineShp[0],'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+
+#%% Theshold plotting
+
+
+sites = ['StAndrewsWest', 'StAndrewsEast']
+Plotting.ThresholdViolin(filepath, sites)
+
+
+#%% Validation vs satellite cross-shore distance through time
+
+Plotting.ValidTimeseries(sitename, ValidDict, 1575)
+
+
+
