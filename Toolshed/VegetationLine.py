@@ -666,7 +666,7 @@ def FindShoreContours_Enhc(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     -----------
     contours_mwi: list of np.arrays
         contains the coordinates of the contour lines extracted from the
-        MNDWI (Modified Normalized Difference Water Index) image
+        Normalized Difference Index of choice
     t_mwi: float
         Otsu sand/water threshold used to map the contours
     """
@@ -709,7 +709,7 @@ def FindShoreContours_Enhc(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     # remove contour points that are NaNs (around clouds)
     contours_ndi = process_contours(contours_ndi)
 
-    # only return MNDWI contours and threshold
+    # return contours and threshold value
     return contours_ndi, t_ndi
 
 def FindShoreContours_Water(im_ndi, im_labels, cloud_mask, im_ref_buffer):
@@ -747,6 +747,7 @@ def FindShoreContours_Water(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     vec_nonwater = im_labels[:,:,0].reshape(ncols*nrows)
 
     # use im_ref_buffer and dilate it by 5 pixels
+    # TO DO: alternative to expanding buffer; loop expansion until you get longer distance of contour? or acceptable amount of water vs not water?
     se = morphology.disk(5)
     im_ref_buffer_extra = morphology.binary_dilation(im_ref_buffer, se)
     # create a buffer around the sandy beach
