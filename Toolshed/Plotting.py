@@ -20,6 +20,7 @@ warnings.filterwarnings("ignore")
 import seaborn as sns
 sns.set(style='whitegrid') #sns.set(context='notebook', style='darkgrid', palette='deep', font='sans-serif', font_scale=1, color_codes=False, rc=None)
 import matplotlib as mpl
+from matplotlib import cm
 mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
@@ -297,8 +298,8 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         # TO DO: check if this works by just using output['dates']
         satnames[Sdate] = list(set(satmatch))[0]
     
-    f = plt.figure(figsize=(8, 6))
-    sns.set(font_scale=1.2)
+    f = plt.figure(figsize=(16, 14))
+    sns.set(font_scale=2.5)
     
     patches = []
     rect10 = mpatches.Rectangle((-10, -50), 20, 100)
@@ -356,7 +357,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-    ax.legend(medians,labels)
+    ax.legend(medians,labels, loc='lower right')
     
     ax.set_axisbelow(False)
     plt.tight_layout()
@@ -365,6 +366,261 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     plt.savefig(figpath)
     print('figure saved under '+figpath)
 
+
+def PlatformViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
+    """
+    Violin plot showing distances between validation and satellite, for each platform used.
+    FM Oct 2022
+
+    Parameters
+    ----------
+    ValidationShp : str
+        Path to validation lines shapefile.
+    DatesCol : str
+        Name of dates column in shapefile.
+    ValidDict : dict
+        Validation dictionary created from ValidateIntersects().
+
+    """
+    
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+    
+    SatGDF = gpd.read_file(SatShp)
+    violin = []
+    violindates = []
+    Sdates = SatGDF[DatesCol].unique()
+    
+    for Sdate in Sdates:
+        valsatdist = []
+        # for each transect in given range
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
+            if Sdate in ValidDict['dates'][Tr]:
+                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                else:
+                    continue
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
+        if valsatdist != []: 
+            violin.append(valsatdist)
+            violindates.append(Sdate)
+    # sort both dates and list of values by date
+    if len(violindates) > 1:
+        violindatesrt, violinsrt = [list(d) for d in zip(*sorted(zip(violindates, violin), key=lambda x: x[0]))]
+    else:
+        violindatesrt = violindates
+        violinsrt = violin
+    df = pd.DataFrame(violinsrt)
+    df = df.transpose()
+    df.columns = violindatesrt
+    
+    # initialise matching list of sat names for labelling
+    satnames = dict.fromkeys(violindatesrt)
+    # for each date in sorted list
+    for Sdate in violindatesrt:    
+        satmatch = []
+        for Tr in range(len(ValidDict['TransectID'])):
+            # loop through transects to find matching date from which to find satname
+            if Sdate not in ValidDict['dates'][Tr]:
+                continue
+            else:
+                satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
+        # cycling through transects leads to list of repeating satnames; take the unique entry
+        # TO DO: check if this works by just using output['dates']
+        satnames[Sdate] = list(set(satmatch))[0]
+    
+    f = plt.figure(figsize=(16, 14))
+    sns.set(font_scale=2.5)
+    
+    patches = []
+    rect10 = mpatches.Rectangle((-10, -50), 20, 100)
+    rect15 = mpatches.Rectangle((-15, -50), 30, 100)
+    patches.append(rect10)
+    patches.append(rect15)
+    coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
+    
+    sns.set_style("whitegrid", {'axes.grid' : False})
+    if len(violindates) > 1:
+        # plot stacked violin plots
+        ax = sns.violinplot(data = df, linewidth=0, palette = 'magma_r', orient='h', cut=0, inner='quartile')
+        ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
+        for l in ax.lines:
+            l.set_linestyle('-')
+            l.set_linewidth(1)
+            l.set_color('white')
+
+        # cut away bottom halves of violins
+        # for violin in ax.collections:
+        #     bbox = violin.get_paths()[0].get_extents()
+        #     x0, y0, width, height = bbox.bounds
+        #     violin.set_clip_path(plt.Rectangle((x0, y0), width, height / 2, transform=ax.transData))
+    else:
+        ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
+        ax.add_collection(coll)
+        
+    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
+    ax.set_title(PlotTitle)
+    
+    # set axis limits to rounded maximum value of all violins (either +ve or -ve)
+    # round UP to nearest 10
+    axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
+    ax.set_xlim(-axlim, axlim)
+    # ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
+    # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
+    
+    # create specific median lines for specific platforms
+    medians = []
+    labels = []
+    # dataframe dates and matching satnames
+    satdf = pd.DataFrame(satnames, index=[0])
+    # for each platform name
+    uniquesats = sorted(set(list(satnames.values())))
+    colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
+    for satname, c in zip(uniquesats, colors):
+        sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
+        sats = sats[0].tolist()
+        # get dataframe column indices for each date that matches the sat name
+        colind = [df.columns.get_loc(sat) for sat in sats]
+        # set the date axis label for each date to corresponding satname colour
+        [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
+        # get median of only the columns that match each sat name
+        medians.append(ax.axvline(df[sats].median().median(), c=c, ls='--'))
+        labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
+    
+    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
+    ax.legend(medians,labels, loc='lower right')
+    
+    ax.set_axisbelow(False)
+    plt.tight_layout()
+    
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+
+
+def BeachWidthSeries(TransectID):
+    
+    f = plt.figure(figsize=(8, 3))
+    
+    
+    plt.plot('.-', color='k')
+    
+def ThresholdViolin(filepath,sites):
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sites[0], 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+      
+    violindict = {}
+    for site in sites:
+        with open(os.path.join(filepath,site ,site+ '_output.pkl'), 'rb') as f:
+            outputdict = pickle.load(f)
+        violindict[site] = outputdict['vthreshold']
+    
+    # concat together threshold columns (even if different sizes; fills with nans)
+    violinDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in violindict.items()]))
+        
+    # colors = ['#21A790','#1D37FB'] #West = Teal, East = Blue
+    # cmap = mpl.colors.ListedColormap(mpl.cm.get_cmap("YlGnBu"))
+    
+    fig = plt.figure(figsize=[12,12], tight_layout=True)
+    sns.set(font="Verdana", font_scale=2.5)
+    sns.set_style("whitegrid", {'axes.grid' : False})
+    
+    ax = sns.violinplot(data = violinDF, linewidth=0, palette = 'YlGnBu', orient='v', cut=0, inner='quartile')
+    for l in ax.lines:
+        l.set_linestyle('-')
+        l.set_linewidth(1)
+        l.set_color('white')
+    
+    # plt.xlabel('Date (yyyy-mm-dd)')
+    plt.ylabel('NDVI threshold value')
+    plt.ylim(0,0.5)
+    # plt.legend(loc='upper left')
+    # plt.xticks(rotation=270)
+
+    outfilename = outfilepath+'/'
+    for site in sites:
+        outfilename += site+'_'
+    outfilename += 'Thresholds_Violin.png'
+    plt.savefig(outfilename)
+
+    plt.show()
+    
+  
+def ValidTimeseries(sitename, ValidDict, TransectID):
+    """
+    
+
+    Parameters
+    ----------
+    ValidDict : TYPE
+        DESCRIPTION.
+    TransectID : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    
+    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in ValidDict['Vdates'][TransectID]]
+    plotsatdist = ValidDict['distances'][TransectID]
+    plotvaliddist = ValidDict['Vdists'][TransectID]
+    
+    plotdate, plotvaliddist = [list(d) for d in zip(*sorted(zip(plotdate, plotvaliddist), key=lambda x: x[0]))]
+    plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]
+    
+    magma = cm.get_cmap('magma')
+    
+    x = mpl.dates.date2num(plotdate)
+    mvalid, cvalid = np.polyfit(x,plotvaliddist,1)
+    msat, csat = np.polyfit(x,plotsatdist,1)
+    
+    polyvalid = np.poly1d([mvalid, cvalid])
+    polysat = np.poly1d([msat, csat])
+    
+    xx = np.linspace(x.min(), x.max(), 100)
+    dd = mpl.dates.num2date(xx)
+    
+    plt.figure(figsize=(5,4))
+    sns.set(font_scale=1.2)
+    sns.set_style("whitegrid", {'axes.grid' : False})
+    validlabels = ['Validation VegEdge','_nolegend_','_nolegend_','_nolegend_']
+    satlabels = ['Satellite VegEdge','_nolegend_','_nolegend_','_nolegend_',]
+    
+    for i,c in enumerate([0.95,0.7,0.6,0.2]):
+        plt.plot(plotdate[i], plotvaliddist[i], 'X', color=magma(c), markersize=10,markeredgecolor='k', label=validlabels[i])
+        plt.plot(plotdate[i], plotsatdist[i], 'o', color=magma(c),markersize=10,markeredgecolor='k', label=satlabels[i])
+    
+    
+    plt.plot(dd, polyvalid(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(mvalid*365.25,2))+'m/yr')
+    plt.plot(dd, polysat(xx), '-', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
+    
+    plt.legend()
+    plt.xlabel('Date')
+    plt.ylabel('Cross-shore distance')
+    plt.tight_layout()
+    
+    plt.savefig(os.path.join(outfilepath,sitename + '_ValidVsSatTimeseries_Transect'+str(TransectID)+'.png'))
+    print('Plot saved under '+os.path.join(outfilepath,sitename + '_ValidVsSatTimeseries_Transect'+str(TransectID)+'.png'))
+    
+    plt.show()
+
+    
 
 def CoastPlot(settings, sitename):
     
