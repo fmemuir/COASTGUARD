@@ -248,7 +248,11 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
     
-    SatGDF = gpd.read_file(SatShp)
+    if type(SatShp) == str:
+        SatGDF = gpd.read_file(SatShp)
+    else:
+        SatGDF = SatShp
+        
     violin = []
     violindates = []
     Sdates = SatGDF[DatesCol].unique()
@@ -295,7 +299,6 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
             else:
                 satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
         # cycling through transects leads to list of repeating satnames; take the unique entry
-        # TO DO: check if this works by just using output['dates']
         satnames[Sdate] = list(set(satmatch))[0]
     
     f = plt.figure(figsize=(16, 14))
@@ -334,8 +337,6 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     # round UP to nearest 10
     axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
     ax.set_xlim(-axlim, axlim)
-    # ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
-    # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
     # create specific median lines for specific platforms
     medians = []
@@ -353,8 +354,12 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         # set the date axis label for each date to corresponding satname colour
         [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
         # get median of only the columns that match each sat name
-        medians.append(ax.axvline(df[sats].median().median(), c=c, ls='--'))
-        labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
+        concatl = []
+        for s in sats:
+            concatl.append(df[s])
+        concatpd = pd.concat(concatl)
+        medians.append(ax.axvline(concatpd.median(), c=c, ls='--'))
+        labels.append(satname + ' median = ' + str(round(concatpd.median(),1)) + 'm')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
     ax.legend(medians,labels, loc='lower right')
@@ -367,7 +372,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     print('figure saved under '+figpath)
 
 
-def PlatformViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
+def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     """
     Violin plot showing distances between validation and satellite, for each platform used.
     FM Oct 2022
@@ -377,7 +382,7 @@ def PlatformViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     ValidationShp : str
         Path to validation lines shapefile.
     DatesCol : str
-        Name of dates column in shapefile.
+        Name of sat column in shapefile.
     ValidDict : dict
         Validation dictionary created from ValidateIntersects().
 
@@ -387,56 +392,47 @@ def PlatformViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
     
-    SatGDF = gpd.read_file(SatShp)
+    if type(SatShp) == str:
+        SatGDF = gpd.read_file(SatShp)
+    else:
+        SatGDF = SatShp
+        
     violin = []
-    violindates = []
-    Sdates = SatGDF[DatesCol].unique()
+    violinsats = []
+    Snames = SatGDF[SatCol].unique()
     
-    for Sdate in Sdates:
+    for Sname in Snames:
         valsatdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDict[SatCol]): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sdate in ValidDict['dates'][Tr]:
-                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+            if Sname in ValidDict[SatCol][Tr]:
+                # need to build list instead of using .index(), as there are multiple occurrences of sat names per transect
+                DateIndexes = [i for i, x in enumerate(ValidDict[SatCol][Tr]) if x == Sname]
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
                 if ValidDict['valsatdist'][Tr] != []:
-                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
-                else:
+                    for DateIndex in DateIndexes:
+                        valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                else: # if ValidDict['valsatdist'][Tr] is empty
                     continue
-            else:
+            else: # if Sname isn't in ValidDict[Tr]
                 continue
         # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
         if valsatdist != []: 
             violin.append(valsatdist)
-            violindates.append(Sdate)
+            violinsats.append(Sname)
     # sort both dates and list of values by date
-    if len(violindates) > 1:
-        violindatesrt, violinsrt = [list(d) for d in zip(*sorted(zip(violindates, violin), key=lambda x: x[0]))]
+    if len(violinsats) > 1:
+        violinsatsrt, violinsrt = [list(d) for d in zip(*sorted(zip(violinsats, violin), key=lambda x: x[0]))]
     else:
-        violindatesrt = violindates
+        violinsatsrt = violinsats
         violinsrt = violin
     df = pd.DataFrame(violinsrt)
     df = df.transpose()
-    df.columns = violindatesrt
-    
-    # initialise matching list of sat names for labelling
-    satnames = dict.fromkeys(violindatesrt)
-    # for each date in sorted list
-    for Sdate in violindatesrt:    
-        satmatch = []
-        for Tr in range(len(ValidDict['TransectID'])):
-            # loop through transects to find matching date from which to find satname
-            if Sdate not in ValidDict['dates'][Tr]:
-                continue
-            else:
-                satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
-        # cycling through transects leads to list of repeating satnames; take the unique entry
-        # TO DO: check if this works by just using output['dates']
-        satnames[Sdate] = list(set(satmatch))[0]
-    
+    df.columns = violinsatsrt
+       
     f = plt.figure(figsize=(16, 14))
     sns.set(font_scale=2.5)
     
@@ -446,27 +442,28 @@ def PlatformViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     patches.append(rect10)
     patches.append(rect15)
     coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
+    colors = plt.cm.Blues(np.linspace(0.4, 1, len(violinsats)))
     
     sns.set_style("whitegrid", {'axes.grid' : False})
-    if len(violindates) > 1:
+    if len(violinsats) > 1:
         # plot stacked violin plots
-        ax = sns.violinplot(data = df, linewidth=0, palette = 'magma_r', orient='h', cut=0, inner='quartile')
+        ax = sns.violinplot(data = df, linewidth=0, palette = 'Blues', orient='h', cut=0, inner='quartile')
         ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
-        for l in ax.lines:
+        for il, l in enumerate(ax.lines):
             l.set_linestyle('-')
             l.set_linewidth(1)
             l.set_color('white')
-
-        # cut away bottom halves of violins
-        # for violin in ax.collections:
-        #     bbox = violin.get_paths()[0].get_extents()
-        #     x0, y0, width, height = bbox.bounds
-        #     violin.set_clip_path(plt.Rectangle((x0, y0), width, height / 2, transform=ax.transData))
+            # overwrite middle line (median) to thicker white line
+            for i in range(0,3*len(violinsats))[1::3]:
+                if i == il:
+                    l.set_linestyle('-')
+                    l.set_linewidth(2)
+                    l.set_color('white')
     else:
         ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
         ax.add_collection(coll)
         
-    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
+    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Satellite image platform')
     ax.set_title(PlotTitle)
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
@@ -476,32 +473,23 @@ def PlatformViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     # ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
     # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
-    # create specific median lines for specific platforms
-    medians = []
+    # # create specific median lines for specific platforms
     labels = []
-    # dataframe dates and matching satnames
-    satdf = pd.DataFrame(satnames, index=[0])
-    # for each platform name
-    uniquesats = sorted(set(list(satnames.values())))
-    colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
-    for satname, c in zip(uniquesats, colors):
-        sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
-        sats = sats[0].tolist()
-        # get dataframe column indices for each date that matches the sat name
-        colind = [df.columns.get_loc(sat) for sat in sats]
-        # set the date axis label for each date to corresponding satname colour
-        [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
-        # get median of only the columns that match each sat name
-        medians.append(ax.axvline(df[sats].median().median(), c=c, ls='--'))
-        labels.append(satname + ' median = ' + str(round(df[sats].median().mean(),1)) + 'm')
+    # # dataframe dates and matching satnames
+    # satdf = pd.DataFrame(satnames, index=[0])
+    # # for each platform name
+    # uniquesats = sorted(set(list(satnames.values())))
+    # colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
+    for satname in violinsats:
+        labels.append(satname + ' median = ' + str(round(df[satname].median(),1)) + 'm')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-    ax.legend(medians,labels, loc='lower right')
+    ax.legend(labels=labels, loc='lower left')
     
     ax.set_axisbelow(False)
     plt.tight_layout()
     
-    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_PlatformDistances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
 
