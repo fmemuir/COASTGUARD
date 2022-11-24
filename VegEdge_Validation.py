@@ -376,11 +376,12 @@ FullValidDict = EastValidDict.copy()
 for keyname in FullValidDict.keys():
     FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
 
+BasePath = 'Data/' + 'StAndrewsEast' + '/veglines'
+EastVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
+BasePath = 'Data/' + 'StAndrewsWest' + '/veglines'
+WestVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
 
- 
-#%% Full error stats
-# TransectIDs = (0,1741) # full
-# Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',FullValidDict,TransectIDs)
+FullVeglineShp = gpd.pd.concat([EastVeglineShp, WestVeglineShp])
 
 #%% Full violin
 
@@ -388,16 +389,18 @@ ClipValidDict = dict.fromkeys(FullValidDict.keys())
 for keyname in FullValidDict.keys():
     ClipValidDict[keyname] = []
     ClipValidDict[keyname].extend(FullValidDict[keyname][40:281])
-    ClipValidDict[keyname].extend(FullValidDict[keyname][312:672])
-    ClipValidDict[keyname].extend(FullValidDict[keyname][740:888])
-    ClipValidDict[keyname].extend(FullValidDict[keyname][972:1303])
+    ClipValidDict[keyname].extend(FullValidDict[keyname][312:711])
+    ClipValidDict[keyname].extend(FullValidDict[keyname][726:889])
+    ClipValidDict[keyname].extend(FullValidDict[keyname][972:1297])
     ClipValidDict[keyname].extend(FullValidDict[keyname][1365:1741])
 
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
-Plotting.SatViolin(sitename,VeglineShp[0],'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
-Plotting.PlatformViolin(sitename, VeglineShp[0],'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+#%%
+Plotting.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+
 
 #%% Theshold plotting
 
