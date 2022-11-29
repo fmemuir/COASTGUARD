@@ -358,8 +358,8 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
 
     # load tidal data
     tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
-    tide_data = pd.read_csv(tidefilepath, parse_dates=['dates'])
-    dates_ts = [_.to_pydatetime() for _ in tide_data['dates']]
+    tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
+    dates_ts = [_.to_pydatetime() for _ in tide_data['date']]
     tides_ts = np.array(tide_data['tide'])
     
     # get the tide level corresponding to the time of sat image acquisition
@@ -811,7 +811,7 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
 
         ValidDict['valsatdist'][Tr] = ValSatDists
         
-    print("TransectDict with intersections created.")
+    print("ValidDict with intersections created.")
     
     return ValidDict
 
