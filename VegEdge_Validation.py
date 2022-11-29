@@ -33,7 +33,7 @@ OPTION 2: AOI polygon is defined using coordinates of a bounding box (in WGS84).
 """
 
 #%%ST ANDREWS EAST
-sitename = 'StAndrewsEast'
+sitename = 'StAndrewsEastFull'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 
@@ -45,6 +45,9 @@ latmin, latmax = 56.32641, 56.39814
 #%% other sites
 
 ##ST ANDREWS
+sitename = 'StAndrewsPlanet'
+lonmin, lonmax = -2.89087, -2.79878
+latmin, latmax = 56.32641, 56.39814
 # lonmin, lonmax = -2.842023, -2.774955
 # latmin, latmax = 56.338343, 56.368490
 
@@ -98,6 +101,7 @@ years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.
 # satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
 sat_list = ['L5','L7','L8','S2']
+# sat_list = ['PSScene4Band']
 
 projection_epsg = 27700
 image_epsg = 32630
@@ -182,7 +186,7 @@ settings = {
     'output_epsg': image_epsg,  # epsg code of spatial reference system desired for the output  
     'wetdry':True,              # extract wet-dry boundary as well as veg
     # quality control:
-    'check_detection': True,    # if True, shows each shoreline detection to the user for validation
+    'check_detection': False,    # if True, shows each shoreline detection to the user for validation
     'adjust_detection': False,  # if True, allows user to adjust the postion of each shoreline by changing the threhold
     'save_figure': True,        # if True, saves a figure showing the mapped shoreline for each image
     # [ONLY FOR ADVANCED USERS] shoreline detection parameters:
@@ -213,6 +217,13 @@ settings['reference_shoreline'] = referenceLine
 settings['ref_epsg'] = ref_epsg
 # Distance to buffer reference line by (this is in metres)
 settings['max_dist_ref'] = 150
+
+
+#%% Compute Tides from FES2014
+tidepath = "/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/aviso-fes/data/fes2014"
+daterange = dates
+tidelatlon = [-2.79878,latmax-(2/latmin)] # seaward edge, halfway between S and N
+Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon)
 
 
 #%% Vegetation Line Extraction
@@ -347,12 +358,15 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
-    
-# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
+#%%    
+TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
 
+#%%
+TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),(1365,1462),(1463,1636),(1637,1741)]# Planet
+TransectIDList= [(0,1741)]
+#%%
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
-
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
@@ -362,7 +376,7 @@ for TransectIDs in TransectIDList:
 # TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
 
 # West errors
-TransectIDList = [(595,711),(726,889),(972,1297)]
+TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
 
@@ -413,5 +427,8 @@ Plotting.ThresholdViolin(filepath, sites)
 
 Plotting.ValidTimeseries(sitename, ValidDict, 1575)
 
+#%%
+TransectID = 1575
+Plotting.VegTimeseries(sitename, TransectDict, TransectID, [0,len(TransectDict['dates'][TransectID])])
 
 
