@@ -379,7 +379,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
 
         # resize the image using bilinear interpolation (order 1)
-        im_ms = im_ms[:,:,:5]
+        im_ms = im_ms[:,:,:5] # B,G,R,NIR,SWIR
         im_ms = transform.resize(im_ms,(nrows, ncols), order=1, preserve_range=True,
                                  mode='constant')
         # resize the image using nearest neighbour interpolation (order 0)
@@ -541,7 +541,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im_ms = img.read()
         
         # filename should be in the format 'yyyymmdd_HHMMSS_'
-        acqtime = datetime.strftime(datetime.strptime(filenames[fn][9:15],'%H%M%S'),'%H:%M:%S.%f')
+        acqtime = datetime.strftime(datetime.strptime(os.path.basename(filenames[fn])[9:15],'%H%M%S'),'%H:%M:%S.%f')
         
         if im_ms is None:
             return None, None, None, None, None, None, None
@@ -553,6 +553,9 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # shape needs to be [row col band], so look for shape with small size
         if im_ms.shape[0] < 10:
             im_ms = np.transpose(im_ms, (1,2,0))
+            
+        if im_ms.shape[2] < 5: # if missing SWIR, copy NIR (TO DO)
+            im_ms = np.stack((im_ms[:,:,0], im_ms[:,:,1], im_ms[:,:,2], im_ms[:,:,3], im_ms[:,:,3]), axis=2)
         
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
@@ -638,15 +641,16 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
         im_RGB = im_ms[:,:,:3]
     # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
     tifname = filenames.rsplit('/',1)[1] # get characters after last /
+    if '.tif' in tifname: # local image has extension in filename; remove it
+        tifname = tifname[:-4]
     transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
     
     # 3-band RGB array and 1-band NDVI
     for imarray, imtype, bandno in zip([im_RGB, im_NDVI],['RGB.tif', 'NDVI.tif'],[3,1]):
         if bandno > 1:
             imarray_brc = np.moveaxis(imarray,2,0) # rasterio expects shape of (bands, rows, cols)
-            with rasterio.open(
-                os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype),
-                'w',
+            savename = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype)
+            with rasterio.open(savename,'w',
                 driver='GTiff',
                 height=imarray_brc.shape[1],
                 width=imarray_brc.shape[2],
@@ -658,9 +662,9 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
                 tif.write(imarray_brc)
         else:
             imarray_brc = imarray
+            savename = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype)
             with rasterio.open(
-                os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype),
-                'w',
+                savename,'w',
                 driver='GTiff',
                 height=imarray_brc.shape[0],
                 width=imarray_brc.shape[1],
@@ -687,6 +691,8 @@ def save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames, settings)
 
     # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
     tifname = filenames.rsplit('/',1)[1] # get characters after last /
+    if '.tif' in tifname: # local image has extension in filename; remove it
+        tifname = tifname[:-4]
     transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
     
     # Binary classified image
@@ -719,6 +725,8 @@ def save_TZone(im_ms, im_labels, cloud_mask, georef, filenames, settings):
 
     # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
     tifname = filenames.rsplit('/',1)[1] # get characters after last /
+    if '.tif' in tifname: # local image has extension in filename; remove it
+        tifname = tifname[:-4]
     transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
     im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     int_veg = im_ndvi[im_labels[:,:,0]]
