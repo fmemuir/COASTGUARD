@@ -33,6 +33,7 @@ plt.ion()
 
 from shapely import geometry
 from shapely.geometry import Point, LineString
+import rasterio
 
 from Toolshed import Toolbox, Transects, Image_Processing
 
@@ -100,25 +101,11 @@ def SatGIF(metadata,settings,output):
 
             print('\r%s:   %d%%' % (satname,int(((i+1)/len(filenames))*100)), end='')
             
-            # preprocess image to array (cloud mask + pansharpening/downsampling)
-            fn = int(i)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
-
-            if im_ms is None:
-                continue
-            
-            if cloud_mask == []:
-                continue
-            
-            # Create RGB version of each multiband array
-            try:
-                im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-                # Set clouds/nodata to white (rather than black)
-                im_RGB = np.where(np.isnan(im_RGB), 1.0, im_RGB)
-            except:
-                continue
-            
+            # TO DO: need to load in images from jpg_files folder
             # Append image array and dates to lists for plotting
+            img = rasterio.open(filenames[i])
+            im_RGB = img.read()
+            
             ims_ms.append(im_RGB)
             ims_date.append(filedates[i])
             
@@ -126,10 +113,11 @@ def SatGIF(metadata,settings,output):
     sl_date = output['dates']
     
     # shoreline dataframe back to array
+    # TO DO: need to load in shorelines from shapefile and match up each date to corresponding image
     #shorelineArr = Toolbox.GStoArr(shoreline)
-    sl_pix=[]
-    for line in shorelineArr:
-        sl_pix.append(Toolbox.convert_world2pix(shorelineArr, georef))
+    # sl_pix=[]
+    # for line in shorelineArr:
+    #     sl_pix.append(Toolbox.convert_world2pix(shorelineArr, georef))
     
     # Sort image arrays and dates by date
     ims_date_sort, ims_ms_sort = (list(t) for t in zip(*sorted(zip(ims_date, ims_ms), key=lambda x: x[0])))
@@ -673,12 +661,13 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     sns.set(font_scale=1.2)
     sns.set_style("whitegrid", {'axes.grid' : False})
     
-    plt.plot(plotdate, plotsatdist, linestyle='-', marker='.', c='k', markersize=7, markeredgecolor='k', label='Satellite VegEdge')
+    plt.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='k', markersize=8, markeredgecolor='k', label='Satellite VegEdge')
        
     # plot trendlines
-    # plt.plot(dd, polysat(xx), '-', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
     yav = movingaverage(plotsatdist, 3)
-    plt.plot(dd, yav, 'r')
+    plt.plot(plotdate, yav, 'r', label='3pt Moving Average')
+    plt.plot(dd, polysat(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
+
     
     plt.legend()
     plt.title('Transect '+str(TransectID))
@@ -686,8 +675,8 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     plt.ylabel('Cross-shore distance')
     plt.tight_layout()
     
-    plt.savefig(os.path.join(outfilepath,sitename + '_ValidVsSatTimeseries_Transect'+str(TransectID)+'.png'))
-    print('Plot saved under '+os.path.join(outfilepath,sitename + '_ValidVsSatTimeseries_Transect'+str(TransectID)+'.png'))
+    plt.savefig(os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
+    print('Plot saved under '+os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
     
     plt.show()
     
