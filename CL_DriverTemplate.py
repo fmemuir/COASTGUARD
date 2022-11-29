@@ -146,10 +146,6 @@ image properties.
 #get_ipython().run_line_magic('matplotlib', 'qt')
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates)
 
-# L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im
-# L8: 20 images (10% of 198), 4:23 (263s) = 0.08 im/s OR 13 s/im
-# S2: 335 images, 5:54 (354s) = 0.096 im/s OR 10.4 s/im
-
 
 #%% Vegetation Line Extraction Load-In
 
@@ -173,10 +169,10 @@ output_latlon = Toolbox.remove_duplicates(output_latlon)
 output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Save the veglines as shapefiles locally
-
-
 # Save output veglines 
-Toolbox.SaveShapefiles(output_proj, BasePath, sitename, settings['projection_epsg'])
+Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['projection_epsg'])
+if settings['wetdry'] == True:
+    Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['projection_epsg'])
 
 #%% Create GIF of satellite images and related shorelines
 
@@ -186,51 +182,74 @@ Plotting.SatGIF(metadata,settings,output)
 SmoothingWindowSize = 21 
 NoSmooths = 100
 TransectSpacing = 10
-DistanceInland = 350
+DistanceInland = 100
 DistanceOffshore = 350
+# DistanceInland = 150 # East
+# DistanceOffshore = 700 # East
 BasePath = 'Data/' + sitename + '/veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
+WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
+WaterlineGDF = gpd.read_file(WaterlineShp[0])
 # Produces Transects for the reference line
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
 if os.path.isfile(TransectSpec) is False:
     TransectGDF = Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
 else:
+    print('Transects already exist and were loaded')
     TransectGDF = gpd.read_file(TransectSpec)
 
 #%% Create (or load) intersections with sat and validation lines per transect
 
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
+    print('TransectDict exists and was loaded')
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
-        TransectDict = pickle.load(f)
+        TransectDict, TransectInterGDF = pickle.load(f)
 else:
     # Get intersections
     TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
     # Save newly intersected transects as shapefile
-    TransectInterGDF = Transects.SaveIntersections(TransectDict, BasePath, sitename, settings['projection_epsg'])
+    TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump(TransectDict, f)
+    if settings['wetdry'] == True:
+        beachslope = 0.02 # tanBeta StAnd W
+        # beachslope = 0.04 # tanBeta StAnE
+        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+        TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
     
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump([TransectDict,TransectInterGDF], f)
+
 
 #%% VALIDATION
 
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_singlepart.shp'
-if os.path.isfile(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl')):
-    with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'rb') as f:
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
+validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
+
+if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
+    print('ValidDict exists and was loaded')
+    with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'rb') as f:
         ValidDict = pickle.load(f)
 else:
-    ValidDict = Transects.ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
-    with open(os.path.join(filepath, sitename, sitename + '_valid_dict.pkl'), 'wb') as f:
+    ValidDict = Transects.ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectDict)
+    with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'wb') as f:
         pickle.dump(ValidDict, f)
 
 #%%
 ValidDict = Transects.ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict)
 #%% Validation Plots
-# TransectIDs = (1294,1877) # start and end transect ID
-TransectIDs = (0,585) # start and end transect ID
-Plotting.ValidViolin(ValidationShp,DatesCol,ValidDict,TransectIDs)
+TransectIDList= [(0,1741)]
+
+# Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
+for TransectIDs in TransectIDList:
+    PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
+    Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    
+#%% Quantify errors between validation and satellite derived lines
+TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+for TransectIDs in TransectIDList:
+    Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
