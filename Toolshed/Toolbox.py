@@ -9,6 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import pdb
+import glob
 
 # other modules
 from osgeo import gdal, osr
@@ -16,19 +17,22 @@ import pandas as pd
 import geopandas as gpd
 from shapely import geometry
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
+
 import skimage.transform as transform
 from astropy.convolution import convolve
-from datetime import datetime
+from datetime import datetime, timedelta
 from IPython.display import clear_output
 import ee
+
 import pickle
 import math
 import requests
 from requests.auth import HTTPBasicAuth
-import glob
+
 import rasterio
 from rasterio.plot import show
 import time
+import pyfes
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
@@ -1340,7 +1344,7 @@ def AOI(lonmin, lonmax, latmin, latmax):
     BBoxGDF = BBoxGDF.to_crs('epsg:27700')
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
-        print('Your bounding box is too big for Sentinel2 (%s too big)' % int((BBoxGDF.area/(10*10))-262144))
+        print('Warning: your bounding box is too big for Sentinel2 (%s too big)' % int((BBoxGDF.area/(10*10))-262144))
     
     # Export as polygon and ee point for use in clipping satellite image requests
     polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
@@ -1635,3 +1639,54 @@ def CalcDistance(Geom1,Geom2):
                                  (Geom1.coords[0][1] - Geom2.y)**2 )
         
     return geom1geom2dist
+
+
+def ComputeTides(settings,tidepath,daterange,tidelatlon):
+    """
+    Function to compute water elevations from tidal consituents of global tide model FES2014. 
+    Uses pyfes package to compute tides at specific lat long and for specified time period.
+    FM Nov 2022
+
+    Parameters
+    ----------
+    tidepath : TYPE
+        DESCRIPTION.
+    daterange : TYPE
+        DESCRIPTION.
+    tidelatlon : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    # create array of hourly timesteps between dates 
+    dates = np.arange(datetime.strptime(daterange[0], '%Y-%m-%d'), datetime.strptime(daterange[1], '%Y-%m-%d'), timedelta(hours=1)).astype(datetime) 
+    
+    # pass configuration files to pyfes handler to gather up tidal constituents
+    config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
+    ocean_tide = pyfes.Handler("ocean", "io", config_ocean)
+    config_load = os.path.join(tidepath,"load_tide.ini")
+    load_tide = pyfes.Handler("radial", "io", config_load)
+    
+    # format dates and latlon
+    dates_np = np.empty((len(dates),), dtype='datetime64[us]')
+    for i,date in enumerate(dates):
+        dates_np[i] = datetime(date.year,date.month,date.day,date.hour,date.minute,date.second)
+    lons = tidelatlon[0]*np.ones(len(dates))
+    lats = tidelatlon[1]*np.ones(len(dates))
+    
+    # compute heights for ocean tide and loadings (both are needed for elastic tide elevations)
+    ocean_short, ocean_long, min_points = ocean_tide.calculate(lons, lats, dates_np)
+    load_short, load_long, min_points = load_tide.calculate(lons, lats, dates_np)
+    # sum up all components and convert from cm to m
+    tide_level = (ocean_short + ocean_long + load_short + load_long)/100
+    
+    # export as csv to tides folder
+    tidesDF = pd.DataFrame([dates, tide_level]).transpose()
+    tidesDF.columns = ['date', 'tide']
+    print('saving computed tides under '+os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
+    tidesDF.to_csv(os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
+    
+    return 
