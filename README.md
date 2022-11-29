@@ -81,7 +81,7 @@ There are 7 main steps to setting up the vegetation extraction tool. You can see
 6. Define a reference shore along which to create a buffer (boundaries will only be extracted along here);
 7. Run the main edge extraction function.
 
-You can use the `CL_DriverTemplate.ipynb` or `CL_DriverTemplate.py` files to create a driver file for your own site.
+You can use the [`VegEdge_DriverTemplate.ipynb`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.ipynb) or [`VegEdge_DriverTemplate.py`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.py) files to create a driver file for your own site.
 
 *<sub>This is an update from the original CoastSat toolkit! Raw satellite images will **not** be downloaded, but merely the filenames will be passed to `geemap` and converted from the cloud server straight to `numpy` arrays. This is to save time and bandwidth. TIFs of true colour images and their classified and NDVI counterparts will however be exported throughout the process to be explored in a GIS environment.</sub>
 
