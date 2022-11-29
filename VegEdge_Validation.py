@@ -197,8 +197,7 @@ settings = {
     # add the inputs defined previously
     'inputs': inputs,
     'projection_epsg': projection_epsg,
-    'year_list': years,
-    'hausdorff_threshold':3*(10**50)
+    'year_list': years
 }
 
 
