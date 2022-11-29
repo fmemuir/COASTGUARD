@@ -2119,8 +2119,8 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                     if skip_image:
                         continue
             
-            if max(scipy.spatial.distance.directed_hausdorff(ref_line, shoreline, seed=0))>settings['hausdorff_threshold']:
-                continue
+            # if max(scipy.spatial.distance.directed_hausdorff(ref_line, shoreline, seed=0))>settings['hausdorff_threshold']:
+            #     continue
          
             # append to output variables
             output_timestamp.append(metadata[satname]['dates'][i])
