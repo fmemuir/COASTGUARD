@@ -21,12 +21,14 @@ import seaborn as sns
 sns.set(style='whitegrid') #sns.set(context='notebook', style='darkgrid', palette='deep', font='sans-serif', font_scale=1, color_codes=False, rc=None)
 import matplotlib as mpl
 from matplotlib import cm
+import matplotlib.colors as pltcls
 mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib import gridspec
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
+from matplotlib.patches import Patch
 plt.ion()
 
 from shapely import geometry
@@ -335,8 +337,11 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
     # round UP to nearest 10
-    axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
-    ax.set_xlim(-axlim, axlim)
+    try:
+        axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
+        ax.set_xlim(-axlim, axlim)
+    except:
+        ax.set_xlim(-100, 100)
     
     # create specific median lines for specific platforms
     medians = []
@@ -358,7 +363,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         for s in sats:
             concatl.append(df[s])
         concatpd = pd.concat(concatl)
-        medians.append(ax.axvline(concatpd.median(), c=c, ls='--'))
+        medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=2.4))
         labels.append(satname + ' median = ' + str(round(concatpd.median(),1)) + 'm')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
@@ -433,7 +438,7 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     df = df.transpose()
     df.columns = violinsatsrt
        
-    f = plt.figure(figsize=(16, 14))
+    f = plt.figure(figsize=(14.5, 14))
     sns.set(font_scale=2.5)
     
     patches = []
@@ -447,13 +452,13 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     sns.set_style("whitegrid", {'axes.grid' : False})
     if len(violinsats) > 1:
         # plot stacked violin plots
-        ax = sns.violinplot(data = df, linewidth=0, palette = 'Blues', orient='h', cut=0, inner='quartile')
+        ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
         ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
         for il, l in enumerate(ax.lines):
             l.set_linestyle('-')
             l.set_linewidth(1)
             l.set_color('white')
-            # overwrite middle line (median) to thicker white line
+            # overwrite middle line (median) setting to a thicker white line
             for i in range(0,3*len(violinsats))[1::3]:
                 if i == il:
                     l.set_linestyle('-')
@@ -474,17 +479,19 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
     # # create specific median lines for specific platforms
-    labels = []
-    # # dataframe dates and matching satnames
-    # satdf = pd.DataFrame(satnames, index=[0])
-    # # for each platform name
-    # uniquesats = sorted(set(list(satnames.values())))
-    # colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
-    for satname in violinsats:
-        labels.append(satname + ' median = ' + str(round(df[satname].median(),1)) + 'm')
+    legend_elements = []
+    for i, satname in enumerate(violinsats):
+        satmedian = df[satname].median()
+        satMSE = np.mean(df[satname]**2)
+        satMAE = np.mean(abs(df[satname]))
+        satRMSE = np.sqrt(satMSE)
+        leglabel = satname+' median = '+str(round(satmedian,2))+'m, MAE = ' +str(round(satMAE,2))+'m, RMSE = '+str(round(satRMSE,2))+'m' 
+        LegPatch = Patch( facecolor=colors[i], label = leglabel)
+        legend_elements.append(LegPatch)
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-    ax.legend(labels=labels, loc='lower left')
+        
+    ax.legend(handles=legend_elements, loc='lower right')
     
     ax.set_axisbelow(False)
     plt.tight_layout()
@@ -517,7 +524,10 @@ def ThresholdViolin(filepath,sites):
     violinDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in violindict.items()]))
         
     # colors = ['#21A790','#1D37FB'] #West = Teal, East = Blue
-    # cmap = mpl.colors.ListedColormap(mpl.cm.get_cmap("YlGnBu"))
+    # colors = [pltcls.to_hex(plt.cm.YlGnBu(i)) for i in range(len(violinDF.keys()))]
+    ylgnbu = mpl.colormaps['YlGnBu']
+    
+    colors = ylgnbu(np.linspace((1/(len(violinDF.keys())+1)), 1-(1/(len(violinDF.keys())+1)), len(violinDF.keys())))
     
     fig = plt.figure(figsize=[12,12], tight_layout=True)
     sns.set(font="Verdana", font_scale=2.5)
@@ -532,7 +542,18 @@ def ThresholdViolin(filepath,sites):
     # plt.xlabel('Date (yyyy-mm-dd)')
     plt.ylabel('NDVI threshold value')
     plt.ylim(0,0.5)
-    # plt.legend(loc='upper left')
+    
+    # # create specific median lines for specific platforms
+    legend_elements = []
+    for i, key in enumerate(violinDF.keys()):
+        satmedian = violinDF[key].median()
+        satmin = violinDF[key].min()
+        satmax = violinDF[key].max()
+        leglabel = ' median = '+str(round(satmedian,2))+', '+str(round(satmin,2))+'-'+str(round(satmax,2))
+        LegPatch = Patch( facecolor=colors[i], label = leglabel)
+        legend_elements.append(LegPatch)
+            
+    plt.legend(handles=legend_elements, loc='upper right')
     # plt.xticks(rotation=270)
 
     outfilename = outfilepath+'/'
@@ -608,6 +629,67 @@ def ValidTimeseries(sitename, ValidDict, TransectID):
     
     plt.show()
 
+
+def VegTimeseries(sitename, TransectDict, TransectID, daterange):
+    """
+    
+
+    Parameters
+    ----------
+    ValidDict : TYPE
+        DESCRIPTION.
+    TransectID : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    
+    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['dates'][TransectID][daterange[0]:daterange[1]]]
+    plotsatdist = TransectDict['distances'][TransectID][daterange[0]:daterange[1]]
+    plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+    
+    plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]
+    
+    # linear regression line
+    x = mpl.dates.date2num(plotdate)
+    msat, csat = np.polyfit(x,plotsatdist,1)
+    polysat = np.poly1d([msat, csat])
+    xx = np.linspace(x.min(), x.max(), 100)
+    dd = mpl.dates.num2date(xx)
+    
+    # moving average trendline
+    def movingaverage(interval, windowsize):
+        window = np.ones(int(windowsize))/float(windowsize)
+        return np.convolve(interval, window, 'same')
+    
+    plt.figure(figsize=(11,4))
+    sns.set(font_scale=1.2)
+    sns.set_style("whitegrid", {'axes.grid' : False})
+    
+    plt.plot(plotdate, plotsatdist, linestyle='-', marker='.', c='k', markersize=7, markeredgecolor='k', label='Satellite VegEdge')
+       
+    # plot trendlines
+    # plt.plot(dd, polysat(xx), '-', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
+    yav = movingaverage(plotsatdist, 3)
+    plt.plot(dd, yav, 'r')
+    
+    plt.legend()
+    plt.title('Transect '+str(TransectID))
+    plt.xlabel('Date')
+    plt.ylabel('Cross-shore distance')
+    plt.tight_layout()
+    
+    plt.savefig(os.path.join(outfilepath,sitename + '_ValidVsSatTimeseries_Transect'+str(TransectID)+'.png'))
+    print('Plot saved under '+os.path.join(outfilepath,sitename + '_ValidVsSatTimeseries_Transect'+str(TransectID)+'.png'))
+    
+    plt.show()
     
 
 def CoastPlot(settings, sitename):
