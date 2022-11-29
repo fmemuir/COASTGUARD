@@ -8,9 +8,6 @@ Created on Thu Sep 15 13:08:30 2022
 #!/usr/bin/env python
 # coding: utf-8
 
-# # VegEdge
-# 
-
 #%% Imports and Initialisation
 
 
@@ -64,7 +61,7 @@ else:
 years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.strptime(dates[-1],'%Y-%m-%d')))
 
 # satellite missions
-# Input a list of containing any/all of 'L5', 'L8', 'S2'
+# Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
 sat_list = ['L5','L8','S2']
 
 projection_epsg = 27700 # OSGB 1936
@@ -119,6 +116,12 @@ settings = {
 }
 
 
+#%% Compute Tides from FES2014
+tidepath = "/path/to/FES2014/files/aviso-fes/data/fes2014"
+daterange = dates
+tidelatlon = [-2.79878,latmax-(2/latmin)] # seaward edge, halfway between S and N
+Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
+    
 #%% Vegetation Edge Reference Line Load-In
 
 """
@@ -183,8 +186,7 @@ NoSmooths = 100
 TransectSpacing = 10
 DistanceInland = 100
 DistanceOffshore = 350
-# DistanceInland = 150 # East
-# DistanceOffshore = 700 # East
+
 BasePath = 'Data/' + sitename + '/veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
@@ -213,8 +215,7 @@ else:
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
     if settings['wetdry'] == True:
-        beachslope = 0.02 # tanBeta StAnd W
-        # beachslope = 0.04 # tanBeta StAnE
+        beachslope = 0.02 # provide average beach slope for site
         TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
         TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
     
@@ -243,7 +244,6 @@ ValidDict = Transects.ValidateSatIntersects(ValidationShp, DatesCol, TransectGDF
 #%% Validation Plots
 TransectIDList= [(0,1741)]
 
-# Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)

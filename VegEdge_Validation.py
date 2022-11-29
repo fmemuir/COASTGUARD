@@ -33,7 +33,7 @@ OPTION 2: AOI polygon is defined using coordinates of a bounding box (in WGS84).
 """
 
 #%%ST ANDREWS EAST
-sitename = 'StAndrewsEastFull'
+sitename = 'StAndrewsEast'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 
@@ -427,7 +427,9 @@ Plotting.ThresholdViolin(filepath, sites)
 Plotting.ValidTimeseries(sitename, ValidDict, 1575)
 
 #%%
-TransectID = 1575
-Plotting.VegTimeseries(sitename, TransectDict, TransectID, [0,len(TransectDict['dates'][TransectID])])
+TransectIDs = [289,1575]
+for TransectID in TransectIDs:
+    DateRange = [0,len(TransectDict['dates'][TransectID])]
+    Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
 
 
