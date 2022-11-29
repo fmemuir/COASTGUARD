@@ -436,6 +436,7 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
 
     # add all the multispectral bands
     features = np.expand_dims(im_ms[im_bool,0],axis=1)
+    
     for k in range(1,im_ms.shape[2]):
         feature = np.expand_dims(im_ms[im_bool,k],axis=1)
         features = np.append(features, feature, axis=-1)
@@ -498,7 +499,6 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
 
     # calculate features
-    #vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
     vec_features = calculate_vegfeatures(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
     vec_features[np.isnan(vec_features)] = 1e-9 # NaN values are create when std is too close to 0
 
@@ -507,16 +507,6 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     vec_nan = np.any(np.isnan(vec_features), axis=1)
     vec_mask = np.logical_or(vec_cloud, vec_nan)
     vec_features = vec_features[~vec_mask, :]
-
-    # # # Luke: classify pixels
-    # vec_features_new = []
-    
-    # for h in range(len(vec_features)):
-    #     if len(vec_features) == 20:
-    #         vec_features_new.append(vec_features[h][1::2])
-    #     else:
-    #         #vec_features_new.append(np.concatenate((vec_features[h][1::2], vec_features[h][11:])))
-    #         vec_features_new.append(vec_features[h][1:11])
     
     #labels = clf[0].predict(vec_features_new) # old classifier was subscriptable
     labels = clf.predict(vec_features)
@@ -528,10 +518,7 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     # create a stack of boolean images for each label
     im_veg = im_classif == 1
     im_nonveg = im_classif == 2
-    # im_sand = im_classif == 2
-    # im_veg = im_classif == 3
-    # im_water = im_classif == 1
-    # im_urb = im_classif == 4
+
     # remove small patches of sand or water that could be around the image (usually noise)
     im_veg = morphology.remove_small_objects(im_veg, min_size=min_beach_area, connectivity=2)
     im_nonveg = morphology.remove_small_objects(im_nonveg, min_size=min_beach_area, connectivity=2)
