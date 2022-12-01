@@ -16,6 +16,7 @@ import pickle
 import warnings
 from datetime import datetime, timedelta
 warnings.filterwarnings("ignore")
+import pdb
 
 import seaborn as sns
 sns.set(style='whitegrid') #sns.set(context='notebook', style='darkgrid', palette='deep', font='sans-serif', font_scale=1, color_codes=False, rc=None)
@@ -618,6 +619,13 @@ def ValidTimeseries(sitename, ValidDict, TransectID):
     plt.show()
 
 
+    
+def movingaverage(interval, windowsize):
+    # moving average trendline
+    window = np.ones(int(windowsize))/float(windowsize)
+    return np.convolve(interval, window, 'same')
+
+
 def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     """
     
@@ -652,11 +660,6 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     xx = np.linspace(x.min(), x.max(), 100)
     dd = mpl.dates.num2date(xx)
     
-    # moving average trendline
-    def movingaverage(interval, windowsize):
-        window = np.ones(int(windowsize))/float(windowsize)
-        return np.convolve(interval, window, 'same')
-    
     plt.figure(figsize=(11,4))
     sns.set(font_scale=1.2)
     sns.set_style("whitegrid", {'axes.grid' : False})
@@ -680,6 +683,63 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     
     plt.show()
     
+    
+def WidthTimeseries(sitename, TransectDict, TransectID, daterange):
+    """
+    
+
+    Parameters
+    ----------
+    ValidDict : TYPE
+        DESCRIPTION.
+    TransectID : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    
+    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['wldates'][TransectID][daterange[0]:daterange[1]]]
+    plotsatdist = TransectDict['beachwidth'][TransectID][daterange[0]:daterange[1]]
+    plotdate = np.arange(0,len(plotsatdist))
+
+    plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]
+    
+    # linear regression line
+    x = mpl.dates.date2num(plotdate)
+    msat, csat = np.polyfit(x,plotsatdist,1)
+    polysat = np.poly1d([msat, csat])
+    xx = np.linspace(x.min(), x.max(), 100)
+    dd = mpl.dates.num2date(xx)
+    
+    plt.figure(figsize=(11,4))
+    sns.set(font_scale=1.2)
+    sns.set_style("whitegrid", {'axes.grid' : False})
+    
+    plt.plot(np.arange(plotsatdist), plotsatdist, linewidth=0, marker='.', c='k', markersize=8, markeredgecolor='k', label='Upper Beach Width')
+       
+    # plot trendlines
+    yav = movingaverage(plotsatdist, 3)
+    plt.plot(plotdate, yav, 'r', label='3pt Moving Average')
+    plt.plot(dd, polysat(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
+
+    
+    plt.legend()
+    plt.title('Transect '+str(TransectID))
+    plt.xlabel('Date')
+    plt.ylabel('Cross-shore distance')
+    plt.tight_layout()
+    
+    plt.savefig(os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
+    print('Plot saved under '+os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
+    
+    plt.show()
 
 def CoastPlot(settings, sitename):
     

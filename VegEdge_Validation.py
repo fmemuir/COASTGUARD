@@ -431,5 +431,11 @@ TransectIDs = [289,1575]
 for TransectID in TransectIDs:
     DateRange = [0,len(TransectDict['dates'][TransectID])]
     Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
+    
+#%%
+TransectIDs = [289,1575]
+for TransectID in TransectIDs:
+    DateRange = [0,len(TransectDict['dates'][TransectID])]
+    Plotting.WidthTimeseries(sitename, TransectDict, TransectID, DateRange)
 
 
