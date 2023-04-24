@@ -17,7 +17,7 @@ matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 plt.ion()
 from datetime import datetime
-from Toolshed import Download, Toolbox, VegetationLine, Plotting, Transects
+from Toolshed import Download, Toolbox, VegetationLine, Plotting, PlottingSeaborn, Transects
 
 
 import ee
@@ -34,6 +34,11 @@ OPTION 2: AOI polygon is defined using coordinates of a bounding box (in WGS84).
 
 #%%ST ANDREWS EAST
 sitename = 'StAndrewsEast'
+lonmin, lonmax = -2.84869, -2.79878
+latmin, latmax = 56.32641, 56.39814
+
+#%%
+sitename = 'StAndrewsEastFull'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 
@@ -137,7 +142,7 @@ nearestdates, nearestIDs = Toolbox.NearestDates(vegsurvey,metadata,sat_list)
 
 #%%
 L5 = dict.fromkeys(metadata['L5'].keys())
-L7 = dict.fromkeys(metadata['L7'].keys())
+# L7 = dict.fromkeys(metadata['L7'].keys())
 L8 = dict.fromkeys(metadata['L8'].keys())
 S2 = dict.fromkeys(metadata['S2'].keys())
 
@@ -330,7 +335,7 @@ else:
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
     if settings['wetdry'] == True:
-        beachslope = 0.02 # tanBeta StAnd W
+        beachslope = 0.006 # tanBeta StAnd W
         # beachslope = 0.04 # tanBeta StAnE
         TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
         TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
@@ -368,7 +373,7 @@ TransectIDList= [(0,1741)]
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    PlottingSeaborn.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
     
 #%% Error stats
 # East errors
@@ -409,17 +414,17 @@ for keyname in FullValidDict.keys():
 
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
-Plotting.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 #%%
-Plotting.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 
 #%% Theshold plotting
 
 
 sites = ['StAndrewsWest', 'StAndrewsEast']
-Plotting.ThresholdViolin(filepath, sites)
+PlottingSeaborn.ThresholdViolin(filepath, sites)
 
 
 #%% Validation vs satellite cross-shore distance through time
@@ -427,15 +432,20 @@ Plotting.ThresholdViolin(filepath, sites)
 Plotting.ValidTimeseries(sitename, ValidDict, 1575)
 
 #%%
-TransectIDs = [289,1575]
+TransectIDs = [1575]
 for TransectID in TransectIDs:
     DateRange = [0,len(TransectDict['dates'][TransectID])]
     Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
     
 #%%
-TransectIDs = [289,1575]
+TransectIDs = [180,1650]
 for TransectID in TransectIDs:
     DateRange = [0,len(TransectDict['dates'][TransectID])]
     Plotting.WidthTimeseries(sitename, TransectDict, TransectID, DateRange)
+
+#%% 
+
+PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+
 
 
