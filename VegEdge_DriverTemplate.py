@@ -22,7 +22,7 @@ matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 plt.ion()
 from datetime import datetime
-from Toolshed import Download, Toolbox, VegetationLine, Plotting, Transects
+from Toolshed import Download, Toolbox, VegetationLine, Plotting, PlottingSeaborn, Transects
 import seaborn as sns; sns.set()
 import ee
 import geopandas as gpd
@@ -246,9 +246,29 @@ TransectIDList= [(0,1741)]
 
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    Plotting.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    PlottingSeaborn.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
     
 #%% Quantify errors between validation and satellite derived lines
 TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
+    
+    
+    
+#%% TIMESERIES PLOTTING
+
+# Select transect ID to plot
+TransectIDs = [1575]
+for TransectID in TransectIDs:
+    DateRange = [0,len(TransectDict['dates'][TransectID])]
+    # Plot timeseries of cross-shore veg position
+    Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
+    
+#%%
+
+# Select transect ID to plot
+TransectIDs = [180,1650]
+for TransectID in TransectIDs:
+    # Plot timeseries of cross-shore width between water edge and veg edge 
+    DateRange = [0,len(TransectDict['dates'][TransectID])]
+    Plotting.WidthTimeseries(sitename, TransectDict, TransectID, DateRange)
