@@ -372,6 +372,7 @@ def check_images_available(inputs):
     Create the structure of subfolders for each satellite mission
 
     KV WRL 2018
+    Updated FM Apr 2023
 
     Arguments:
     -----------
@@ -404,6 +405,7 @@ def check_images_available(inputs):
     col_names_T1 = {'L5':'LANDSAT/LT05/C01/T1_TOA',
                  'L7':'LANDSAT/LE07/C01/T1_TOA',
                  'L8':'LANDSAT/LC08/C01/T1_TOA',
+                 'L9':'LANDSAT/LC09/C02/T1_TOA'
                  'S2':'COPERNICUS/S2'}
 
     print('- In Landsat Tier 1 & Sentinel-2 Level-1C:')
@@ -442,7 +444,8 @@ def check_images_available(inputs):
     # otherwise check how many images are available in Landsat Tier 2
     col_names_T2 = {'L5':'LANDSAT/LT05/C01/T2_TOA',
                  'L7':'LANDSAT/LE07/C01/T2_TOA',
-                 'L8':'LANDSAT/LC08/C01/T2_TOA'}
+                 'L8':'LANDSAT/LC08/C01/T2_TOA',
+                 'L9':'LANDSAT/LC09/C02/T2_TOA'}
     print('- In Landsat Tier 2:', end='\n')
     im_dict_T2 = dict([])
     sum_img = 0
