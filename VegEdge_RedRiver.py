@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
+Created on Tue Apr 25 11:06:45 2023
+
+@author: fmuir
+"""
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
 Created on Thu Sep 15 13:08:30 2022
 
 @author: fmuir
@@ -32,14 +39,16 @@ ee.Initialize()
 
 #%% Define AOI using coordinates of a rectangle
 
-projection_epsg = 27700 # OSGB 1936
-image_epsg = 32630 # UTM Zone 30N
 
+##ST ANDREWS EAST
 # The points represent the corners of a bounding box that go around your site
-sitename = 'SITENAME'
-lonmin, lonmax = -2.84869, -2.79878
-latmin, latmax = 56.32641, 56.39814
+sitename = 'RedRiver'
 
+lonmin, lonmax = 106.5390, 106.5429
+latmin, latmax = 20.2007, 20.2068
+
+projection_epsg = 32648 # UTM Zone 48N
+image_epsg = 32648 # UTM Zone 48N
 
 polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, image_epsg)
 # Save an HTML map of your AOI in the site directory, to be opened in any browser
@@ -55,7 +64,7 @@ if os.path.isdir(filepath) is False:
     os.mkdir(filepath)
 
 # date range
-dates = ['2021-05-01', '2021-07-02']
+dates = ['2018-12-01', '2019-02-01']
 if len(dates)>2:
     daterange='no'
 else:
@@ -64,8 +73,7 @@ years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.
 
 # satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
-# L5: 1984-2013; L7: 1999-2017 (SLC error from 2003); L8: 2013-present; S2: 2014-present; L9: 2021-present
-sat_list = ['L5','L8','S2']
+sat_list = ['L8','S2']
 
 # put all the inputs into a dictionnary
 inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list': sat_list, 'sitename': sitename, 'filepath':filepath}
@@ -99,15 +107,15 @@ settings = {
     # general parameters:
     'cloud_thresh': 0.5,        # threshold on maximum cloud cover
     'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
-    'wetdry':True,              # extract wet-dry boundary as well as veg
+    'wetdry':False,              # extract wet-dry boundary as well as veg
     # quality control:
     'check_detection': True,    # if True, shows each shoreline detection to the user for validation
     'adjust_detection': False,  # if True, allows user to adjust the postion of each shoreline by changing the threhold
     'save_figure': True,        # if True, saves a figure showing the mapped shoreline for each image
     # [ONLY FOR ADVANCED USERS] shoreline detection parameters:
     'min_beach_area': 200,     # minimum area (in metres^2) for an object to be labelled as a beach
-    'buffer_size': 250,         # radius (in metres) for buffer around sandy pixels considered in the shoreline detection
-    'min_length_sl': 500,       # minimum length (in metres) of shoreline perimeter to be valid
+    'buffer_size': 200,         # radius (in metres) for buffer around sandy pixels considered in the shoreline detection
+    'min_length_sl': 200,       # minimum length (in metres) of shoreline perimeter to be valid
     'cloud_mask_issue': False,  # switch this parameter to True if sand pixels are masked (in black) on many images  
     # add the inputs defined previously
     'inputs': inputs,
@@ -129,8 +137,7 @@ OPTION 2: Load in coordinates of reference line shapefile and format for use in
 the veg extraction.
 """
 
-#referenceLineShp = os.path.join(inputs['filepath'], sitename,'StAndrews_refLine.shp')
-referenceLineShp = os.path.join(inputs['filepath'], 'SITE_refLine.shp')
+referenceLineShp = os.path.join(inputs['filepath'], sitename+ '_refline.shp')
 referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
 
 settings['reference_shoreline'] = referenceLine
@@ -147,7 +154,7 @@ image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
 clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
-output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates)
+output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
 
 
 #%% Vegetation Line Extraction Load-In
