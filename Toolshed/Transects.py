@@ -236,6 +236,28 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
         
     return TransectDict
 
+
+def GetTransitionDists(TransectDict,TransectInterGDF):
+    '''
+    
+
+    Parameters
+    ----------
+    TransectDict : TYPE
+        DESCRIPTION.
+    TransectInterGDF : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    '''
+    
+    
+    
+    
+
 def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, AvBeachSlope):
     
     '''
