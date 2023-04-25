@@ -33,15 +33,18 @@ ee.Initialize()
 
 #%% Define AOI using coordinates of a rectangle
 
+projection_epsg = 27700 # OSGB 1936
+image_epsg = 32630 # UTM Zone 30N
 
-##ST ANDREWS EAST
 # The points represent the corners of a bounding box that go around your site
 sitename = 'SITENAME'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 
 
-polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, image_epsg)
+# Save an HTML map of your AOI in the site directory, to be opened in any browser
+m = Toolbox.ShowAOI(lonmin, lonmax, latmin, latmax, sitename)
 # it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
 
@@ -62,10 +65,8 @@ years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.
 
 # satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
+# L5: 1984-2013; L7: 1999-2017 (SLC error from 2003); L8: 2013-present; S2: 2014-present; L9: 2021-present
 sat_list = ['L5','L8','S2']
-
-projection_epsg = 27700 # OSGB 1936
-image_epsg = 32630 # UTM Zone 30N
 
 # put all the inputs into a dictionnary
 inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list': sat_list, 'sitename': sitename, 'filepath':filepath}
@@ -146,6 +147,7 @@ OPTION 1: Run extraction tool and return output dates, lines, filenames and
 image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
+clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates)
 
 

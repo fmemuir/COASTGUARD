@@ -31,6 +31,8 @@ ee.Initialize()
 """
 OPTION 2: AOI polygon is defined using coordinates of a bounding box (in WGS84).
 """
+projection_epsg = 27700
+image_epsg = 32630
 
 #%%ST ANDREWS EAST
 sitename = 'StAndrewsEast'
@@ -70,7 +72,9 @@ latmin, latmax = 56.32641, 56.39814
 
 #%%
 
-polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, image_epsg)
+# Save an HTML map of your AOI in the site directory, to be opened in any browser
+m = Toolbox.ShowAOI(lonmin, lonmax, latmin, latmax, sitename)
 # it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
 
@@ -107,9 +111,6 @@ years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
 sat_list = ['L5','L7','L8','S2']
 # sat_list = ['PSScene4Band']
-
-projection_epsg = 27700
-image_epsg = 32630
 
 
 # put all the inputs into a dictionnary
@@ -334,6 +335,8 @@ else:
     TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+    # TransectDict = Transects.GetTransitionDists(TransectDict,TransectInterGDF)
+    
     if settings['wetdry'] == True:
         beachslope = 0.006 # tanBeta StAnd W
         # beachslope = 0.04 # tanBeta StAnE
