@@ -1323,7 +1323,7 @@ def spaced_vertices(referenceLine):
     return newreferenceLine
 
 
-def AOI(lonmin, lonmax, latmin, latmax, image_epsg):
+def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     '''
     Creates area of interest bounding box from provided latitudes and longitudes, and
     checks to see if order is correct and size isn't too large for GEE requests.
@@ -1375,19 +1375,18 @@ def AOI(lonmin, lonmax, latmin, latmax, image_epsg):
     if (int(BBoxGDF.area)/(10*10))>262144:
         print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
     
+    mapcentrelon = lonmin + ((lonmax - lonmin)/2)
+    mapcentrelat = latmin + ((latmax - latmin)/2)
+    m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 10, tiles = 'Stamen Terrain')
+    folium.GeoJson(data=BBoxGDF['geometry']).add_to(m)
+    m.save("./Data/"+sitename+"/AOImap.html")
+    
     # Export as polygon and ee point for use in clipping satellite image requests
     polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
     point = ee.Geometry.Point(polygon[0][0]) 
     
     return polygon, point
 
-
-def ShowAOI(lonmin, lonmax, latmin, latmax, sitename):
-    mapcentrelon = lonmin + ((lonmax - lonmin)/2)
-    mapcentrelat = latmin + ((latmax - latmin)/2)
-    m = folium.Map(location=[mapcentrelat, mapcentrelon])
-    m.save("./Data/"+sitename+"/AOImap.html")
-    return m
 
 
 def GStoArr(shoreline):
