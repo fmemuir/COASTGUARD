@@ -2,6 +2,8 @@
 This module contains utilities to work with satellite images
     
 Author: Kilian Vos, Water Research Laboratory, University of New South Wales
+
+Enhanced by: Freya Muir, University of Glasgow
 """
 
 # load modules
@@ -17,6 +19,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely import geometry
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
+import folium
 
 import skimage.transform as transform
 from astropy.convolution import convolve
@@ -1320,7 +1323,31 @@ def spaced_vertices(referenceLine):
     return newreferenceLine
 
 
-def AOI(lonmin, lonmax, latmin, latmax):
+def AOI(lonmin, lonmax, latmin, latmax, image_epsg):
+    '''
+    Creates area of interest bounding box from provided latitudes and longitudes, and
+    checks to see if order is correct and size isn't too large for GEE requests.
+    FM Jun 2022'
+
+    Parameters
+    ----------
+    lonmin : TYPE
+        DESCRIPTION.
+    lonmax : TYPE
+        DESCRIPTION.
+    latmin : TYPE
+        DESCRIPTION.
+    latmax : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    polygon : TYPE
+        DESCRIPTION.
+    point : TYPE
+        DESCRIPTION.
+
+    '''
     # Check if lat and long min and max are around the right way
     if latmin > latmax:
         print('Check your latitude min and max bounding box values!')
@@ -1341,16 +1368,27 @@ def AOI(lonmin, lonmax, latmin, latmax):
                     [lonmin, latmax]])
     BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs = {'init':'epsg:4326'})
     # UK conversion only
-    BBoxGDF = BBoxGDF.to_crs('epsg:27700')
+    #BBoxGDF = BBoxGDF.to_crs('epsg:27700')
+    # convert crs of geodataframe to UTM to get metre measurements (not degrees)
+    BBoxGDF.to_crs('epsg:'+str(image_epsg))
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
-        print('Warning: your bounding box is too big for Sentinel2 (%s too big)' % int((BBoxGDF.area/(10*10))-262144))
+        print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
     
     # Export as polygon and ee point for use in clipping satellite image requests
     polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
     point = ee.Geometry.Point(polygon[0][0]) 
     
     return polygon, point
+
+
+def ShowAOI(lonmin, lonmax, latmin, latmax, sitename):
+    mapcentrelon = lonmin + ((lonmax - lonmin)/2)
+    mapcentrelat = latmin + ((latmax - latmin)/2)
+    m = folium.Map(location=[mapcentrelat, mapcentrelon])
+    m.save("./Data/"+sitename+"/AOImap.html")
+    return m
+
 
 def GStoArr(shoreline):
     """
