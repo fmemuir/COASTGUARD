@@ -72,9 +72,9 @@ latmin, latmax = 56.32641, 56.39814
 
 #%%
 
-polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, image_epsg)
-# Save an HTML map of your AOI in the site directory, to be opened in any browser
-m = Toolbox.ShowAOI(lonmin, lonmax, latmin, latmax, sitename)
+# Return AOI after checking coords and saving folium map HTML in sitename directory
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg)
+
 # it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
 
