@@ -143,7 +143,7 @@ nearestdates, nearestIDs = Toolbox.NearestDates(vegsurvey,metadata,sat_list)
 
 #%%
 L5 = dict.fromkeys(metadata['L5'].keys())
-# L7 = dict.fromkeys(metadata['L7'].keys())
+L7 = dict.fromkeys(metadata['L7'].keys())
 L8 = dict.fromkeys(metadata['L8'].keys())
 S2 = dict.fromkeys(metadata['S2'].keys())
 
@@ -365,7 +365,7 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
+TransectIDList = [(40,281)] #,(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
 #%%    
 TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
 
@@ -376,7 +376,16 @@ TransectIDList= [(0,1741)]
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    PlottingSeaborn.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    # PlottingSeaborn.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    PlottingSeaborn.SatPDF(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+
+    
+#%%
+TransectIDList = [(40,281)]
+for TransectIDs in TransectIDList:
+    PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
+    Plotting.ValidPDF(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+ 
     
 #%% Error stats
 # East errors
