@@ -44,15 +44,15 @@ ee.Initialize()
 # The points represent the corners of a bounding box that go around your site
 sitename = 'RedRiver'
 
-lonmin, lonmax = 106.5390, 106.5429
-latmin, latmax = 20.2007, 20.2068
+lonmin, lonmax = 106.5370, 106.5890
+latmin, latmax = 20.2001, 20.2425
 
 projection_epsg = 32648 # UTM Zone 48N
 image_epsg = 32648 # UTM Zone 48N
 
-polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, image_epsg)
-# Save an HTML map of your AOI in the site directory, to be opened in any browser
-m = Toolbox.ShowAOI(lonmin, lonmax, latmin, latmax, sitename)
+# Return AOI after checking coords and saving folium map HTML in sitename directory
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg)
+
 # it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
 
@@ -64,7 +64,7 @@ if os.path.isdir(filepath) is False:
     os.mkdir(filepath)
 
 # date range
-dates = ['2018-12-01', '2019-02-01']
+dates = ['2018-12-01', '2019-04-01']
 if len(dates)>2:
     daterange='no'
 else:
@@ -75,8 +75,11 @@ years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
 sat_list = ['L8','S2']
 
+# threshold on maximum cloud cover
+cloud_thresh = 0.5
+
 # put all the inputs into a dictionnary
-inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list': sat_list, 'sitename': sitename, 'filepath':filepath}
+inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list': sat_list, 'sitename': sitename, 'filepath':filepath, 'cloud_thresh':cloud_thresh}
 
 direc = os.path.join(filepath, sitename)
 
@@ -105,7 +108,7 @@ if os.path.isdir(BasePath) is False:
 
 settings = {
     # general parameters:
-    'cloud_thresh': 0.5,        # threshold on maximum cloud cover
+    'cloud_thresh': cloud_thresh,        # threshold on maximum cloud cover
     'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
     'wetdry':False,              # extract wet-dry boundary as well as veg
     # quality control:
@@ -143,7 +146,7 @@ referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
 settings['reference_shoreline'] = referenceLine
 settings['ref_epsg'] = ref_epsg
 # Distance to buffer reference line by (this is in metres)
-settings['max_dist_ref'] = 150
+settings['max_dist_ref'] = 200
 
 
 #%% Vegetation Line Extraction
