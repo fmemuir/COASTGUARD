@@ -405,7 +405,7 @@ def check_images_available(inputs):
     col_names_T1 = {'L5':'LANDSAT/LT05/C01/T1_TOA',
                  'L7':'LANDSAT/LE07/C01/T1_TOA',
                  'L8':'LANDSAT/LC08/C01/T1_TOA',
-                 'L9':'LANDSAT/LC09/C02/T1_TOA'
+                 'L9':'LANDSAT/LC09/C02/T1_TOA',
                  'S2':'COPERNICUS/S2'}
 
     print('- In Landsat Tier 1 & Sentinel-2 Level-1C:')
@@ -422,9 +422,10 @@ def check_images_available(inputs):
                     ee_col_2 = ee_col.map(ee_col.set('simpleTime',ee.Date(ee_col.get('system:time_start')).format('YYYY-MM-dd')))
                     col = ee_col_2.filterBounds(point).filter(ee.Filter.inList("simpleTime", inputs['dates']))
                 else:
-                    col = ee_col.filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][-1])
-                # col = ee_col.filterBounds(ee.Geometry.Polygon(inputs['polygon']))\
-                #             .filterDate(inputs['dates'][0],inputs['dates'][1])
+                    col = ee_col.filterBounds(point)\
+                                .filterDate(inputs['dates'][0], inputs['dates'][-1])
+                                #.filter(ee.Filter.eq('CLOUD_COVER',inputs['cloud_thresh']))
+                    
                 im_list = col.getInfo().get('features')
                 break
             except:
@@ -457,6 +458,7 @@ def check_images_available(inputs):
                 ee_col = ee.ImageCollection(col_names_T2[satname])
                 col = ee_col.filterBounds(ee.Geometry.Polygon(inputs['polygon']))\
                             .filterDate(inputs['dates'][0],inputs['dates'][-1])
+                            #.filter(ee.Filter.eq('CLOUD_COVER',inputs['cloud_thresh']))
                 im_list = col.getInfo().get('features')
                 break
             except:
