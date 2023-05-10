@@ -20,6 +20,8 @@ Various improvements have been made to the toolkit to address more accurate appr
 
 ## Installation
 
+Jump to the short version [down below](#install-quick-version)
+
 ### 1.1 Download the code
 The Python tool relies on packages downloaded through Anaconda and the Google Earth Engine API to run. The preliminary step is downloading this repository. You can do this either by clicking the <span style="color:white;background-color:#2EA043;">Code</span> button at the top and downloading + extracting the zipped folder, or by navigating to where you want to download it on your local machine and running 
 ```
@@ -62,13 +64,15 @@ earthengine authenticate
 
 A web browser will open; log in with the GMail account you used to sign up to GEE. The authenticator should then redirect back to your terminal window. If it doesn't, copy+paste the authorization code into the terminal.
 
-**INSTALL TL;DR**
+
+### **INSTALL QUICK VERSION**
 1. Download repo: `$ git clone https://github.com/fmemuir/CoastLearn-main.git`
 2. Create conda environment: `conda env create -f coastlearn_environment.yml`
 3. Activate env: `conda activate coastlearn`
 4. Authenticate GEE: `earthengine authenticate`
 
 **Remember!**: Always run `conda activate coastlearn` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing. 
+
 
 ## Run-through Example
 There are 7 main steps to setting up the vegetation extraction tool. You can see [this paper]() for a flowchart and more info on the methodology. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
