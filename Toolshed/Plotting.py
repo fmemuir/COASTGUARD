@@ -17,7 +17,7 @@ import matplotlib.colors as pltcls
 mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from matplotlib import gridspec
+from matplotlib.gridspec import GridSpec
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch
@@ -25,7 +25,12 @@ import matplotlib.dates as mdates
 plt.ion()
 
 import rasterio
+import geopandas as gpd
+import pandas as pd
+from sklearn.neighbors import KernelDensity
 
+mpl.rcParams.update(mpl.rcParamsDefault)
+mpl.rcParams['font.sans-serif'] = 'Arial'
 
 # SCALING:
 # Journal 2-column width: 224pt or 3.11in
@@ -347,4 +352,118 @@ def BeachWidthSeries(TransectID):
     plt.plot('.-', color='k')
     
     
+
+def ResultsPlot(outfilepath, outfilename, sitename):
     
+    
+    def formatAxes(fig):
+        for i, ax in enumerate(fig.axes):
+            ax.tick_params(labelbottom=False, labelleft=False)
+    
+    fig = plt.figure(layout='constrained', figsize=(6.55,5))
+    
+    gs = GridSpec(3,3, figure=fig)
+    ax1 = fig.add_subplot(gs[0,:])
+    ax2 = fig.add_subplot(gs[1,:-1])
+    ax3 = fig.add_subplot(gs[1:,-1])
+    ax4 = fig.add_subplot(gs[-1,0])
+    ax5 = fig.add_subplot(gs[-1,-2])
+    
+    formatAxes(fig)
+    
+    # # font size 8 and width of 6.55in fit 2-column journal formatting
+    # plt.rcParams['font.size'] = 8
+    # fig, ax = plt.subplots(3,2, figsize=(6.55,5), dpi=300, gridspec_kw={'height_ratios':[3,2,2]})
+    
+    # # outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    # if os.path.isdir(outfilepath) is False:
+    #     os.mkdir(outfilepath)
+    
+    plt.tight_layout()
+    #plt.savefig(os.path.join(outfilepath,outfilename), dpi=300)
+    print('Plot saved under '+os.path.join(outfilepath,outfilename))
+    
+    plt.show()
+    
+    
+def ValidPDF(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs,PlotTitle):    
+
+    # font size 8 and width of 6.55in fit 2-column journal formatting
+    plt.rcParams['font.size'] = 8  
+    
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+    
+    ValidGDF = gpd.read_file(ValidationShp)
+    violin = []
+    violindates = []
+    Vdates = ValidGDF[DatesCol].unique()
+    for Vdate in Vdates:
+        valsatdist = []
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['Vdates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
+            if Vdate in ValidDict['Vdates'][Tr]:
+                DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                else:
+                    continue
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
+        if valsatdist != []: 
+            violin.append(valsatdist)
+            violindates.append(Vdate)
+    # sort both dates and list of values by date
+    if len(violindates) > 1:
+        violindatesrt, violinsrt = [list(d) for d in zip(*sorted(zip(violindates, violin), key=lambda x: x[0]))]
+    else:
+        violindatesrt = violindates
+        violinsrt = violin
+    df = pd.DataFrame(violinsrt)
+    df = df.transpose()
+    df.columns = violindatesrt
+    
+    
+    # Above is violin stuff, below is KD
+    x = np.array()
+    x_d = np.linspace(0,1,1000)
+    
+    kde = KernelDensity(bandwidth=0.03, kernel='gaussian')
+    kde.fit(x[:,None])
+    logprob = kde.score_samples(x_d[:,None])    
+    
+    
+    fig, ax = plt.subplots(1,1, figsize=(2.48,4.51))
+    if len(violindates) > 1:
+        ax.plot(x_d, np.exp(logprob), linewidth=1)
+    else:
+        ax.plot(data = df, linewidth=1)
+        
+    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
+    ax.set_title('Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1]))
+    
+    # set axis limits to rounded maximum value of all violins (either +ve or -ve)
+    axlim = round(np.max([abs(df.min().min()),abs(df.max().max())]),-1)
+    ax.set_xlim(-axlim, axlim)
+    ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
+    ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
+    median = ax.axvline(df.median().mean(), c='r', ls='-.')
+    
+    handles = [median]
+    labels = ['median' + str(round(df.median().mean(),1)) + 'm']
+    ax.legend(handles,labels)
+    
+    ax.set_axisbelow(False)
+    plt.tight_layout()
+    
+    #plt.savefig(os.path.join(outfilepath,outfilename), dpi=300)
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
+    plt.show()
