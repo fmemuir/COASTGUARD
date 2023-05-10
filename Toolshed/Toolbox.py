@@ -770,8 +770,8 @@ def metadata_collection(sat_list, Sat, filepath_data, sitename):
                 metadata[sat_list[i]]['dates'].append(Sat[i].getInfo().get('features')[j]['properties']['DATE_ACQUIRED'])
             else:
                 metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
-                metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['bands'][0]['crs_transform'])
-                metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][0]['crs'].lstrip('EPSG:')))
+                metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['bands'][1]['crs_transform'])
+                metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][1]['crs'].lstrip('EPSG:')))
                 d = datetime.strptime(Sat[i].getInfo().get('features')[j]['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
                 metadata[sat_list[i]]['dates'].append(str(d.strftime('%Y-%m-%d')))
             
@@ -1370,7 +1370,7 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     # UK conversion only
     #BBoxGDF = BBoxGDF.to_crs('epsg:27700')
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
-    BBoxGDF.to_crs('epsg:'+str(image_epsg))
+    BBoxGDF = BBoxGDF.to_crs('epsg:'+str(image_epsg))
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
         print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
