@@ -404,7 +404,7 @@ def calculate_features(im_ms, cloud_mask, im_bool):
     im_std = Toolbox.image_std(im_BR, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
-    # Total feature sets should be 20 for V+NIR+SWIR (5 bands)
+    # Total feature sets should be 20 for V+NIR+SWIR (5 bands, 5 indices, stdev on each)
     # and 14 for V+NIR (4 bands)
     return features
 
@@ -467,7 +467,93 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     im_std = Toolbox.image_std(im_RG, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
+    # Total feature num should be 16 (5 bands, 3 band indices, stdev on each)
     return features
+
+def calculate_WV_features(im_ms, cloud_mask, im_bool):
+    """
+    Calculates features on the image that are used for the supervised classification. 
+    of vegetation. The features include band differences, normalized-difference indices and 
+    standard deviation on all image bands and indices.
+    Differs from original calculate_features() in that the indices used are for veg (and not water),
+    and only NIR is required (not SWIR).
+
+    FM 2023
+
+    Arguments:
+    -----------
+    im_ms: np.array
+        RGB + downsampled NIR and SWIR
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+    im_bool: np.array
+        2D array of boolean indicating where on the image to calculate the features
+
+    Returns:    
+    -----------
+    features: np.array
+        matrix containing each feature (columns) calculated for all
+        the pixels (rows) indicated in im_bool
+        
+    """
+
+    # add all the multispectral bands
+    features = np.expand_dims(im_ms[im_bool,0],axis=1)
+    
+    for k in range(1,im_ms.shape[2]):
+        feature = np.expand_dims(im_ms[im_bool,k],axis=1)
+        features = np.append(features, feature, axis=-1)
+    if im_ms.shape[2]>4: # FM: exception for if SWIR band doesn't exist 
+        # SWIR-G
+        im_SWIRG = Toolbox.nd_index(im_ms[:,:,4], im_ms[:,:,1], cloud_mask)
+        features = np.append(features, np.expand_dims(im_SWIRG[im_bool],axis=1), axis=-1)
+        # SWIR-NIR
+        im_SWIRNIR = Toolbox.nd_index(im_ms[:,:,4], im_ms[:,:,3], cloud_mask)
+        features = np.append(features, np.expand_dims(im_SWIRNIR[im_bool],axis=1), axis=-1)
+    # NDVI (NIR - R)
+    im_NIRR = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRR[im_bool],axis=1), axis=-1)
+    # NIR-G
+    im_NIRG = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
+    # R-G
+    im_RG = Toolbox.nd_index(im_ms[:,:,2], im_ms[:,:,1], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
+    # B-R
+    im_BR = Toolbox.nd_index(im_ms[:,:,0], im_ms[:,:,2], cloud_mask)
+    features = np.append(features, np.expand_dims(im_BR[im_bool],axis=1), axis=-1)
+    
+    # calculate standard deviation of individual bands
+    for k in range(im_ms.shape[2]):
+        im_std =  Toolbox.image_std(im_ms[:,:,k], 1)
+        features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    if im_ms.shape[2]>4: # FM: exception for if SWIR band doesn't exist
+        # SWIR-G   
+        im_std = Toolbox.image_std(im_SWIRG, 1)
+        features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+        #SWIR-NIR
+        im_std = Toolbox.image_std(im_SWIRNIR, 1)
+        features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # calculate standard deviation of the spectral indices
+    # NDVI  (NIR - R)
+    im_std = Toolbox.image_std(im_NIRR, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # NIR-G
+    im_std = Toolbox.image_std(im_NIRG, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # R-G
+    im_std = Toolbox.image_std(im_RG, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    #B-R
+    im_std = Toolbox.image_std(im_BR, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+
+    
+    # Total feature sets should be 22 for V+NIR+SWIR (5 bands, 6 indices, stdev on each)
+    # and 16 for V+NIR (4 bands, 4 indices, stdev on each)
+    return features
+
+
 
 def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
