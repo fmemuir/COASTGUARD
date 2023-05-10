@@ -628,11 +628,212 @@ def label_vegimages(metadata, polygon, Sat, settings):
     plt.close(fig)
 
 
+def label_WV_images(metadata, polygon, Sat, settings):
+    """
+    Load satellite images and interactively label different classes (incl. veg and water)
+
+    FM 2023
+
+    Arguments:
+    -----------
+    metadata: dict
+        contains all the information about the satellite images that were downloaded
+    settings: dict with the following keys
+        'cloud_thresh': float
+            value between 0 and 1 indicating the maximum cloud fraction in 
+            the cropped image that is accepted    
+        'cloud_mask_issue': boolean
+            True if there is an issue with the cloud mask and sand pixels
+            are erroneously being masked on the images
+        'labels': dict
+            list of label names (key) and label numbers (value) for each class
+        'flood_fill': boolean
+            True to use the flood_fill functionality when labelling sand pixels
+        'tolerance': float
+            tolerance value for flood fill when labelling the sand pixels
+        'filepath_train': str
+            directory in which to save the labelled data
+        'inputs': dict
+            input parameters (sitename, filepath, polygon, dates, sat_list)
+                
+    Returns:
+    -----------
+    Stores the labelled data in the specified directory
+
+    """
+    
+    filepath_train = settings['filepath_train']
+    # initialize figure
+    fig,ax = plt.subplots(1,1,figsize=[17,10], tight_layout=True,sharex=True,
+                          sharey=True)
+    mng = plt.get_current_fig_manager()                                         
+    mng.window.showMaximized()
+
+    # loop through satellites
+    for satname in metadata.keys():
+        if satname == 'PSScene4Band':
+            filepath = os.path.dirname(metadata[satname]['filenames'])
+        else:
+            filepath = Toolbox.get_filepath(settings['inputs'],satname)
+        if len(metadata[satname]['filenames']) < 2: # for single images; for loop list needs to be nested
+            filenames = [metadata[satname]['filenames']]
+        else:
+            filenames = metadata[satname]['filenames']
+            
+        # loop through images
+        for i in range(len(filenames)):
+            # image filename
+            fn = int(i)
+            if satname == 'PSScene4Band':
+                dates = [metadata[satname]['dates'],metadata[satname]['dates']]
+            else:
+                dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
+            
+            # read and preprocess image
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
+
+            # compute cloud_cover percentage (with no data pixels)
+            cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
+                                    (cloud_mask.shape[0]*cloud_mask.shape[1]))
+            if cloud_cover_combined > 0.99: # if 99% of cloudy pixels in image skip
+                continue
+
+            # remove no data pixels from the cloud mask (for example L7 bands of no data should not be accounted for)
+            cloud_mask_adv = np.logical_xor(cloud_mask, im_nodata)
+            # compute updated cloud cover percentage (without no data pixels)
+            cloud_cover = np.divide(sum(sum(cloud_mask_adv.astype(int))),
+                                    (sum(sum((~im_nodata).astype(int)))))
+            # skip image if cloud cover is above threshold
+            if cloud_cover > settings['cloud_thresh'] or cloud_cover == 1:
+                continue
+            # get individual RGB image
+            im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+            im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+            im_NDWI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
+            # initialise labels
+            im_viz = im_RGB.copy()
+            im_labels = np.zeros([im_RGB.shape[0],im_RGB.shape[1]])
+            # show RGB image
+            ax.axis('off')  
+            ax.imshow(im_RGB)
+            implot = ax.imshow(im_viz, alpha=0.6)            
+            if len(filenames) < 2: # for single image collections, see formatting note at start of satname loop
+                filename = filenames[0][i].rsplit('/',1)[1]
+            else:
+                filename = filenames[i].rsplit('/',1)[1]
+            ax.set_title(metadata[satname]['dates'][i])
+           
+            ##############################################################
+            # select image to label
+            ##############################################################           
+            # set a key event to accept/reject the detections (see https://stackoverflow.com/a/15033071)
+            # this variable needs to be immuatable so we can access it after the keypress event
+            key_event = {}
+            def press(event):
+                # store what key was pressed in the dictionary
+                key_event['pressed'] = event.key
+            # let the user press a key, right arrow to keep the image, left arrow to skip it
+            # to break the loop the user can press 'escape'
+            while True:
+                btn_keep = ax.text(1.1, 0.9, 'keep ⇨', size=12, ha="right", va="top",
+                                    transform=ax.transAxes,
+                                    bbox=dict(boxstyle="square", ec='k',fc='w'))
+                btn_skip = ax.text(-0.1, 0.9, '⇦ skip', size=12, ha="left", va="top",
+                                    transform=ax.transAxes,
+                                    bbox=dict(boxstyle="square", ec='k',fc='w'))
+                btn_esc = ax.text(0.5, 0, '<esc> to quit', size=12, ha="center", va="top",
+                                    transform=ax.transAxes,
+                                    bbox=dict(boxstyle="square", ec='k',fc='w'))
+                fig.canvas.draw_idle()                         
+                fig.canvas.mpl_connect('key_press_event', press)
+                plt.waitforbuttonpress()
+                # after button is pressed, remove the buttons
+                btn_skip.remove()
+                btn_keep.remove()
+                btn_esc.remove()
+                
+                # keep/skip image according to the pressed key, 'escape' to break the loop
+                if key_event.get('pressed') == 'right':
+                    skip_image = False
+                    break
+                elif key_event.get('pressed') == 'left':
+                    skip_image = True
+                    break
+                elif key_event.get('pressed') == 'escape':
+                    plt.close()
+                    raise StopIteration('User cancelled labelling images')
+                else:
+                    plt.waitforbuttonpress()
+                    
+            # if user decided to skip show the next image
+            if skip_image:
+                ax.clear()
+                continue
+            # otherwise label this image
+            else:
+                ##############################################################
+                # digitize pixels (with lassos)
+                ##############################################################
+                for pixtype in settings['labels'].keys():
+                    
+                    color = settings['colors'][pixtype]
+                    ax.set_title(('Click and hold to draw lassos and select '+pixtype+' pixels\nwhen finished press <Enter>'))
+                    fig.canvas.draw_idle() 
+                    selector = SelectFromImage(ax, implot, color)
+                    key_event = {}
+                    while True:
+                        fig.canvas.draw_idle()                         
+                        fig.canvas.mpl_connect('key_press_event', press)
+                        plt.waitforbuttonpress()
+                        if key_event.get('pressed') == 'enter':
+                            selector.disconnect()
+                            break
+                        elif key_event.get('pressed') == 'escape':
+                            selector.array = im_viz.copy()
+                            implot.set_data(selector.array)
+                            fig.canvas.draw_idle()                         
+                            selector.implot = implot
+                            selector.im_bool = np.zeros((selector.array.shape[0], selector.array.shape[1])) 
+                            selector.ind=[]          
+                    # update im_viz and im_labels
+                    im_viz = selector.array
+                    selector.im_bool = selector.im_bool.astype(bool)
+                    im_labels[selector.im_bool] = settings['labels'][pixtype]
+                    
+                    im_labelled = im_viz.copy()
+
+                
+                # save labelled image
+                ax.set_title(filename)
+                fig.canvas.draw_idle()                         
+                fp = os.path.join(filepath_train,settings['inputs']['sitename'])
+                if not os.path.exists(fp):
+                    os.makedirs(fp)
+                fig.savefig(os.path.join(fp,filename+'.jpg'), dpi=150)
+                ax.clear()
+                
+                # calculate features from band values and their indices (e.g. 20 for CoastSat with S2)
+                # 'features{class}(row,col) corresponds to {land type}(pixel values,bands/band indices)'
+                features = dict([])
+                for key in settings['labels'].keys():
+                    im_bool = im_labels == settings['labels'][key]
+                    features[key] = VegetationLine.calculate_WV_features(im_ms, cloud_mask, im_bool)
+                training_data = {'labels':im_labels, 'features':features, 'label_ids':settings['labels']}
+                # save labels and features
+                with open(os.path.join(fp, filename + '.pkl'), 'wb') as f:
+                    pickle.dump(training_data,f)
+                    
+    # close figure when finished
+    plt.close(fig)
+
+
 def load_labels(train_sites, settings, CoastOnly=False):
     """
     Load the labelled data from the different training sites
 
     KV WRL 2019
+    
+    Adjusted by FM 2022
 
     Arguments:
     -----------
@@ -655,6 +856,87 @@ def load_labels(train_sites, settings, CoastOnly=False):
     # initialize the features dict
     features = dict([])
     n_features = 16 # number of features corresponds to different bands and indices; coastsat is 20
+    first_row = np.nan*np.ones((1,n_features))
+    for key in settings['labels'].keys():
+        features[key] = first_row
+    labelledmaps = []
+    imnames = []
+    # loop through each site 
+    for site in train_sites:
+        sitename = settings['inputs']['sitename']
+        filepath = os.path.join(filepath_train,sitename)
+        if os.path.exists(filepath):
+            # FM: faster way to get just pkl files
+            list_files_pkl = glob.glob(filepath+'/*.pkl') 
+        else:
+            continue
+        # load and append the training data to the features dict
+        for file in list_files_pkl:
+            imnames.append(os.path.basename(file))
+            # read file
+            with open( file, 'rb') as f:
+                labelled_data = pickle.load(f)
+            
+            # if only training and testing from coastal data
+            # if CoastOnly == True:
+                # # load in and process reference line shapefile
+                # referenceLineShp = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'], 'StAndrews_refLine.shp')
+                # referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
+                # if sitename == 'Aberdeen':
+                #     labelled_data['labels'][:, 0:int(len(labelled_data['labels'][0])*0.3)] = 0
+                #     labelled_data['labels'][:, int(len(labelled_data['labels'][0])*0.55):] = 0
+                #     newfeatures = dict([])
+                #     for key in settings['labels'].keys():
+                #         im_bool = im_labels == settings['labels'][key]
+                #         newfeatures[key] = VegetationLine.calculate_vegfeatures(im_ms, cloud_mask, im_bool)
+            # else:    
+            for key in labelled_data['features'].keys():
+                if len(labelled_data['features'][key])>0: # check that is not empty
+                    # append rows
+                    features[key] = np.append(features[key],
+                                labelled_data['features'][key], axis=0)
+            labelledmaps.append(labelled_data['labels'])
+    
+    # remove the first row (initialized with nans) and print how many pixels
+    print('Number of pixels per class in training data:')
+    for key in features.keys(): 
+        features[key] = features[key][1:,:]
+        print('%s : %d pixels'%(key,len(features[key])))
+    
+    # save label maps in new dict
+    labelmaps = {'filenames':imnames,'labelmaps':labelledmaps}
+    
+    return features, labelmaps
+
+def load_labels_WV(train_sites, settings, CoastOnly=False):
+    """
+    Load the labelled data from the different training sites
+
+    FM 2023
+
+    Arguments:
+    -----------
+    train_sites: list of str
+        sites to be loaded
+    settings: dict with the following keys
+        'labels': dict
+            list of label names (key) and label numbers (value) for each class
+        'filepath_train': str
+            directory in which to save the labelled data
+                
+    Returns:
+    -----------
+    features: dict
+        contains the features for each labelled pixel
+    
+    """    
+    
+    filepath_train = settings['filepath_train']
+    # initialize the features dict
+    features = dict([])
+    # number of features corresponds to different bands and indices
+    n_features = 16
+    
     first_row = np.nan*np.ones((1,n_features))
     for key in settings['labels'].keys():
         features[key] = first_row
