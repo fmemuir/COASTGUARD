@@ -182,7 +182,7 @@ for site in train_sites:
     settings['inputs']['sitename'] = sitename
     settings['cloud_mask_issue'] = False
     # label images
-    Classifier.label_vegimages(metadata, polygon, Sat, settings)
+    Classifier.label_WV_images(metadata, polygon, Sat, settings)
 
 
 #%% 3. Train Classifier (Skip previous 2 and run this if already trained)
@@ -202,7 +202,7 @@ features,labelmaps = Classifier.load_labels(train_sites, settings)
 # subsample randomly the land and water classes
 # as the most important class is 'sand', the number of samples should be close to the number of sand pixels
 n_samples = 10000
-for key in ['veg', 'nonveg']:
+for key in settings['labels'].keys():
     features[key] =  features[key][np.random.choice(features[key].shape[0], n_samples, replace=False),:]
 # print classes again
 for key in features.keys():
@@ -215,7 +215,7 @@ for key in features.keys():
 # When the labelled data is ready, format it into X, a matrix of features, and y, a vector of labels:
 
 # format into X (features) and y (labels) 
-classes = ['veg','nonveg']
+classes = settings['labels'].keys()
 labels = [1,2]
 X,y = Classifier.format_training_data(features, classes, labels)
 
