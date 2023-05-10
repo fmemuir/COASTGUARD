@@ -908,7 +908,7 @@ def load_labels(train_sites, settings, CoastOnly=False):
     
     return features, labelmaps
 
-def load_labels_WV(train_sites, settings, CoastOnly=False):
+def load_WV_labels(train_sites, settings, CoastOnly=False):
     """
     Load the labelled data from the different training sites
 
