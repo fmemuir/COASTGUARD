@@ -935,7 +935,7 @@ def load_labels_WV(train_sites, settings, CoastOnly=False):
     # initialize the features dict
     features = dict([])
     # number of features corresponds to different bands and indices
-    n_features = 16
+    n_features = 22
     
     first_row = np.nan*np.ones((1,n_features))
     for key in settings['labels'].keys():
