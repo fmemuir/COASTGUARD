@@ -365,7 +365,7 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     
     f = plt.figure(figsize=(2.6, 4.51), dpi=300)
     ax = f.add_subplot(111)
-    sns.set(font_scale=0.5)
+    sns.set(font_scale=0.6)
     
     patches = []
     rect10 = mpatches.Rectangle((-10, -50), 20, 100)
@@ -406,12 +406,17 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         ax.set_xlim(-axlim, axlim)
     except:
         ax.set_xlim(-100, 100)
-    
+      
     # create specific median lines for specific platforms
     medians = []
     labels = []
     # dataframe dates and matching satnames
     satdf = pd.DataFrame(satnames, index=[0])
+    # remove empty columns to make plotting/legends easier
+    df = df.dropna(axis=1, how='all')
+    commondates=[col for col in set(df.columns).intersection(satdf.columns)]
+    satdf = satdf[commondates]
+    
     # for each platform name
     uniquesats = sorted(set(list(satnames.values())))
     colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
@@ -421,6 +426,8 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         # get dataframe column indices for each date that matches the sat name
         colind = [df.columns.get_loc(sat) for sat in sats]
         # set the date legend label for each date to corresponding satname colour
+        [leg1.get_texts()[ind].set_color(c) for ind in colind]
+            
         # [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
         # get median of only the columns that match each sat name
         concatl = []
@@ -428,8 +435,7 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
             concatl.append(df[s])
         concatpd = pd.concat(concatl)
         medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=1))
-        labels.append(satname + ' median = ' + str(round(concatpd.median(),1)) + 'm')
-        
+        labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
     ax.legend(medians,labels, loc='upper right')
