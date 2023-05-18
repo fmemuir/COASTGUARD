@@ -387,7 +387,30 @@ def ResultsPlot(outfilepath, outfilename, sitename):
     
     
 def ValidPDF(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs,PlotTitle):    
+    """
+    Generate probability density function of validation vs sat lines
+    FM 2023
 
+    Parameters
+    ----------
+    sitename : TYPE
+        DESCRIPTION.
+    ValidationShp : TYPE
+        DESCRIPTION.
+    DatesCol : TYPE
+        DESCRIPTION.
+    ValidDict : TYPE
+        DESCRIPTION.
+    TransectIDs : TYPE
+        DESCRIPTION.
+    PlotTitle : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     # font size 8 and width of 6.55in fit 2-column journal formatting
     plt.rcParams['font.size'] = 8  
     
@@ -467,3 +490,116 @@ def ValidPDF(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     print('figure saved under '+figpath)
     
     plt.show()
+    
+    
+def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
+       
+    
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+    
+    if type(SatShp) == str:
+        SatGDF = gpd.read_file(SatShp)
+    else:
+        SatGDF = SatShp
+        
+    valdists = []
+    satdists = []
+    satplotdates = []
+    validplotdates = []
+    # get unique sat dates
+    Sdates = SatGDF[DatesCol].unique()
+    # get unique validation dates
+    Vdates = []
+    for Tr in range(TransectIDs[0], TransectIDs[1]):
+        for i in ValidDict['Vdates'][Tr]:
+            if i != []:
+                try:
+                    Vdates.append(ValidDict['Vdates'][Tr][i]) 
+                except:
+                    Vdates.append(ValidDict['Vdates'][Tr][0])
+    Vdates = set(Vdates)
+    
+    for Sdate in Sdates:
+        satdist = []
+        # for each transect in given range
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
+            if Sdate in ValidDict['dates'][Tr]:
+                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    satdist.append(ValidDict['distances'][Tr][DateIndex])
+                else:
+                    continue
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
+        if satdist != []: 
+            satdists.append(satdist)
+            satplotdates.append(Sdate)
+    # sort both dates and list of values by date
+    if len(satplotdates) > 1:
+        satplotdatesrt, satsrt = [list(d) for d in zip(*sorted(zip(satplotdates, satdists), key=lambda x: x[0]))]
+    else:
+        satplotdatesrt = satplotdates
+        satsrt = satdists
+        
+    for Vdate in Vdates:
+        valdist = []
+        # for each transect in given range
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['Vdates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
+            if Vdate in ValidDict['Vdates'][Tr]:
+                DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    valdist.append(ValidDict['Vdists'][Tr][DateIndex])
+                else:
+                    continue
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
+        if valdist != []: 
+            valdists.append(valdist)
+            validplotdates.append(Vdate)
+    # sort both dates and list of values by date
+    if len(validplotdates) > 1:
+        validplotdatesrt, valsrt = [list(d) for d in zip(*sorted(zip(validplotdates, valdists), key=lambda x: x[0]))]
+    else:
+        validplotdatesrt = validplotdates
+        valsrt = valdists
+    
+    # # initialise matching list of sat names for labelling
+    # satnames = dict.fromkeys(violindatesrt)
+    # # for each date in sorted list
+    # for Sdate in violindatesrt:    
+    #     satmatch = []
+    #     for Tr in range(len(ValidDict['TransectID'])):
+    #         # loop through transects to find matching date from which to find satname
+    #         if Sdate not in ValidDict['dates'][Tr]:
+    #             continue
+    #         else:
+    #             satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
+    #     # cycling through transects leads to list of repeating satnames; take the unique entry
+    #     satnames[Sdate] = list(set(satmatch))[0]
+    
+    f = plt.figure(figsize=(2.6, 4.58), dpi=300)
+    
+    cmap = mpl.colormaps['magma_r'](len(Sdates))
+    for i in range(len(Sdates)): 
+        # plot scatter of validation (observed) vs satellite (predicted) distances along each transect
+        try:
+            plt.scatter(valsrt, satsrt, c=cmap[i])
+        except:
+            import pdb
+            pdb.set_trace()
+    
+    plt.show()
+        
+    
