@@ -363,7 +363,7 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         # cycling through transects leads to list of repeating satnames; take the unique entry
         satnames[Sdate] = list(set(satmatch))[0]
     
-    f = plt.figure(figsize=(2.6, 4.51), dpi=300)
+    f = plt.figure(figsize=(2.6, 4.58), dpi=300)
     ax = f.add_subplot(111)
     sns.set(font_scale=0.6)
     
@@ -383,14 +383,14 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         # ax.add_collection(coll)
         
         # build color palette manually to allow for gaps (columns with nodata)
-        kdecmap = sns.color_palette('magma_r', len(violindates))    
+        kdecmap = sns.color_palette('magma_r', len(violindates)).as_hex()
         for i in range(len(violindates)):
             if df.iloc[:,i].isnull().sum() == df.shape[0]:
                 kdelabel = None
             else:
                 # find name of column for legend labelling (sat date)
                 kdelabel = df.columns[i]
-            sns.kdeplot(data = df.iloc[:,i], color=kdecmap[i], label=kdelabel)
+            sns.kdeplot(data = df.iloc[:,i], color=kdecmap[i], label=kdelabel, alpha=0.8)
             
         ax.add_collection(coll)
         leg1 = ax.legend(loc='upper left')
@@ -414,7 +414,7 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     satdf = pd.DataFrame(satnames, index=[0])
     # remove empty columns to make plotting/legends easier
     df = df.dropna(axis=1, how='all')
-    commondates=[col for col in set(df.columns).intersection(satdf.columns)]
+    commondates=[col for col in df.columns.intersection(satdf.columns)]
     satdf = satdf[commondates]
     
     # for each platform name
@@ -423,6 +423,9 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     for satname, c in zip(uniquesats, colors):
         sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
         sats = sats[0].tolist()
+        # skip calculating satellite median if transects are empty for this satellite
+        if sats == []:
+            continue
         # get dataframe column indices for each date that matches the sat name
         colind = [df.columns.get_loc(sat) for sat in sats]
         # set the date legend label for each date to corresponding satname colour
@@ -449,6 +452,8 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     print('figure saved under '+figpath)
     
     plt.show()
+    
+    #mpl.rcParams.update(mpl.rcParamsDefault)
 
 def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     """
@@ -596,38 +601,52 @@ def ThresholdViolin(filepath,sites):
     
     colors = ylgnbu(np.linspace((1/(len(violinDF.keys())+1)), 1-(1/(len(violinDF.keys())+1)), len(violinDF.keys())))
     
-    fig = plt.figure(figsize=[12,12], tight_layout=True)
-    sns.set(font="Verdana", font_scale=2.5)
+    fig = plt.figure(figsize=[1.89,2.64], tight_layout=True)
+    sns.set(font="Arial", font_scale=0.55)
     sns.set_style("whitegrid", {'axes.grid' : False})
     
-    ax = sns.violinplot(data = violinDF, linewidth=0, palette = 'YlGnBu', orient='v', cut=0, inner='quartile')
-    for l in ax.lines:
-        l.set_linestyle('-')
-        l.set_linewidth(1)
+    ax = sns.violinplot(data = violinDF, linewidth=0, palette = 'YlGnBu', orient='v', cut=0, inner='quart')
+    # change quartile line styles
+    for il, l in enumerate(ax.lines):
+        l.set_linestyle(':')
+        l.set_linewidth(0.5)
         l.set_color('white')
+        # overwrite middle line (median) setting to a thicker white line
+        for i in range(0,3*len(violinDF.columns))[1::3]:
+            if i == il:
+                l.set_linestyle('--')
     
-    # plt.xlabel('Date (yyyy-mm-dd)')
+    ax.set_xticklabels(['Inner Estuarine','Open Coast'])
     plt.ylabel('NDVI threshold value')
     plt.ylim(0,0.5)
     
-    # # create specific median lines for specific platforms
+    # create legend with medians and data labels for each violin
     legend_elements = []
     for i, key in enumerate(violinDF.keys()):
+        # find median value
         satmedian = violinDF[key].median()
         satmin = violinDF[key].min()
         satmax = violinDF[key].max()
-        leglabel = ' median = '+str(round(satmedian,2))+', '+str(round(satmin,2))+'-'+str(round(satmax,2))
+        # pass median to legend object
+        leglabel = '$\eta_{NDVI}$ = '+str(round(satmedian,2))
         LegPatch = Patch( facecolor=colors[i], label = leglabel)
         legend_elements.append(LegPatch)
-            
+        # define data labels for max and min values
+        ypos = [satmin-0.018, satmax+0.003]
+        textlabels = [str(round(satmin,2)), str(round(satmax,2))]
+        # for each min and max value of each violin, label data
+        for j in range(len(ypos)):
+            ax.text(i, ypos[j], textlabels[j], ha='center')
+        
     plt.legend(handles=legend_elements, loc='upper right')
-    # plt.xticks(rotation=270)
-
+  
+    plt.tight_layout()
     outfilename = outfilepath+'/'
     for site in sites:
         outfilename += site+'_'
     outfilename += 'Thresholds_Violin.png'
-    plt.savefig(outfilename)
+    plt.savefig(outfilename, dpi=300)
+    print('figure saved under '+outfilename)
 
     plt.show()
     
