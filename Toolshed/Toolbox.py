@@ -1647,6 +1647,7 @@ def QuantifyErrors(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     
     errordf = pd.DataFrame(errordict)
     savepath = os.path.join(filepath, sitename+'_Errors_Transects'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.csv')
+    print("Error stats saved to "+savepath)
     errordf.to_csv(savepath, index=False)
     
 def CalcDistance(Geom1,Geom2):
