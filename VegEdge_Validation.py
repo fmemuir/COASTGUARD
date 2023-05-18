@@ -365,9 +365,9 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281)] #,(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
+TransectIDList = [(40,281),(312,415)]#,(1637,1741)]#,(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
 #%%    
-TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
+TransectIDList = [(595,889),(972,1297)] # west
 
 #%%
 TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),(1365,1462),(1463,1636),(1637,1741)]# Planet
@@ -413,7 +413,7 @@ WestVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
 
 FullVeglineShp = gpd.pd.concat([EastVeglineShp, WestVeglineShp])
 
-#%% Full violin
+#%% Full violin and errors
 
 ClipValidDict = dict.fromkeys(FullValidDict.keys())
 for keyname in FullValidDict.keys():
@@ -427,6 +427,13 @@ for keyname in FullValidDict.keys():
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
 PlottingSeaborn.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+
+for TransectID in [TransectIDs]:
+    Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectID)
+
+
 
 #%%
 PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
