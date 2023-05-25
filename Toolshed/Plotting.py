@@ -28,6 +28,7 @@ import rasterio
 import geopandas as gpd
 import pandas as pd
 from sklearn.neighbors import KernelDensity
+from sklearn.linear_model import LinearRegression
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
@@ -197,8 +198,8 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
 
     plt.legend()
     plt.title('Transect '+str(TransectID))
-    plt.xlabel('Date')
-    plt.ylabel('Cross-shore distance')
+    plt.xlabel('Date (yyyy-mm)')
+    plt.ylabel('Cross-shore distance (m)')
     # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
     plt.ylim(min(plotsatdist)-10, max(plotsatdist)+10)
     plt.tight_layout()
@@ -208,6 +209,103 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     
     plt.show()
     
+    
+def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
+    """
+    
+
+    Parameters
+    ----------
+    ValidDict : TYPE
+        DESCRIPTION.
+    TransectID : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+        
+    if len(TransectIDs) > 1:
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300)
+    else:
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(2,1,figsize=(6.55,3), dpi=300, gridspec_kw={'height_ratios':[100,1]})
+        
+    for TransectID, ax in zip(TransectIDs,axs):
+        daterange = [0,len(TransectDict['dates'][TransectID])]
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['dates'][TransectID][daterange[0]:daterange[1]]]
+        plotsatdist = TransectDict['distances'][TransectID][daterange[0]:daterange[1]]
+        plotwldist = TransectDict['wldists'][TransectID][daterange[0]:daterange[1]]
+        plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+        
+        plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
+                
+        ax2 = ax.twinx()
+        
+        ax.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='#526A24', markersize=6, label='Satellite VegEdge')
+        ax2.plot(plotdate, plotwldist, linewidth=0, marker='.', c='#1E6E99', markersize=6, label='Satellite Shoreline')
+        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5)
+            
+        recjanlist = []
+        recmarchlist = []
+        for i in range(plotdate[0].year-1, plotdate[-1].year):
+            recjan = mdates.date2num(datetime(i, 12, 1, 0, 0))
+            recmarch = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+            recwidth = recmarch - recjan
+            rec = mpatches.Rectangle((recjan, -500), recwidth, 1000, fc=[0.25,0.3,1], ec=None, alpha=0.2)
+            ax.add_patch(rec)
+          
+        # plot trendlines
+        vegav = movingaverage(plotsatdist, 3)
+        wlav = movingaverage(plotwldist, 3)
+        ax.plot(plotdate, vegav, color='#81A739', lw=1.5, label='3pt Moving Average VegEdge')
+        ax2.plot(plotdate, wlav, color='#2893CC', lw=1.5, label='3pt Moving Average Shoreline')
+    
+        # linear regression lines
+        x = mpl.dates.date2num(plotdate)
+        for y, pltax, clr in zip([plotsatdist, plotwldist], [ax,ax2], ['#81A739','#2893CC']):
+            m, c = np.polyfit(x,y,1)
+            polysat = np.poly1d([m, c])
+            xx = np.linspace(x.min(), x.max(), 100)
+            dd = mpl.dates.num2date(xx)
+            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
+    
+        plt.title('Transect '+str(TransectID))
+        ax.set_xlabel('Date (yyyy-mm)')
+        ax.set_ylabel('Cross-shore distance (veg) (m)')
+        ax2.set_ylabel('Cross-shore distance (water) (m)')
+        # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
+        ax.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
+        ax2.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
+        
+        leg1 = ax.legend(loc=1)
+        leg2 = ax2.legend(loc=2)
+        # weird zorder with twinned axes; remove first axis legend and plot on top of second
+        leg1.remove()
+        ax2.add_artist(leg1)
+        
+        figID += '_'+str(TransectID)
+        
+    figname = os.path.join(outfilepath,sitename + '_SatVegWaterTimeseries_Transect'+figID+'.png')
+    
+    if not axs[1].lines:
+        fig.delaxes(axs[1])
+    plt.tight_layout()
+            
+    plt.savefig(figname)
+    print('Plot saved under '+figname)
+    
+    plt.show()
     
 
 def ValidTimeseries(sitename, ValidDict, TransectID):
@@ -265,8 +363,8 @@ def ValidTimeseries(sitename, ValidDict, TransectID):
     ax.plot(dd, polysat(xx), '-', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
     
     plt.legend()
-    plt.xlabel('Date')
-    plt.ylabel('Cross-shore distance')
+    plt.xlabel('Date (yyyy-mm)')
+    plt.ylabel('Cross-shore distance (m)')
     plt.tight_layout()
     
     plt.savefig(os.path.join(outfilepath,sitename + '_ValidVsSatTimeseries_Transect'+str(TransectID)+'.png'))
@@ -332,8 +430,8 @@ def WidthTimeseries(sitename, TransectDict, TransectID, daterange):
     
     plt.legend()
     plt.title('Transect '+str(TransectID))
-    plt.xlabel('Date')
-    plt.ylabel('Cross-shore distance')
+    plt.xlabel('Date (yyyy-mm)')
+    plt.ylabel('Cross-shore distance (m)')
     plt.ylim(-200,1000)
     plt.tight_layout()
     
@@ -523,6 +621,7 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     
     for Sdate in Sdates:
         satdist = []
+        valdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
             if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
@@ -533,6 +632,8 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
                 if ValidDict['valsatdist'][Tr] != []:
                     satdist.append(ValidDict['distances'][Tr][DateIndex])
+                    # extract validation dists by performing difference calc back on sat dists
+                    valdist.append(ValidDict['distances'][Tr][DateIndex]-ValidDict['valsatdist'][Tr][DateIndex])
                 else:
                     continue
             else:
@@ -541,64 +642,77 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
         if satdist != []: 
             satdists.append(satdist)
             satplotdates.append(Sdate)
+            valdists.append(valdist)
     # sort both dates and list of values by date
     if len(satplotdates) > 1:
-        satplotdatesrt, satsrt = [list(d) for d in zip(*sorted(zip(satplotdates, satdists), key=lambda x: x[0]))]
+        satplotdatesrt, satsrt, valsrt = [list(d) for d in zip(*sorted(zip(satplotdates, satdists, valdists), key=lambda x: x[0]))]
     else:
         satplotdatesrt = satplotdates
         satsrt = satdists
-        
-    for Vdate in Vdates:
-        valdist = []
-        # for each transect in given range
-        for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['Vdates']): # for when transect values extend beyond what transects exist
-                print("check your chosen transect values!")
-                return
-            if Vdate in ValidDict['Vdates'][Tr]:
-                DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
-                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    valdist.append(ValidDict['Vdists'][Tr][DateIndex])
-                else:
-                    continue
-            else:
-                continue
-        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
-        if valdist != []: 
-            valdists.append(valdist)
-            validplotdates.append(Vdate)
-    # sort both dates and list of values by date
-    if len(validplotdates) > 1:
-        validplotdatesrt, valsrt = [list(d) for d in zip(*sorted(zip(validplotdates, valdists), key=lambda x: x[0]))]
-    else:
-        validplotdatesrt = validplotdates
         valsrt = valdists
+
+
+    f = plt.figure(figsize=(3.31, 3.31), dpi=300)
+    mpl.rcParams.update({'font.size':7})
+    ax = f.add_subplot(1,1,1)
+    ax.set_facecolor('#ECEAEC')
     
-    # # initialise matching list of sat names for labelling
-    # satnames = dict.fromkeys(violindatesrt)
-    # # for each date in sorted list
-    # for Sdate in violindatesrt:    
-    #     satmatch = []
-    #     for Tr in range(len(ValidDict['TransectID'])):
-    #         # loop through transects to find matching date from which to find satname
-    #         if Sdate not in ValidDict['dates'][Tr]:
-    #             continue
-    #         else:
-    #             satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
-    #     # cycling through transects leads to list of repeating satnames; take the unique entry
-    #     satnames[Sdate] = list(set(satmatch))[0]
-    
-    f = plt.figure(figsize=(2.6, 4.58), dpi=300)
-    
-    cmap = mpl.colormaps['magma_r'](len(Sdates))
-    for i in range(len(Sdates)): 
+    valsrtclean = []
+    satsrtclean = []
+    satdateclean = []
+    # for each list of transects for a particular date
+    for dat, vallist, satlist in zip(range(len(valsrt)), valsrt, satsrt):
+        vallistclean = []
+        satlistclean = []
+        # for each transect obs
+        for i in range(len(vallist)):
+            if np.isnan(vallist[i]) == False: # if transect obs is not empty
+                vallistclean.append(vallist[i])
+                satlistclean.append(satlist[i])
+        if vallistclean != []: # skip completely empty dates
+            satdateclean.append(satplotdatesrt[dat])
+            valsrtclean.append(vallistclean)
+            satsrtclean.append(satlistclean)
+
+    cmap = cm.get_cmap('magma_r',len(valsrtclean))
+    for i in range(len(valsrtclean)): 
         # plot scatter of validation (observed) vs satellite (predicted) distances along each transect
-        try:
-            plt.scatter(valsrt, satsrt, c=cmap[i])
-        except:
-            import pdb
-            pdb.set_trace()
+        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=1, alpha=0.2, zorder=0)
+        # linear regression
+        X = np.array(valsrtclean[i]).reshape((-1,1))
+        y = np.array(satsrtclean[i])
+        model = LinearRegression(fit_intercept=True).fit(X,y)
+        r2 = model.score(X,y)
+        
+        valfit = np.linspace(0,round(np.max(valsrtclean[i])),len(valsrtclean[i])).reshape((-1,1))
+        satfit = model.predict(valfit)
+
+        plt.plot(valfit,satfit, c=cmap(i), alpha=0.7, linewidth=1, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))))
+
+    plt.legend(ncol=1)
+
+    maxlim = max( max(max(satsrt)), max(max(valsrt)) )
+    minlim = min( min(min(satsrt)), min(min(valsrt)) )
+    majort = np.arange(-100,maxlim+150,100)
+    minort = np.arange(-100,maxlim+150,20)
+    ax.set_xticks(majort)
+    ax.set_yticks(majort)
+    ax.set_xticks(minort, minor=True)
+    ax.set_yticks(minort, minor=True)
+    ax.grid(which='major', color='#BBB4BB', alpha=0.5)
+    ax.grid(which='minor', color='#BBB4BB', alpha=0.2)
+
+    plt.xlim(0,maxlim+150)
+    plt.ylim(0,maxlim)
+    
+    plt.xlabel('Validation Veg Edge cross-shore distance (m)')
+    plt.ylabel('Satellite Veg Edge cross-shore distance (m)')
+    
+    plt.tight_layout()
+    
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_LinReg_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
     
     plt.show()
         
