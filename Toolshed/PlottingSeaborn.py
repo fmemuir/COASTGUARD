@@ -288,7 +288,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
     plt.savefig(figpath, dpi=300)
     print('figure saved under '+figpath)
-
+    
 
 def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     """
@@ -578,7 +578,13 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     plt.savefig(figpath)
     print('figure saved under '+figpath)
 
-
+    for i in df.columns:
+        print('No. of transects for '+i+' with sub-pixel accuracy:')
+        if i == 'L5' or i == 'L8':
+            subpix = (df[i].between(-15,15).sum()/df[i].count())*100
+        else:
+            subpix = (df[i].between(-10,10).sum()/df[i].count())*100
+        print(str(round(subpix,2))+'%')
     
 def ThresholdViolin(filepath,sites):
     
