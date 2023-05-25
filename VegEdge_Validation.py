@@ -389,10 +389,10 @@ for TransectIDs in TransectIDList:
     
 #%% Error stats
 # East errors
-# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
 
 # West errors
-TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
 
@@ -426,9 +426,9 @@ for keyname in FullValidDict.keys():
 
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
-PlottingSeaborn.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-# Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
     Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectID)
@@ -451,10 +451,11 @@ PlottingSeaborn.ThresholdViolin(filepath, sites)
 Plotting.ValidTimeseries(sitename, ValidDict, 1575)
 
 #%%
-TransectIDs = [1575]
+TransectIDs = [[309,1575],[120]]
 for TransectID in TransectIDs:
-    DateRange = [0,len(TransectDict['dates'][TransectID])]
-    Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
+    
+    # Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
+    Plotting.VegWaterTimeseries(sitename, TransectDict, TransectID)
     
 #%%
 TransectIDs = [180,1650]
