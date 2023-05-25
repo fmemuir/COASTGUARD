@@ -1608,7 +1608,7 @@ def QuantifyErrors(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
     df = df.transpose()
     df.columns = errordatesrt
     
-    errordict = {'Date':[],'Count':[],'MAE':[],'RMSE':[]}
+    errordict = {'Date':[],'Count':[],'MAE':[],'RMSE':[],'CountSub10m':[],'CountSub15m':[]}
     
     print('Transects %s to %s:' % (TransectIDs[0],TransectIDs[1]))
     totald = []
@@ -1619,6 +1619,8 @@ def QuantifyErrors(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
         mse_f = np.mean(d**2)
         mae_f = np.mean(abs(d))
         rmse_f = np.sqrt(mse_f)
+        sub10 = d.between(-10,10).sum()
+        sub15 = d.between(-15,15).sum()
         # r2_f = 1-(sum(d**2)/sum((y-np.mean(y))**2))
         print('For sat date %s:' % date)
         print('Count: %s' % d.count())
@@ -1626,24 +1628,36 @@ def QuantifyErrors(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
         # print("MSE:", mse_f)
         print("RMSE:", rmse_f)
         # print("R-Squared:", r2)
+        print('Sub 10m pixel count:',sub10)
+        print('Sub 15m pixel count:',sub15)
         if d.count() != 0:
             errordict['Date'].append(date)
             errordict['Count'].append(d.count())
             errordict['MAE'].append(mae_f)
             errordict['RMSE'].append(rmse_f)
+            errordict['CountSub10m'].append(sub10)
+            errordict['CountSub15m'].append(sub15)
+
+            
     totald = np.array(totald)
     mse = np.mean(np.power(totald[~np.isnan(totald)], 2))
     mae = np.mean(abs(totald[~np.isnan(totald)]))
     rmse = np.sqrt(mse)
+    sub10 = np.logical_and(totald>=-10,totald<=10).sum()
+    sub15 = np.logical_and(totald>=-15,totald<=15).sum()
     print('TOTAL')
     print('Count: %s' % len(totald[~np.isnan(totald)]))
     print("MAE:",mae)
     # print("MSE:", mse)
     print("RMSE:", rmse)
+    print('Sub 10m pixel count:',sub10)
+    print('Sub 15m pixel count:',sub15)
     errordict['Date'].append('Total')
     errordict['Count'].append(len(totald[~np.isnan(totald)]))
     errordict['MAE'].append(mae)
     errordict['RMSE'].append(rmse)
+    errordict['CountSub10m'].append(sub10)
+    errordict['CountSub15m'].append(sub15)
     
     errordf = pd.DataFrame(errordict)
     savepath = os.path.join(filepath, sitename+'_Errors_Transects'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.csv')
