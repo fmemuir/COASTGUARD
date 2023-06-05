@@ -451,7 +451,7 @@ PlottingSeaborn.ThresholdViolin(filepath, sites)
 Plotting.ValidTimeseries(sitename, ValidDict, 1575)
 
 #%%
-TransectIDs = [[309,1575],[120]]
+TransectIDs = [[1575,309],[120]]
 for TransectID in TransectIDs:
     
     # Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)

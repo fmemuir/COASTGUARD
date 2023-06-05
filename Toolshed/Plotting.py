@@ -280,7 +280,12 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
             dd = mpl.dates.num2date(xx)
             pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
     
-        plt.title('Transect '+str(TransectID))
+        if TransectID == 309:
+            plt.title('Transect '+str(TransectID)+', Out Head')
+        elif TransectID == 1575:
+            plt.title('Transect '+str(TransectID)+', Tentsmuir')
+        else:
+            plt.title('Transect '+str(TransectID))
         ax.set_xlabel('Date (yyyy-mm)')
         ax.set_ylabel('Cross-shore distance (veg) (m)')
         ax2.set_ylabel('Cross-shore distance (water) (m)')
@@ -687,9 +692,24 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
         valfit = np.linspace(0,round(np.max(valsrtclean[i])),len(valsrtclean[i])).reshape((-1,1))
         satfit = model.predict(valfit)
 
-        plt.plot(valfit,satfit, c=cmap(i), alpha=0.7, linewidth=1, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))))
+        plt.plot(valfit,satfit, c=cmap(i), alpha=0.6, linewidth=1.2, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))))
 
     plt.legend(ncol=1)
+    
+    # overall linear regression
+    valfull = [item for sublist in valsrtclean for item in sublist]
+    satfull =[item for sublist in satsrtclean for item in sublist]
+    X = np.array(valfull).reshape((-1,1))
+    y = np.array(satfull)
+    model = LinearRegression(fit_intercept=True).fit(X,y)
+    r2 = model.score(X,y)
+    
+    valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
+    satfit = model.predict(valfit)
+
+    plt.plot(valfit,satfit, c='#7A7A7A', linestyle='--', linewidth=1.2)
+    plt.text(valfit[-1],satfit[-1], 'R$^2$ = '+str(round(r2,2)))
+
 
     maxlim = max( max(max(satsrt)), max(max(valsrt)) )
     minlim = min( min(min(satsrt)), min(min(valsrt)) )
