@@ -481,22 +481,24 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     
     DateList = LinesGDF['dates'].unique()
     
-    # for each unique date in satellitee-derived shorelines list
-    for Date in DateList:
-        # shortened date format to YYMMDD to fit in field heading
-        dateshort = Date[2:].replace('-','')
-        ColData = []
-        # for each transect
-        for Tr in range(len(TransectInterGDF)):
-            if Date in TransectInterGDF['dates'].iloc[Tr]:
-                # find matching distance along transect for  that date
-                DateIndex = TransectInterGDF['dates'].iloc[Tr].index(Date)
-                # append found distance to list which will make up a new attribute field of distances
-                ColData.append(TransectInterGDF['distances'].iloc[Tr][DateIndex])
-            else:
-                ColData.append(np.nan)
-        # attach back onto GDF as a new field per image date
-        TransectInterGDF[dateshort + 'dist'] = ColData
+    # # for each unique date in satellitee-derived shorelines list
+    # for Date in DateList:
+    #     # shortened date format to YYMMDD to fit in field heading
+    #     dateshort = Date[2:].replace('-','')
+    #     ColData = []
+    #     # for each transect
+    #     for Tr in range(len(TransectInterGDF)):
+    #         if Date in TransectInterGDF['dates'].iloc[Tr]:
+    #             # find matching distance along transect for  that date
+    #             DateIndex = TransectInterGDF['dates'].iloc[Tr].index(Date)
+    #             # append found distance to list which will make up a new attribute field of distances
+    #             ColData.append(TransectInterGDF['distances'].iloc[Tr][DateIndex])
+    #         else:
+    #             ColData.append(np.nan)
+    #     # attach back onto GDF as a new field per image date
+    #     TransectInterGDF[dateshort + 'dist'] = ColData
+    
+    # rates of change go here
             
     TransectInterShp = TransectInterGDF.copy()
 
