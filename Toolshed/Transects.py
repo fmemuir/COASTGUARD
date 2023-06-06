@@ -20,6 +20,7 @@ from pyproj import Proj
 
 # other modules
 import skimage.transform as transform
+from sklearn.linear_model import LinearRegression
 from pylab import ginput
 
 from Toolshed import Toolbox
@@ -507,29 +508,25 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
         
         # for each Tr, find difference between converted oldest and youngest dates and transform to decimal years
-        FullDateTime.append(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425)
-        RecentDateTime.append(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425)
+        FullDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425),4)
+        RecentDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
         # convert dates to ordinals for linreg
         OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[0]]
         
+        Slopes = []
         for idate in [[0,-1],[-2,-1]]:
             X = np.array(OrdDates[idate[0]:idate[1]]).reshape((-1,1))
             y = np.array(TransectInterGDF['distances'])
             model = LinearRegression(fit_intercept=True).fit(X,y)
-            r2 = model.score(X,y)
-            
-            valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
-            satfit = model.predict(valfit)
+            Slopes.append(round(model.coef_,2))
 
-    TransectInterGDF['olddate'] = DateList[0] # oldest date in timeseries
-    TransectInterGDF['youngdate'] = DateList[-1] # youngest date in timeseries
-    TransectInterGDF['oldyoungT'] = DateList[0]-DateList[-1] # time difference in years between oldest and youngest date
-    TransectInterGDF['oldyoungRT'] = ColData # rate of change from oldest to youngest veg edge in m/yr
-    TransectInterGDF['recentT'] = DateList[-2]-DateList[-1] # time difference in years between second youngest and youngest date
-    TransectInterGDF['recentRT'] = ColData # rate of change from second youngest to youngest veg edge in m/yr
-    
-    
-            
+    TransectInterGDF['olddate'] = DateRange[0] # oldest date in timeseries
+    TransectInterGDF['youngdate'] = DateRange[-1] # youngest date in timeseries
+    TransectInterGDF['oldyoungT'] = FullDateTime # time difference in years between oldest and youngest date
+    TransectInterGDF['oldyoungRT'] = Slopes[0] # rate of change from oldest to youngest veg edge in m/yr
+    TransectInterGDF['recentT'] = RecentDateTime # time difference in years between second youngest and youngest date
+    TransectInterGDF['recentRT'] = Slopes[1] # rate of change from second youngest to youngest veg edge in m/yr
+               
     TransectInterShp = TransectInterGDF.copy()
 
     KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances','interpnt']
@@ -573,30 +570,58 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
     
     DateList = LinesGDF['dates'].unique()
     
-    # for each unique date in satellite-derived shorelines list
-    for Date in DateList:
-        # shortened date format to YYMMDD to fit in field heading
-        dateshort = Date[2:].replace('-','')
-        DistColData = []
-        BWColData = []
-        # for each transect
-        for Tr in range(len(TransectInterGDF)):
-            if Date in TransectInterGDF['wldates'].iloc[Tr]:
-                # find matching distance along transect for that date
-                DateIndex = TransectInterGDF['wldates'].iloc[Tr].index(Date)
-                # append found distance to list which will make up a new attribute field of distances
-                DistColData.append(TransectInterGDF['wldists'].iloc[Tr][DateIndex])
-                if TransectInterGDF['beachwidth'].iloc[Tr] != []: # for rare transects where shoreline exists but width doesn't
-                    BWColData.append(TransectInterGDF['beachwidth'].iloc[Tr][DateIndex])
-                else:
-                    BWColData.append(np.nan)
-            else:
-                DistColData.append(np.nan)
-                BWColData.append(np.nan)
-        # attach back onto GDF as a new field per image date
-        TransectInterGDF[dateshort + 'wld'] = DistColData
-        TransectInterGDF[dateshort + 'bw'] = BWColData
+    # # for each unique date in satellite-derived shorelines list
+    # for Date in DateList:
+    #     # shortened date format to YYMMDD to fit in field heading
+    #     dateshort = Date[2:].replace('-','')
+    #     DistColData = []
+    #     BWColData = []
+    #     # for each transect
+    #     for Tr in range(len(TransectInterGDF)):
+    #         if Date in TransectInterGDF['wldates'].iloc[Tr]:
+    #             # find matching distance along transect for that date
+    #             DateIndex = TransectInterGDF['wldates'].iloc[Tr].index(Date)
+    #             # append found distance to list which will make up a new attribute field of distances
+    #             DistColData.append(TransectInterGDF['wldists'].iloc[Tr][DateIndex])
+    #             if TransectInterGDF['beachwidth'].iloc[Tr] != []: # for rare transects where shoreline exists but width doesn't
+    #                 BWColData.append(TransectInterGDF['beachwidth'].iloc[Tr][DateIndex])
+    #             else:
+    #                 BWColData.append(np.nan)
+    #         else:
+    #             DistColData.append(np.nan)
+    #             BWColData.append(np.nan)
+    #     # attach back onto GDF as a new field per image date
+    #     TransectInterGDF[dateshort + 'wld'] = DistColData
+    #     TransectInterGDF[dateshort + 'bw'] = BWColData
+    
+    DateRange = []
+    FullDateTime = []
+    RecentDateTime = []
+    for Tr in range(len(TransectInterGDF)):
+        DateRange.append(TransectInterGDF['dates'].iloc[Tr][0]) # oldest date
+        DateRange.append(TransectInterGDF['dates'].iloc[Tr][-2]) # second youngest date
+        DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
         
+        # for each Tr, find difference between converted oldest and youngest dates and transform to decimal years
+        FullDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425),4)
+        RecentDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
+        # convert dates to ordinals for linreg
+        OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[0]]
+        
+        Slopes = []
+        for idate in [[0,-1],[-2,-1]]:
+            X = np.array(OrdDates[idate[0]:idate[1]]).reshape((-1,1))
+            y = np.array(TransectInterGDF['distances'])
+            model = LinearRegression(fit_intercept=True).fit(X,y)
+            Slopes.append(round(model.coef_,2))
+
+    TransectInterGDF['olddateW'] = DateRange[0] # oldest date in timeseries
+    TransectInterGDF['youngdateW'] = DateRange[-1] # youngest date in timeseries
+    TransectInterGDF['oldyoungTW'] = FullDateTime # time difference in years between oldest and youngest date
+    TransectInterGDF['oldyungRTW'] = Slopes[0] # rate of change from oldest to youngest veg edge in m/yr
+    TransectInterGDF['recentTW'] = RecentDateTime # time difference in years between second youngest and youngest date
+    TransectInterGDF['recentRTW'] = Slopes[1] # rate of change from second youngest to youngest veg edge in m/yr
+               
     TransectInterShp = TransectInterGDF.copy()
     
     KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','wlinterpnt', 'beachwidth']
@@ -605,8 +630,7 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
     
     
     TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
-    
-    # TransectInterGDF = gpd.GeoDataFrame(TransectDict)
+
     
     print("Shapefile with sat intersections saved.")
     
