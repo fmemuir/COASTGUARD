@@ -252,8 +252,8 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
                 
         ax2 = ax.twinx()
         
-        ax.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='#526A24', markersize=6, label='Satellite VegEdge')
-        ax2.plot(plotdate, plotwldist, linewidth=0, marker='.', c='#1E6E99', markersize=6, label='Satellite Shoreline')
+        ax.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='#81A739', ms=6, alpha=0.5, label='Satellite VegEdge')
+        ax2.plot(plotdate, plotwldist, linewidth=0, marker='.', c='#2893CC', ms=6, alpha=0.5, label='Satellite Shoreline')
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5)
             
         recjanlist = []
