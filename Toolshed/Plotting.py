@@ -662,6 +662,9 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     ax = f.add_subplot(1,1,1)
     ax.set_facecolor('#ECEAEC')
     
+    # line through the origin as a guide for error
+    plt.plot([0,1000],[0,1000],c='k',lw=0.5,linestyle=':')
+    
     valsrtclean = []
     satsrtclean = []
     satdateclean = []
