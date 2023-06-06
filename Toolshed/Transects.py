@@ -454,7 +454,7 @@ def GetBeachSlopes(MSL, MHWS, DEMpath):
 
 def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     '''
-    Save transects with intersection info as shapefile.
+    Save transects with intersection info as shapefile. Rates of change also calculated.
     FM Sept 2022
 
     Parameters
@@ -498,7 +498,37 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     #     # attach back onto GDF as a new field per image date
     #     TransectInterGDF[dateshort + 'dist'] = ColData
     
-    # rates of change go here
+    DateRange = []
+    FullDateTime = []
+    RecentDateTime = []
+    for Tr in range(len(TransectInterGDF)):
+        DateRange.append(TransectInterGDF['dates'].iloc[Tr][0]) # oldest date
+        DateRange.append(TransectInterGDF['dates'].iloc[Tr][-2]) # second youngest date
+        DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
+        
+        # for each Tr, find difference between converted oldest and youngest dates and transform to decimal years
+        FullDateTime.append(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425)
+        RecentDateTime.append(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425)
+        # convert dates to ordinals for linreg
+        OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[0]]
+        
+        for idate in [[0,-1],[-2,-1]]:
+            X = np.array(OrdDates[idate[0]:idate[1]]).reshape((-1,1))
+            y = np.array(TransectInterGDF['distances'])
+            model = LinearRegression(fit_intercept=True).fit(X,y)
+            r2 = model.score(X,y)
+            
+            valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
+            satfit = model.predict(valfit)
+
+    TransectInterGDF['olddate'] = DateList[0] # oldest date in timeseries
+    TransectInterGDF['youngdate'] = DateList[-1] # youngest date in timeseries
+    TransectInterGDF['oldyoungT'] = DateList[0]-DateList[-1] # time difference in years between oldest and youngest date
+    TransectInterGDF['oldyoungRT'] = ColData # rate of change from oldest to youngest veg edge in m/yr
+    TransectInterGDF['recentT'] = DateList[-2]-DateList[-1] # time difference in years between second youngest and youngest date
+    TransectInterGDF['recentRT'] = ColData # rate of change from second youngest to youngest veg edge in m/yr
+    
+    
             
     TransectInterShp = TransectInterGDF.copy()
 
