@@ -508,17 +508,20 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
         
         # for each Tr, find difference between converted oldest and youngest dates and transform to decimal years
-        FullDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425),4)
-        RecentDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
+        DateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425),4)
+        FullDateTime.append(DateTime)
+        DateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
+        RecentDateTime.append(DateTime)
         # convert dates to ordinals for linreg
         OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[0]]
         
         Slopes = []
-        for idate in [[0,-1],[-2,-1]]:
-            X = np.array(OrdDates[idate[0]:idate[1]]).reshape((-1,1))
-            y = np.array(TransectInterGDF['distances'])
+        for idate in [0,-2]:
+            X = np.array(OrdDates[idate:]).reshape((-1,1))
+            y = np.array(TransectInterGDF['distances'][Tr][idate:])
             model = LinearRegression(fit_intercept=True).fit(X,y)
-            Slopes.append(round(model.coef_,2))
+            Slope = round(model.coef_[0],2)*365.2425 # ordinal dates means slope is in m/day, converts to m/yr
+            Slopes.append(Slope)
 
     TransectInterGDF['olddate'] = DateRange[0] # oldest date in timeseries
     TransectInterGDF['youngdate'] = DateRange[-1] # youngest date in timeseries
@@ -603,17 +606,20 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
         
         # for each Tr, find difference between converted oldest and youngest dates and transform to decimal years
-        FullDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425),4)
-        RecentDateTime.append(round(float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
+        DateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425),4)
+        FullDateTime.append(DateTime)
+        DateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
+        RecentDateTime.append(DateTime)
         # convert dates to ordinals for linreg
         OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[0]]
         
         Slopes = []
-        for idate in [[0,-1],[-2,-1]]:
-            X = np.array(OrdDates[idate[0]:idate[1]]).reshape((-1,1))
-            y = np.array(TransectInterGDF['distances'])
+        for idate in [0,-2]:
+            X = np.array(OrdDates[idate:]).reshape((-1,1))
+            y = np.array(TransectInterGDF['wlcorrdist'][Tr][idate:])
             model = LinearRegression(fit_intercept=True).fit(X,y)
-            Slopes.append(round(model.coef_,2))
+            Slope = round(model.coef_[0],2)*365.2425
+            Slopes.append(Slope)
 
     TransectInterGDF['olddateW'] = DateRange[0] # oldest date in timeseries
     TransectInterGDF['youngdateW'] = DateRange[-1] # youngest date in timeseries
