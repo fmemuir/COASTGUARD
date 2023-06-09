@@ -663,7 +663,7 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     ax.set_facecolor('#ECEAEC')
     
     # line through the origin as a guide for error
-    plt.plot([0,1000],[0,1000],c='k',lw=0.5,linestyle=':')
+    plt.plot([0,1000],[0,1000],c='k',lw=0.8,linestyle=':')
     
     valsrtclean = []
     satsrtclean = []
@@ -711,7 +711,7 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     satfit = model.predict(valfit)
 
     plt.plot(valfit,satfit, c='#7A7A7A', linestyle='--', linewidth=1.2)
-    plt.text(valfit[-1],satfit[-1], 'R$^2$ = '+str(round(r2,2)))
+    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2)), c='#7A7A7A')
 
 
     maxlim = max( max(max(satsrt)), max(max(valsrt)) )
