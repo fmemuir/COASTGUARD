@@ -332,19 +332,20 @@ else:
     # Get intersections
     TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
     # Save newly intersected transects as shapefile
-    TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
+#%%
+TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
-    TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
     # TransectDict = Transects.GetTransitionDists(TransectDict,TransectInterGDF)
     
-    if settings['wetdry'] == True:
-        beachslope = 0.006 # tanBeta StAnd W
-        # beachslope = 0.04 # tanBeta StAnE
-        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-        TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-    
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDF], f)
+if settings['wetdry'] == True:
+    beachslope = 0.006 # tanBeta StAnd W
+    # beachslope = 0.04 # tanBeta StAnE
+    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+
+with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+    pickle.dump([TransectDict,TransectInterGDF], f)
 
 
 #%% VALIDATION
@@ -365,7 +366,7 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415)]#,(1637,1741)]#,(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
+TransectIDList = [(40,281),(312,415),(1637,1741)]#,(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
 #%%    
 TransectIDList = [(595,889),(972,1297)] # west
 
@@ -380,7 +381,7 @@ for TransectIDs in TransectIDList:
     PlottingSeaborn.SatPDF(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
 
     
-#%%
+#%% not finished
 TransectIDList = [(40,281)]
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
@@ -427,8 +428,8 @@ for keyname in FullValidDict.keys():
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
 # PlottingSeaborn.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-# PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
     Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectID)
@@ -436,7 +437,7 @@ for TransectID in [TransectIDs]:
 
 
 #%%
-PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs)
 
 
 #%% Theshold plotting
