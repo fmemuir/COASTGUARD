@@ -121,7 +121,7 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     else:
         ax = sns.violinplot(data = df, linewidth=1, orient='h',)
         
-    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
+    ax.set(xlabel='Distance$_{satellite - validation}$ (m)', ylabel='Validation line date')
     ax.set_title('Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1]))
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
@@ -245,7 +245,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
         ax.add_collection(coll)
         
-    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Validation line date')
+    ax.set(xlabel='Distance$_{satellite - validation}$ (m)', ylabel='Validation line date')
     ax.set_title(PlotTitle)
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
@@ -372,28 +372,23 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     rect15 = mpatches.Rectangle((-15, -50), 30, 100)
     patches.append(rect10)
     patches.append(rect15)
-    coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
+    coll=PatchCollection(patches, facecolor="black", alpha=0.1, zorder=0)
     
-    sns.set_style("whitegrid", {'axes.grid' : False})
+    sns.axes_style("darkgrid")
+    sns.set_style({'axes.facecolor':'#E0E0E0', 'axes.grid' : False})
     if len(violindates) > 1:
-            
-        # plot ridges
-        # kdelabels = df.columns
-        # ax = sns.kdeplot(data = df, palette = 'magma_r', label=kdelabels)
-        # ax.add_collection(coll)
-        
-        # build color palette manually to allow for gaps (columns with nodata)
-        kdecmap = sns.color_palette('magma_r', len(violindates)).as_hex()
+                   
+        kdecmap = cm.get_cmap('magma_r',len(violindates))
         for i in range(len(violindates)):
             if df.iloc[:,i].isnull().sum() == df.shape[0]:
                 kdelabel = None
             else:
                 # find name of column for legend labelling (sat date)
                 kdelabel = df.columns[i]
-            sns.kdeplot(data = df.iloc[:,i], color=kdecmap[i], label=kdelabel, alpha=0.8)
+            sns.kdeplot(data = df.iloc[:,i], color=kdecmap.colors[i], label=kdelabel, alpha=0.8)
             
         ax.add_collection(coll)
-        leg1 = ax.legend(loc='upper left')
+        leg1 = ax.legend(loc='upper left',facecolor='w')
             
     ax.set(xlabel='Distance$_{satellite - validation}$ (m)', ylabel='')
     ax.set_title(PlotTitle)
@@ -441,7 +436,7 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
         labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-    ax.legend(medians,labels, loc='upper right')
+    ax.legend(medians,labels, loc='upper right',facecolor='w')
     plt.gca().add_artist(leg1)
     
     ax.set_axisbelow(False)
@@ -455,7 +450,7 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     
     #mpl.rcParams.update(mpl.rcParamsDefault)
 
-def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
+def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None):
     """
     Violin plot showing distances between validation and satellite, for each platform used.
     FM Oct 2022
@@ -516,8 +511,8 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     df = df.transpose()
     df.columns = violinsatsrt
        
-    f = plt.figure(figsize=(14.5, 14))
-    sns.set(font_scale=2.5)
+    f = plt.figure(figsize=(3.31,3.31),dpi=300)
+    sns.set(font_scale=0.6)
     
     patches = []
     rect10 = mpatches.Rectangle((-10, -50), 20, 100)
@@ -533,21 +528,22 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
         ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
         ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
         for il, l in enumerate(ax.lines):
-            l.set_linestyle('-')
-            l.set_linewidth(1)
+            l.set_linestyle('--')
+            l.set_linewidth(0.7)
             l.set_color('white')
             # overwrite middle line (median) setting to a thicker white line
             for i in range(0,3*len(violinsats))[1::3]:
                 if i == il:
                     l.set_linestyle('-')
-                    l.set_linewidth(2)
+                    l.set_linewidth(1)
                     l.set_color('white')
     else:
         ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
         ax.add_collection(coll)
         
-    ax.set(xlabel='Cross-shore distance of satellite-derived line from validation line (m)', ylabel='Satellite image platform')
-    ax.set_title(PlotTitle)
+    ax.set(xlabel='Distance$_{satellite - validation}$ (m)', ylabel='Satellite image platform')
+    if PlotTitle != None:
+        ax.set_title(PlotTitle)
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
     # round UP to nearest 10
@@ -558,24 +554,30 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle):
     
     # # create specific median lines for specific platforms
     legend_elements = []
-    for i, satname in enumerate(violinsats):
+    ilines = list(range(0,3*len(violinsats))[1::3])
+    for i, (satname, iline) in enumerate(zip(violinsats, ilines)):
         satmedian = df[satname].median()
         satMSE = np.mean(df[satname]**2)
         satMAE = np.mean(abs(df[satname]))
         satRMSE = np.sqrt(satMSE)
-        leglabel = satname+' median = '+str(round(satmedian,2))+'m, MAE = ' +str(round(satMAE,2))+'m, RMSE = '+str(round(satRMSE,2))+'m' 
+        leglabel = 'MAE = ' +str(round(satMAE,1))+'m\nRMSE = '+str(round(satRMSE,1))+'m'
+        medianlabel = '$\eta_{dist}$ = '+str(round(satmedian,1))+'m'
         LegPatch = Patch( facecolor=colors[i], label = leglabel)
         legend_elements.append(LegPatch)
+        ax.text(-99, i+0.1, leglabel)
+        medianline = ax.lines[iline].get_data()[1][0]
+        ax.text(satmedian, medianline-0.05, medianlabel,ha='center')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
         
-    ax.legend(handles=legend_elements, loc='lower right')
+    # ax.legend(handles=legend_elements, loc=4)
+    
     
     ax.set_axisbelow(False)
     plt.tight_layout()
     
     figpath = os.path.join(filepath,sitename+'_Validation_Satellite_PlatformDistances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
-    plt.savefig(figpath)
+    plt.savefig(figpath, dpi=300)
     print('figure saved under '+figpath)
 
     for i in df.columns:
