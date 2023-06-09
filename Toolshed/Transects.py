@@ -22,6 +22,7 @@ from pyproj import Proj
 import skimage.transform as transform
 from sklearn.linear_model import LinearRegression
 from pylab import ginput
+import rasterio as rio
 
 from Toolshed import Toolbox
 from Toolshed.Coast import *
@@ -659,6 +660,32 @@ def CalculateChanges(TransectDict,TransectInterGDF):
     print("TransectDict updated with distances between sat lines.")
             
     return TransectDict
+
+
+def TZIntersect(settings,):
+    
+    fpath = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'])
+    # read in Transition Zone tifs
+    for Tr in len(TransectGDF):
+        fnames = TransectDict['filename'][Tr]
+        for f in fnames:
+            TZfname = os.path.join(fpath, 'jpg_files', f.rsplit('/',1)[-1] + '_TZ.tif')
+            TZraster = rio.open(TZfname)
+            # TZ to polygon
+            
+    # Calculate area of polygon
+    
+    # Remove polygons with < threshold area (1 pix)
+    
+    # Intersection between polygon edges and Tr
+    
+    # Loc of point to extract info to
+    
+    # Intersect point used to calculate TZ width and slope across TZ
+    
+    # Info stored back onto the matching Tr ID
+    
+    return
 
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
