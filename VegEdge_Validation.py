@@ -337,7 +337,7 @@ TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePat
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
 TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
     # TransectDict = Transects.GetTransitionDists(TransectDict,TransectInterGDF)
-    
+#%%    
 if settings['wetdry'] == True:
     beachslope = 0.006 # tanBeta StAnd W
     # beachslope = 0.04 # tanBeta StAnE
