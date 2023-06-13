@@ -322,14 +322,15 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
             (AllIntersects['wlinterpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
     AllIntersects['wldists'] = distances
 
-    CorrectedDists = TidalCorrection(settings, output, AllIntersects, AvBeachSlope)
+    CorrectedDists, TidalStages = TidalCorrection(settings, output, AllIntersects, AvBeachSlope)
     AllIntersects['wlcorrdist'] = CorrectedDists
+    AllIntersects['waterelev'] = TidalStages
     
     #initialise lists used for storing each transect's intersection values
     dates, distances, corrdists, interpnt = ([] for i in range(4)) # per-transect lists of values
 
     Key = [dates, distances, corrdists, interpnt]
-    KeyName = ['wldates','wldists', 'wlcorrdist','wlinterpnt']
+    KeyName = ['wldates','wldists', 'wlcorrdist','waterelev','wlinterpnt']
        
     # for each column name
     for i in range(len(Key)):
@@ -407,6 +408,7 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
     
     # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
     # TO DO: figure out way of running this per transect
+    # OR TO DO: incorporate CoastSat.slopes into this part?
     DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
     if os.path.exists(DEMpath):
         MSL = 1.0
@@ -417,6 +419,7 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
         BeachSlope = AvBeachSlope
     
     CorrIntDistances = []
+    TidalStages = []
     
     dates_sat_d = []
     for dt in dates_sat:
@@ -425,11 +428,13 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
     for D, Dist in enumerate(IntersectDF['wldists']):
         DateIndex = dates_sat_d.index(datetime.strptime(IntersectDF['wldates'][D], '%Y-%m-%d').date())
         # calculate and apply cross-shore correction 
-        Correction = (tides_sat[DateIndex] - RefElev) / BeachSlope
+        TidalElev = tides_sat[DateIndex] - RefElev
+        Correction = TidalElev / BeachSlope
         # correction is minus because transect dists are defined land to seaward
         CorrIntDistances.append(Dist - Correction)
+        TidalStages.append(TidalElev)
     
-    return CorrIntDistances
+    return CorrIntDistances, TidalStages
 
 def GetBeachSlopes(MSL, MHWS, DEMpath):
     """
@@ -500,10 +505,11 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     #     # attach back onto GDF as a new field per image date
     #     TransectInterGDF[dateshort + 'dist'] = ColData
     
-    DateRange = []
+    
     FullDateTime = []
     RecentDateTime = []
     for Tr in range(len(TransectInterGDF)):
+        DateRange = []
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][0]) # oldest date
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][-2]) # second youngest date
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
@@ -514,14 +520,14 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
         DateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
         RecentDateTime.append(DateTime)
         # convert dates to ordinals for linreg
-        OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[0]]
+        OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[Tr]]
         
         Slopes = []
         for idate in [0,-2]:
             X = np.array(OrdDates[idate:]).reshape((-1,1))
             y = np.array(TransectInterGDF['distances'][Tr][idate:])
             model = LinearRegression(fit_intercept=True).fit(X,y)
-            Slope = round(model.coef_[0],2)*365.2425 # ordinal dates means slope is in m/day, converts to m/yr
+            Slope = round(model.coef_[0]*365.2425, 2) # ordinal dates means slope is in m/day, converts to m/yr
             Slopes.append(Slope)
 
     TransectInterGDF['olddate'] = DateRange[0] # oldest date in timeseries
@@ -598,10 +604,11 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
     #     TransectInterGDF[dateshort + 'wld'] = DistColData
     #     TransectInterGDF[dateshort + 'bw'] = BWColData
     
-    DateRange = []
+    
     FullDateTime = []
     RecentDateTime = []
     for Tr in range(len(TransectInterGDF)):
+        DateRange = []
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][0]) # oldest date
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][-2]) # second youngest date
         DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
@@ -612,14 +619,14 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
         DateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
         RecentDateTime.append(DateTime)
         # convert dates to ordinals for linreg
-        OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[0]]
+        OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[Tr]]
         
         Slopes = []
         for idate in [0,-2]:
             X = np.array(OrdDates[idate:]).reshape((-1,1))
             y = np.array(TransectInterGDF['wlcorrdist'][Tr][idate:])
             model = LinearRegression(fit_intercept=True).fit(X,y)
-            Slope = round(model.coef_[0],2)*365.2425
+            Slope = round(model.coef_[0]*365.2425, 2)
             Slopes.append(Slope)
 
     TransectInterGDF['olddateW'] = DateRange[0] # oldest date in timeseries
@@ -631,7 +638,7 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
                
     TransectInterShp = TransectInterGDF.copy()
     
-    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','wlinterpnt', 'beachwidth']
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','waterelev','wlinterpnt', 'beachwidth']
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
