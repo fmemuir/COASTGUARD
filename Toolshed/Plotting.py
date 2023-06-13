@@ -287,14 +287,14 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
         else:
             plt.title('Transect '+str(TransectID))
         ax.set_xlabel('Date (yyyy-mm)')
-        ax.set_ylabel('Cross-shore distance (veg) (m)')
-        ax2.set_ylabel('Cross-shore distance (water) (m)')
+        ax.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+        ax2.set_ylabel('Cross-shore distance (water) (m)', color='#2893CC')
         # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
         ax.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
         ax2.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
         
-        leg1 = ax.legend(loc=1)
-        leg2 = ax2.legend(loc=2)
+        leg1 = ax.legend(loc=2)
+        leg2 = ax2.legend(loc=1)
         # weird zorder with twinned axes; remove first axis legend and plot on top of second
         leg1.remove()
         ax2.add_artist(leg1)
