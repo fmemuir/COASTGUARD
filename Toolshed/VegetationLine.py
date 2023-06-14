@@ -225,7 +225,6 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                     contours_ndwi, t_ndwi = FindShoreContours_Water(im_ndwi, sh_labels, cloud_mask, im_ref_buffer)
 
                 # process the contours into a vegline
-                # vegline, vegline_latlon, vegline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)   
                 vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
                 if settings['wetdry'] == True:
                     shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndwi, cloud_mask, georef, image_epsg, settings)
@@ -265,6 +264,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             output_idxkeep.append(i)
             output_t_ndvi.append(t_ndvi)
 
+        
         # create dictionary of output
         output[satname] = {
                 'dates': output_timestamp,
@@ -303,6 +303,16 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 'wthreshold': output_t_ndwi
                 }
         
+        # TO DO: test following on small run
+        dates_sat = []
+        for i in range(len(output_timestamp)):
+            dates_sat_str = output_timestamp[i] +' '+output_time[i]
+            dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
+        
+        output_waterelev = Toolbox.GetWaterElevs(settings, dates_sat)
+        output[satname]['tideelev'] = output_waterelev
+        output_latlon[satname]['tideelev'] = output_waterelev
+        output_proj[satname]['tideelev'] = output_waterelev
         
     # change the format to have one list sorted by date with all the veglines (easier to use)
     output = Toolbox.merge_output(output)

@@ -1742,3 +1742,28 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
     tidesDF.to_csv(os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
     
     return 
+
+
+def GetWaterElevs(settings, dates_sat):
+
+    # load tidal data
+    tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+    tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
+    dates_ts = [_.to_pydatetime() for _ in tide_data['date']]
+    tides_ts = np.array(tide_data['tide'])
+    
+    # # get the tide level corresponding to the time of sat image acquisition
+    # dates_sat = []
+    # for i in range(len(satdatetime)):
+    #     dates_sat_str = satdatetime
+    #     dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
+    
+    tide_sat = []
+    def find(item, lst):
+        start = 0
+        start = lst.index(item, start)
+        return start
+    for i,date in enumerate(dates_sat):
+        tide_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
+    
+    return tide_sat
