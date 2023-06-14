@@ -332,20 +332,19 @@ else:
     # Get intersections
     TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
     # Save newly intersected transects as shapefile
-#%%
-TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
+    TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
-TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
+    TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
     # TransectDict = Transects.GetTransitionDists(TransectDict,TransectInterGDF)
-#%%    
-if settings['wetdry'] == True:
-    beachslope = 0.006 # tanBeta StAnd W
-    # beachslope = 0.04 # tanBeta StAnE
-    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-
-with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    pickle.dump([TransectDict,TransectInterGDF], f)
+    
+    if settings['wetdry'] == True:
+        beachslope = 0.006 # tanBeta StAnd W
+        # beachslope = 0.04 # tanBeta StAnE
+        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+        TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+    
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump([TransectDict,TransectInterGDF], f)
 
 
 #%% VALIDATION
