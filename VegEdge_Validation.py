@@ -71,6 +71,13 @@ latmin, latmax = 56.32641, 56.39814
 #latmin, latmax = 52.027039, 52.037448
 
 #%%
+# directory where the data will be stored
+filepath = os.path.join(os.getcwd(), 'Data')
+
+direc = os.path.join(filepath, sitename)
+
+if os.path.isdir(direc) is False:
+    os.mkdir(direc)
 
 # Return AOI after checking coords and saving folium map HTML in sitename directory
 polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg)
@@ -79,9 +86,6 @@ polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, sitename, image_eps
 polygon = Toolbox.smallest_rectangle(polygon)
 
 #%% Image Settings
-
-# directory where the data will be stored
-filepath = os.path.join(os.getcwd(), 'Data')
 
 # date range
 #dates = ['2021-05-01', '2021-07-02']
@@ -116,11 +120,6 @@ sat_list = ['L5','L7','L8','S2']
 # put all the inputs into a dictionnary
 inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list': sat_list, 'sitename': sitename, 'filepath':filepath}
 
-direc = os.path.join(filepath, sitename)
-
-if os.path.isdir(direc) is False:
-    os.mkdir(direc)
- 
     
 #%% Image Retrieval
 
@@ -342,7 +341,7 @@ else:
         # beachslope = 0.04 # tanBeta StAnE
         TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
         TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-    
+
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
 
@@ -451,7 +450,7 @@ PlottingSeaborn.ThresholdViolin(filepath, sites)
 Plotting.ValidTimeseries(sitename, ValidDict, 1575)
 
 #%%
-TransectIDs = [[1575,309],[120]]
+TransectIDs = [[1575,309]]
 for TransectID in TransectIDs:
     
     # Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
