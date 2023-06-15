@@ -7,6 +7,7 @@ Martin Hurst, Freya Muir
 
 # load modules
 import os
+import glob
 from osgeo import ogr
 import numpy as np
 import pandas as pd
@@ -23,6 +24,7 @@ import skimage.transform as transform
 from sklearn.linear_model import LinearRegression
 from pylab import ginput
 import rasterio as rio
+from rasterio.features import shapes
 
 from Toolshed import Toolbox
 from Toolshed.Coast import *
@@ -715,28 +717,66 @@ def CalculateChanges(TransectDict,TransectInterGDF):
     return TransectDict
 
 
-def TZIntersect(settings,):
+def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     
+    # Initialise empty field that matches dimensions of each intersection
+    WidthFields = []
+    for Tr in range(len(TransectInterGDF)):
+        WidthFields.append([0]*len(TransectInterGDF['filename'].iloc[Tr]))
+        
     fpath = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'])
     # read in Transition Zone tifs
-    for Tr in len(TransectGDF):
-        fnames = TransectDict['filename'][Tr]
-        for f in fnames:
-            TZfname = os.path.join(fpath, 'jpg_files', f.rsplit('/',1)[-1] + '_TZ.tif')
-            TZraster = rio.open(TZfname)
-            # TZ to polygon
+    fnames = [os.path.basename(x) for x in glob.glob(os.path.join(fpath,'jpg_files', '*_TZ.tif'))]
+
+    for fname in fnames: # for each TZ raster (and therefore image date)
+        with rio.Env():
+            with rio.open(os.path.join(fpath, 'jpg_files', fname)) as src:
+                img = src.read(1).astype("float32") # first band
+                results = (
+                {'properties': {'raster_val': v}, 'geometry': s}
+                for i, (s, v) 
+                in enumerate(
+                    shapes(img, mask=None, transform=src.transform)))
+        # TZ to polygon
+        geoms = list(results)
+        TZpoly = gpd.GeoDataFrame.from_features(geoms, src.crs)
+        TZpoly = TZpoly[TZpoly['raster_val'] == 1] # get rid of nan polygons
+        
+        f = fname[:-7] # get rid of '_TZ' and extension
+        # Calculate area of polygons
+        TZpoly['area'] = TZpoly.area        
+        # Get matching veg line and buffer by ref line buffer amount
+        VeglinesGDF['imagename'] = [os.path.basename(x) for x in VeglinesGDF['filename']]
+        Vegline = VeglinesGDF[VeglinesGDF['imagename'].isin([f])]
+        VeglineBuff = Vegline.buffer(settings['max_dist_ref'])
+        # convert to matching CRS for clipping (also ensures same CRS for Tr intersect)
+        TZpoly = TZpoly.to_crs(VeglineBuff.crs) 
+        # Clip TZ polys to matching image's vegline buffer
+        TZpolyClip = gpd.clip(TZpoly,VeglineBuff)
+                    
+        # Intersection between polygon edges and Tr
+        for Tr in range(len(TransectInterGDF)):
+            # list of filenames on each transect from intersections with VEs
+            TrFiles = [os.path.basename(x) for x in TransectInterGDF['filename'].iloc[Tr]]
+            # get matching image index in list of transect's VE filenames 
+            ImInd = TrFiles.index(f)
+            # Distances of each polygon centroid from VE
+            TZpolyClip.centroid.distance(TransectInterGDF['interpnt'][Tr][ImInd])
+            # Intersect Tr with TZ polygon
+            TZintersects = TZpolyClip.exterior.intersection(TransectInterGDF['geometry'].iloc[0])
             
-    # Calculate area of polygon
-    
-    # Remove polygons with < threshold area (1 pix)
-    
-    # Intersection between polygon edges and Tr
-    
-    # Loc of point to extract info to
-    
-    # Intersect point used to calculate TZ width and slope across TZ
-    
-    # Info stored back onto the matching Tr ID
+            # Loc of point to extract info to
+            
+            # Intersect point used to calculate TZ width and slope across TZ
+            
+            # Info stored back onto the matching Tr ID
+            WidthFields[Tr][ImInd] = TZwidth
+            
+    TransectInterGDF['TZwidth'] = WidthFields 
+        
+        
+        
+        
     
     return
 

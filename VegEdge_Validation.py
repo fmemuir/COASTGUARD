@@ -345,6 +345,8 @@ else:
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
 
+#%%
+Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
 
 #%% VALIDATION
 
