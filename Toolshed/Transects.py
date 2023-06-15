@@ -637,20 +637,20 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
         RecentDateTime = []
         DateRange = []
         Slopes = []
-        if len(TransectInterGDF['dates'].iloc[Tr]) > 0:
-            DateRange.append(TransectInterGDF['dates'].iloc[Tr][0]) # oldest date
-            if len(TransectInterGDF['dates'].iloc[Tr]) > 1:
-                DateRange.append(TransectInterGDF['dates'].iloc[Tr][-2]) # second youngest date
-                DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1]) # youngest date
+        if len(TransectInterGDF['wldates'].iloc[Tr]) > 0:
+            DateRange.append(TransectInterGDF['wldates'].iloc[Tr][0]) # oldest date
+            if len(TransectInterGDF['wldates'].iloc[Tr]) > 1:
+                DateRange.append(TransectInterGDF['wldates'].iloc[Tr][-2]) # second youngest date
+                DateRange.append(TransectInterGDF['wldates'].iloc[Tr][-1]) # youngest date
             else: # for transects with only two dates, take first and last for both 'full' and 'recent' rates
-                DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1])
-                DateRange.append(TransectInterGDF['dates'].iloc[Tr][-1])
+                DateRange.append(TransectInterGDF['wldates'].iloc[Tr][-1])
+                DateRange.append(TransectInterGDF['wldates'].iloc[Tr][-1])
             
             # for each Tr, find difference between converted oldest and youngest dates and transform to decimal years
             FullDateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[0],'%Y-%m-%d')).days)/365.2425),4)
             RecentDateTime = round((float((datetime.strptime(DateRange[2],'%Y-%m-%d')-datetime.strptime(DateRange[1],'%Y-%m-%d')).days)/365.2425),4)
             # convert dates to ordinals for linreg
-            OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['dates'].iloc[Tr]]
+            OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TransectInterGDF['wldates'].iloc[Tr]]
             
             for idate in [0,-2]:
                 X = np.array(OrdDates[idate:]).reshape((-1,1))
@@ -674,17 +674,17 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
             recentT.append(np.nan) # time difference in years between second youngest and youngest date
             recentRt.append(np.nan) # rate of change from second youngest to youngest veg edge in m/yr
     
-    TransectInterGDF['olddate'] = olddate # oldest date in timeseries
-    TransectInterGDF['youngdate'] = youngdate # youngest date in timeseries
-    TransectInterGDF['oldyoungT'] = oldyoungT # time difference in years between oldest and youngest date
-    TransectInterGDF['oldyoungRt'] = oldyoungRt # rate of change from oldest to youngest veg edge in m/yr
-    TransectInterGDF['recentT'] = recentT # time difference in years between second youngest and youngest date
-    TransectInterGDF['recentRt'] = recentRt # rate of change from second youngest to youngest veg edge in m/yr
+    TransectInterGDF['olddateW'] = olddate # oldest date in timeseries
+    TransectInterGDF['youngdateW'] = youngdate # youngest date in timeseries
+    TransectInterGDF['oldyoungTW'] = oldyoungT # time difference in years between oldest and youngest date
+    TransectInterGDF['oldyungRtW'] = oldyoungRt # rate of change from oldest to youngest veg edge in m/yr
+    TransectInterGDF['recentTW'] = recentT # time difference in years between second youngest and youngest date
+    TransectInterGDF['recentRtW'] = recentRt # rate of change from second youngest to youngest veg edge in m/yr
     
     TransectInterShp = TransectInterGDF.copy()
 
     # reformat fields with lists to strings
-    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','waterelev','wlinterpnt', 'beachwidth']
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','waterelev', 'beachwidth']
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
