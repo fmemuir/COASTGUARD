@@ -762,7 +762,6 @@ def metadata_collection(sat_list, Sat, filepath_data, sitename):
 
     for i in range(len(Sat)):
         for j in range(len(Sat[i].getInfo().get('features'))):
-            clear_output(wait=True)
             if sat_list[i] != 'S2':
                 metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
                 metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['properties']['GEOMETRIC_RMSE_MODEL'])
@@ -775,7 +774,7 @@ def metadata_collection(sat_list, Sat, filepath_data, sitename):
                 d = datetime.strptime(Sat[i].getInfo().get('features')[j]['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
                 metadata[sat_list[i]]['dates'].append(str(d.strftime('%Y-%m-%d')))
             
-            print(sat_list[i],": ",(100*j/len(Sat[i].getInfo().get('features'))),'%', end='')
+            print('\r'+sat_list[i],": ",(100*j/len(Sat[i].getInfo().get('features'))),'%', end='')
     
     with open(os.path.join(filepath, sitename + '_metadata.pkl'), 'wb') as f:
         pickle.dump(metadata, f)
