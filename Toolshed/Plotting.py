@@ -252,8 +252,8 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
                 
         ax2 = ax.twinx()
         
-        ax.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='#81A739', ms=6, alpha=0.5, label='Satellite VegEdge')
-        ax2.plot(plotdate, plotwldist, linewidth=0, marker='.', c='#2893CC', ms=6, alpha=0.5, label='Satellite Shoreline')
+        ax.plot(plotdate, plotwldist, linewidth=0, marker='.', c='#4056F4', ms=6, alpha=0.5, label='Satellite Shoreline')
+        ax2.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='#81A739', ms=6, alpha=0.5, label='Satellite VegEdge')
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5)
             
         recjanlist = []
@@ -268,12 +268,12 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
         wlav = movingaverage(plotwldist, 3)
-        ax.plot(plotdate, vegav, color='#81A739', lw=1.5, label='3pt Moving Average VegEdge')
-        ax2.plot(plotdate, wlav, color='#2893CC', lw=1.5, label='3pt Moving Average Shoreline')
+        ax.plot(plotdate, wlav, color='#4056F4', lw=1.5, label='3pt Moving Average Shoreline')
+        ax2.plot(plotdate, vegav, color='#81A739', lw=1.5, label='3pt Moving Average VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
-        for y, pltax, clr in zip([plotsatdist, plotwldist], [ax,ax2], ['#81A739','#2893CC']):
+        for y, pltax, clr in zip([plotwldist,plotsatdist], [ax,ax2], ['#4056F4' ,'#81A739']):
             m, c = np.polyfit(x,y,1)
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
@@ -287,11 +287,11 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
         else:
             plt.title('Transect '+str(TransectID))
         ax.set_xlabel('Date (yyyy-mm)')
-        ax.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
-        ax2.set_ylabel('Cross-shore distance (water) (m)', color='#2893CC')
+        ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+        ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
         # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
-        ax.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
-        ax2.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
+        ax2.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
+        ax.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
         
         leg1 = ax.legend(loc=2)
         leg2 = ax2.legend(loc=1)
