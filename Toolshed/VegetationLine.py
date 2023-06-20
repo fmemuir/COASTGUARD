@@ -136,7 +136,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         # loop through the images
         for i in range(len(filenames)):
 
-            print('\r%s:   %d%%' % (satname,int(((i+1)/len(filenames))*100)), end='')
+            print('\r%s:   %0.3f %% ' % (satname,((i+1)/len(filenames))*100), end='')
 
             # preprocess image (cloud mask + pansharpening/downsampling)
             fn = int(i)
