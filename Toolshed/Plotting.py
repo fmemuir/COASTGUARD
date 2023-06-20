@@ -29,6 +29,7 @@ import geopandas as gpd
 import pandas as pd
 from sklearn.neighbors import KernelDensity
 from sklearn.linear_model import LinearRegression
+from sklearn.cluster import KMeans
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
@@ -739,4 +740,37 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     
     plt.show()
         
+    
+    
+    
+def ClusterRates(TransectInterGDF):
+    
+    # Create array of veg change rates vs shoreline change rates per transect
+    RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
+    # Remove any transects with nan values in either column
+    RateArray = RateArray[~np.isnan(RateArray).any(axis=1)]
+    # Fit k-means clustering to array of rates
+    RateCluster = KMeans(n_clusters=8).fit_predict(RateArray[:,1:])
+    
+    fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=300)
+    # Plot array using clusters as colour map
+    ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
+    ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
+    
+    # axs[0].set_aspect('equal')
+    # axs[1].set_aspect('equal')
+    axs[0].set_xlim(-25,25)
+    axs[0].set_ylim(-100,100)
+    axs[1].set_xlim(-25,25)
+    axs[1].set_ylim(-100,100)
+    axs[0].set_xlabel('Veg change rate (m/yr)')
+    axs[0].set_ylabel('Shore change rate (m/yr)')
+    axs[1].set_xlabel('Veg change rate (m/yr)')
+    
+    plt.colorbar(ax1, ax=axs[0])
+    plt.colorbar(ax2, ax=axs[1])
+    plt.tight_layout()
+    plt.show()
+    
+    return
     
