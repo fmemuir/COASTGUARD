@@ -346,7 +346,9 @@ else:
         pickle.dump([TransectDict,TransectInterGDF], f)
 
 #%%
-Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
+TransectInterTZGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
+with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+    pickle.dump([TransectDict,TransectInterTZGDF], f)
 
 #%% VALIDATION
 
@@ -468,5 +470,7 @@ for TransectID in TransectIDs:
 
 PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
+#%%
+Plotting.ClusterRates(TransectInterGDF)
 
 
