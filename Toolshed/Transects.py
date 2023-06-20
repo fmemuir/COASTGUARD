@@ -722,7 +722,7 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     # Initialise empty field that matches dimensions of each intersection
     WidthFields = []
     for Tr in range(len(TransectInterGDF)):
-        WidthFields.append([0]*len(TransectInterGDF['filename'].iloc[Tr]))
+        WidthFields.append([np.nan]*len(TransectInterGDF['filename'].iloc[Tr]))
         
     fpath = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'])
     # read in Transition Zone tifs
@@ -759,26 +759,30 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
             # list of filenames on each transect from intersections with VEs
             TrFiles = [os.path.basename(x) for x in TransectInterGDF['filename'].iloc[Tr]]
             # get matching image index in list of transect's VE filenames 
-            ImInd = TrFiles.index(f)
+            try:
+                ImInd = TrFiles.index(f)
+            except:
+                pdb.set_trace()
             # Distances of each polygon centroid from VE
-            TZpolyClip.centroid.distance(TransectInterGDF['interpnt'][Tr][ImInd])
+            TZpolyClip['pntdist'] = TZpolyClip.centroid.distance(TransectInterGDF['interpnt'][Tr][ImInd])
             # Intersect Tr with TZ polygon
-            TZintersects = TZpolyClip.exterior.intersection(TransectInterGDF['geometry'].iloc[0])
-            
-            # Loc of point to extract info to
-            
-            # Intersect point used to calculate TZ width and slope across TZ
-            
+            TZpolyClip['TrIntersect'] = TZpolyClip.exterior.intersection(TransectInterGDF['geometry'].iloc[Tr])
+            # Find TZ polygon with smallest distance from VE
+            TZpolyClipInter = TZpolyClip[TZpolyClip['TrIntersect'].is_empty == False][TZpolyClip['TrIntersect'].isna() == False]
+            # if Transect doesn't intersect with any TZ polygons
+            if len(TZpolyClipInter) == 0:
+                TZwidth = np.nan
+            else:
+                TZpolyClose = TZpolyClipInter['TrIntersect'][TZpolyClipInter['pntdist'] == TZpolyClipInter['pntdist'].min()]
+                # TZ width (Distance between intersect points)
+                TZwidth = TZpolyClose.explode(index_parts=True).iloc[0].distance(TZpolyClose.explode(index_parts=True).iloc[1])
             # Info stored back onto the matching Tr ID
             WidthFields[Tr][ImInd] = TZwidth
             
     TransectInterGDF['TZwidth'] = WidthFields 
-        
-        
-        
-        
+ 
     
-    return
+    return TransectInterGDF
 
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
