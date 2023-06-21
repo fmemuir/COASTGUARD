@@ -747,6 +747,11 @@ def ClusterRates(TransectInterGDF):
     
     # Create array of veg change rates vs shoreline change rates per transect
     RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
+    # Remove outliers (set to nan then remove in one go below)
+    RateArray[:,1] = np.where(RateArray[:,1] < 50, RateArray[:,1], np.nan)
+    RateArray[:,1] = np.where(RateArray[:,1] > -50, RateArray[:,1], np.nan)
+    RateArray[:,2] = np.where(RateArray[:,2] < 190, RateArray[:,2], np.nan)
+    RateArray[:,2] = np.where(RateArray[:,2] > -190, RateArray[:,2], np.nan)
     # Remove any transects with nan values in either column
     RateArray = RateArray[~np.isnan(RateArray).any(axis=1)]
     # Fit k-means clustering to array of rates
@@ -766,9 +771,41 @@ def ClusterRates(TransectInterGDF):
     axs[0].set_xlabel('Veg change rate (m/yr)')
     axs[0].set_ylabel('Shore change rate (m/yr)')
     axs[1].set_xlabel('Veg change rate (m/yr)')
+    axs[0].set_title('Clustering')
+    axs[1].set_title('TransectID')
     
     plt.colorbar(ax1, ax=axs[0])
     plt.colorbar(ax2, ax=axs[1])
+    plt.tight_layout()
+    plt.show()
+    
+    fig, axs = plt.subplots(3,3, figsize=(5,5), dpi=200)
+    # Plot matrix of relationships
+    lab = ['ID','veg','shore']
+    for row in range(3):
+        for col in range(3):
+            axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=2, alpha=0.5, marker='.',c='k')
+            axs[row,col].set_xlabel(lab[row])
+            axs[row,col].set_ylabel(lab[col])
+            axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+            axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+    
+    for i in [0,1]:
+        fig.delaxes(axs[i][i+1])
+    fig.delaxes(axs[0][2])
+    # ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
+    # ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
+    
+    # # axs[0].set_aspect('equal')
+    # # axs[1].set_aspect('equal')
+    # axs[0].set_xlim(-25,25)
+    # axs[0].set_ylim(-100,100)
+    # axs[1].set_xlim(-25,25)
+    # axs[1].set_ylim(-100,100)
+    # axs[0].set_xlabel('Veg change rate (m/yr)')
+    # axs[0].set_ylabel('Shore change rate (m/yr)')
+    # axs[1].set_xlabel('Veg change rate (m/yr)')
+    
     plt.tight_layout()
     plt.show()
     
