@@ -177,14 +177,14 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     # for each row/feature in transect
     for _, _, ID, TrGeom in TransectGDF.itertuples():
         # for each row/feature shoreline
-        for _,dates,times,filename,cloud,ids,vthresh,satn,wthresh,SGeom in ShorelineGDF.itertuples():
+        for _,dates,times,filename,cloud,ids,vthresh,wthresh,tideelev,satn,SGeom in ShorelineGDF.itertuples():
             # calculate intersections between each transect and shoreline
             Intersects = TrGeom.intersection(SGeom)
-            ColumnData.append((ID,dates,times,filename,cloud,ids,vthresh,satn,wthresh))
+            ColumnData.append((ID,dates,times,filename,cloud,ids,vthresh,wthresh,tideelev,satn))
             Geoms.append(Intersects)
             
     # create GDF from appended lists of intersections        
-    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname'])
+    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','tideelev','satname'])
     # remove any rows with no intersections
     AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
     # duplicate geom column to save point intersections
@@ -216,10 +216,10 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     
 
     #initialise lists used for storing each transect's intersection values
-    dates, times, filename, cloud_cove, idx, vthreshold, wthreshold, satname, distances, interpnt = ([] for i in range(10)) # per-transect lists of values
+    dates, times, filename, cloud_cove, idx, vthreshold, wthreshold, satname, tideelev, distances, interpnt = ([] for i in range(11)) # per-transect lists of values
 
-    Key = [dates,times,filename,cloud_cove,idx,vthreshold, wthreshold,satname, distances, interpnt]
-    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold', 'wthreshold','satname', 'distances', 'interpnt']
+    Key = [dates,times,filename,cloud_cove,idx,vthreshold, wthreshold,satname,tideelev,  distances, interpnt]
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold', 'wthreshold','tideelev','satname', 'distances', 'interpnt']
     
     # for each column name
     for i in range(len(Key)):
@@ -293,7 +293,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
     # for each row/feature in transect
     for _, _, ID, TrGeom in TransectGDF.itertuples():
         # for each row/feature shoreline
-        for _,dates,_,_,_,_,_,_,_,SGeom in WaterlineGDF.itertuples():
+        for _,dates,_,_,_,_,_,_,_,_,SGeom in WaterlineGDF.itertuples():
             # calculate intersections between each transect and shoreline
             Intersects = TrGeom.intersection(SGeom)
             ColumnData.append((ID,dates))
@@ -566,7 +566,7 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     TransectInterShp = TransectInterGDF.copy()
 
     # reformat fields with lists to strings
-    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances','interpnt']
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','tideelev','satname', 'distances','interpnt']
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
@@ -686,7 +686,7 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
     TransectInterShp = TransectInterGDF.copy()
 
     # reformat fields with lists to strings
-    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','waterelev', 'beachwidth']
+    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','tideelev','satname', 'distances', 'normdists' ,'interpnt', 'wldates','wldists', 'wlcorrdist','waterelev', 'beachwidth']
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
@@ -753,6 +753,7 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
         TZpoly = TZpoly.to_crs(VeglineBuff.crs) 
         # Clip TZ polys to matching image's vegline buffer
         TZpolyClip = gpd.clip(TZpoly,VeglineBuff)
+        TZpolyClip = TZpolyClip.explode()
                     
         # Intersection between polygon edges and Tr
         for Tr in range(len(TransectInterGDF)):
@@ -763,16 +764,33 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
                 ImInd = TrFiles.index(f)
             except:
                 pdb.set_trace()
-            # Distances of each polygon centroid from VE
-            TZpolyClip['pntdist'] = TZpolyClip.centroid.distance(TransectInterGDF['interpnt'][Tr][ImInd])
             # Intersect Tr with TZ polygon
-            TZpolyClip['TrIntersect'] = TZpolyClip.exterior.intersection(TransectInterGDF['geometry'].iloc[Tr])
-            # Find TZ polygon with smallest distance from VE
+            TransectGeom = TransectInterGDF['geometry'].iloc[Tr]
+            TZpolyClip['TrIntersect'] = TZpolyClip.exterior.intersection(TransectGeom)
+            # Distances of each intersection pair from VE
+            TZpolyClip['pntdist'] = [np.nan]*len(TZpolyClip)
+            # Remove empty geoms from TZ dataframe
             TZpolyClipInter = TZpolyClip[TZpolyClip['TrIntersect'].is_empty == False][TZpolyClip['TrIntersect'].isna() == False]
+            
+            # if Transect ends inside TZ polygon, extend length until multipoint is achieved
+            while (TZpolyClipInter['TrIntersect'].geom_type == 'Point').sum() > 0:
+                TransectGeom = Toolbox.ExtendLine(TransectGeom, 10)
+                TZpolyClip['TrIntersect'] = TZpolyClip.exterior.intersection(TransectGeom)
+                # Distances of each intersection pair from VE
+                TZpolyClip['pntdist'] = [np.nan]*len(TZpolyClip)
+                # Remove empty geoms from TZ dataframe
+                TZpolyClipInter = TZpolyClip[TZpolyClip['TrIntersect'].is_empty == False][TZpolyClip['TrIntersect'].isna() == False]
+            
+            for i in range(len(TZpolyClipInter)):
+                try:
+                    TZpolyClipInter['pntdist'].iloc[i] = list(TZpolyClipInter['TrIntersect'].iloc[i])[0].distance(TransectInterGDF['interpnt'][Tr][ImInd])
+                except:
+                    pdb.set_trace()    
+            # TZpolyClip['pntdist'] = TZpolyClip.centroid.distance(TransectInterGDF['interpnt'][Tr][ImInd])
             # if Transect doesn't intersect with any TZ polygons
             if len(TZpolyClipInter) == 0:
                 TZwidth = np.nan
-            else:
+            else:                
                 TZpolyClose = TZpolyClipInter['TrIntersect'][TZpolyClipInter['pntdist'] == TZpolyClipInter['pntdist'].min()]
                 # TZ width (Distance between intersect points)
                 TZwidth = TZpolyClose.explode(index_parts=True).iloc[0].distance(TZpolyClose.explode(index_parts=True).iloc[1])
