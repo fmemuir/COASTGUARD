@@ -1744,6 +1744,23 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
 
 
 def GetWaterElevs(settings, dates_sat):
+    '''
+    Extracts matching water elevations from formatted CSV of tide heights and times.
+    FM Jun 2023
+
+    Parameters
+    ----------
+    settings : dict
+        .
+    dates_sat : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
+    '''
 
     # load tidal data
     tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
@@ -1766,3 +1783,38 @@ def GetWaterElevs(settings, dates_sat):
         tide_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
     
     return tide_sat
+
+
+def ExtendLine(LineGeom, dist):
+    '''
+    FM Jun 2023
+    
+    Parameters
+    ----------
+    LineGeom : shapely LINESTRING
+        Line to be extended.
+    dist : int
+        distance to extend line by.
+
+    Returns
+    -------
+    new extended shapely LINESTRING.
+
+    '''
+    # extract coords
+    x1, x2, y1, y2 = LineGeom.coords.xy[0][0], LineGeom.coords.xy[0][1], LineGeom.coords.xy[1][0], LineGeom.coords.xy[1][1]
+    # calculate vector
+    v = (x2-x1, y2-y1)
+    v_ = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+    # calculate normalised vector
+    vnorm = v / v_
+    # use norm vector to extend 
+    x_1, y_1 = (x1, y1) - (dist*vnorm)
+    x_2, y_2 = (x2, y2) + (dist*vnorm)
+    # Extended line
+    NewLineGeom = LineString([(x_1, y_1), (x_2, y_2)])
+    
+    return NewLineGeom
+    
+    
+    
