@@ -732,7 +732,7 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     # read in Transition Zone tifs
     fnames = [os.path.basename(x) for x in glob.glob(os.path.join(fpath,'jpg_files', '*_TZ.tif'))]
 
-    for fname in fnames: # for each TZ raster (and therefore image date)
+    for fnum, fname in enumerate(fnames): # for each TZ raster (and therefore image date)
         with rio.Env():
             with rio.open(os.path.join(fpath, 'jpg_files', fname)) as src:
                 img = src.read(1).astype("float32") # first band
@@ -761,6 +761,7 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
                     
         # Intersection between polygon edges and Tr
         for Tr in range(len(TransectInterGDF)):
+            print('\r %0.3f %% images processed : %0.3f %% transects processed' % ( ((fnum)/len(fnames))*100, (Tr/len(TransectInterGDF))*100 ), end='')
             # list of filenames on each transect from intersections with VEs
             TrFiles = [os.path.basename(x) for x in TransectInterGDF['filename'].iloc[Tr]]
             # get matching image index in list of transect's VE filenames 
@@ -803,14 +804,14 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     print('Adding TZ widths to transect shapefile... ')
     TransectInterGDF['TZwidth'] = WidthFields
     
-    TransectInterShp = TransectInterGDF.copy()
+    # TransectInterShp = TransectInterGDF.copy()
 
-    # reformat fields with lists to strings
-    KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
-    for Key in KeyName:
-        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+    # # reformat fields with lists to strings
+    # KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
+    # for Key in KeyName:
+    #     TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
-    TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected_TZ.shp'))
+    # TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected_TZ.shp'))
  
     
     return TransectInterGDF
