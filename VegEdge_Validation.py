@@ -349,6 +349,13 @@ else:
         pickle.dump([TransectDict,TransectInterGDF], f)
 
 #%%
+# beachslope = 0.006 # tanBeta StAnd W
+beachslope = 0.04 # tanBeta StAnE
+TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+
+
+#%% Update Transects with Transition Zone widths
 TransectInterTZGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
     pickle.dump([TransectDict,TransectInterTZGDF], f)
