@@ -757,7 +757,7 @@ def ClusterRates(TransectInterGDF):
     # Fit k-means clustering to array of rates
     RateCluster = KMeans(n_clusters=8).fit_predict(RateArray[:,1:])
     
-    fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=300)
+    fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=200)
     # Plot array using clusters as colour map
     ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
     ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
