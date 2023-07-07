@@ -609,8 +609,11 @@ def ThresholdViolin(filepath,sites):
     
     colors = ylgnbu(np.linspace((1/(len(violinDF.keys())+1)), 1-(1/(len(violinDF.keys())+1)), len(violinDF.keys())))
     
-    fig = plt.figure(figsize=[1.89,2.64], tight_layout=True)
-    sns.set(font="Arial", font_scale=0.55)
+    # fig = plt.figure(figsize=[1.89,2.64], tight_layout=True)
+    fig = plt.figure(figsize=(3.31, 3.31), dpi=300, tight_layout=True)
+
+    # sns.set(font="Arial", font_scale=0.55)
+    sns.set(font="Arial", font_scale=0.6)
     sns.set_style("whitegrid", {'axes.grid' : False})
     
     ax = sns.violinplot(data = violinDF, linewidth=0, palette = 'YlGnBu', orient='v', cut=0, inner='quart')
