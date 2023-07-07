@@ -211,7 +211,7 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     plt.show()
     
     
-def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
+def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
     """
     
 
@@ -257,14 +257,17 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
         ax2.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='#81A739', ms=6, alpha=0.5, label='Satellite VegEdge')
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5)
             
-        recjanlist = []
-        recmarchlist = []
+        # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year):
-            recjan = mdates.date2num(datetime(i, 12, 1, 0, 0))
-            recmarch = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
-            recwidth = recmarch - recjan
-            rec = mpatches.Rectangle((recjan, -500), recwidth, 1000, fc=[0.25,0.3,1], ec=None, alpha=0.2)
-            ax.add_patch(rec)
+            if Hemisphere == 'N':
+                rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+            elif Hemisphere == 'S':
+                rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
+            rectwidth = rectWinterEnd - rectWinterStart
+            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.25,0.3,1], ec=None, alpha=0.2)
+            ax.add_patch(rect)
           
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
@@ -284,7 +287,7 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
         if TransectID == 309:
             plt.title('Transect '+str(TransectID)+', Out Head')
         elif TransectID == 1575:
-            plt.title('Transect '+str(TransectID)+', Tentsmuir')
+            plt.title('Transect '+str(TransectID)+', Reres Wood')
         else:
             plt.title('Transect '+str(TransectID))
         ax.set_xlabel('Date (yyyy-mm)')
@@ -293,6 +296,7 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs):
         # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
         ax2.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
         ax.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
+        ax.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
         
         leg1 = ax.legend(loc=2)
         leg2 = ax2.legend(loc=1)
