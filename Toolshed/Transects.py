@@ -457,7 +457,22 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
     return CorrIntDistances, TidalStages
 
 def BeachTideLoc(settings):
-    
+    '''
+    Create steps of water elevation based on a tidal range, which correspond to the 'lower', 'middle' and 'upper' beach.
+    FM July 2023
+
+    Parameters
+    ----------
+    settings : dict
+        Tool settings stored here
+
+    Returns
+    -------
+    TideSteps : list
+        Array of 4 elevations running from lowest to highest tide.
+        Beach zone class is then 'lower' = TideSteps[0] to TideSteps[1], etc.
+
+    '''
     tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
     tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
     tides_ts = np.array(tide_data['tide'])
@@ -829,6 +844,11 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     
     print('Adding TZ widths to transect shapefile... ')
     TransectInterGDF['TZwidth'] = WidthFields
+    
+    # initialise and fill field with median TZ widths across each Tr's timeseries
+    TransectInterGDF['TZwidthmed'] = np.zeros(len(TransectInterGDF))
+    for i in range(len(TransectInterGDF)):
+        TransectInterGDF['TZwidthmed'].iloc[i] = np.nanmedian(TransectInterGDF['TZwidth'].iloc[i])
     
     # TransectInterShp = TransectInterGDF.copy()
 
