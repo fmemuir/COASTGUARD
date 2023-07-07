@@ -40,7 +40,7 @@ lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 
 #%%
-sitename = 'StAndrewsEastFull'
+sitename = 'StAndrewsEastS2Full'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 
@@ -468,7 +468,7 @@ TransectIDs = [[1575,309]]
 for TransectID in TransectIDs:
     
     # Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
-    Plotting.VegWaterTimeseries(sitename, TransectDict, TransectID)
+    Plotting.VegWaterTimeseries(sitename, TransectDict, TransectID, 'N')
     
 #%%
 TransectIDs = [180,1650]
