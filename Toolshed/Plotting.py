@@ -250,12 +250,19 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
         plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
         
         plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
-                
+        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
+        
         ax2 = ax.twinx()
         
-        ax.plot(plotdate, plotwldist, linewidth=0, marker='.', c='#4056F4', ms=6, alpha=0.5, label='Satellite Shoreline')
-        ax2.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='#81A739', ms=6, alpha=0.5, label='Satellite VegEdge')
-        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5)
+        ax.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=6, alpha=0.8, edgecolors='none', label='Satellite Shoreline')
+        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        
+        # create error bar lines to fill between
+        errorRMSE = 10.4
+        yerrorplus = [x + errorRMSE for x in plotsatdist]
+        yerrorneg = [x - errorRMSE for x in plotsatdist]
+        ax2.fill_between(plotdate, yerrorneg, yerrorplus, color='#81A739', alpha=0.3, edgecolor=None)
+        # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
             
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year):
@@ -272,12 +279,12 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
         wlav = movingaverage(plotwldist, 3)
-        ax.plot(plotdate, wlav, color='#4056F4', lw=1.5, label='3pt Moving Average Shoreline')
-        ax2.plot(plotdate, vegav, color='#81A739', lw=1.5, label='3pt Moving Average VegEdge')
+        ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Shoreline')
+        ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
-        for y, pltax, clr in zip([plotwldist,plotsatdist], [ax,ax2], ['#4056F4' ,'#81A739']):
+        for y, pltax, clr in zip([plotwldist,plotsatdist], [ax,ax2], ['#0A1DAE' ,'#3A4C1A']):
             m, c = np.polyfit(x,y,1)
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
@@ -747,7 +754,12 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     
     
     
-def ClusterRates(TransectInterGDF):
+def ClusterRates(sitename, TransectInterGDF):
+    
+    ## Cluster Plot
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
     
     # Create array of veg change rates vs shoreline change rates per transect
     RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
@@ -783,20 +795,39 @@ def ClusterRates(TransectInterGDF):
     plt.tight_layout()
     plt.show()
     
-    fig, axs = plt.subplots(3,3, figsize=(5,5), dpi=200)
+    
+    ## Multivariate Plot
+    RateArray = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz 
+                          in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'],TransectInterGDF['TZwidthmed'])])
+
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(5,5), dpi=200)
     # Plot matrix of relationships
-    lab = ['ID','veg','shore']
-    for row in range(3):
-        for col in range(3):
-            axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=2, alpha=0.5, marker='.',c='k')
+    lab = ['ID','veg','shore','TZ width']
+    for row in range(RateArray.shape[1]):
+        for col in range(RateArray.shape[1]):
+            # remove repeated plots on right hand side
+            for i in range(RateArray.shape[1]):
+                if row == i and col > i:
+                    fig.delaxes(axs[row,col])
+            
+            # if plot is same var on x and y, change plot to a histogram    
+            if row == col:
+                axs[row,col].hist(RateArray[:,row],50, color='k')
+            # otherwise plot scatter of each variable against one another
+            else:
+                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=4, alpha=0.5, marker='.',c='k', edgecolors='none')
             axs[row,col].set_xlabel(lab[row])
             axs[row,col].set_ylabel(lab[col])
             axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
             axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
-    
-    for i in [0,1]:
-        fig.delaxes(axs[i][i+1])
-    fig.delaxes(axs[0][2])
+            
+            # turn off axes to tighten up layout
+            if col != 0 and row != RateArray.shape[1]-1: # first col and last row
+                axs[row,col].set_xlabel(None)
+                axs[row,col].set_ylabel(None)
+    # for i in [0,1]:
+    #     fig.delaxes(axs[i][i+1])
+    # fig.delaxes(axs[0][2])
     # ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
     # ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
     
@@ -811,6 +842,11 @@ def ClusterRates(TransectInterGDF):
     # axs[1].set_xlabel('Veg change rate (m/yr)')
     
     plt.tight_layout()
+    
+    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
     plt.show()
     
     return
