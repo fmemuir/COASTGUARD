@@ -258,10 +258,11 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
         ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
         
         # create error bar lines to fill between
-        errorRMSE = 10.4
-        yerrorplus = [x + errorRMSE for x in plotsatdist]
-        yerrorneg = [x - errorRMSE for x in plotsatdist]
-        ax2.fill_between(plotdate, yerrorneg, yerrorplus, color='#81A739', alpha=0.3, edgecolor=None)
+        for axloop, errorRMSE, plotdist, col in zip([ax, ax2], [7.2, 10.4], [plotwldist,plotsatdist], ['#4056F4','#81A739']):
+            yerrorplus = [x + errorRMSE for x in plotdist]
+            yerrorneg = [x - errorRMSE for x in plotdist]
+            axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
+       
         # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
             
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
@@ -761,73 +762,20 @@ def ClusterRates(sitename, TransectInterGDF):
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
     
-    # Create array of veg change rates vs shoreline change rates per transect
-    RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
-    # Remove outliers (set to nan then remove in one go below)
-    RateArray[:,1] = np.where(RateArray[:,1] < 50, RateArray[:,1], np.nan)
-    RateArray[:,1] = np.where(RateArray[:,1] > -50, RateArray[:,1], np.nan)
-    RateArray[:,2] = np.where(RateArray[:,2] < 190, RateArray[:,2], np.nan)
-    RateArray[:,2] = np.where(RateArray[:,2] > -190, RateArray[:,2], np.nan)
-    # Remove any transects with nan values in either column
-    RateArray = RateArray[~np.isnan(RateArray).any(axis=1)]
-    # Fit k-means clustering to array of rates
-    RateCluster = KMeans(n_clusters=8).fit_predict(RateArray[:,1:])
+    # # Create array of veg change rates vs shoreline change rates per transect
+    # RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
+    # # Remove outliers (set to nan then remove in one go below)
+    # RateArray[:,1] = np.where(RateArray[:,1] < 50, RateArray[:,1], np.nan)
+    # RateArray[:,1] = np.where(RateArray[:,1] > -50, RateArray[:,1], np.nan)
+    # RateArray[:,2] = np.where(RateArray[:,2] < 190, RateArray[:,2], np.nan)
+    # RateArray[:,2] = np.where(RateArray[:,2] > -190, RateArray[:,2], np.nan)
+    # # Remove any transects with nan values in either column
+    # RateArray = RateArray[~np.isnan(RateArray).any(axis=1)]
+    # # Fit k-means clustering to array of rates
+    # RateCluster = KMeans(n_clusters=8).fit_predict(RateArray[:,1:])
     
-    fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=200)
-    # Plot array using clusters as colour map
-    ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
-    ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
-    
-    # axs[0].set_aspect('equal')
-    # axs[1].set_aspect('equal')
-    axs[0].set_xlim(-25,25)
-    axs[0].set_ylim(-100,100)
-    axs[1].set_xlim(-25,25)
-    axs[1].set_ylim(-100,100)
-    axs[0].set_xlabel('Veg change rate (m/yr)')
-    axs[0].set_ylabel('Shore change rate (m/yr)')
-    axs[1].set_xlabel('Veg change rate (m/yr)')
-    axs[0].set_title('Clustering')
-    axs[1].set_title('TransectID')
-    
-    plt.colorbar(ax1, ax=axs[0])
-    plt.colorbar(ax2, ax=axs[1])
-    plt.tight_layout()
-    plt.show()
-    
-    
-    ## Multivariate Plot
-    RateArray = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz 
-                          in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'],TransectInterGDF['TZwidthmed'])])
-
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(5,5), dpi=200)
-    # Plot matrix of relationships
-    lab = ['ID','veg','shore','TZ width']
-    for row in range(RateArray.shape[1]):
-        for col in range(RateArray.shape[1]):
-            # remove repeated plots on right hand side
-            for i in range(RateArray.shape[1]):
-                if row == i and col > i:
-                    fig.delaxes(axs[row,col])
-            
-            # if plot is same var on x and y, change plot to a histogram    
-            if row == col:
-                axs[row,col].hist(RateArray[:,row],50, color='k')
-            # otherwise plot scatter of each variable against one another
-            else:
-                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=4, alpha=0.5, marker='.',c='k', edgecolors='none')
-            axs[row,col].set_xlabel(lab[row])
-            axs[row,col].set_ylabel(lab[col])
-            axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
-            axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
-            
-            # turn off axes to tighten up layout
-            if col != 0 and row != RateArray.shape[1]-1: # first col and last row
-                axs[row,col].set_xlabel(None)
-                axs[row,col].set_ylabel(None)
-    # for i in [0,1]:
-    #     fig.delaxes(axs[i][i+1])
-    # fig.delaxes(axs[0][2])
+    # fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=200)
+    # # Plot array using clusters as colour map
     # ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
     # ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
     
@@ -840,6 +788,53 @@ def ClusterRates(sitename, TransectInterGDF):
     # axs[0].set_xlabel('Veg change rate (m/yr)')
     # axs[0].set_ylabel('Shore change rate (m/yr)')
     # axs[1].set_xlabel('Veg change rate (m/yr)')
+    # axs[0].set_title('Clustering')
+    # axs[1].set_title('TransectID')
+    
+    # plt.colorbar(ax1, ax=axs[0])
+    # plt.colorbar(ax2, ax=axs[1])
+    # plt.tight_layout()
+    # plt.show()
+    
+    
+    ## Multivariate Plot
+    # Subset into south and north transects
+    RateArrayS = TransectInterGDF.iloc[24:358]
+    RateArrayS['LocLabel'] = 'blue'
+    RateArrayN = TransectInterGDF.iloc[1385:1719]
+    RateArrayN['LocLabel'] = 'red'
+    RateArray = pd.concat([RateArrayS, RateArrayN], axis=0)
+    # Extract desired columns to an array for plotting
+    RateArray = np.array(RateArray[['TransectID','oldyoungRt','oldyungRtW','TZwidthmed','LocLabel']])
+    # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'])])
+
+    fig, axs = plt.subplots(RateArray.shape[1]-1,RateArray.shape[1]-1, figsize=(5,5), dpi=200)
+    # Plot matrix of relationships
+    lab = ['ID','veg','shore','TZ width']
+    for row in range(RateArray.shape[1]-1):
+        for col in range(RateArray.shape[1]-1):
+            # remove repeated plots on right hand side
+            for i in range(RateArray.shape[1]-1):
+                if row == i and col > i:
+                    fig.delaxes(axs[row,col])
+            
+            # if plot is same var on x and y, change plot to a histogram    
+            if row == col:
+                axs[row,col].hist(RateArray[:333,row],50, color='blue')
+                axs[row,col].hist(RateArray[334:,row],50, color='red')
+            # otherwise plot scatter of each variable against one another
+            else:
+                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=4, alpha=0.5, marker='.', c=RateArray[:,-1], cmap='gray', edgecolors='none')
+            axs[row,col].set_xlabel(lab[row])
+            axs[row,col].set_ylabel(lab[col])
+            axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+            axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+            
+            # turn off axes to tighten up layout
+            # if col != 0 and row != RateArray.shape[1]-1: # first col and last row
+            #     axs[row,col].set_xlabel(None)
+            #     axs[row,col].set_ylabel(None)
+                
     
     plt.tight_layout()
     
