@@ -850,18 +850,26 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     for i in range(len(TransectInterGDF)):
         TransectInterGDF['TZwidthmed'].iloc[i] = np.nanmedian(TransectInterGDF['TZwidth'].iloc[i])
     
-    # TransectInterShp = TransectInterGDF.copy()
 
-    # # reformat fields with lists to strings
-    # KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
-    # for Key in KeyName:
-    #     TransectInterShp[Key] = TransectInterShp[Key].astype(str)
-    
-    # TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected_TZ.shp'))
- 
-    
     return TransectInterGDF
 
+
+def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile):
+    
+    print('Intersecting transects with slope ... ')
+    
+    src = rio.open(DTMfile)
+    
+    for Tr in range(len(TransectInterGDF)):
+        TrGeom = TransectInterGDF.iloc[Tr].geometry
+        # Generate regularly spaced points along each transect
+        distance_delta = 1
+        distances = np.arange(0, TrGeom.length, distance_delta)
+        points = [TrGeom.interpolate(distance) for distance in distances] + [TrGeom.boundary[1]]
+        # multipoint = unary_union(points)
+        
+        # Extract slope values at each point along Tr
+        TrGeom["value"] = [x for x in src.sample(points)]
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     """

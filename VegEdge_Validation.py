@@ -323,6 +323,8 @@ else:
 
 #%% Create (or load) intersections with sat and validation lines per transect
 
+DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/'
+
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
     print('TransectDict exists and was loaded')
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
@@ -347,16 +349,18 @@ else:
 
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
+        
+    # Update Transects with Transition Zone widths and slope if available
+    TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
+    TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
 
+
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump([TransectDict,TransectInterGDF], f)
+        
 #%%
-# beachslope = 0.006 # tanBeta StAnd W
-beachslope = 0.04 # tanBeta StAnE
-TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-
-
-#%% Update Transects with Transition Zone widths
-TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
+DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG32630.tif'
+TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
     pickle.dump([TransectDict,TransectInterGDF], f)
 
