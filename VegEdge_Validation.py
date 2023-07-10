@@ -113,8 +113,8 @@ years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.
 
 # satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
-sat_list = ['L5','L7','L8','S2']
-# sat_list = ['PSScene4Band']
+# sat_list = ['L5','L7','L8','S2']
+sat_list = ['PSScene4Band']
 
 
 # put all the inputs into a dictionnary
@@ -356,9 +356,9 @@ TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, 
 
 
 #%% Update Transects with Transition Zone widths
-TransectInterTZGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
+TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    pickle.dump([TransectDict,TransectInterTZGDF], f)
+    pickle.dump([TransectDict,TransectInterGDF], f)
 
 #%% VALIDATION
 
@@ -481,6 +481,6 @@ for TransectID in TransectIDs:
 PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 #%%
-Plotting.ClusterRates(TransectInterGDF)
+Plotting.ClusterRates(sitename, TransectInterGDF)
 
 
