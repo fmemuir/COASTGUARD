@@ -854,22 +854,67 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     return TransectInterGDF
 
 
-def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile):
+def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=None):
     
-    print('Intersecting transects with slope ... ')
+    if DTMfile==None:
+        print('No DTM file provided.')
+        return TransectInterGDF
     
-    src = rio.open(DTMfile)
-    
-    for Tr in range(len(TransectInterGDF)):
-        TrGeom = TransectInterGDF.iloc[Tr].geometry
-        # Generate regularly spaced points along each transect
-        distance_delta = 1
-        distances = np.arange(0, TrGeom.length, distance_delta)
-        points = [TrGeom.interpolate(distance) for distance in distances] + [TrGeom.boundary[1]]
-        # multipoint = unary_union(points)
+    else:
+        print('Intersecting transects with slope ... ')
         
-        # Extract slope values at each point along Tr
-        TrGeom["value"] = [x for x in src.sample(points)]
+        # DTM should be in same CRS as Transects    
+        src = rio.open(DTMfile)
+
+        MaxSlope = []
+        MeanSlope = []
+        
+        for Tr in range(len(TransectInterGDF)):
+            print('\r %0.3f %% transects processed' % ( (Tr/len(TransectInterGDF))*100 ), end='')
+
+            # Only want 20 m either side of veg intersect
+            InterPnts = TransectInterGDF['interpnt'].iloc[Tr]
+            # If there are no line intersections on that transect
+            if InterPnts == []:
+                MaxSlope.append(np.nan)
+                MeanSlope.append(np.nan)
+            else:
+                # Take average vegline intersection point of each transect to swath points along
+                InterPnt = Point(np.mean([Pnt.x for Pnt in InterPnts]), np.mean([Pnt.y for Pnt in InterPnts]))
+                
+                # Extend 20m in either direction along transect from intersection point
+                intx, Trx, inty, Try = InterPnt.coords.xy[0][0], TransectInterGDF.iloc[Tr].geometry.coords.xy[0][0], InterPnt.coords.xy[1][0],TransectInterGDF.iloc[Tr].geometry.coords.xy[1][0]
+
+                dist = 20
+                # calculate vector
+                v = (Trx-intx, Try-inty)
+                v_ = np.sqrt((Trx-intx)**2 + (Try-inty)**2)
+                # calculate normalised vector
+                vnorm = v / v_
+                # use norm vector to extend 
+                x_1, y_1 = (intx, inty) - (dist*vnorm)
+                x_2, y_2 = (intx, inty) + (dist*vnorm)
+                
+                # New linestring from extended points
+                NewTr = gpd.GeoDataFrame(index=[0], crs=TransectInterGDF.crs, geometry=[LineString([(x_1,y_1),(x_2,y_2)])])
+                NewTrGeom = NewTr.geometry
+                # Generate regularly spaced points along each transect
+                distance_delta = 1
+                distances = np.arange(0, float(NewTrGeom.length), distance_delta)
+                points = [NewTrGeom.interpolate(distance) for distance in distances]
+                points = [(float(point.x), float(point.y)) for point in points]
+                
+                # Extract slope values at each point along Tr
+                MaxSlopeTr = np.max([val[0] for val in src.sample(points)])
+                MeanSlopeTr = np.mean([val[0] for val in src.sample(points)])
+                MaxSlope.append(MaxSlopeTr)
+                MeanSlope.append(MeanSlopeTr)
+        
+        TransectInterGDF['maxslope'] = MaxSlope
+        TransectInterGDF['meanslope'] = MeanSlope
+            
+        return TransectInterGDF    
+            
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     """

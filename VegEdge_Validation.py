@@ -73,8 +73,8 @@ latmin, latmax = 56.32641, 56.39814
 #%%
 # satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
-# sat_list = ['L5','L7','L8','S2']
-sat_list = ['PSScene4Band']
+sat_list = ['L5','L7','L8','S2']
+# sat_list = ['PSScene4Band']
 
 # directory where the data will be stored
 filepath = Toolbox.CreateFileStructure(sitename, sat_list)
@@ -348,14 +348,14 @@ else:
         
     # Update Transects with Transition Zone widths and slope if available
     TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
-    TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
+    # TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
 
 
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDF], f)
+    # with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+    #     pickle.dump([TransectDict,TransectInterGDF], f)
         
 #%%
-DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG32630.tif'
+DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif'
 TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
     pickle.dump([TransectDict,TransectInterGDF], f)
@@ -384,7 +384,7 @@ TransectIDList = [(595,889),(972,1297)] # west
 
 #%%
 TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),(1365,1462),(1463,1636),(1637,1741)]# Planet
-TransectIDList= [(0,1741)]
+# TransectIDList= [(0,1741)]
 #%%
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 for TransectIDs in TransectIDList:
