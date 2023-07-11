@@ -744,6 +744,26 @@ def smallest_rectangle(polygon):
     polygon_rect = [[[_[0], _[1]] for _ in coords_polygon]]
     return polygon_rect
 
+
+def CreateFileStructure(sitename, sat_list):
+    
+    filepath = os.path.join(os.getcwd(), 'Data')
+
+    direc = os.path.join(filepath, sitename)
+
+    if os.path.isdir(direc) is False:
+        os.mkdir(direc)
+    
+    if 'PSScene4Band' in sat_list:
+        if os.path.isdir(direc+'/local_images') is False:
+            os.mkdir(direc+'/local_images')
+            os.mkdir(direc+'/local_images/PlanetScope')
+            os.mkdir(direc+'/AuxillaryPlanetImages')
+            os.mkdir(direc+'/local_images/PlanetScope/cloudmasks')
+    
+    return filepath
+
+
 def metadata_collection(inputs, Sat):
     
     sat_list = inputs['sat_list']
@@ -751,7 +771,7 @@ def metadata_collection(inputs, Sat):
     sitename = inputs['sitename']
     
     # Planet data must be loaded locally (while API is still sluggish)
-    if 'PSSene4Band' in sat_list:
+    if 'PSScene4Band' in sat_list:
         metadata = LocalImageMetadata(inputs, Sat)
     
     else: 
@@ -858,7 +878,8 @@ def LocalImageMetadata(inputs, Sat):
     for i in range(len(inputs['sat_list'])):
         metadata[inputs['sat_list'][i]] = {'filenames':[], 'acc_georef':[], 'epsg':[], 'dates':[]}
 
-    for i in range(len(Sat)):
+    # for i in range(len(Sat[0])):
+    for i in range(1):    
         for j in range(len(Sat[i])):
             
             imdata = rasterio.open(Sat[i][j])

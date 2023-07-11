@@ -71,13 +71,13 @@ latmin, latmax = 56.32641, 56.39814
 #latmin, latmax = 52.027039, 52.037448
 
 #%%
+# satellite missions
+# Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
+# sat_list = ['L5','L7','L8','S2']
+sat_list = ['PSScene4Band']
+
 # directory where the data will be stored
-filepath = os.path.join(os.getcwd(), 'Data')
-
-direc = os.path.join(filepath, sitename)
-
-if os.path.isdir(direc) is False:
-    os.mkdir(direc)
+filepath = Toolbox.CreateFileStructure(sitename, sat_list)
 
 # Return AOI after checking coords and saving folium map HTML in sitename directory
 polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg)
@@ -110,11 +110,6 @@ else:
 
 
 years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.strptime(dates[-1],'%Y-%m-%d')))
-
-# satellite missions
-# Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
-# sat_list = ['L5','L7','L8','S2']
-sat_list = ['PSScene4Band']
 
 
 # put all the inputs into a dictionnary
@@ -237,7 +232,8 @@ OPTION 1: Run extraction tool and return output dates, lines, filenames and
 image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
-clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
+# clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
+clf_model = 'DornochPSScene_MLPClassifier_Veg_PSScene.pkl'
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
 
 # L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im

@@ -403,7 +403,7 @@ def label_vegimages(metadata, polygon, Sat, settings):
     # loop through satellites
     for satname in metadata.keys():
         if satname == 'PSScene4Band':
-            filepath = os.path.dirname(metadata[satname]['filenames'])
+            filepath = os.path.dirname(metadata[satname]['filenames'][0])
         else:
             filepath = Toolbox.get_filepath(settings['inputs'],satname)
         if len(metadata[satname]['filenames']) < 2: # for single images; for loop list needs to be nested
@@ -421,8 +421,8 @@ def label_vegimages(metadata, polygon, Sat, settings):
                 dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
             
             # read and preprocess image
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
-
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
+            
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
                                     (cloud_mask.shape[0]*cloud_mask.shape[1]))
