@@ -744,9 +744,11 @@ def smallest_rectangle(polygon):
     polygon_rect = [[[_[0], _[1]] for _ in coords_polygon]]
     return polygon_rect
 
-def metadata_collection(inputs, Sat, filepath_data, sitename):
+def metadata_collection(inputs, Sat):
     
     sat_list = inputs['sat_list']
+    filepath_data = inputs['filepath']
+    sitename = inputs['sitename']
     
     # Planet data must be loaded locally (while API is still sluggish)
     if 'PSSene4Band' in sat_list:
