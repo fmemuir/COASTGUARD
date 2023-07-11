@@ -118,7 +118,8 @@ if os.path.isdir(direc) is False:
 # In[49]:
 
 
-sat_list = ['L8','S2']
+# sat_list = ['L8','S2']
+sat_list = ['PSScene4Band']
 dates = ['2019-02-01', '2019-11-30']
 # dates = ['2019-06-01', '2019-08-31']
 # dates = ['2019-12-01', '2020-02-28']
