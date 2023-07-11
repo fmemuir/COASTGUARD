@@ -744,40 +744,47 @@ def smallest_rectangle(polygon):
     polygon_rect = [[[_[0], _[1]] for _ in coords_polygon]]
     return polygon_rect
 
-def metadata_collection(sat_list, Sat, filepath_data, sitename):
+def metadata_collection(inputs, Sat, filepath_data, sitename):
     
-    filename = sitename + '_metadata.pkl'
-    filepath = os.path.join(filepath_data, sitename)
+    sat_list = inputs['sat_list']
     
-    if filename in os.listdir(filepath):
-        print('Metadata already exists and was loaded')
-        with open(os.path.join(filepath, filename), 'rb') as f:
-            metadata = pickle.load(f)
-        return metadata
+    # Planet data must be loaded locally (while API is still sluggish)
+    if 'PSSene4Band' in sat_list:
+        metadata = LocalImageMetadata(inputs, Sat)
     
-    metadata = dict([])
-
-    for i in range(len(sat_list)):
-        metadata[sat_list[i]] = {'filenames':[], 'acc_georef':[], 'epsg':[], 'dates':[]}
-
-    for i in range(len(Sat)):
-        for j in range(len(Sat[i].getInfo().get('features'))):
-            if sat_list[i] != 'S2':
-                metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
-                metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['properties']['GEOMETRIC_RMSE_MODEL'])
-                metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][0]['crs'].lstrip('EPSG:')))
-                metadata[sat_list[i]]['dates'].append(Sat[i].getInfo().get('features')[j]['properties']['DATE_ACQUIRED'])
-            else:
-                metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
-                metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['bands'][1]['crs_transform'])
-                metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][1]['crs'].lstrip('EPSG:')))
-                d = datetime.strptime(Sat[i].getInfo().get('features')[j]['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
-                metadata[sat_list[i]]['dates'].append(str(d.strftime('%Y-%m-%d')))
-            
-            print('\r'+sat_list[i],": ",(100*j/len(Sat[i].getInfo().get('features'))),'%', end='')
+    else: 
+        filename = sitename + '_metadata.pkl'
+        filepath = os.path.join(filepath_data, sitename)
+        
+        if filename in os.listdir(filepath):
+            print('Metadata already exists and was loaded')
+            with open(os.path.join(filepath, filename), 'rb') as f:
+                metadata = pickle.load(f)
+            return metadata
+        
+        metadata = dict([])
     
-    with open(os.path.join(filepath, sitename + '_metadata.pkl'), 'wb') as f:
-        pickle.dump(metadata, f)
+        for i in range(len(sat_list)):
+            metadata[sat_list[i]] = {'filenames':[], 'acc_georef':[], 'epsg':[], 'dates':[]}
+    
+        for i in range(len(Sat)):
+            for j in range(len(Sat[i].getInfo().get('features'))):
+                if sat_list[i] != 'S2':
+                    metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
+                    metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['properties']['GEOMETRIC_RMSE_MODEL'])
+                    metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][0]['crs'].lstrip('EPSG:')))
+                    metadata[sat_list[i]]['dates'].append(Sat[i].getInfo().get('features')[j]['properties']['DATE_ACQUIRED'])
+                else:
+                    metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
+                    metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['bands'][1]['crs_transform'])
+                    metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][1]['crs'].lstrip('EPSG:')))
+                    d = datetime.strptime(Sat[i].getInfo().get('features')[j]['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
+                    metadata[sat_list[i]]['dates'].append(str(d.strftime('%Y-%m-%d')))
+                
+                print('\r'+sat_list[i],": ",(100*j/len(Sat[i].getInfo().get('features'))),'%', end='')
+        
+        with open(os.path.join(filepath, sitename + '_metadata.pkl'), 'wb') as f:
+            pickle.dump(metadata, f)
         
     return metadata
 
@@ -806,7 +813,8 @@ def image_retrieval(inputs):
     if 'S2' in inputs['sat_list']:
         Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
         Sat.append(Sentinel2)
-        
+    if 'PSScene4Band' in inputs['sat_list']:
+        Sat = LocalImageRetrieval(inputs)
     return Sat
 
 def LocalImageRetrieval(inputs):

@@ -134,7 +134,7 @@ Download.check_images_available(inputs)
 OPTION 1: Populate metadata using image names pulled from server.
 """
 Sat = Toolbox.image_retrieval(inputs)
-metadata = Toolbox.metadata_collection(sat_list, Sat, filepath, sitename)
+metadata = Toolbox.metadata_collection(inputs, Sat, filepath, sitename)
 
 #%%  Metadata filtering using validation dates only
 
