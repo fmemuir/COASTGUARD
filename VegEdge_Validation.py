@@ -348,11 +348,11 @@ else:
         
     # Update Transects with Transition Zone widths and slope if available
     TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
-    # TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
+    TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
 
 
-    # with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    #     pickle.dump([TransectDict,TransectInterGDF], f)
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump([TransectDict,TransectInterGDF], f)
         
 #%%
 DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif'
@@ -481,6 +481,7 @@ for TransectID in TransectIDs:
 PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 #%%
-Plotting.ClusterRates(sitename, TransectInterGDF)
-
+# Plot multivariate matrix of different variables per transect subsets (subsets should have same number of transects)
+# Plotting.ClusterRates(sitename, TransectInterGDF, [232,290], [1661,1719])
+Plotting.MultivariateMatrix(sitename, TransectInterGDF, [232,290], [1661,1719])
 

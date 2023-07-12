@@ -30,6 +30,7 @@ import pandas as pd
 from sklearn.neighbors import KernelDensity
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
+import scipy.stats
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
@@ -755,80 +756,124 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     
     
     
-def ClusterRates(sitename, TransectInterGDF):
+def ClusterRates(sitename, TransectInterGDF, Sloc, Nloc):
     
     ## Cluster Plot
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
     
-    # # Create array of veg change rates vs shoreline change rates per transect
-    # RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
-    # # Remove outliers (set to nan then remove in one go below)
-    # RateArray[:,1] = np.where(RateArray[:,1] < 50, RateArray[:,1], np.nan)
-    # RateArray[:,1] = np.where(RateArray[:,1] > -50, RateArray[:,1], np.nan)
-    # RateArray[:,2] = np.where(RateArray[:,2] < 190, RateArray[:,2], np.nan)
-    # RateArray[:,2] = np.where(RateArray[:,2] > -190, RateArray[:,2], np.nan)
-    # # Remove any transects with nan values in either column
-    # RateArray = RateArray[~np.isnan(RateArray).any(axis=1)]
-    # # Fit k-means clustering to array of rates
-    # RateCluster = KMeans(n_clusters=8).fit_predict(RateArray[:,1:])
     
-    # fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=200)
-    # # Plot array using clusters as colour map
-    # ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
-    # ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
+    mpl.rcParams.update({'font.size':7})
     
-    # # axs[0].set_aspect('equal')
-    # # axs[1].set_aspect('equal')
-    # axs[0].set_xlim(-25,25)
-    # axs[0].set_ylim(-100,100)
-    # axs[1].set_xlim(-25,25)
-    # axs[1].set_ylim(-100,100)
-    # axs[0].set_xlabel('Veg change rate (m/yr)')
-    # axs[0].set_ylabel('Shore change rate (m/yr)')
-    # axs[1].set_xlabel('Veg change rate (m/yr)')
-    # axs[0].set_title('Clustering')
-    # axs[1].set_title('TransectID')
+    # Create array of veg change rates vs shoreline change rates per transect
+    RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
+    # Remove outliers (set to nan then remove in one go below)
+    RateArray[:,1] = np.where(RateArray[:,1] < 50, RateArray[:,1], np.nan)
+    RateArray[:,1] = np.where(RateArray[:,1] > -50, RateArray[:,1], np.nan)
+    RateArray[:,2] = np.where(RateArray[:,2] < 190, RateArray[:,2], np.nan)
+    RateArray[:,2] = np.where(RateArray[:,2] > -190, RateArray[:,2], np.nan)
+    # Remove any transects with nan values in either column
+    RateArray = RateArray[~np.isnan(RateArray).any(axis=1)]
+    # Fit k-means clustering to array of rates
+    RateCluster = KMeans(n_clusters=8).fit_predict(RateArray[:,1:])
     
-    # plt.colorbar(ax1, ax=axs[0])
-    # plt.colorbar(ax2, ax=axs[1])
-    # plt.tight_layout()
-    # plt.show()
+    fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=200)
+    # Plot array using clusters as colour map
+    ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
+    ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
     
+    # axs[0].set_aspect('equal')
+    # axs[1].set_aspect('equal')
+    axs[0].set_xlim(-25,25)
+    axs[0].set_ylim(-100,100)
+    axs[1].set_xlim(-25,25)
+    axs[1].set_ylim(-100,100)
+    axs[0].set_xlabel('Veg change rate (m/yr)')
+    axs[0].set_ylabel('Shore change rate (m/yr)')
+    axs[1].set_xlabel('Veg change rate (m/yr)')
+    axs[0].set_title('Clustering')
+    axs[1].set_title('TransectID')
+    
+    plt.colorbar(ax1, ax=axs[0])
+    plt.colorbar(ax2, ax=axs[1])
+    plt.tight_layout()
+    plt.show()
+    
+
+def MultivariateMatrix(sitename, TransectInterGDF, Sloc, Nloc):
     
     ## Multivariate Plot
     # Subset into south and north transects
-    RateArrayS = TransectInterGDF.iloc[24:358]
+    RateArrayS = TransectInterGDF.iloc[Sloc[0]:Sloc[1]]
     RateArrayS['LocLabel'] = 'blue'
-    RateArrayN = TransectInterGDF.iloc[1385:1719]
+    RateArrayN = TransectInterGDF.iloc[Nloc[0]:Nloc[1]]
     RateArrayN['LocLabel'] = 'red'
     RateArray = pd.concat([RateArrayS, RateArrayN], axis=0)
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateArray[['TransectID','oldyoungRt','oldyungRtW','TZwidthmed','LocLabel']])
+    RateArray = np.array(RateArray[['oldyoungRt','oldyungRtW','TZwidthmed','maxslope','LocLabel']])
     # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'])])
 
-    fig, axs = plt.subplots(RateArray.shape[1]-1,RateArray.shape[1]-1, figsize=(5,5), dpi=200)
+    fig, axs = plt.subplots(RateArray.shape[1]-1,RateArray.shape[1]-1, figsize=(6.55,6.55), dpi=300)
+    
     # Plot matrix of relationships
-    lab = ['ID','veg','shore','TZ width']
+    lab = [r'$\Delta$veg (m/yr)',r'$\Delta$shore (m/yr)',r'$TZwidth_{\eta}$ (m)',r'$slope_{max}$ ($\circ$)']
     for row in range(RateArray.shape[1]-1):
         for col in range(RateArray.shape[1]-1):
             # remove repeated plots on right hand side
-            for i in range(RateArray.shape[1]-1):
-                if row == i and col > i:
-                    fig.delaxes(axs[row,col])
+            # for i in range(RateArray.shape[1]-1):
+                # if row == i and col > i:
+                    # fig.delaxes(axs[row,col])
             
             # if plot is same var on x and y, change plot to a histogram    
             if row == col:
-                axs[row,col].hist(RateArray[:333,row],50, color='blue')
-                axs[row,col].hist(RateArray[334:,row],50, color='red')
+                binnum = round(np.sqrt(len(RateArray)))+4
+                axs[row,col].hist(RateArray[:int(len(RateArray)/2),row],binnum, color='blue', alpha=0.7,label='S')
+                axs[row,col].hist(RateArray[int(len(RateArray)/2):,row],binnum, color='red', alpha=0.7,label='N')
+                axs[row,col].legend(loc=2,fontsize=6)
             # otherwise plot scatter of each variable against one another
             else:
-                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=4, alpha=0.5, marker='.', c=RateArray[:,-1], cmap='gray', edgecolors='none')
+                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
+                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
+                
+                # overall linear reg line
+                z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                poly = np.poly1d(z)
+                order = np.argsort(RateArray[:,row])
+                axs[row,col].plot(RateArray[:,row][order], poly(RateArray[:,row][order]), c='k', ls='--', lw=0.8)
+                r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                stats = 'r = %.2f' % (r)
+                # axs[row,col].text( RateArray[:,row][order][-1], poly(RateArray[:,row][order])[-1], stats, c='k', fontsize=5, ha='center')
+                axs[row,col].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
+
+                # linear regression lines
+                S, N = [RateArray[:len(RateArrayS),row], RateArray[:len(RateArrayS),col]], [RateArray[len(RateArrayN):,row], RateArray[len(RateArrayN):,col]]
+                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
+                    zArr = np.polyfit(list(Arr[0]), list(Arr[1]), 1)
+                    polyArr = np.poly1d(zArr)
+                    orderArr = np.argsort(Arr[0])
+                    # linear reg line
+                    axs[row,col].plot(Arr[0][orderArr], polyArr(Arr[0][orderArr]), c=regc, ls='--', lw=0.8)
+                    for i in range(RateArray.shape[1]-1):
+                        if row == i and col > i:
+                            # clear plots on RHS
+                            axs[row,col].cla() 
+                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
+                    for i in range(RateArray.shape[1]-1):
+                        if row == i and col > i:      
+                            rArr, pArr = scipy.stats.pearsonr(list(Arr[0]), list(Arr[1]))
+                            statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
+                            axs[row,col].text(0.5, pos, statsArr, c=regc, fontsize=6, ha='center')
+                    
+                        
+
             axs[row,col].set_xlabel(lab[row])
             axs[row,col].set_ylabel(lab[col])
             axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
             axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+            
+            if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$shore (m/yr)' :
+                axs[row,col].axis('equal')
             
             # turn off axes to tighten up layout
             # if col != 0 and row != RateArray.shape[1]-1: # first col and last row
@@ -837,6 +882,7 @@ def ClusterRates(sitename, TransectInterGDF):
                 
     
     plt.tight_layout()
+    plt.subplots_adjust(wspace=0.6, hspace=0.5)
     
     figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis.png')
     plt.savefig(figpath)
