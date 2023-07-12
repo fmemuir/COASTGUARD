@@ -907,6 +907,9 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=
                 # Extract slope values at each point along Tr
                 MaxSlopeTr = np.max([val[0] for val in src.sample(points)])
                 MeanSlopeTr = np.mean([val[0] for val in src.sample(points)])
+                if MaxSlopeTr == -9999: # nodata value
+                    MaxSlopeTr = np.nan
+                    MeanSlopeTr = np.nan
                 MaxSlope.append(MaxSlopeTr)
                 MeanSlope.append(MeanSlopeTr)
         
