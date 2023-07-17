@@ -7,6 +7,9 @@ The goal of this toolkit is to have a fully operational framework for predicting
 
 Currently, the main toolset is for extracting <b><span style="color:#2EA043">coastal vegetation edges</span></b> from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
 
+https://github.com/fmemuir/CoastLearn-main/assets/22475417/cb27e704-f361-4f34-b999-dcd5c990816c
+
+
 ## Enhancements
 Various improvements have been made to the toolkit to address more accurate approaches recently reported on, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the methods paper (), but include:
 
@@ -75,6 +78,9 @@ A web browser will open; log in with the GMail account you used to sign up to GE
 
 
 ## Run-through Example
+
+https://github.com/fmemuir/CoastLearn-main/assets/22475417/1bd4722b-ece9-4ed9-a9ac-104f71c241d7
+
 There are 7 main steps to setting up the vegetation extraction tool. You can see [this paper]() for a flowchart and more info on the methodology. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
 
 1. Import relevant packages (including initialising the `earthengine` tools);
