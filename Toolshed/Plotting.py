@@ -10,6 +10,7 @@ import numpy as np
 import warnings
 from datetime import datetime, timedelta
 warnings.filterwarnings("ignore")
+import pdb
 
 import matplotlib as mpl
 from matplotlib import cm
@@ -275,7 +276,7 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
                 rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
                 rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
             rectwidth = rectWinterEnd - rectWinterStart
-            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.25,0.3,1], ec=None, alpha=0.2)
+            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
             ax.add_patch(rect)
           
         # plot trendlines
@@ -652,7 +653,10 @@ def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
                 if ValidDict['valsatdist'][Tr] != []:
                     satdist.append(ValidDict['distances'][Tr][DateIndex])
                     # extract validation dists by performing difference calc back on sat dists
-                    valdist.append(ValidDict['distances'][Tr][DateIndex]-ValidDict['valsatdist'][Tr][DateIndex])
+                    try:
+                        valdist.append(ValidDict['distances'][Tr][DateIndex]-ValidDict['valsatdist'][Tr][DateIndex])
+                    except:
+                        pdb.set_trace()
                 else:
                     continue
             else:
