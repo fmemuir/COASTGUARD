@@ -538,6 +538,9 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         # read all bands (B,G,R,NIR)        
         img = rasterio.open(filenames[fn])
+        
+        # TO DO: add line for cropping input image to Polygon of bounding box/AOI
+        # im_cl = mask(img, [BBoxGDF_warp.geometry], crop=True)
         im_ms = img.read()
         
         # filename should be in the format 'yyyymmdd_HHMMSS_'
@@ -566,6 +569,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         outProj = Proj(init=img.crs)
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+        
+        
         
         # Additional coregistering based on georef to OS (EPSG 27700) imagery
         if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
