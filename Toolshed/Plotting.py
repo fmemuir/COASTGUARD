@@ -504,7 +504,7 @@ def ResultsPlot(outfilepath, outfilename, sitename):
     plt.show()
     
     
-def ValidPDF(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs,PlotTitle):    
+def ValidPDF(sitename, ValidGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):    
     """
     Generate probability density function of validation vs sat lines
     FM 2023
@@ -535,8 +535,7 @@ def ValidPDF(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
-    
-    ValidGDF = gpd.read_file(ValidationShp)
+
     violin = []
     violindates = []
     Vdates = ValidGDF[DatesCol].unique()
@@ -610,17 +609,12 @@ def ValidPDF(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
     plt.show()
     
     
-def SatRegress(sitename,SatShp,DatesCol,ValidDict,TransectIDs,PlotTitle):
+def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
        
     
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
-    
-    if type(SatShp) == str:
-        SatGDF = gpd.read_file(SatShp)
-    else:
-        SatGDF = SatShp
         
     valdists = []
     satdists = []

@@ -399,14 +399,14 @@ TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     # PlottingSeaborn.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
-    PlottingSeaborn.SatPDF(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    PlottingSeaborn.SatPDF(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
 
     
 #%% not finished
 TransectIDList = [(40,281)]
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    Plotting.ValidPDF(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    Plotting.ValidPDF(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
  
     
 #%% Error stats
@@ -416,7 +416,7 @@ TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,174
 # West errors
 # TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
-    Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectIDs)
+    Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidDict,TransectIDs)
 
 #%% Combine East and West
 with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEast', 'validation','StAndrewsEast' + '_valid_dict.pkl'), 'rb') as f:
@@ -429,28 +429,28 @@ for keyname in FullValidDict.keys():
     FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
 
 BasePath = 'Data/' + 'StAndrewsEast' + '/veglines'
-EastVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
+EastVeglineGDF = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
 BasePath = 'Data/' + 'StAndrewsWest' + '/veglines'
-WestVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
+WestVeglineGDF = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
 
-FullVeglineShp = gpd.pd.concat([EastVeglineShp, WestVeglineShp])
+FullVeglineGDF = gpd.pd.concat([EastVeglineGDF, WestVeglineGDF])
 
 #%% Combine Planet East and West
-with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEastPlanet', 'validation','StAndrewsEastPlanet' + '_valid_dict.pkl'), 'rb') as f:
-    EastValidDict = pickle.load(f)
-with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWestPlanet', 'validation', 'StAndrewsWestPlanet' + '_valid_dict.pkl'), 'rb') as f:
-    WestValidDict = pickle.load(f)
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetEast', 'validation','StAndrewsPlanetEast' + '_valid_dict.pkl'), 'rb') as f:
+    EastPlValidDict = pickle.load(f)
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetWest', 'validation', 'StAndrewsPlanetWest' + '_valid_dict.pkl'), 'rb') as f:
+    WestPlValidDict = pickle.load(f)
 
-FullValidDict = EastValidDict.copy()
-for keyname in FullValidDict.keys():
-    FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
+FullPlValidDict = EastPlValidDict.copy()
+for keyname in FullPlValidDict.keys():
+    FullPlValidDict[keyname][586:1303] = WestPlValidDict[keyname][586:1303]
 
-BasePath = 'Data/' + 'StAndrewsEastPlanet' + '/veglines'
-EastVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
-BasePath = 'Data/' + 'StAndrewsWestPlanet' + '/veglines'
-WestVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
+BasePlPath = 'Data/' + 'StAndrewsPlanetEast' + '/veglines'
+EastPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
+BasePlPath = 'Data/' + 'StAndrewsPlanetWest' + '/veglines'
+WestPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
 
-FullPlanetVeglineShp = gpd.pd.concat([EastVeglineShp, WestVeglineShp])
+FullPlVeglineGDF = gpd.pd.concat([EastPlVeglineGDF, WestPlVeglineGDF])
 
 
 #%% Combine East West AND Planet
@@ -463,9 +463,9 @@ for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold',
             FullValidDict[keyname][i].append(PlanetValidDict[keyname][i][j])
 
 BasePath = 'Data/' + 'StAndrewsPlanet' + '/veglines'
-PlanetVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
-
-FullVeglineShp = gpd.pd.concat([FullVeglineShp, PlanetVeglineShp])
+PlanetVeglineShp = glob.glob(BasePath+'/*veglines.shp')[0]
+PlanetVeglineGDF = gpd.read_file(PlanetVeglineShp)
+FullVeglineGDF = gpd.pd.concat([PlanetVeglineGDF, PlanetVeglineGDF])
 
 #%% Full violin and errors
 
@@ -480,12 +480,33 @@ for keyname in FullValidDict.keys():
 
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
-# PlottingSeaborn.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-# PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatViolin(sitename,FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF(sitename,FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress(sitename,FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors(sitename, FullVeglineShp,'dates',FullValidDict,TransectID)
+    Toolbox.QuantifyErrors(sitename, FullVeglineGDF,'dates',FullValidDict,TransectID)
+    
+
+#%% Full Planet violin and errors
+
+ClipPlValidDict = dict.fromkeys(FullPlValidDict.keys())
+for keyname in FullPlValidDict.keys():
+    ClipPlValidDict[keyname] = []
+    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][40:281])
+    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][312:711])
+    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][726:889])
+    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][972:1297])
+    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][1365:1741])
+
+TransectIDs = (0,len(ClipPlValidDict['dates'])) # full
+
+PlottingSeaborn.SatViolin(sitename,FullPlVeglineShp,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF(sitename,FullPlVeglineShp,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress(sitename,FullPlVeglineShp,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
+
+for TransectID in [TransectIDs]:
+    Toolbox.QuantifyErrors(sitename, FullPlVeglineShp,'dates',FullPlValidDict,TransectID)
 
 
 

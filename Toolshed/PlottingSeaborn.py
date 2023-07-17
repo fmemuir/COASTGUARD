@@ -143,7 +143,7 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     print('figure saved under '+figpath)
     
 
-def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
+def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -163,11 +163,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
     
-    if type(SatShp) == str:
-        SatGDF = gpd.read_file(SatShp)
-    else:
-        SatGDF = SatShp
-        
+       
     violin = []
     violindates = []
     Sdates = SatGDF[DatesCol].unique()
@@ -290,7 +286,7 @@ def SatViolin(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     print('figure saved under '+figpath)
     
 
-def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
+def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     """
     Prob density function plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -309,11 +305,6 @@ def SatPDF(sitename, SatShp,DatesCol,ValidDict,TransectIDs, PlotTitle):
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
-    
-    if type(SatShp) == str:
-        SatGDF = gpd.read_file(SatShp)
-    else:
-        SatGDF = SatShp
         
     violin = []
     violindates = []

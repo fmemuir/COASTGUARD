@@ -1597,9 +1597,9 @@ def TZValues(int_veg, int_nonveg):
     
     return [minval,maxval]
 
-def QuantifyErrors(sitename, SatShp,DatesCol,ValidDict,TransectIDs):
+def QuantifyErrors(sitename, SatGDF, DatesCol,ValidDict,TransectIDs):
     
-    SatGDF = gpd.read_file(SatShp)
+    
     errordata = []
     errordates = []
     Sdates = SatGDF[DatesCol].unique()
