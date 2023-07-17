@@ -52,9 +52,16 @@ latmin, latmax = 56.32641, 56.39814
 #%% other sites
 
 ##ST ANDREWS
-sitename = 'StAndrewsPlanet'
-lonmin, lonmax = -2.89087, -2.79878
+sitename = 'StAndrewsPlanetEast'
+lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
+
+#%%
+##ST ANDREWS
+sitename = 'StAndrewsPlanetWest'
+lonmin, lonmax = -2.89087, -2.84869
+latmin, latmax = 56.32641, 56.39814
+
 # lonmin, lonmax = -2.842023, -2.774955
 # latmin, latmax = 56.338343, 56.368490
 
@@ -73,8 +80,8 @@ latmin, latmax = 56.32641, 56.39814
 #%%
 # satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
-sat_list = ['L5','L7','L8','S2']
-# sat_list = ['PSScene4Band']
+# sat_list = ['L5','L7','L8','S2']
+sat_list = ['PSScene4Band']
 
 # directory where the data will be stored
 filepath = Toolbox.CreateFileStructure(sitename, sat_list)
@@ -319,7 +326,7 @@ else:
 
 #%% Create (or load) intersections with sat and validation lines per transect
 
-DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/'
+DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif'
 
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
     print('TransectDict exists and was loaded')
@@ -364,7 +371,9 @@ with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl
 
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
+# ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20190813_20220222.shp'
+
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
 if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
@@ -426,6 +435,38 @@ WestVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
 
 FullVeglineShp = gpd.pd.concat([EastVeglineShp, WestVeglineShp])
 
+#%% Combine Planet East and West
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEastPlanet', 'validation','StAndrewsEastPlanet' + '_valid_dict.pkl'), 'rb') as f:
+    EastValidDict = pickle.load(f)
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWestPlanet', 'validation', 'StAndrewsWestPlanet' + '_valid_dict.pkl'), 'rb') as f:
+    WestValidDict = pickle.load(f)
+
+FullValidDict = EastValidDict.copy()
+for keyname in FullValidDict.keys():
+    FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
+
+BasePath = 'Data/' + 'StAndrewsEastPlanet' + '/veglines'
+EastVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
+BasePath = 'Data/' + 'StAndrewsWestPlanet' + '/veglines'
+WestVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
+
+FullPlanetVeglineShp = gpd.pd.concat([EastVeglineShp, WestVeglineShp])
+
+
+#%% Combine East West AND Planet
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanet', 'validation', 'StAndrewsPlanet' + '_valid_dict.pkl'), 'rb') as f:
+    PlanetValidDict = pickle.load(f)
+
+for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold', 'satname', 'wthreshold', 'interpnt', 'distances', 'normdists', 'wldates', 'wldists', 'wlcorrdist', 'wlinterpnt', 'beachwidth', 'Vdates', 'Vdists', 'Vinterpnt', 'valsatdist']:
+    for i in range(len(PlanetValidDict[keyname])):
+        for j in range(len(PlanetValidDict[keyname][i])):
+            FullValidDict[keyname][i].append(PlanetValidDict[keyname][i][j])
+
+BasePath = 'Data/' + 'StAndrewsPlanet' + '/veglines'
+PlanetVeglineShp = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
+
+FullVeglineShp = gpd.pd.concat([FullVeglineShp, PlanetVeglineShp])
+
 #%% Full violin and errors
 
 ClipValidDict = dict.fromkeys(FullValidDict.keys())
@@ -440,11 +481,11 @@ for keyname in FullValidDict.keys():
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
 # PlottingSeaborn.SatViolin(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-# Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatPDF(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress(sitename,FullVeglineShp,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors(sitename, VeglineShp[0],'dates',ValidDict,TransectID)
+    Toolbox.QuantifyErrors(sitename, FullVeglineShp,'dates',FullValidDict,TransectID)
 
 
 
