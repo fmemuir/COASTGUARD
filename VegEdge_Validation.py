@@ -392,7 +392,7 @@ TransectIDList = [(40,281),(312,415),(1637,1741)]#,(416,594),(1365,1462),(1463,1
 TransectIDList = [(595,889),(972,1297)] # west
 
 #%%
-TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),(1365,1462),(1463,1636),(1637,1741)]# Planet
+TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),(1365,1462),(1463,1636),(1637,1741)]
 # TransectIDList= [(0,1741)]
 #%%
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
@@ -426,7 +426,7 @@ with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWest', 'validation', 'StAn
 
 FullValidDict = EastValidDict.copy()
 for keyname in FullValidDict.keys():
-    FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303]
+    FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303].copy()
 
 BasePath = 'Data/' + 'StAndrewsEast' + '/veglines'
 EastVeglineGDF = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
@@ -443,7 +443,7 @@ with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetWest', 'validation',
 
 FullPlValidDict = EastPlValidDict.copy()
 for keyname in FullPlValidDict.keys():
-    FullPlValidDict[keyname][586:1303] = WestPlValidDict[keyname][586:1303]
+    FullPlValidDict[keyname][586:1303] = WestPlValidDict[keyname][586:1303].copy()
 
 BasePlPath = 'Data/' + 'StAndrewsPlanetEast' + '/veglines'
 EastPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
@@ -452,20 +452,6 @@ WestPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
 
 FullPlVeglineGDF = gpd.pd.concat([EastPlVeglineGDF, WestPlVeglineGDF])
 
-
-#%% Combine East West AND Planet
-with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanet', 'validation', 'StAndrewsPlanet' + '_valid_dict.pkl'), 'rb') as f:
-    PlanetValidDict = pickle.load(f)
-
-for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold', 'satname', 'wthreshold', 'interpnt', 'distances', 'normdists', 'wldates', 'wldists', 'wlcorrdist', 'wlinterpnt', 'beachwidth', 'Vdates', 'Vdists', 'Vinterpnt', 'valsatdist']:
-    for i in range(len(PlanetValidDict[keyname])):
-        for j in range(len(PlanetValidDict[keyname][i])):
-            FullValidDict[keyname][i].append(PlanetValidDict[keyname][i][j])
-
-BasePath = 'Data/' + 'StAndrewsPlanet' + '/veglines'
-PlanetVeglineShp = glob.glob(BasePath+'/*veglines.shp')[0]
-PlanetVeglineGDF = gpd.read_file(PlanetVeglineShp)
-FullVeglineGDF = gpd.pd.concat([PlanetVeglineGDF, PlanetVeglineGDF])
 
 #%% Full violin and errors
 
@@ -501,17 +487,48 @@ for keyname in FullPlValidDict.keys():
 
 TransectIDs = (0,len(ClipPlValidDict['dates'])) # full
 
-PlottingSeaborn.SatViolin(sitename,FullPlVeglineShp,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF(sitename,FullPlVeglineShp,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress(sitename,FullPlVeglineShp,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatViolin(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors(sitename, FullPlVeglineShp,'dates',FullPlValidDict,TransectID)
+    Toolbox.QuantifyErrors(sitename, FullPlVeglineGDF,'dates',FullPlValidDict,TransectID)
+
+
+#%% Combine East West AND Planet
+
+EWPValidDict = FullValidDict.copy()
+
+for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold', 'satname', 'wthreshold', 'interpnt', 'distances', 'normdists', 'wldates', 'wldists', 'wlcorrdist', 'wlinterpnt', 'beachwidth', 'Vdates', 'Vdists', 'Vinterpnt', 'valsatdist']:
+    for i in range(len(FullPlValidDict[keyname])):
+        for j in range(len(FullPlValidDict[keyname][i])):
+            EWPValidDict[keyname][i].append(FullPlValidDict[keyname][i][j])
+
+EWPVeglineGDF = gpd.pd.concat([FullVeglineGDF, FullPlVeglineGDF])
+
+#%%
+ClipEWPValidDict = dict.fromkeys(EWPValidDict.keys())
+for keyname in EWPValidDict.keys():
+    ClipEWPValidDict[keyname] = []
+    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][40:281])
+    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][312:711])
+    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][726:889])
+    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][972:1297])
+    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][1365:1741])
+
+TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
+
+PlottingSeaborn.SatViolin(sitename,EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF(sitename,EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress(sitename,EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+
+for TransectID in [TransectIDs]:
+    Toolbox.QuantifyErrors(sitename, EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
 
 
 
 #%%
-PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs)
+PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,TransectIDs)
 
 
 #%% Theshold plotting
@@ -540,7 +557,7 @@ for TransectID in TransectIDs:
 
 #%% 
 
-PlottingSeaborn.PlatformViolin(sitename,FullVeglineShp,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
 #%%
 # Plot multivariate matrix of different variables per transect subsets (subsets should have same number of transects)
