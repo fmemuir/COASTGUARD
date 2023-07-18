@@ -179,7 +179,10 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
                 DateIndex = (ValidDict['dates'][Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
                 if ValidDict['valsatdist'][Tr] != []:
-                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                    try:
+                        valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                    except:
+                        pdb.set_trace()
                 else:
                     continue
             else:
