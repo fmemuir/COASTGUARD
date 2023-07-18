@@ -8,6 +8,7 @@
 
 import os
 import glob
+from copy import deepcopy
 import numpy as np
 import pickle
 import warnings
@@ -424,7 +425,7 @@ with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEast', 'validation','StAnd
 with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWest', 'validation', 'StAndrewsWest' + '_valid_dict.pkl'), 'rb') as f:
     WestValidDict = pickle.load(f)
 
-FullValidDict = EastValidDict.copy()
+FullValidDict = deepcopy(EastValidDict)
 for keyname in FullValidDict.keys():
     FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303].copy()
 
@@ -441,7 +442,8 @@ with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetEast', 'validation',
 with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetWest', 'validation', 'StAndrewsPlanetWest' + '_valid_dict.pkl'), 'rb') as f:
     WestPlValidDict = pickle.load(f)
 
-FullPlValidDict = EastPlValidDict.copy()
+FullPlValidDict = deepcopy(EastPlValidDict)
+
 for keyname in FullPlValidDict.keys():
     FullPlValidDict[keyname][586:1303] = WestPlValidDict[keyname][586:1303].copy()
 
@@ -497,11 +499,11 @@ for TransectID in [TransectIDs]:
 
 #%% Combine East West AND Planet
 
-EWPValidDict = FullValidDict.copy()
+EWPValidDict = deepcopy(FullValidDict)
 
 for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold', 'satname', 'wthreshold', 'interpnt', 'distances', 'normdists', 'wldates', 'wldists', 'wlcorrdist', 'wlinterpnt', 'beachwidth', 'Vdates', 'Vdists', 'Vinterpnt', 'valsatdist']:
-    for i in range(len(FullPlValidDict[keyname])):
-        for j in range(len(FullPlValidDict[keyname][i])):
+    for i in range(len(FullPlValidDict[keyname])): # for each transect
+        for j in range(len(FullPlValidDict[keyname][i])): # for each data entry on each transect
             EWPValidDict[keyname][i].append(FullPlValidDict[keyname][i][j])
 
 EWPVeglineGDF = gpd.pd.concat([FullVeglineGDF, FullPlVeglineGDF])
@@ -518,9 +520,9 @@ for keyname in EWPValidDict.keys():
 
 TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
 
-PlottingSeaborn.SatViolin(sitename,EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF(sitename,EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress(sitename,EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
     Toolbox.QuantifyErrors(sitename, EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
