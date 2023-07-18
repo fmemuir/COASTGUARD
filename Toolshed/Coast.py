@@ -23,7 +23,7 @@ from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiP
 from shapely.ops import nearest_points, linemerge
 
 #from Toolshed import Line
-from Line import *
+from Toolshed.Line import *
 from IPython.display import clear_output
 
 # might do some multiprocessing?

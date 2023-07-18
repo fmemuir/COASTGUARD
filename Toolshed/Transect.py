@@ -19,7 +19,7 @@ from matplotlib import rcParams, cm
 
 # import other custom classes
 #from Toolshed import Node
-from Node import *
+from Toolshed.Node import *
 
 from shapely.geometry import Point, LineString
 

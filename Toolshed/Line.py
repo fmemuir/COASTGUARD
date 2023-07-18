@@ -13,8 +13,8 @@ import numpy as np
 from scipy.signal import savgol_filter
 from scipy.interpolate import splprep, splev
 #from Toolshed import Transect, Node
-from Node import *
-from Transect import *
+from Toolshed.Node import *
+from Toolshed.Transect import *
 
 import geopandas as gp
 from shapely.geometry import Point, LineString, MultiLineString, Polygon, MultiPolygon
