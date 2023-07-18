@@ -107,7 +107,7 @@ The tool takes all the input settings the user has defined, and performs these s
 This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!
 
 ## Contributions
-We are in testing phase and not currently taking contributions, but please [reach out to Freya](mailto:f.muir.1@research.gla.ac.uk) with suggestions!
+We are in testing phase and not currently taking contributions, but [reach out to Freya](mailto:f.muir.1@research.gla.ac.uk) with suggestions.
 
 ## Authors and acknowledgements
-This tool is heavily based on work by Kilian Vos ([github: kvos](https://github.com/kvos)) at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir and Martin Hurst, and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger. Please see these papers for more information:
+This tool is based on work by Kilian Vos ([github: kvos](https://github.com/kvos)) at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir, Luke Richardson-Foulger and Martin Hurst, and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger.
