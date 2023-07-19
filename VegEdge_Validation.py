@@ -39,16 +39,19 @@ image_epsg = 32630
 sitename = 'StAndrewsEast'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
+sat_list = ['L5','L7','L8','S2']
 
 #%%
 sitename = 'StAndrewsEastS2Full'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
+sat_list = ['S2']
 
 #%%ST ANDREWS WEST
 sitename = 'StAndrewsWest'
 lonmin, lonmax = -2.89087, -2.84869
 latmin, latmax = 56.32641, 56.39814
+sat_list = ['L5','L7','L8','S2']
 
 #%% other sites
 
@@ -56,12 +59,14 @@ latmin, latmax = 56.32641, 56.39814
 sitename = 'StAndrewsPlanetEast'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
+sat_list = ['PSScene4Band']
 
 #%%
 ##ST ANDREWS
 sitename = 'StAndrewsPlanetWest'
 lonmin, lonmax = -2.89087, -2.84869
 latmin, latmax = 56.32641, 56.39814
+sat_list = ['PSScene4Band']
 
 # lonmin, lonmax = -2.842023, -2.774955
 # latmin, latmax = 56.338343, 56.368490
@@ -79,10 +84,6 @@ latmin, latmax = 56.32641, 56.39814
 #latmin, latmax = 52.027039, 52.037448
 
 #%%
-# satellite missions
-# Input a list of containing any/all of 'L5', 'L7', 'L8', 'S2'
-# sat_list = ['L5','L7','L8','S2']
-sat_list = ['PSScene4Band']
 
 # directory where the data will be stored
 filepath = Toolbox.CreateFileStructure(sitename, sat_list)
@@ -230,7 +231,8 @@ settings['max_dist_ref'] = 150
 tidepath = "/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/aviso-fes/data/fes2014"
 daterange = dates
 tidelatlon = [-2.79878,latmax-(2/latmin)] # seaward edge, halfway between S and N
-Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon)
+if os.path.isfile(os.path.join('./Data/tides',sitename+'_tides.csv')) == False:
+    Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon)
 
 
 #%% Vegetation Line Extraction
@@ -240,8 +242,8 @@ OPTION 1: Run extraction tool and return output dates, lines, filenames and
 image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
-# clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
-clf_model = 'DornochPSScene_MLPClassifier_Veg_PSScene.pkl'
+clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
+# clf_model = 'DornochPSScene_MLPClassifier_Veg_PSScene.pkl'
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
 
 # L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im
@@ -277,9 +279,9 @@ slicedates = ['2007-04-17','2011-04-28','2011-10-28','2015-09-30','2017-07-24','
 slicedates = ['2007-04-17','2011-04-28','2011-11-06','2015-09-30','2017-07-24','2018-06-24','2018-12-16','2019-08-13','2021-07-01','2022-02-11']
 
 #%% if old otsu threshold name remains
-output = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output.items()}
-output_latlon = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_latlon.items()}
-output_proj = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_proj.items()}
+# output = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output.items()}
+# output_latlon = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_latlon.items()}
+# output_proj = {"vthreshold" if k == 'Otsu_threshold' else k:v for k,v in output_proj.items()}
 
 newoutputdict = output.copy()
 for key in output.keys():
@@ -331,7 +333,8 @@ DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/C
 
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
     print('TransectDict exists and was loaded')
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
+    with open(os.path.join
+              (filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
         TransectDict, TransectInterGDF = pickle.load(f)
 else:
     # Get intersections
@@ -354,6 +357,7 @@ else:
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
         
+        
     # Update Transects with Transition Zone widths and slope if available
     TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
     TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
@@ -362,7 +366,7 @@ else:
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
         
-#%%
+#%% run single instance of slope intersect 
 DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif'
 TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
@@ -374,7 +378,7 @@ with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl
 DatesCol = 'Date'
 # ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
 ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20190813_20220222.shp'
-
+ 
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
 if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
@@ -388,9 +392,9 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415),(1637,1741)]#,(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
+TransectIDList = [(40,281),(312,415),(1637,1735)]#,(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
 #%%    
-TransectIDList = [(595,889),(972,1297)] # west
+TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
 
 #%%
 TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),(1365,1462),(1463,1636),(1637,1741)]
@@ -399,7 +403,7 @@ TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),
 # Plotting.ValidViolin(sitename,ValidationShp,DatesCol,ValidDict,TransectIDs)
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    # PlottingSeaborn.SatViolin(sitename,VeglineShp[0],'dates',ValidDict,TransectIDs, PlotTitle)
+    # PlottingSeaborn.SatViolin(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
     PlottingSeaborn.SatPDF(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
 
     
@@ -412,10 +416,10 @@ for TransectIDs in TransectIDList:
     
 #%% Error stats
 # East errors
-TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1741)]
+# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
 
 # West errors
-# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidDict,TransectIDs)
 
@@ -518,6 +522,8 @@ for keyname in EWPValidDict.keys():
     ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][972:1297])
     ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][1365:1741])
 
+
+#%%
 TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
 
 PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
@@ -530,7 +536,8 @@ for TransectID in [TransectIDs]:
 
 
 #%%
-PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,TransectIDs)
+# PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,TransectIDs)
+PlottingSeaborn.PlatformViolin(sitename,EWPVeglineGDF,'satname',ClipEWPValidDict,TransectIDs)
 
 
 #%% Theshold plotting
