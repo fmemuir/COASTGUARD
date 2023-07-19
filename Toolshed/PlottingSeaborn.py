@@ -288,6 +288,8 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
     plt.savefig(figpath, dpi=300)
     print('figure saved under '+figpath)
     
+    plt.show()
+    
 
 def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     """
@@ -410,7 +412,11 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     uniquesats = sorted(set(list(satnames.values())))
     colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
     for satname, c in zip(uniquesats, colors):
-        sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
+        try:
+            sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
+        except:
+            print("Can't plot empty Transects with no validation data!")
+            continue
         sats = sats[0].tolist()
         # skip calculating satellite median if transects are empty for this satellite
         if sats == []:
@@ -427,7 +433,10 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
             concatl.append(df[s])
         concatpd = pd.concat(concatl)
         medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=1))
-        labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
+        try:
+            labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
+        except:
+            pdb.set_trace()
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
     ax.legend(medians,labels, loc='upper right',facecolor='w')
@@ -514,10 +523,10 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
     patches.append(rect10)
     patches.append(rect15)
     coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
-    colors = plt.cm.Blues(np.linspace(0.4, 1, len(violinsats)))
+    colors = plt.cm.Blues(np.linspace(0.4, 1, len(violinsatsrt)))
     
     sns.set_style("whitegrid", {'axes.grid' : False})
-    if len(violinsats) > 1:
+    if len(violinsatsrt) > 1:
         # plot stacked violin plots
         ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
         ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
@@ -526,7 +535,7 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
             l.set_linewidth(0.7)
             l.set_color('white')
             # overwrite middle line (median) setting to a thicker white line
-            for i in range(0,3*len(violinsats))[1::3]:
+            for i in range(0,3*len(violinsatsrt))[1::3]:
                 if i == il:
                     l.set_linestyle('-')
                     l.set_linewidth(1)
@@ -548,8 +557,8 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
     
     # # create specific median lines for specific platforms
     legend_elements = []
-    ilines = list(range(0,3*len(violinsats))[1::3])
-    for i, (satname, iline) in enumerate(zip(violinsats, ilines)):
+    ilines = list(range(0,3*len(violinsatsrt))[1::3])
+    for i, (satname, iline) in enumerate(zip(violinsatsrt, ilines)):
         satmedian = df[satname].median()
         satMSE = np.mean(df[satname]**2)
         satMAE = np.mean(abs(df[satname]))
