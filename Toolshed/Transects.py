@@ -1135,20 +1135,39 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
         VDateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['Vdates'][Tr]]
         DateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['dates'][Tr]]
         # find index of closest validation date to each sat date
-        ValSatDists = []
+        # previously was empty list with nans or distances appended
+        # now should start with list of nans with n=n(dates)
+        ValSatDists = list(np.empty(len(ValidDict['dates'][Tr]))*np.nan)
         for D, Date in enumerate(DateList):
             # index of matching nearest date
             if VDateList != []:
                 NearestDate = Toolbox.NearDate(Date,VDateList)
                 if NearestDate == False: # if no matching validation date exists, add nan to the list
-                    ValSatDists.append(np.nan)
+                    continue
                 else:
                     # use date index to identify matching distance along transect
                     # and calculate distance between two intersections (sat - validation means +ve is seaward/-ve is landward)
+                    DateStr = datetime.strftime(Date,'%Y-%m-%d')
+                    SDateIndex = ValidDict['dates'][Tr].index(DateStr)
                     VDateIndex = VDateList.index(NearestDate)
-                    ValSatDists.append(ValidDict['distances'][Tr][D] - ValidDict['Vdists'][Tr][VDateIndex])
+                    ValSatDists[SDateIndex] = ValidDict['distances'][Tr][D] - ValidDict['Vdists'][Tr][VDateIndex]
             else:
                 continue
+        
+        # ValSatDists = []
+        # for D, Date in enumerate(DateList):
+        #     # index of matching nearest date
+        #     if VDateList != []:
+        #         NearestDate = Toolbox.NearDate(Date,VDateList)
+        #         if NearestDate == False: # if no matching validation date exists, add nan to the list
+        #             ValSatDists.append(np.nan)
+        #         else:
+        #             # use date index to identify matching distance along transect
+        #             # and calculate distance between two intersections (sat - validation means +ve is seaward/-ve is landward)
+        #             VDateIndex = VDateList.index(NearestDate)
+        #             ValSatDists.append(ValidDict['distances'][Tr][D] - ValidDict['Vdists'][Tr][VDateIndex])
+        #     else:
+        #         continue
 
 
         ValidDict['valsatdist'][Tr] = ValSatDists
