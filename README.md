@@ -42,16 +42,16 @@ Once you have Anaconda installed on your PC:
 
 and navigate to the folder with the repository files. If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!.
 
-Create a new `conda` environment named `coastlearn` with all the required packages by entering this command (make sure you're in the repo folder!):
+Navigate to the repository folder and then create a new `conda` environment named `coastlearn` with all the required packages by entering this command (make sure you're in the repo folder!):
 
 ```
-conda env create -f coastlearn_environment.yml
+cd CoastLearn
+~/CoastLearn$ conda env create -f coastlearn_environment.yml
 ```
-
-All the required packages have now been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
+Please note that solving and building the environment can take some time. Once this step is complete, all the required packages will have been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
 
 ```
-conda activate coastlearn
+~/CoastLearn$ conda activate coastlearn
 ```
 ### 1.3 Activate Google Earth Engine API
 
