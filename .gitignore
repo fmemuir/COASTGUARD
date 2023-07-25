@@ -10,6 +10,12 @@ Validation/StAndrews_20180527_DTM_1m_EPSG32630.tif
 Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif
 Validation/
 
-
+VegEdge_Montrose2022.py
+VegEdge_StAndrewsTimeseries.py
+VegEdge_Validation_Notebook.py
+VegEdge_Validation_HiRes.py
+VegEdge_Validation.ipynb
+VegEdge.ipynb
+Shoreline.ipynb
 
 
