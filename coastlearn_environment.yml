@@ -1,5 +1,6 @@
 name: coastlearn
 channels:
+  - fbriol
   - conda-forge
   - defaults
 dependencies:
@@ -41,10 +42,10 @@ dependencies:
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
   - c-blosc2=2.2.0=h7a311fb_0
-  - ca-certificates=2022.6.15=ha878542_0
+  - ca-certificates=2022.9.24=ha878542_0
   - cachetools=4.2.4=pyhd8ed1ab_0
   - cairo=1.16.0=ha61ee94_1012
-  - certifi=2022.6.15=py38h578d9bd_0
+  - certifi=2022.9.24=pyhd8ed1ab_0
   - cffi=1.15.1=py38h4a40e3a_0
   - cfitsio=4.1.0=hd9d235c_0
   - chardet=5.0.0=py38h578d9bd_0
@@ -99,9 +100,11 @@ dependencies:
   - geeadd=0.5.4=pyhd8ed1ab_0
   - geemap=0.16.4=pyhd8ed1ab_0
   - geocoder=1.38.1=py_1
+  - geographiclib=1.52=pyhd8ed1ab_0
   - geojson=2.5.0=py_0
   - geopandas=0.11.1=pyhd8ed1ab_0
   - geopandas-base=0.11.1=pyha770c72_0
+  - geopy=2.2.0=pyhd8ed1ab_0
   - geos=3.11.0=h27087fc_0
   - geotiff=1.7.1=h4fc65e6_3
   - gettext=0.19.8.1=h73d1719_1008
@@ -279,7 +282,7 @@ dependencies:
   - numpydoc=1.4.0=pyhd8ed1ab_1
   - openh264=2.3.0=h27087fc_0
   - openjpeg=2.4.0=hb52868f_1
-  - openssl=1.1.1q=h166bdaf_0
+  - openssl=1.1.1s=h166bdaf_0
   - p11-kit=0.24.1=hc5aa10d_0
   - packaging=21.3=pyhd8ed1ab_0
   - pandas=1.4.3=py38h47df419_0
@@ -319,6 +322,7 @@ dependencies:
   - pycrs=1.0.2=py_0
   - pydocstyle=6.1.1=pyhd8ed1ab_0
   - pyerfa=2.0.0.1=py38h71d37f0_2
+  - pyfes=2.9.4=py38h2bc3f7f_0
   - pyflakes=2.4.0=pyhd8ed1ab_0
   - pygments=2.12.0=pyhd8ed1ab_0
   - pylint=2.7.2=py38h578d9bd_0

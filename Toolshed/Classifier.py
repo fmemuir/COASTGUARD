@@ -424,6 +424,13 @@ def label_vegimages(metadata, polygon, Sat, settings):
             im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
             
             # compute cloud_cover percentage (with no data pixels)
+            # if image is empty, skip
+            if cloud_mask is None:
+                continue
+            # if cloud mask is completely filled, skip
+            if sum(sum(cloud_mask) / cloud_mask.shape[0]) / cloud_mask.shape[1] == 1.0:
+                continue
+            
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
                                     (cloud_mask.shape[0]*cloud_mask.shape[1]))
             if cloud_cover_combined > 0.99: # if 99% of cloudy pixels in image skip

@@ -251,7 +251,10 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
     # round UP to nearest 10
     try:
         axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
-        ax.set_xlim(-axlim, axlim)
+        if axlim < 100:
+            ax.set_xlim(-axlim, axlim)
+        else:
+            ax.set_xlim(-100,100)
     except:
         ax.set_xlim(-100, 100)
     
@@ -275,7 +278,9 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
         for s in sats:
             concatl.append(df[s])
         concatpd = pd.concat(concatl)
-        medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=1.5))
+        medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=1))
+        if 'PSScene4Band' in satname:
+            satname = 'PS'
         labels.append(satname + ' median = ' + str(round(concatpd.median(),1)) + 'm')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
@@ -426,17 +431,17 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
         # set the date legend label for each date to corresponding satname colour
         [leg1.get_texts()[ind].set_color(c) for ind in colind]
             
-        # [ax.get_yticklabels()[ind].set_color(c) for ind in colind]
         # get median of only the columns that match each sat name
         concatl = []
         for s in sats:
             concatl.append(df[s])
         concatpd = pd.concat(concatl)
         medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=1))
-        try:
-            labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
-        except:
-            pdb.set_trace()
+        if 'PSScene4Band' in satname:
+            satname = 'PS'
+        labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
+        
+
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
     ax.legend(medians,labels, loc='upper right',facecolor='w')
@@ -545,13 +550,21 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
         ax.add_collection(coll)
         
     ax.set(xlabel='Distance$_{satellite - validation}$ (m)', ylabel='Satellite image platform')
+    if 'PSScene4Band' in violinsatsrt:
+        yticklabels = [item.get_text() for item in ax.get_yticklabels()]
+        yticklabels[yticklabels.index('PSScene4Band')] = 'PS'
+        ax.set_yticklabels(yticklabels)
+
     if PlotTitle != None:
         ax.set_title(PlotTitle)
     
     # set axis limits to rounded maximum value of all violins (either +ve or -ve)
     # round UP to nearest 10
     axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
-    ax.set_xlim(-axlim, axlim)
+    if axlim < 150:
+        ax.set_xlim(-axlim, axlim)
+    else:
+        ax.set_xlim(-150, 150)
     # ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
     # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
@@ -567,14 +580,14 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
         medianlabel = '$\eta_{dist}$ = '+str(round(satmedian,1))+'m'
         LegPatch = Patch( facecolor=colors[i], label = leglabel)
         legend_elements.append(LegPatch)
-        ax.text(-99, i+0.1, leglabel)
+        if axlim < 150:
+            ax.text(-axlim+1, i+0.1, leglabel)
+        else:
+            ax.text(-149, i+0.1, leglabel)
         medianline = ax.lines[iline].get_data()[1][0]
         ax.text(satmedian, medianline-0.05, medianlabel,ha='center')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-        
-    # ax.legend(handles=legend_elements, loc=4)
-    
     
     ax.set_axisbelow(False)
     plt.tight_layout()
@@ -585,7 +598,7 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
 
     for i in df.columns:
         print('No. of transects for '+i+' with sub-pixel accuracy:')
-        if i == 'L5' or i == 'L8':
+        if i == 'L5' or i == 'L7' or i == 'L8' or i == 'L9':
             subpix = (df[i].between(-15,15).sum()/df[i].count())*100
         else:
             subpix = (df[i].between(-10,10).sum()/df[i].count())*100

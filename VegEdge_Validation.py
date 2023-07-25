@@ -521,6 +521,19 @@ for keyname in EWPValidDict.keys():
     ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][726:889])
     ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][972:1297])
     ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][1365:1741])
+    
+ClipEPValidDict = dict.fromkeys(EWPValidDict.keys())
+for keyname in EWPValidDict.keys():
+    ClipEPValidDict[keyname] = []
+    ClipEPValidDict[keyname].extend(EWPValidDict[keyname][40:281])
+    ClipEPValidDict[keyname].extend(EWPValidDict[keyname][312:586])
+    ClipEPValidDict[keyname].extend(EWPValidDict[keyname][1303:1736])
+    
+ClipWPValidDict = dict.fromkeys(EWPValidDict.keys())
+for keyname in EWPValidDict.keys():
+    ClipWPValidDict[keyname] = []
+    ClipWPValidDict[keyname].extend(EWPValidDict[keyname][587:889])
+    ClipWPValidDict[keyname].extend(EWPValidDict[keyname][972:1302])
 
 
 #%%

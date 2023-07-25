@@ -771,6 +771,7 @@ def metadata_collection(inputs, Sat):
     sitename = inputs['sitename']
     
     # Planet data must be loaded locally (while API is still sluggish)
+    # TO DO: incorporate in so that metadata can consist of Landsat, Sentinel AND Planet
     if 'PSScene4Band' in sat_list:
         metadata = LocalImageMetadata(inputs, Sat)
     

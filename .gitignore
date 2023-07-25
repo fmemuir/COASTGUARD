@@ -2,12 +2,21 @@
 .ipynb_checkpoints/CoastWatch-checkpoint.ipynb
 Data/
 Classification/Data/
+Classification/training_data/
 READMEnotes.md
 *.pyc
 CL_DriverTemplate_Test.py
 Validation/StAndrews_20180527_DTM_1m_EPSG32630.tif
 Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif
 Validation/
-Shoreline.ipynb
+
+VegEdge_Montrose2022.py
+VegEdge_StAndrewsTimeseries.py
+VegEdge_Validation_Notebook.py
+VegEdge_Validation_HiRes.py
+VegEdge_Validation.ipynb
 VegEdge.ipynb
+Shoreline.ipynb
+.ipynb_checkpoints/
+
 
