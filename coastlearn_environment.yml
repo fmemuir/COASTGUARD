@@ -1,4 +1,4 @@
-name: cl
+name: coastlearn
 channels:
   - fbriol
   - conda-forge
