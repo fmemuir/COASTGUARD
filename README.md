@@ -49,7 +49,7 @@ cd CoastLearn
 
 conda env create -f coastlearn_environment.yml
 ```
-Please note that solving and building the environment can take some time (can be up to a few hours!). Once this step is complete, all the required packages will have been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
+Please note that solving and building the environment can take some time (minutes to hours depending on the the nature of your base environment). Once this step is complete, all the required packages will have been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
 
 ```
 conda activate coastlearn
