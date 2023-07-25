@@ -42,13 +42,14 @@ Once you have Anaconda installed on your PC:
 
 and navigate to the folder with the repository files. If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!.
 
-Create a new `conda` environment named `coastlearn` with all the required packages by entering this command (make sure you're in the repo folder!):
+Navigate to the repository folder and then create a new `conda` environment named `coastlearn` with all the required packages by entering this command (make sure you're in the repo folder!):
 
 ```
+cd CoastLearn
+
 conda env create -f coastlearn_environment.yml
 ```
-
-All the required packages have now been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
+Please note that solving and building the environment can take some time (minutes to hours depending on the the nature of your base environment). Once this step is complete, all the required packages will have been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
 
 ```
 conda activate coastlearn
@@ -57,9 +58,9 @@ conda activate coastlearn
 
 This tool uses Google Earth Engine (GEE) API to access satellite image metadata. You need to request access to GEE API by signing up at https://signup.earthengine.google.com/ with a Google account and filling in a few questions about your intended usage (the safest bet is 'research'). It can take up to 24 hours to approve a request, but it's usually fairly quick. 
 
-In the meantime, you will also need to install a program called Google Cloud for the authenticator to work. It shouldn't matter where you download this to. Find installation instructions here: https://cloud.google.com/sdk/docs/install. 
+In the meantime, you will also need to install a program called Google Cloud Command Line Interface (gcloud CLI). It shouldn't matter where you download this to. Find installation instructions here: https://cloud.google.com/sdk/docs/install. 
 
-Once your GEE request has been approved, you should get a confirmation email. Open a prompt/terminal window and activate the `coastlearn` environment. Run this command to link your `conda` environment to the GEE server:
+Once your GEE request has been approved, you should get a confirmation email. Open a prompt/terminal window and `activate coastlearn` environment. Run this command to link your `conda` environment to the GEE server:
 
 ```
 earthengine authenticate
@@ -77,8 +78,17 @@ A web browser will open; log in with the GMail account you used to sign up to GE
 **Remember!**: Always run `conda activate coastlearn` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing. 
 
 
-## Run-through Example
+## Getting Started
 
+The process of extracting coastal vegetation edges from satellite data is run through a driver file. Driver files can be customised for your own site of interest. There are a couple of template examples in the repository to help you get started. 
+The interactive python notebook [`VegEdge_DriverTemplate.ipynb`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.ipynb) can be viewed and executed in an interactive notebook environment such as jupyter-notebook which can be launched at the command line:
+```
+(coastlearn) $ jupyter-notebook VegEdge_DriverTemplate.ipynb
+```
+Alternatively, you can customise and run the standard python script [`VegEdge_DriverTemplate.py`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.py) using a python IDE such as spyder:
+```
+(coastlearn) $ spyder VegEdge_DriverTemplate.py
+```
 https://github.com/fmemuir/CoastLearn-main/assets/22475417/1bd4722b-ece9-4ed9-a9ac-104f71c241d7
 
 There are 7 main steps to setting up the vegetation extraction tool. You can see [this paper]() for a flowchart and more info on the methodology. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
@@ -90,8 +100,6 @@ There are 7 main steps to setting up the vegetation extraction tool. You can see
 5. Set coastal boundary parameters (cloud cover threshold, plotting flags, minimum area for contouring);
 6. Define a reference shore along which to create a buffer (boundaries will only be extracted along here);
 7. Run the main edge extraction function.
-
-You can use the [`VegEdge_DriverTemplate.ipynb`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.ipynb) or [`VegEdge_DriverTemplate.py`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.py) files to create a driver file for your own site.
 
 *<sub>This is an update from the original CoastSat toolkit! Raw satellite images will **not** be downloaded, but merely the filenames will be passed to `geemap` and converted from the cloud server straight to `numpy` arrays. This is to save time and bandwidth. TIFs of true colour images and their classified and NDVI counterparts will however be exported throughout the process to be explored in a GIS environment.</sub>
 
