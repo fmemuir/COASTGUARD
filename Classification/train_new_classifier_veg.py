@@ -93,14 +93,14 @@ filepath_models = os.path.join(os.getcwd(), 'models')
 # lonmin, lonmax = -2.49, -2.42
 # latmin, latmax = 56.70, 56.75
 
-sitename = 'Aberdeen'
-lonmin, lonmax = -2.098,-2.052
-latmin, latmax = 57.164,57.181 
+# sitename = 'Aberdeen'
+# lonmin, lonmax = -2.098,-2.052
+# latmin, latmax = 57.164,57.181 
 
 # sitename = 'DornochPSScene'
-# sitename = 'DornochL5'
-# lonmin, lonmax = -4.036261,-3.995186
-# latmin, latmax = 57.853515,57.889722 
+sitename = 'DornochL5'
+lonmin, lonmax = -4.036261,-3.995186
+latmin, latmax = 57.853515,57.889722 
 
 # sat_list = ['PSScene4Band']
 sat_list = ['L5']
@@ -195,7 +195,7 @@ for site in train_sites:
 # You can use the data that was labelled here and/or the original CoastSat training data.
 
 # load labelled images
-features,labelmaps = Classifier.load_labels(train_sites, settings)
+features,labelmaps = Classifier._els(train_sites, settings)
 
 #%% 3.1 Combine Additional Classifier Data
 
@@ -205,13 +205,21 @@ newnonveg = np.append(features['nonveg'], features2['nonveg'], axis=0)
 newveg = np.append(features['veg'], features2['veg'], axis=0)
 newfeatures = dict({'veg':newveg,'nonveg':newnonveg})
 
+features = newfeatures
+
+for i in range(len(labelmaps2['filenames'])):
+    labelmaps['filenames'].append(labelmaps2['filenames'][i])
+    labelmaps['labelmaps'].append(labelmaps2['labelmaps'][i])
+    
+print('full features:\nveg:', str(len(features['veg'])), '\nnonveg:',str(len(features['nonveg'])) )
+
 #%% 4. Subsample
 #As the classes do not have the same number of pixels, it is good practice to subsample the very large classes 
 # (in this case 'veg' and 'other land features')
 
 # subsample randomly the land and water classes
 # as the most important class is 'sand', the number of samples should be close to the number of sand pixels
-n_samples = 10000
+n_samples = 20000
 for key in ['veg', 'nonveg']:
     features[key] =  features[key][np.random.choice(features[key].shape[0], n_samples, replace=False),:]
 # print classes again
@@ -351,7 +359,7 @@ start_time = timeit.default_timer()
 classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
 classifier.fit(X,y)
 # joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
-joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_L5.pkl'))
+joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_L5L8S2.pkl'))
 print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
 #%% Evaluate the classifier
