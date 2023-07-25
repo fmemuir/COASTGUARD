@@ -195,7 +195,7 @@ for site in train_sites:
 # You can use the data that was labelled here and/or the original CoastSat training data.
 
 # load labelled images
-features,labelmaps = Classifier._els(train_sites, settings)
+features,labelmaps = Classifier.load_labels(train_sites, settings)
 
 #%% 3.1 Combine Additional Classifier Data
 

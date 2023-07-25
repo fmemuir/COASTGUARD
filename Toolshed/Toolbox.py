@@ -1410,6 +1410,9 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     mapcentrelat = latmin + ((latmax - latmin)/2)
     m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 10, tiles = 'Stamen Terrain')
     folium.GeoJson(data=BBoxGDF['geometry']).add_to(m)
+    folium.Marker(location=[BBoxGDF.centroid.x,BBoxGDF.centroid.y],
+                  popup=str(round(float(BBoxGDF.to_crs('epsg:32630').area)))+' sq m'
+                  ).add_to(m)
     m.save("./Data/"+sitename+"/AOImap.html")
     
     # Export as polygon and ee point for use in clipping satellite image requests
