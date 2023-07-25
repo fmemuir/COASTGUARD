@@ -697,7 +697,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     cmap = cm.get_cmap('magma_r',len(valsrtclean))
     for i in range(len(valsrtclean)): 
         # plot scatter of validation (observed) vs satellite (predicted) distances along each transect
-        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=1, alpha=0.2, zorder=0)
+        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=3, alpha=0.3, edgecolors='none', zorder=0)
         # linear regression
         X = np.array(valsrtclean[i]).reshape((-1,1))
         y = np.array(satsrtclean[i])
