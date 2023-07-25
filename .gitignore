@@ -2,7 +2,7 @@
 .ipynb_checkpoints/CoastWatch-checkpoint.ipynb
 Data/
 Classification/Data/
-Classification/training_data/
+
 READMEnotes.md
 *.pyc
 CL_DriverTemplate_Test.py
