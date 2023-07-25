@@ -46,12 +46,13 @@ Navigate to the repository folder and then create a new `conda` environment name
 
 ```
 cd CoastLearn
-~/CoastLearn$ conda env create -f coastlearn_environment.yml
+
+conda env create -f coastlearn_environment.yml
 ```
-Please note that solving and building the environment can take some time. Once this step is complete, all the required packages will have been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
+Please note that solving and building the environment can take some time (can be up to a few hours!). Once this step is complete, all the required packages will have been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
 
 ```
-~/CoastLearn$ conda activate coastlearn
+conda activate coastlearn
 ```
 ### 1.3 Activate Google Earth Engine API
 
