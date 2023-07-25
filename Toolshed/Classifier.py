@@ -859,7 +859,7 @@ def load_labels(train_sites, settings, CoastOnly=False):
     
     """    
     
-    filepath_train = settings['filepath_train']
+    filepath_train = './training_data'
     # initialize the features dict
     features = dict([])
     n_features = 16 # number of features corresponds to different bands and indices; coastsat is 20
@@ -870,7 +870,7 @@ def load_labels(train_sites, settings, CoastOnly=False):
     imnames = []
     # loop through each site 
     for site in train_sites:
-        sitename = settings['inputs']['sitename']
+        sitename = site
         filepath = os.path.join(filepath_train,sitename)
         if os.path.exists(filepath):
             # FM: faster way to get just pkl files
