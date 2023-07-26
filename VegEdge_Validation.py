@@ -242,7 +242,7 @@ OPTION 1: Run extraction tool and return output dates, lines, filenames and
 image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
-clf_model = 'MLPClassifier_Veg_L8S2.pkl.pkl'
+clf_model = 'MLPClassifier_Veg_L8S2.pkl'
 # clf_model = 'MLPClassifier_Veg_PSScene.pkl'
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
 
