@@ -846,9 +846,9 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     TransectInterGDF['TZwidth'] = WidthFields
     
     # initialise and fill field with median TZ widths across each Tr's timeseries
-    TransectInterGDF['TZwidthmed'] = np.zeros(len(TransectInterGDF))
+    TransectInterGDF['TZwidthMn'] = np.zeros(len(TransectInterGDF))
     for i in range(len(TransectInterGDF)):
-        TransectInterGDF['TZwidthmed'].iloc[i] = np.nanmedian(TransectInterGDF['TZwidth'].iloc[i])
+        TransectInterGDF['TZwidthMn'].iloc[i] = np.nanmean(TransectInterGDF['TZwidth'].iloc[i])
     
 
     return TransectInterGDF
@@ -856,7 +856,7 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
 
 def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=None):
     
-    if DTMfile==None:
+    if DTMfile is None:
         print('No DTM file provided.')
         return TransectInterGDF
     
@@ -913,8 +913,8 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=
                 MaxSlope.append(MaxSlopeTr)
                 MeanSlope.append(MeanSlopeTr)
         
-        TransectInterGDF['maxslope'] = MaxSlope
-        TransectInterGDF['meanslope'] = MeanSlope
+        TransectInterGDF['SlopeMax'] = MaxSlope
+        TransectInterGDF['SlopeMean'] = MeanSlope
             
         return TransectInterGDF    
             
