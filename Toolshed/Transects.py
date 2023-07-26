@@ -850,6 +850,15 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     for i in range(len(TransectInterGDF)):
         TransectInterGDF['TZwidthMn'].iloc[i] = np.nanmean(TransectInterGDF['TZwidth'].iloc[i])
     
+    TransectInterShp = TransectInterGDF.copy()
+
+    # reformat fields with lists to strings
+    KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
+    for Key in KeyName:
+        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+    # Save as shapefile of intersected transects
+    TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
+        
 
     return TransectInterGDF
 
@@ -916,6 +925,16 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=
         
         TransectInterGDF['SlopeMax'] = MaxSlope
         TransectInterGDF['SlopeMean'] = MeanSlope
+        
+        
+        TransectInterShp = TransectInterGDF.copy()
+
+        # reformat fields with lists to strings
+        KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
+        for Key in KeyName:
+            TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+        # Save as shapefile of intersected transects
+        TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
             
         return TransectInterGDF    
             
