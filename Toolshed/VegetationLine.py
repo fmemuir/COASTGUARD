@@ -456,8 +456,11 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     im_NIRG = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
     features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
     # R-G
-    im_RG = Toolbox.nd_index(im_ms[:,:,2], im_ms[:,:,1], cloud_mask)
-    features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
+    # im_RG = Toolbox.nd_index(im_ms[:,:,2], im_ms[:,:,1], cloud_mask)
+    # features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
+    # SAVI
+    im_SAVI = Toolbox.savi_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    features = np.append(features, np.expand_dims(im_SAVI[im_bool],axis=1), axis=-1)
     
     # calculate standard deviation of individual bands
     for k in range(im_ms.shape[2]):
@@ -472,7 +475,10 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     im_std = Toolbox.image_std(im_NIRG, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
     # R-G
-    im_std = Toolbox.image_std(im_RG, 1)
+    # im_std = Toolbox.image_std(im_RG, 1)
+    # features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # SAVI
+    im_std = Toolbox.image_std(im_SAVI, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
     # Total feature num should be 16 (5 bands, 3 band indices, stdev on each)
