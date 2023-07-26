@@ -220,6 +220,44 @@ def nd_index(im1, im2, cloud_mask):
     im_nd = vec_nd.reshape(im1.shape[0], im1.shape[1])
     return im_nd
     
+
+def savi_index(im1, im2, cloud_mask):
+    """
+    Computes soil adjusted vegetation index on 2 bands (2D), given a cloud mask (2D).
+
+    FM 2022
+
+    Arguments:
+    -----------
+    im1: np.array
+        first image (2D) with which to calculate the ND index (should be NIR band)
+    im2: np.array
+        second image (2D) with which to calculate the ND index (should be Red band)
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+
+    Returns:    
+    -----------
+    im_nd: np.array
+        Image (2D) containing the ND index
+        
+    """
+
+    # reshape the cloud mask
+    vec_mask = cloud_mask.reshape(im1.shape[0] * im1.shape[1])
+    # initialise with NaNs
+    vec_nd = np.ones(len(vec_mask)) * np.nan
+    # reshape the two images
+    nir = im1.reshape(im1.shape[0] * im1.shape[1])
+    red = im2.reshape(im2.shape[0] * im2.shape[1])
+    # compute the normalised difference index
+    temp = np.divide(nir[~vec_mask] - red[~vec_mask],
+                     nir[~vec_mask] + red[~vec_mask] + 0.9) * (1 + 0.9)
+    vec_nd[~vec_mask] = temp
+    # reshape into image
+    im_nd = vec_nd.reshape(im1.shape[0], im1.shape[1])
+    return im_nd
+
 def image_std(image, radius):
     """
     Calculates the standard deviation of an image, using a moving window of 
