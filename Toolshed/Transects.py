@@ -882,10 +882,11 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=
                 # Take average vegline intersection point of each transect to swath points along
                 InterPnt = Point(np.mean([Pnt.x for Pnt in InterPnts]), np.mean([Pnt.y for Pnt in InterPnts]))
                 
-                # Extend 20m in either direction along transect from intersection point
+                # Extend Tr in either direction along transect from intersection point
                 intx, Trx, inty, Try = InterPnt.coords.xy[0][0], TransectInterGDF.iloc[Tr].geometry.coords.xy[0][0], InterPnt.coords.xy[1][0],TransectInterGDF.iloc[Tr].geometry.coords.xy[1][0]
-
-                dist = 20
+                # Distance decided by cross-shore width of TZ plus extra 5m buffer
+                # dist = 20
+                dist = round(TransectInterGDF['TZwidthMn'].iloc[Tr]) + 5
                 # calculate vector
                 v = (Trx-intx, Try-inty)
                 v_ = np.sqrt((Trx-intx)**2 + (Try-inty)**2)
