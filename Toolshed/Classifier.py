@@ -446,8 +446,6 @@ def label_vegimages(metadata, polygon, Sat, settings):
                 continue
             # get individual RGB image
             im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-            im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-            im_NDWI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
             # initialise labels
             im_viz = im_RGB.copy()
             im_labels = np.zeros([im_RGB.shape[0],im_RGB.shape[1]])
