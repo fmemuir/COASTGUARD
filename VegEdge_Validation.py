@@ -367,8 +367,8 @@ with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl
     pickle.dump([TransectDict,TransectInterGDF], f)
        
 # Update Transects with Transition Zone widths and slope if available
-TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
-TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
+TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath)
+TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath, DTM)
 
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
     pickle.dump([TransectDict,TransectInterGDF], f)
@@ -380,7 +380,7 @@ with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
 # ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20190813_20220222.shp'
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp'
  
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
