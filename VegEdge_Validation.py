@@ -61,6 +61,12 @@ lonmin, lonmax = -2.89087, -2.84869
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['L5','L7','L8','S2']
 
+#%%ST ANDREWS WEST SAVI
+sitename = 'StAndrewsWestSAVI'
+lonmin, lonmax = -2.89087, -2.84869
+latmin, latmax = 56.32641, 56.39814
+sat_list = ['L5','L7','L8','S2']
+
 #%% other sites
 
 ##ST ANDREWS
@@ -395,7 +401,7 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415),(1637,1735)]#,(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)] # east 
 #%%    
 TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
 
@@ -419,10 +425,10 @@ for TransectIDs in TransectIDList:
     
 #%% Error stats
 # East errors
-# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
 
 # West errors
-TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidDict,TransectIDs)
 
