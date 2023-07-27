@@ -1789,8 +1789,13 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
     None.
 
     """
-    # create array of hourly timesteps between dates 
-    dates = np.arange(datetime.strptime(daterange[0], '%Y-%m-%d'), datetime.strptime(daterange[1], '%Y-%m-%d'), timedelta(hours=1)).astype(datetime) 
+    
+    print('Compiling tide heights for given date range...')
+    # add buffer of one day either side
+    startdate = datetime.strptime(daterange[0], '%Y-%m-%d') - timedelta(days=1)
+    enddate = datetime.strptime(daterange[1], '%Y-%m-%d') + timedelta(days=1)
+    # create array of hourly timesteps between dates
+    dates = np.arange(startdate, enddate, timedelta(hours=1)).astype(datetime) 
     
     # pass configuration files to pyfes handler to gather up tidal constituents
     config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
