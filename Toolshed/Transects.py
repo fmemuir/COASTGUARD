@@ -760,7 +760,7 @@ def CalculateChanges(TransectDict,TransectInterGDF):
     return TransectDict
 
 
-def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
+def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath):
     
     
     print('Intersecting transects with transition zones... ')
@@ -857,13 +857,13 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     for Key in KeyName:
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     # Save as shapefile of intersected transects
-    TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
+    TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
         
 
     return TransectInterGDF
 
 
-def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=None):
+def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=None):
     
     if DTMfile is None:
         print('No DTM file provided.')
@@ -934,7 +934,7 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=
         for Key in KeyName:
             TransectInterShp[Key] = TransectInterShp[Key].astype(str)
         # Save as shapefile of intersected transects
-        TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
+        TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
             
         return TransectInterGDF    
             
