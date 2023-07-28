@@ -760,7 +760,7 @@ def CalculateChanges(TransectDict,TransectInterGDF):
     return TransectDict
 
 
-def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
+def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath):
     
     
     print('Intersecting transects with transition zones... ')
@@ -846,17 +846,26 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF):
     TransectInterGDF['TZwidth'] = WidthFields
     
     # initialise and fill field with median TZ widths across each Tr's timeseries
-    TransectInterGDF['TZwidthmed'] = np.zeros(len(TransectInterGDF))
+    TransectInterGDF['TZwidthMn'] = np.zeros(len(TransectInterGDF))
     for i in range(len(TransectInterGDF)):
-        TransectInterGDF['TZwidthmed'].iloc[i] = np.nanmedian(TransectInterGDF['TZwidth'].iloc[i])
+        TransectInterGDF['TZwidthMn'].iloc[i] = np.nanmean(TransectInterGDF['TZwidth'].iloc[i])
     
+    TransectInterShp = TransectInterGDF.copy()
+
+    # reformat fields with lists to strings
+    KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
+    for Key in KeyName:
+        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+    # Save as shapefile of intersected transects
+    TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
+        
 
     return TransectInterGDF
 
 
-def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=None):
+def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=None):
     
-    if DTMfile==None:
+    if DTMfile is None:
         print('No DTM file provided.')
         return TransectInterGDF
     
@@ -882,10 +891,11 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=
                 # Take average vegline intersection point of each transect to swath points along
                 InterPnt = Point(np.mean([Pnt.x for Pnt in InterPnts]), np.mean([Pnt.y for Pnt in InterPnts]))
                 
-                # Extend 20m in either direction along transect from intersection point
+                # Extend Tr in either direction along transect from intersection point
                 intx, Trx, inty, Try = InterPnt.coords.xy[0][0], TransectInterGDF.iloc[Tr].geometry.coords.xy[0][0], InterPnt.coords.xy[1][0],TransectInterGDF.iloc[Tr].geometry.coords.xy[1][0]
-
-                dist = 20
+                # Distance decided by cross-shore width of TZ plus extra 5m buffer
+                # dist = 20
+                dist = round(TransectInterGDF['TZwidthMn'].iloc[Tr]) + 5
                 # calculate vector
                 v = (Trx-intx, Try-inty)
                 v_ = np.sqrt((Trx-intx)**2 + (Try-inty)**2)
@@ -913,8 +923,18 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, DTMfile=
                 MaxSlope.append(MaxSlopeTr)
                 MeanSlope.append(MeanSlopeTr)
         
-        TransectInterGDF['maxslope'] = MaxSlope
-        TransectInterGDF['meanslope'] = MeanSlope
+        TransectInterGDF['SlopeMax'] = MaxSlope
+        TransectInterGDF['SlopeMean'] = MeanSlope
+        
+        
+        TransectInterShp = TransectInterGDF.copy()
+
+        # reformat fields with lists to strings
+        KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
+        for Key in KeyName:
+            TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+        # Save as shapefile of intersected transects
+        TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
             
         return TransectInterGDF    
             

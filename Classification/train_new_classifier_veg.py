@@ -93,38 +93,41 @@ filepath_models = os.path.join(os.getcwd(), 'models')
 # lonmin, lonmax = -2.49, -2.42
 # latmin, latmax = 56.70, 56.75
 
-sitename = 'Aberdeen'
-lonmin, lonmax = -2.098,-2.052
-latmin, latmax = 57.164,57.181 
+# sitename = 'Aberdeen'
+# lonmin, lonmax = -2.098,-2.052
+# latmin, latmax = 57.164,57.181 
 
+# sitename = 'DornochPSScene'
+sitename = 'DornochL5'
+lonmin, lonmax = -4.036261,-3.995186
+latmin, latmax = 57.853515,57.889722 
+
+# sat_list = ['PSScene4Band']
+sat_list = ['L5']
+
+# directory where the data will be stored
+filepath = Toolbox.CreateFileStructure(sitename, sat_list)
+
+projection_epsg = 27700
+image_epsg = 32630
+cloud_thresh = 0.5
 
 train_sites = [sitename]
 print('Sites for training:\n%s\n'%train_sites)
 
-polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax)
+polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax,sitename, image_epsg)
 # it's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
 
-#%%
-
-
-filepath = os.path.join(os.getcwd(), 'Data')
-direc = os.path.join(filepath, sitename)
-
-if os.path.isdir(direc) is False:
-    os.mkdir(direc)
 
 
 # In[49]:
 
 
-sat_list = ['L8','S2']
-dates = ['2019-02-01', '2019-11-30']
+# dates = ['2022-01-01', '2022-12-31']
 # dates = ['2019-06-01', '2019-08-31']
-# dates = ['2019-12-01', '2020-02-28']
-projection_epsg = 27700
-image_epsg = 32630
-cloud_thresh = 0.3
+dates = ['2019-01-01', '2020-01-01']
+# dates = ['2004-01-01', '2006-01-01']
 
 # put all the inputs into a dictionnary
 inputs = {
@@ -171,7 +174,7 @@ Download.check_images_available(inputs)
 
 
 Sat = Toolbox.image_retrieval(inputs)
-metadata = Toolbox.metadata_collection(sat_list, Sat, filepath, sitename)
+metadata = Toolbox.metadata_collection(inputs, Sat)
 
 
 #%% 2. Label Images
@@ -194,6 +197,21 @@ for site in train_sites:
 # load labelled images
 features,labelmaps = Classifier.load_labels(train_sites, settings)
 
+#%% 3.1 Combine Additional Classifier Data
+
+features2,labelmaps2 = Classifier.load_labels(['Aberdeen'], settings) # rerun settings to redefine
+
+newnonveg = np.append(features['nonveg'], features2['nonveg'], axis=0)
+newveg = np.append(features['veg'], features2['veg'], axis=0)
+newfeatures = dict({'veg':newveg,'nonveg':newnonveg})
+
+features = newfeatures
+
+for i in range(len(labelmaps2['filenames'])):
+    labelmaps['filenames'].append(labelmaps2['filenames'][i])
+    labelmaps['labelmaps'].append(labelmaps2['labelmaps'][i])
+    
+print('full features:\nveg:', str(len(features['veg'])), '\nnonveg:',str(len(features['nonveg'])) )
 
 #%% 4. Subsample
 #As the classes do not have the same number of pixels, it is good practice to subsample the very large classes 
@@ -201,7 +219,7 @@ features,labelmaps = Classifier.load_labels(train_sites, settings)
 
 # subsample randomly the land and water classes
 # as the most important class is 'sand', the number of samples should be close to the number of sand pixels
-n_samples = 10000
+n_samples = 20000
 for key in ['veg', 'nonveg']:
     features[key] =  features[key][np.random.choice(features[key].shape[0], n_samples, replace=False),:]
 # print classes again
@@ -340,7 +358,8 @@ Classifier.plot_confusion_matrix(y_test, y_pred,
 start_time = timeit.default_timer()
 classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
 classifier.fit(X,y)
-joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
+# joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
+joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_L5L8S2.pkl'))
 print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
 #%% Evaluate the classifier
