@@ -818,20 +818,23 @@ def metadata_collection(inputs, Sat):
             metadata[sat_list[i]] = {'filenames':[], 'acc_georef':[], 'epsg':[], 'dates':[]}
     
         for i in range(len(Sat)):
-            for j in range(len(Sat[i].getInfo().get('features'))):
+            Features = Sat[i].getInfo().get('features')
+            for j in range(len(Features)):
+                Feature = Features[j]
                 if sat_list[i] != 'S2':
-                    metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
-                    metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['properties']['GEOMETRIC_RMSE_MODEL'])
-                    metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][0]['crs'].lstrip('EPSG:')))
-                    metadata[sat_list[i]]['dates'].append(Sat[i].getInfo().get('features')[j]['properties']['DATE_ACQUIRED'])
+                    metadata[sat_list[i]]['filenames'].append(Feature['id'])
+                    metadata[sat_list[i]]['acc_georef'].append(Feature['properties']['GEOMETRIC_RMSE_MODEL'])
+                    metadata[sat_list[i]]['epsg'].append(int(Feature['bands'][0]['crs'].lstrip('EPSG:')))
+                    metadata[sat_list[i]]['dates'].append(Feature['properties']['DATE_ACQUIRED'])
                 else:
-                    metadata[sat_list[i]]['filenames'].append(Sat[i].getInfo().get('features')[j]['id'])
-                    metadata[sat_list[i]]['acc_georef'].append(Sat[i].getInfo().get('features')[j]['bands'][1]['crs_transform'])
-                    metadata[sat_list[i]]['epsg'].append(int(Sat[i].getInfo().get('features')[j]['bands'][1]['crs'].lstrip('EPSG:')))
-                    d = datetime.strptime(Sat[i].getInfo().get('features')[j]['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
+                    metadata[sat_list[i]]['filenames'].append(Feature['id'])
+                    metadata[sat_list[i]]['acc_georef'].append(Feature['bands'][1]['crs_transform'])
+                    metadata[sat_list[i]]['epsg'].append(int(Feature['bands'][1]['crs'].lstrip('EPSG:')))
+                    d = datetime.strptime(Feature['properties']['DATATAKE_IDENTIFIER'][5:13],'%Y%m%d')
                     metadata[sat_list[i]]['dates'].append(str(d.strftime('%Y-%m-%d')))
                 
-                print('\r'+sat_list[i],": ",(100*j/len(Sat[i].getInfo().get('features'))),'%', end='')
+                print('\r'+sat_list[i],": ",round(100*(j+1)/len(Features)),'%   ', end='')
+            print("Done")
         
         with open(os.path.join(filepath, sitename + '_metadata.pkl'), 'wb') as f:
             pickle.dump(metadata, f)
