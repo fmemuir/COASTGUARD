@@ -41,14 +41,28 @@ lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['L5','L7','L8','S2']
 
+#%% ST ANDREWS EAST SAVI
+sitename = 'StAndrewsEastSAVI'
+lonmin, lonmax = -2.84869, -2.79878
+latmin, latmax = 56.32641, 56.39814
+sat_list = ['L5','L7','L8','S2']
+
 #%%
 sitename = 'StAndrewsEastS2Full'
 lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['S2']
+dates = ['2015-06-28', '2023-06-13']
+
 
 #%%ST ANDREWS WEST
 sitename = 'StAndrewsWest'
+lonmin, lonmax = -2.89087, -2.84869
+latmin, latmax = 56.32641, 56.39814
+sat_list = ['L5','L7','L8','S2']
+
+#%%ST ANDREWS WEST SAVI
+sitename = 'StAndrewsWestSAVI'
 lonmin, lonmax = -2.89087, -2.84869
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['L5','L7','L8','S2']
@@ -100,7 +114,7 @@ polygon = Toolbox.smallest_rectangle(polygon)
 #dates = ['2021-05-01', '2021-07-02']
 
 # date range for valiation
-vegsurveyshp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
+vegsurveyshp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp'
 vegsurvey = gpd.read_file(vegsurveyshp)
 vegdatemin = vegsurvey.Date.min()
 vegdatemax = vegsurvey.Date.max()
@@ -230,7 +244,7 @@ settings['max_dist_ref'] = 150
 #%% Compute Tides from FES2014
 tidepath = "/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/aviso-fes/data/fes2014"
 daterange = dates
-tidelatlon = [-2.79878,latmax-(2/latmin)] # seaward edge, halfway between S and N
+tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N
 if os.path.isfile(os.path.join('./Data/tides',sitename+'_tides.csv')) == False:
     Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon)
 
@@ -242,8 +256,9 @@ OPTION 1: Run extraction tool and return output dates, lines, filenames and
 image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
-clf_model = 'Aberdeen_MLPClassifier_Veg_S2.pkl'
-# clf_model = 'DornochPSScene_MLPClassifier_Veg_PSScene.pkl'
+# clf_model = 'MLPClassifier_Veg_L8S2.pkl'
+# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
+clf_model = 'L5L8S2_SAVI_MLPClassifier_Veg.pkl' 
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
 
 # L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im
@@ -329,7 +344,7 @@ else:
 
 #%% Create (or load) intersections with sat and validation lines per transect
 
-DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif'
+DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20201120_Phase5DTM_1m.tif'
 
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
     print('TransectDict exists and was loaded')
@@ -348,36 +363,30 @@ else:
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
         
-    if settings['wetdry'] == True:
-        # beachslope = 0.006 # tanBeta StAnd W
-        beachslope = 0.04 # tanBeta StAnE
-        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-        TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+if settings['wetdry'] == True:
+    # beachslope = 0.006 # tanBeta StAnd W
+    beachslope = 0.04 # tanBeta StAnE
+    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
 
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDF], f)
-        
-        
-    # Update Transects with Transition Zone widths and slope if available
-    TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF)
-    TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
-
-
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDF], f)
-        
-#%% run single instance of slope intersect 
-DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20180527_DTM_1m_EPSG27700.tif'
-TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, DTM)
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
     pickle.dump([TransectDict,TransectInterGDF], f)
+       
+# Update Transects with Transition Zone widths and slope if available
+TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath)
+TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath, DTM)
+
+with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+    pickle.dump([TransectDict,TransectInterGDF], f)
+        
+
 
 #%% VALIDATION
 
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
 # ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20190813_20220222.shp'
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp'
  
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
@@ -392,7 +401,7 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415),(1637,1735)]#,(416,594),(1365,1462),(1463,1636),(1637,1741)] # east 
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)] # east 
 #%%    
 TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
 
@@ -416,10 +425,10 @@ for TransectIDs in TransectIDList:
     
 #%% Error stats
 # East errors
-# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
+TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
 
 # West errors
-TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidDict,TransectIDs)
 

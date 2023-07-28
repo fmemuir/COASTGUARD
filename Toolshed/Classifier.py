@@ -446,8 +446,6 @@ def label_vegimages(metadata, polygon, Sat, settings):
                 continue
             # get individual RGB image
             im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-            im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-            im_NDWI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
             # initialise labels
             im_viz = im_RGB.copy()
             im_labels = np.zeros([im_RGB.shape[0],im_RGB.shape[1]])
@@ -859,7 +857,7 @@ def load_labels(train_sites, settings, CoastOnly=False):
     
     """    
     
-    filepath_train = settings['filepath_train']
+    filepath_train = './training_data'
     # initialize the features dict
     features = dict([])
     n_features = 16 # number of features corresponds to different bands and indices; coastsat is 20
@@ -870,7 +868,7 @@ def load_labels(train_sites, settings, CoastOnly=False):
     imnames = []
     # loop through each site 
     for site in train_sites:
-        sitename = settings['inputs']['sitename']
+        sitename = site
         filepath = os.path.join(filepath_train,sitename)
         if os.path.exists(filepath):
             # FM: faster way to get just pkl files

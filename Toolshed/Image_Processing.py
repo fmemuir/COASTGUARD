@@ -108,7 +108,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef[3] = georef[3] - georef[5]/2 # ytrans = up by half of 15m
         
         # Additional coregistering based on georef to OS (EPSG 27700) imagery
-        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast' or settings['inputs']['sitename'] == 'StAndrewsEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsWestSAVI':
             georef[0] = georef[0] + (-4.5)
             georef[3] = georef[3] + (42.3)
         
@@ -174,7 +174,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistering based on georef to OS (EPSG 27700) imagery
-        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast' or settings['inputs']['sitename'] == 'StAndrewsEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsWestSAVI':
             georef[0] = georef[0] + (13.7)
             georef[3] = georef[3] + (37.4)
         
@@ -269,7 +269,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistering based on georef to OS (EPSG 27700) imagery
-        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast' or settings['inputs']['sitename'] == 'StAndrewsEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsWestSAVI':
             georef[0] = georef[0] + (13.7)
             georef[3] = georef[3] + (37.4)
         
@@ -363,7 +363,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistering based on georef to OS (EPSG 27700) imagery
-        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast' or settings['inputs']['sitename'] == 'StAndrewsEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsWestSAVI':
             georef[0] = georef[0] + (13.7)
             georef[3] = georef[3] + (37.4)
         
@@ -444,7 +444,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistering based on georef to OS (EPSG 27700) imagery
-        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
+        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast' or settings['inputs']['sitename'] == 'StAndrewsEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsWestSAVI':
             georef[0] = georef[0] + (-7.5)
             georef[3] = georef[3] + (15.5)
         
@@ -573,9 +573,9 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         
         # Additional coregistering based on georef to OS (EPSG 27700) imagery
-        if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
-            georef[0] = georef[0] + (-7.5)
-            georef[3] = georef[3] + (15.5)
+        if settings['inputs']['sitename'] == 'StAndrewsPlanetWest' or settings['inputs']['sitename'] == 'StAndrewsPlanetEast' or settings['inputs']['sitename'] == 'StAndrewsPlanetEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsPlanetWestSAVI':
+            georef[0] = georef[0] + (3.8)
+            georef[3] = georef[3] + (6.5)
         
         
         datepath = os.path.basename(filenames[fn])[0:8]
