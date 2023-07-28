@@ -179,6 +179,33 @@ def convert_epsg(points, epsg_in, epsg_out):
 
     return points_converted
 
+
+def get_UTMepsg_from_wgs(lat, lon):
+    """
+    Retrieves an epsg code from lat lon in wgs84
+    see https://stackoverflow.com/a/40140326/4556479
+    
+    added by MDH 2023
+
+    Arguments:
+    -----------
+    lat: latitude in WGS84
+    lon: longitude in WGS84         
+                
+    Returns:    
+    -----------
+    epsg_code: epsg code for best UTM zone 
+        
+    """
+    utm_band = str((math.floor((lon + 180) / 6 ) % 60) + 1)
+    if len(utm_band) == 1:
+        utm_band = '0'+utm_band
+    if lat >= 0:
+        epsg_code = '326' + utm_band
+        return epsg_code
+    epsg_code = '327' + utm_band
+    return epsg_code
+    
 ###################################################################################################
 # IMAGE ANALYSIS FUNCTIONS
 ###################################################################################################
