@@ -860,7 +860,7 @@ def load_labels(train_sites, settings, CoastOnly=False):
     filepath_train = './training_data'
     # initialize the features dict
     features = dict([])
-    n_features = 16 # number of features corresponds to different bands and indices; coastsat is 20
+    n_features = 20 # number of features corresponds to different bands and indices; coastsat is 20
     first_row = np.nan*np.ones((1,n_features))
     for key in settings['labels'].keys():
         features[key] = first_row
@@ -912,6 +912,8 @@ def load_labels(train_sites, settings, CoastOnly=False):
     labelmaps = {'filenames':imnames,'labelmaps':labelledmaps}
     
     return features, labelmaps
+
+
 
 def load_WV_labels(train_sites, settings, CoastOnly=False):
     """
