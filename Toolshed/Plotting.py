@@ -801,6 +801,10 @@ def ClusterRates(sitename, TransectInterGDF, Sloc, Nloc):
 
 def MultivariateMatrix(sitename, TransectInterGDF, Sloc, Nloc):
     
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+        
     ## Multivariate Plot
     # Subset into south and north transects
     RateArrayS = TransectInterGDF.iloc[Sloc[0]:Sloc[1]]
@@ -890,3 +894,51 @@ def MultivariateMatrix(sitename, TransectInterGDF, Sloc, Nloc):
     
     return
     
+
+def WPErrors(filepath, sitename, CSVpath):
+
+    fig, ax = plt.subplots(figsize=(3.31, 3.31), dpi=300)  
+    ax2 = ax.twiny()
+    
+    #read in CSV of errors
+    errorDF = pd.read_csv(CSVpath)
+    # sort sat names alphabetically
+    errorDF = pd.concat([errorDF['veg'], errorDF['nonveg'], errorDF.iloc[:,2:].reindex(sorted(errorDF.columns[2:]), axis=1)], axis=1)
+    
+    # read in names of satellites from headings
+    uniquesats = list(errorDF.columns[2:])
+    colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
+    
+    # for each satellite name
+    for i,sat in enumerate(uniquesats):
+        # plot graph of errors and max value of each sat as diamond
+        ax2.plot(errorDF['nonveg'][errorDF[sat]==min(errorDF[sat])], errorDF[sat][errorDF[sat]==min(errorDF[sat])], marker='d', color=colors[i], markeredgecolor='r', markeredgewidth=0.5, markersize=5, zorder=5)
+        ax.plot(errorDF['veg'], errorDF[sat], marker='o', markersize=2, color=colors[i], linewidth=1, label=sat)
+    
+    
+    ax.set_xticks(errorDF['veg'],minor=True)
+    ax.set_xticks(list(errorDF['veg'])[0::2], major=True)
+    ax2.set_xticks(errorDF['nonveg'],minor=True)
+    ax2.set_xticks(list(errorDF['nonveg'])[0::2], major=True)
+    # ax2.invert_axis()
+    ax.set_xlim(min(errorDF['veg'])-0.05, max(errorDF['veg'])+0.05)
+    ax2.set_xlim(max(errorDF['nonveg'])+0.05, min(errorDF['nonveg'])-0.05)
+    
+    ax.grid(which='major', color='#BBB4BB', alpha=0.5)
+    ax.grid(which='minor', color='#BBB4BB', alpha=0.2)
+    
+    ax.set_xlabel('$\omega_{veg}$')
+    ax2.set_xlabel('$\omega_{nonveg}$')
+    ax.set_ylabel('RMSE (m)')
+    
+    ax.legend(loc='upper left',ncol=2)
+    plt.tight_layout()
+    mpl.rcParams.update({'font.size':7})
+    
+    figpath = os.path.join(filepath,sitename+'_VedgeSat_WP_Errors.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
+    plt.show()
+    
+    return
