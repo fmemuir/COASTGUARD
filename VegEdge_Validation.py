@@ -257,8 +257,8 @@ image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
 # clf_model = 'MLPClassifier_Veg_L8S2.pkl'
-# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
-clf_model = 'L5L8S2_SAVI_MLPClassifier_Veg.pkl' 
+clf_model = 'MLPClassifier_Veg_PSScene.pkl'
+# clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
 
 # L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im
@@ -372,12 +372,12 @@ if settings['wetdry'] == True:
 with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
     pickle.dump([TransectDict,TransectInterGDF], f)
        
-# Update Transects with Transition Zone widths and slope if available
-TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath)
-TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath, DTM)
+# # Update Transects with Transition Zone widths and slope if available
+# TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath)
+# TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath, DTM)
 
-with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    pickle.dump([TransectDict,TransectInterGDF], f)
+# with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+#     pickle.dump([TransectDict,TransectInterGDF], f)
         
 
 
@@ -594,4 +594,11 @@ PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,T
 # Plot multivariate matrix of different variables per transect subsets (subsets should have same number of transects)
 # Plotting.ClusterRates(sitename, TransectInterGDF, [232,290], [1661,1719])
 Plotting.MultivariateMatrix(sitename, TransectInterGDF, [232,290], [1661,1719])
+
+
+#%% WP Errors plot
+CSVpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_Errors_Planet.csv'
+filepath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegPaperFigs'
+Plotting.WPErrors(filepath, sitename, CSVpath)
+
 
