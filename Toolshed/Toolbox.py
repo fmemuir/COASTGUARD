@@ -252,7 +252,49 @@ def savi_index(im1, im2, cloud_mask):
     red = im2.reshape(im2.shape[0] * im2.shape[1])
     # compute the normalised difference index
     temp = np.divide(nir[~vec_mask] - red[~vec_mask],
-                     nir[~vec_mask] + red[~vec_mask] + 0.9) * (1 + 0.9)
+                     nir[~vec_mask] + red[~vec_mask] + 0.5) * (1 + 0.5)
+    vec_nd[~vec_mask] = temp
+    # reshape into image
+    im_nd = vec_nd.reshape(im1.shape[0], im1.shape[1])
+    return im_nd
+
+
+def rbnd_index(im1, im2, im3, cloud_mask):
+    """
+    Computes soil adjusted vegetation index on 2 bands (2D), given a cloud mask (2D).
+
+    FM 2022
+
+    Arguments:
+    -----------
+    im1: np.array
+        first image (2D) with which to calculate the ND index (should be NIR band)
+    im2: np.array
+        second image (2D) with which to calculate the ND index (should be Red band)
+    im3: np.array
+        third image (2D) with which to calculate the ND index (should be Blue band)
+    
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+
+    Returns:    
+    -----------
+    im_nd: np.array
+        Image (2D) containing the ND index
+        
+    """
+
+    # reshape the cloud mask
+    vec_mask = cloud_mask.reshape(im1.shape[0] * im1.shape[1])
+    # initialise with NaNs
+    vec_nd = np.ones(len(vec_mask)) * np.nan
+    # reshape the images
+    nir =  im1.reshape(im1.shape[0] * im1.shape[1])
+    red =  im2.reshape(im2.shape[0] * im2.shape[1])
+    blue = im3.reshape(im3.shape[0] * im3.shape[1])
+    # compute the normalised difference index
+    temp = np.divide(nir[~vec_mask] - (red[~vec_mask] + blue[~vec_mask]),
+                     nir[~vec_mask] + (red[~vec_mask] + blue[~vec_mask]))
     vec_nd[~vec_mask] = temp
     # reshape into image
     im_nd = vec_nd.reshape(im1.shape[0], im1.shape[1])
