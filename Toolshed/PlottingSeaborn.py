@@ -441,11 +441,25 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
             satname = 'PS'
         labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
         
-
-    
+    # set legend for median lines  
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-    ax.legend(medians,labels, loc='upper right',facecolor='w')
+    medleg = ax.legend(medians,labels, loc='upper right',facecolor='w')
     plt.gca().add_artist(leg1)
+    
+    # Overall error as text
+    totald = []
+    for date in df.columns:
+        d = df[date]
+        for i,datum in enumerate(d):
+            totald.append(datum)
+
+    totald = np.array(totald)
+    mse = np.mean(np.power(totald[~np.isnan(totald)], 2))
+    mae = np.mean(abs(totald[~np.isnan(totald)]))
+    rmse = np.sqrt(mse)
+    # get bounding box loc of legend to plot text underneath it
+    p = medleg.get_window_extent()
+    ax.annotate('RMSE', (p.p0[0], p.p1[1]), (p.p0[0], p.p1[1]), xycoords='figure pixels', zorder=9)
     
     ax.set_axisbelow(False)
     plt.tight_layout()
