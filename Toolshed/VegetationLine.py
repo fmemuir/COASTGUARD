@@ -452,15 +452,18 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     # NDVI (NIR - R)
     im_NIRR = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     features = np.append(features, np.expand_dims(im_NIRR[im_bool],axis=1), axis=-1)
-    # NIR-G
+    # NDWI (NIR-G)
     im_NIRG = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
     features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
     # R-G
-    # im_RG = Toolbox.nd_index(im_ms[:,:,2], im_ms[:,:,1], cloud_mask)
-    # features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
+    im_RG = Toolbox.nd_index(im_ms[:,:,2], im_ms[:,:,1], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
     # SAVI
     im_SAVI = Toolbox.savi_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
     features = np.append(features, np.expand_dims(im_SAVI[im_bool],axis=1), axis=-1)
+    # RB-NDVI (NIR -+ (R + B))
+    im_RBNDVI = Toolbox.rbnd_index(im_ms[:,:,3], im_ms[:,:,2], im_ms[:,:,0], cloud_mask)
+    features = np.append(features, np.expand_dims(im_RBNDVI[im_bool],axis=1), axis=-1)
     
     # calculate standard deviation of individual bands
     for k in range(im_ms.shape[2]):
@@ -471,17 +474,21 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     # NDVI  (NIR - R)
     im_std = Toolbox.image_std(im_NIRR, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
-    # NIR-G
+    # NDWI (NIR-G)
     im_std = Toolbox.image_std(im_NIRG, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
     # R-G
-    # im_std = Toolbox.image_std(im_RG, 1)
-    # features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    im_std = Toolbox.image_std(im_RG, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
     # SAVI
     im_std = Toolbox.image_std(im_SAVI, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    # RB-NDVI
+    im_std = Toolbox.image_std(im_RBNDVI, 1)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
     # Total feature num should be 16 (5 bands, 3 band indices, stdev on each)
+    # Total feature num should be 20 (5 bands, 5 band indices, stdev on each)
     return features
 
 def calculate_WV_features(im_ms, cloud_mask, im_bool):
@@ -985,7 +992,7 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
                 # always take first peak over 0 (corresponds to bare land/sand in veg classification)
                 peaks.append(clipbins[prom[0]])
             
-    # Calculate index value using weighted peaks (weighted towards nonveg)
+    # Calculate index value using weighted peaks
     t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
             
     # find contour with Marching-Squares algorithm
