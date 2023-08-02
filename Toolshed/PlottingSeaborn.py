@@ -30,6 +30,7 @@ from matplotlib import gridspec
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 plt.ion()
 
 from shapely import geometry
@@ -440,11 +441,6 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
         if 'PSScene4Band' in satname:
             satname = 'PS'
         labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
-        
-    # set legend for median lines  
-    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-    medleg = ax.legend(medians,labels, loc='upper right',facecolor='w')
-    plt.gca().add_artist(leg1)
     
     # Overall error as text
     totald = []
@@ -457,10 +453,21 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     mse = np.mean(np.power(totald[~np.isnan(totald)], 2))
     mae = np.mean(abs(totald[~np.isnan(totald)]))
     rmse = np.sqrt(mse)
-    # get bounding box loc of legend to plot text underneath it
-    p = medleg.get_window_extent()
-    ax.annotate('RMSE', (p.p0[0], p.p1[1]), (p.p0[0], p.p1[1]), xycoords='figure pixels', zorder=9)
     
+    l = Line2D([],[], color='none')
+    medians.append(l)
+    labels.append('RMSE = ' + str(round(rmse,1)) +'m')
+    
+    # set legend for median lines  
+    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
+    medleg = ax.legend(medians,labels, loc='upper right',facecolor='w')
+    plt.gca().add_artist(leg1)
+    
+    
+    # plt.draw()
+    # # get bounding box loc of legend to plot text underneath it
+    # p = medleg.get_window_extent()
+    # ax.annotate('Hi', (p.p0[1], p.p1[0]), (p.p0[1], p.p1[0]), xycoords='figure pixels', zorder=9, ha='right')    
     ax.set_axisbelow(False)
     plt.tight_layout()
     
@@ -609,6 +616,8 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
     figpath = os.path.join(filepath,sitename+'_Validation_Satellite_PlatformDistances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
     plt.savefig(figpath, dpi=300)
     print('figure saved under '+figpath)
+    
+    plt.show()
 
     for i in df.columns:
         print('No. of transects for '+i+' with sub-pixel accuracy:')
