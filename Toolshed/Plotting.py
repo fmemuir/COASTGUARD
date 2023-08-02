@@ -675,7 +675,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     ax.set_facecolor('#ECEAEC')
     
     # line through the origin as a guide for error
-    plt.plot([0,1000],[0,1000],c='k',lw=0.8,linestyle=':')
+    plt.plot([-100,1000],[-100,1000],c='b',lw=0.5,linestyle='-', zorder=3)
     
     valsrtclean = []
     satsrtclean = []
@@ -694,10 +694,21 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
             valsrtclean.append(vallistclean)
             satsrtclean.append(satlistclean)
 
+    maxlim = max( max(max(satsrt)), max(max(valsrt)) )
+    minlim = min( min(min(satsrt)), min(min(valsrt)) )
+    majort = np.arange(-100,maxlim+200,100)
+    minort = np.arange(-100,maxlim+200,20)
+    ax.set_xticks(majort)
+    ax.set_yticks(majort)
+    ax.set_xticks(minort, minor=True)
+    ax.set_yticks(minort, minor=True)
+    ax.grid(which='major', color='#BBB4BB', alpha=0.5, zorder=0)
+    # ax.grid(which='minor', color='#BBB4BB', alpha=0.2, zorder=0)
+    
     cmap = cm.get_cmap('magma_r',len(valsrtclean))
     for i in range(len(valsrtclean)): 
         # plot scatter of validation (observed) vs satellite (predicted) distances along each transect
-        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=3, alpha=0.3, edgecolors='none', zorder=0)
+        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=2, alpha=0.4, edgecolors='none', zorder=2)
         # linear regression
         X = np.array(valsrtclean[i]).reshape((-1,1))
         y = np.array(satsrtclean[i])
@@ -707,7 +718,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
         valfit = np.linspace(0,round(np.max(valsrtclean[i])),len(valsrtclean[i])).reshape((-1,1))
         satfit = model.predict(valfit)
 
-        plt.plot(valfit,satfit, c=cmap(i), alpha=0.6, linewidth=1.2, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))))
+        plt.plot(valfit,satfit, c=cmap(i), alpha=0.8, linewidth=1.2, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))), zorder=3)
 
     plt.legend(ncol=1)
     
@@ -722,23 +733,11 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
     satfit = model.predict(valfit)
 
-    plt.plot(valfit,satfit, c='#7A7A7A', linestyle='--', linewidth=1.2)
-    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2)), c='#7A7A7A')
+    plt.plot(valfit,satfit, c='#A5A5AF', linestyle='--', linewidth=1.2, zorder=3)
+    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2)), c='#7A7A7A', zorder=3)
 
-
-    maxlim = max( max(max(satsrt)), max(max(valsrt)) )
-    minlim = min( min(min(satsrt)), min(min(valsrt)) )
-    majort = np.arange(-100,maxlim+150,100)
-    minort = np.arange(-100,maxlim+150,20)
-    ax.set_xticks(majort)
-    ax.set_yticks(majort)
-    ax.set_xticks(minort, minor=True)
-    ax.set_yticks(minort, minor=True)
-    ax.grid(which='major', color='#BBB4BB', alpha=0.5)
-    ax.grid(which='minor', color='#BBB4BB', alpha=0.2)
-
-    plt.xlim(0,maxlim+150)
-    plt.ylim(0,maxlim)
+    plt.xlim(-20,round(maxlim)+200)
+    plt.ylim(-20,maxlim)
     
     plt.xlabel('Validation Veg Edge cross-shore distance (m)')
     plt.ylabel('Satellite Veg Edge cross-shore distance (m)')
@@ -748,7 +747,8 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_LinReg_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
-    
+    mpl.rcParams.update({'font.size':7})
+
     plt.show()
         
     
