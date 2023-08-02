@@ -1714,13 +1714,13 @@ def TZValues(int_veg, int_nonveg):
 def QuantifyErrors(sitename, SatGDF, DatesCol,ValidDict,TransectIDs):
     
     
-    errordata = []
-    errordates = []
-    Sdates = SatGDF[DatesCol].unique()
-    
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
+        
+    errordata = []
+    errordates = []
+    Sdates = SatGDF[DatesCol].unique()
     
     for Sdate in Sdates:
         valsatdist = []
