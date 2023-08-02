@@ -41,12 +41,6 @@ lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['L5','L7','L8','S2']
 
-#%% ST ANDREWS EAST SAVI
-sitename = 'StAndrewsEastSAVI'
-lonmin, lonmax = -2.84869, -2.79878
-latmin, latmax = 56.32641, 56.39814
-sat_list = ['L5','L7','L8','S2']
-
 #%%
 sitename = 'StAndrewsEastS2Full'
 lonmin, lonmax = -2.84869, -2.79878
@@ -57,12 +51,6 @@ dates = ['2015-06-28', '2023-06-13']
 
 #%%ST ANDREWS WEST
 sitename = 'StAndrewsWest'
-lonmin, lonmax = -2.89087, -2.84869
-latmin, latmax = 56.32641, 56.39814
-sat_list = ['L5','L7','L8','S2']
-
-#%%ST ANDREWS WEST SAVI
-sitename = 'StAndrewsWestSAVI'
 lonmin, lonmax = -2.89087, -2.84869
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['L5','L7','L8','S2']
@@ -385,8 +373,8 @@ with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl
 
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
-# ValidationShp = './Validation/StAndrews_Veg_Edge_combined_2007_2022_singlepart.shp'
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp'
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_PlanetScope.shp' # Planet
+# ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp' # L5L8S2
  
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
@@ -481,12 +469,13 @@ for keyname in FullValidDict.keys():
 
 TransectIDs = (0,len(ClipValidDict['dates'])) # full
 
-PlottingSeaborn.SatViolin(sitename,FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF(sitename,FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress(sitename,FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatViolin('StAndrewsEast',FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatPDF('StAndrewsEast',FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
+# Plotting.SatRegress('StAndrewsEast',FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
 
-for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors(sitename, FullVeglineGDF,'dates',FullValidDict,TransectID)
+# #full errors are in East 
+# for TransectID in [TransectIDs]:
+#     Toolbox.QuantifyErrors('StAndrewsEast', FullVeglineGDF,'dates',ClipValidDict,TransectID)
     
 
 #%% Full Planet violin and errors
@@ -507,7 +496,7 @@ PlottingSeaborn.SatPDF(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,Transec
 Plotting.SatRegress(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors(sitename, FullPlVeglineGDF,'dates',FullPlValidDict,TransectID)
+    Toolbox.QuantifyErrors(sitename, FullPlVeglineGDF,'dates',ClipPlValidDict,TransectID)
 
 
 #%% Combine East West AND Planet
@@ -521,6 +510,14 @@ for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold',
 
 EWPVeglineGDF = gpd.pd.concat([FullVeglineGDF, FullPlVeglineGDF])
 
+#save full dict and vegline shp
+validpath = os.path.join(os.getcwd(), 'Data', 'StAndrewsEWP', 'validation')
+with open(os.path.join(validpath, 'StAndrewsEWP' + '_valid_dict.pkl'), 'wb') as f:
+    pickle.dump(EWPValidDict, f)
+    
+VegShpPath = os.path.join(os.getcwd(), 'Data', 'StAndrewsEWP', 'veglines', 'StAndrewsEWP' + '_' + str(dates[0]) + '_' + str(dates[1]) + '_veglines.shp')
+EWPVeglineGDF.to_file(VegShpPath)
+
 #%%
 ClipEWPValidDict = dict.fromkeys(EWPValidDict.keys())
 for keyname in EWPValidDict.keys():
@@ -531,35 +528,44 @@ for keyname in EWPValidDict.keys():
     ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][972:1297])
     ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][1365:1741])
     
-ClipEPValidDict = dict.fromkeys(EWPValidDict.keys())
-for keyname in EWPValidDict.keys():
-    ClipEPValidDict[keyname] = []
-    ClipEPValidDict[keyname].extend(EWPValidDict[keyname][40:281])
-    ClipEPValidDict[keyname].extend(EWPValidDict[keyname][312:586])
-    ClipEPValidDict[keyname].extend(EWPValidDict[keyname][1303:1736])
+# ClipEPValidDict = dict.fromkeys(EWPValidDict.keys())
+# for keyname in EWPValidDict.keys():
+#     ClipEPValidDict[keyname] = []
+#     ClipEPValidDict[keyname].extend(EWPValidDict[keyname][40:281])
+#     ClipEPValidDict[keyname].extend(EWPValidDict[keyname][312:586])
+#     ClipEPValidDict[keyname].extend(EWPValidDict[keyname][1303:1736])
     
-ClipWPValidDict = dict.fromkeys(EWPValidDict.keys())
-for keyname in EWPValidDict.keys():
-    ClipWPValidDict[keyname] = []
-    ClipWPValidDict[keyname].extend(EWPValidDict[keyname][587:889])
-    ClipWPValidDict[keyname].extend(EWPValidDict[keyname][972:1302])
+# ClipWPValidDict = dict.fromkeys(EWPValidDict.keys())
+# for keyname in EWPValidDict.keys():
+#     ClipWPValidDict[keyname] = []
+#     ClipWPValidDict[keyname].extend(EWPValidDict[keyname][587:889])
+#     ClipWPValidDict[keyname].extend(EWPValidDict[keyname][972:1302])
 
 
 #%%
 TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
 
-PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 
-for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors(sitename, EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
+# for TransectID in [TransectIDs]:
+#     Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
 
+#%%
+TransectIDList = [(20,30),(40,281),(312,415),(1637,1736),(972,1297)]
+for TransectIDs in TransectIDList:
+    PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
+    # PlottingSeaborn.SatViolin(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
+    PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidDict,TransectIDs, PlotTitle)
+    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidDict,TransectIDs)
 
 
 #%%
+TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
+
 # PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,TransectIDs)
-PlottingSeaborn.PlatformViolin(sitename,EWPVeglineGDF,'satname',ClipEWPValidDict,TransectIDs)
+PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidDict,TransectIDs)
 
 
 #%% Theshold plotting
