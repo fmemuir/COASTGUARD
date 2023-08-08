@@ -245,8 +245,8 @@ image properties.
 """
 #get_ipython().run_line_magic('matplotlib', 'qt')
 # clf_model = 'MLPClassifier_Veg_L8S2.pkl'
-clf_model = 'MLPClassifier_Veg_PSScene.pkl'
-# clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
+# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
+clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
 
 # L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im
@@ -351,15 +351,15 @@ else:
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
         
-if settings['wetdry'] == True:
-    # beachslope = 0.006 # tanBeta StAnd W
-    beachslope = 0.04 # tanBeta StAnE
-    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-
-with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    pickle.dump([TransectDict,TransectInterGDF], f)
-       
+    if settings['wetdry'] == True:
+        # beachslope = 0.006 # tanBeta StAnd W
+        beachslope = 0.04 # tanBeta StAnE
+        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+        TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+    
+    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump([TransectDict,TransectInterGDF], f)
+           
 # # Update Transects with Transition Zone widths and slope if available
 # TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath)
 # TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath, DTM)
@@ -373,8 +373,8 @@ with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl
 
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_PlanetScope.shp' # Planet
-# ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp' # L5L8S2
+# ValidationShp = './Validation/StAndrews_Veg_Edge_combined_PlanetScope.shp' # Planet
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp' # L5L8S2
  
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
@@ -510,7 +510,7 @@ for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold',
 
 EWPVeglineGDF = gpd.pd.concat([FullVeglineGDF, FullPlVeglineGDF])
 
-#save full dict and vegline shp
+#%% save full dict and vegline shp
 validpath = os.path.join(os.getcwd(), 'Data', 'StAndrewsEWP', 'validation')
 with open(os.path.join(validpath, 'StAndrewsEWP' + '_valid_dict.pkl'), 'wb') as f:
     pickle.dump(EWPValidDict, f)
@@ -553,7 +553,7 @@ Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,Transe
 #     Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
 
 #%%
-TransectIDList = [(20,30),(40,281),(312,415),(1637,1736),(972,1297)]
+TransectIDList = [(20,30),(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     # PlottingSeaborn.SatViolin(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
