@@ -5,7 +5,7 @@ CoastLearn is a Python toolkit for coastal monitoring and modelling using machin
 ## Description and Scope
 The goal of this toolkit is to have a fully operational framework for predicting coastal change, using machine learning techniques that are trained with satellite observations. We have a plethora of satellite imagery being generated every day to be used freely in a number of automated, API-based ways. These datasets are therefore well-suited to machine learning approaches which require a lot of data to train sufficiently. With just one satellite image, multiple indicators of coastal change can be automatically extracted such as wave breaking zones, wet-dry boundaries, high water marks and vegetation edges. These automatically extracted indicators can then be fed into a machine learning network which makes future predictions based on the past changes and relationships between these indicators. The result is an automated, early warning system for coastal erosion at a potentially global scale.
 
-Currently, the main toolset is for extracting <b><span style="color:#2EA043">coastal vegetation edges</span></b> from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
+Currently, the main toolset <b>VedgeSat</b> is for extracting <b><span style="color:#2EA043">coastal vegetation edges</span></b> from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
 
 https://github.com/fmemuir/CoastLearn-main/assets/22475417/cb27e704-f361-4f34-b999-dcd5c990816c
 
