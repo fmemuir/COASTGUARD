@@ -942,3 +942,27 @@ def WPErrors(filepath, sitename, CSVpath):
     plt.show()
     
     return
+
+
+def TideHeights(VegGDF, CSVpath):
+    
+    CSV = pd.read_csv(CSVpath)
+    # Remove 'Total' row
+    CSV.drop(CSV[CSV['Date'] == 'Total'].index, axis=0, inplace=True)
+    
+    VegLines = VegGDF.groupby(['dates']).max()
+    
+    Tides = []
+    for date in CSV['Date']:
+        Tides.append(VegLines.loc[date]['tideelev'])
+    
+    CSV['Tides'] = Tides
+    
+    plt.scatter(CSV['RMSE'], CSV['Tides'])
+    plt.show()
+    
+    return
+    
+
+
+
