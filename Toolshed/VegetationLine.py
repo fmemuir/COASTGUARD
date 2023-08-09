@@ -43,31 +43,31 @@ np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 # Main function for batch vegline detection
 def extract_veglines(metadata, settings, polygon, dates, clf_model):
     """
-    Main function to extract vegetation edges from satellite imagery (Landsat 5-9, Sentinel-2 or local images).
+    Main function to extract vegetation edges from satellite imagery (Landsat 5-9, Sentinel-2 or local images (e.g. Planet)).
     
     FM Aug 2022    
     
     Parameters
     ----------
     metadata : dict
-        DESCRIPTION.
+        Dictionary of sat image filenames, georeferencing info, EPSGs and dates of capture.
     settings : dict
-        DESCRIPTION.
-    polygon : TYPE
-        DESCRIPTION.
-    dates : TYPE
-        DESCRIPTION.
-    clf_model : TYPE
-        DESCRIPTION.
+        Dictionary of user-defined settings used for the veg edge extraction.
+    polygon : list
+        List of 5 WGS84 coordinate pairs marking rectangle of interest.
+    dates : list
+        Start and end dates of interest as yyyy-mm-dd strings.
+    clf_model : str
+        Name of classification model to use.
 
     Returns
     -------
     output : dict
-        DESCRIPTION.
+        Dictionary of extracted veg edges and associated info with each.
     output_latlon : dict
-        DESCRIPTION.
+        Dictionary of extracted veg edges and associated info with each (in WGS84).
     output_proj : dict
-        DESCRIPTION.
+        Dictionary of extracted veg edges and associated info with each (in chosen CRS).
 
     """
 
@@ -301,7 +301,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 'wthreshold': output_t_ndwi
                 }
         
-        # TO DO: test following on small run
+
         dates_sat = []
         for i in range(len(output_timestamp)):
             dates_sat_str = output_timestamp[i] +' '+output_time[i]
