@@ -896,7 +896,24 @@ def MultivariateMatrix(sitename, TransectInterGDF, Sloc, Nloc):
     
 
 def WPErrors(filepath, sitename, CSVpath):
+    """
+    Generate plot error values associated with different Weighted Peaks thresholding values.
+    FM Aug 2023
 
+    Parameters
+    ----------
+    filepath : str
+        Filepath to save figure to.
+    sitename : str
+        Name of site of interest.
+    CSVpath : str
+        Filepath to Weighted Peaks RMSE values stored in CSV.
+
+    Returns
+    -------
+    None.
+
+    """
     fig, ax = plt.subplots(figsize=(3.31, 3.31), dpi=300)  
     ax2 = ax.twiny()
     
@@ -945,20 +962,45 @@ def WPErrors(filepath, sitename, CSVpath):
 
 
 def TideHeights(VegGDF, CSVpath):
-    
-    CSV = pd.read_csv(CSVpath)
+    """
+    Generate plot of RMSE values vs tide heights for satellite veg edges in chosen transect range.
+    FM Aug 2023
+
+    Parameters
+    ----------
+    VegGDF : GeoDataFrame
+        GeoDataFrame generated from reading in the sat-derived veg edge shapefile.
+    CSVpath : str
+        Filepath to errors CSV generated with Toolbox.QuantifyErrors().
+
+    Returns
+    -------
+    None.
+
+    """
+    ErrorCSV = pd.read_csv(CSVpath)
     # Remove 'Total' row
-    CSV.drop(CSV[CSV['Date'] == 'Total'].index, axis=0, inplace=True)
+    ErrorCSV.drop(ErrorCSV[ErrorCSV['Date'] == 'Total'].index, axis=0, inplace=True)
     
     VegLines = VegGDF.groupby(['dates']).max()
     
     Tides = []
-    for date in CSV['Date']:
+    for date in ErrorCSV['Date']:
         Tides.append(VegLines.loc[date]['tideelev'])
     
-    CSV['Tides'] = Tides
+    ErrorCSV['Tides'] = Tides
     
-    plt.scatter(CSV['RMSE'], CSV['Tides'])
+    print(ErrorCSV)
+    
+    plt.scatter(ErrorCSV['RMSE'], ErrorCSV['Tides'])
+    x = ErrorCSV['RMSE']
+    msat, csat = np.polyfit(x,ErrorCSV['Tides'],1)
+    polysat = np.poly1d([msat, csat])
+    xx = np.linspace(x.min(), x.max(), 100)
+    plt.plot(xx, polysat(xx), '--', color='k')
+             
+    plt.xlabel('RMSE (m)')
+    plt.ylabel('Tide height (m)')
     plt.show()
     
     return
