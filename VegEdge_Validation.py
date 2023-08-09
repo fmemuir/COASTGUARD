@@ -607,4 +607,9 @@ CSVpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spread
 filepath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegPaperFigs'
 Plotting.WPErrors(filepath, sitename, CSVpath)
 
+#%%
+ErrorsCSV = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Data/StAndrewsEWP/validation/StAndrewsEWP_Errors_Transects972to1297.csv'
+# ErrorsCSV = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Data/StAndrewsEWP/validation/StAndrewsEWP_Errors_Transects595to889.csv'
+Plotting.TideHeights(EWPVeglineGDF, ErrorsCSV)
+
 
