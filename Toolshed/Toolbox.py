@@ -1911,7 +1911,7 @@ def GetWaterElevs(settings, dates_sat):
 
     Returns
     -------
-    TYPE
+    tides_sat : TYPE
         DESCRIPTION.
 
     '''
@@ -1921,22 +1921,39 @@ def GetWaterElevs(settings, dates_sat):
     tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
     dates_ts = [_.to_pydatetime() for _ in tide_data['date']]
     tides_ts = np.array(tide_data['tide'])
+
     
-    # # get the tide level corresponding to the time of sat image acquisition
-    # dates_sat = []
-    # for i in range(len(satdatetime)):
-    #     dates_sat_str = satdatetime
-    #     dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
-    
-    tide_sat = []
+    tides_sat = []
     def find(item, lst):
         start = 0
         start = lst.index(item, start)
         return start
-    for i,date in enumerate(dates_sat):
-        tide_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
     
-    return tide_sat
+    # Previously found first following tide time, but incorrect when time is e.g. only 1min past the hour
+    # for i,date in enumerate(dates_sat):
+    #     tides_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
+    
+    # Interpolate tide using number of minutes through the hour the satellite image was captured
+    for i,date in enumerate(dates_sat):
+        # find preceding and following hourly tide levels and times
+        time_1 = dates_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
+        tide_1 = tides_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
+        time_2 = dates_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
+        tide_2 = tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
+        
+        # Find time difference of actual satellite timestamp (next hour minus sat timestamp)
+        timediff = time_2 - date
+        # Get proportion of time through the hour (e.g. 59mins past = 0.01)
+        timeprop = timediff / timedelta(hours=1)
+        
+        # Get difference between the two tidal stages
+        tidediff = (tide_2 - tide_1) / 2
+        tide_sat = tide_2 - (tidediff * timeprop)
+        
+        tides_sat.append(tide_sat)
+        print(tide_sat)
+    
+    return tides_sat
 
 
 def ExtendLine(LineGeom, dist):
