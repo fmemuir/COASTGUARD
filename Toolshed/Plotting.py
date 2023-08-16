@@ -675,7 +675,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     ax.set_facecolor('#ECEAEC')
     
     # line through the origin as a guide for error
-    plt.plot([-100,1000],[-100,1000],c='b',lw=0.5,linestyle='-', zorder=3)
+    plt.plot([-100,1000],[-100,1000],c=[0.6,0.5,0.5], lw=0.8, linestyle='-', zorder=3, alpha=0.35)
     
     valsrtclean = []
     satsrtclean = []
@@ -750,7 +750,35 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     mpl.rcParams.update({'font.size':7})
 
     plt.show()
+    
+    # Get unique dates and satnames    
+    SatGDFNames = SatGDF.groupby(['dates']).max()
+    SatNames = []
+    
+    for d in satdateclean:
+        SatNames.append(SatGDFNames.loc[d]['satname'])
+    SatNameList = sorted(set(SatNames))
+    
+    for SatN in SatNameList:
+        SatInd = []
+        for i, e in enumerate(SatNames):
+            if e == SatN:
+                SatInd.append(i)
         
+        valsrtN = []
+        satsrtN = []
+        for SatI in SatInd:
+            valsrtN.append(valsrtclean[SatI])
+            satsrtN.append(satsrtclean[SatI])
+
+        valN = [item for sublist in valsrtN for item in sublist]
+        satN =[item for sublist in satsrtN for item in sublist]
+        X = np.array(valN).reshape((-1,1))
+        y = np.array(satN)
+        model = LinearRegression(fit_intercept=True).fit(X,y)
+        r2 = model.score(X,y)
+        
+        print(SatN, r2)
     
     
     
@@ -961,7 +989,7 @@ def WPErrors(filepath, sitename, CSVpath):
     return
 
 
-def TideHeights(VegGDF, CSVpath):
+def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
     """
     Generate plot of RMSE values vs tide heights for satellite veg edges in chosen transect range.
     FM Aug 2023
@@ -972,35 +1000,74 @@ def TideHeights(VegGDF, CSVpath):
         GeoDataFrame generated from reading in the sat-derived veg edge shapefile.
     CSVpath : str
         Filepath to errors CSV generated with Toolbox.QuantifyErrors().
+    cmapDates : list
+        List of date strings to be used to create a colour ramp.
 
     Returns
     -------
     None.
 
     """
-    ErrorCSV = pd.read_csv(CSVpath)
-    # Remove 'Total' row
-    ErrorCSV.drop(ErrorCSV[ErrorCSV['Date'] == 'Total'].index, axis=0, inplace=True)
+    mpl.rcParams.update({'font.size':7})
     
+    # Read in errors CSV
+    ErrorDF = pd.read_csv(CSVpath)
+    # Remove 'Total' row
+    ErrorDF.drop(ErrorDF[ErrorDF['Date'] == 'Total'].index, axis=0, inplace=True)
+    
+    # Take unique dates from veg edge shapefile
     VegLines = VegGDF.groupby(['dates']).max()
     
+    # Extract tide levels and sat names for each matching date in error CSV
     Tides = []
-    for date in ErrorCSV['Date']:
+    SatNames = []
+    for date in ErrorDF['Date']:
         Tides.append(VegLines.loc[date]['tideelev'])
+        SatNames.append(VegLines.loc[date]['satname'])
     
-    ErrorCSV['Tides'] = Tides
+    # Attach tides and satnames back to dataframe
+    ErrorDF['Tides'] = Tides
+    ErrorDF['satname'] = SatNames
     
-    print(ErrorCSV)
+    # Generate colour ramp based on full date range, then only keep dates that exist in error DF    
+    cmap = cm.get_cmap('magma_r',len(cmapDates))
+    cmc = []
+    for i in range(len(ErrorDF['Date'])):
+        cmi = cmapDates.index(ErrorDF['Date'].iloc[i])
+        cmc.append(cmap.colors[cmi])
     
-    plt.scatter(ErrorCSV['RMSE'], ErrorCSV['Tides'])
-    x = ErrorCSV['RMSE']
-    msat, csat = np.polyfit(x,ErrorCSV['Tides'],1)
+    # Create blue colour ramp for sat names
+    Sats = sorted(set(SatNames))
+    satcmap = plt.cm.Blues(np.linspace(0.4, 1, len(Sats)))
+    satcm = { Sats[i] : satcmap[i] for i in range(len(Sats)) }
+    
+    # Set up plot
+    fig, ax = plt.subplots(figsize=(2.07,2.01), dpi=300)
+    
+    # Plot point for each tide height vs error value
+    for i in range(len(ErrorDF['RMSE'])):
+        plt.scatter(ErrorDF['RMSE'][i], ErrorDF['Tides'][i], s=25, marker='s', color=cmc[i], edgecolors=satcm[ErrorDF['satname'][i]], linewidth=1, label=ErrorDF['Date'][i])
+    
+    # Fit linear regression to scatter
+    x = ErrorDF['RMSE']
+    msat, csat = np.polyfit(x,ErrorDF['Tides'],1)
     polysat = np.poly1d([msat, csat])
     xx = np.linspace(x.min(), x.max(), 100)
-    plt.plot(xx, polysat(xx), '--', color='k')
-             
+    plt.plot(xx, polysat(xx), c='#A5A5AF', linestyle='--', linewidth=1.2)
+    
+    # Plot properties
+    plt.xticks(range(0,35,5))
+    plt.yticks(np.arange(-2,2.5,0.5))
     plt.xlabel('RMSE (m)')
     plt.ylabel('Tide height (m)')
+      
+    # plt.legend(loc='lower left',ncol=2)
+    plt.tight_layout()
+    
+    figname = os.path.join(figpath,sitename+'_VedgeSat_TideHeights_Errors.png')
+    plt.savefig(figname)
+    print('figure saved under '+figname)
+    
     plt.show()
     
     return
