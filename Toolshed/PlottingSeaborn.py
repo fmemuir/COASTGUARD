@@ -390,7 +390,7 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
             sns.kdeplot(data = df.iloc[:,i], color=kdecmap.colors[i], label=kdelabel, alpha=0.8)
             
         ax.add_collection(coll)
-        leg1 = ax.legend(loc='upper left',facecolor='w')
+        leg1 = ax.legend(loc='upper left', facecolor='w', framealpha=0.4)
             
     ax.set(xlabel='Distance$_{satellite - validation}$ (m)', ylabel='')
     ax.set_title(PlotTitle)
@@ -460,7 +460,7 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     
     # set legend for median lines  
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
-    medleg = ax.legend(medians,labels, loc='upper right',facecolor='w')
+    medleg = ax.legend(medians,labels, loc='upper right',facecolor='w', framealpha=0.5)
     plt.gca().add_artist(leg1)
     
     
@@ -618,7 +618,7 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
     print('figure saved under '+figpath)
     
     plt.show()
-
+    
     for i in df.columns:
         print('No. of transects for '+i+' with sub-pixel accuracy:')
         if i == 'L5' or i == 'L7' or i == 'L8' or i == 'L9':
