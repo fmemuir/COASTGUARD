@@ -1752,7 +1752,7 @@ def QuantifyErrors(sitename, SatGDF, DatesCol,ValidDict,TransectIDs):
     df = df.transpose()
     df.columns = errordatesrt
     
-    errordict = {'Date':[],'Count':[],'MAE':[],'RMSE':[],'CountSub10m':[],'CountSub15m':[]}
+    errordict = {'Date':[],'Count':[],'MAE':[],'RMSE':[],'CountSub3m':[],'CountSub10m':[],'CountSub15m':[]}
     
     print('Transects %s to %s:' % (TransectIDs[0],TransectIDs[1]))
     totald = []
@@ -1781,6 +1781,7 @@ def QuantifyErrors(sitename, SatGDF, DatesCol,ValidDict,TransectIDs):
             errordict['Count'].append(d.count())
             errordict['MAE'].append(mae_f)
             errordict['RMSE'].append(rmse_f)
+            errordict['CountSub3m'].append(sub3)
             errordict['CountSub10m'].append(sub10)
             errordict['CountSub15m'].append(sub15)
 
@@ -1804,6 +1805,7 @@ def QuantifyErrors(sitename, SatGDF, DatesCol,ValidDict,TransectIDs):
     errordict['Count'].append(len(totald[~np.isnan(totald)]))
     errordict['MAE'].append(mae)
     errordict['RMSE'].append(rmse)
+    errordict['CountSub3m'].append(sub3)
     errordict['CountSub10m'].append(sub10)
     errordict['CountSub15m'].append(sub15)
     
@@ -1951,7 +1953,6 @@ def GetWaterElevs(settings, dates_sat):
         tide_sat = tide_2 - (tidediff * timeprop)
         
         tides_sat.append(tide_sat)
-        print(tide_sat)
     
     return tides_sat
 
