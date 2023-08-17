@@ -265,7 +265,7 @@ def GetTransitionDists(TransectDict,TransectInterGDF):
 def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, AvBeachSlope):
     
     '''
-    Intersection between veglines and shorelines, based on geopandas GDFs/shapefiles.
+    Intersection between veglines and lines, based on geopandas GDFs/shapefiles.
     Shorelines are tidally corrected using either a DEM of slopes or a single slope value for all transects.
     
     FM Sept 2022
@@ -398,27 +398,13 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
 
 def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
 
-    # # load tidal data
-    # tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
-    # tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
-    # dates_ts = [_.to_pydatetime() for _ in tide_data['date']]
-    # tides_ts = np.array(tide_data['tide'])
     
-    # # get the tide level corresponding to the time of sat image acquisition
+    # get the tide level corresponding to the time of sat image acquisition
     dates_sat = []
     for i in range(len(output['dates'])):
         dates_sat_str = output['dates'][i] +' '+output['times'][i]
         dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
     
-    # tide_sat = []
-    # def find(item, lst):
-    #     start = 0
-    #     start = lst.index(item, start)
-    #     return start
-    # for i,date in enumerate(dates_sat):
-    #     tide_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
-    # tides_sat = np.array(tide_sat)
-         
     tide_sat = Toolbox.GetWaterElevs(settings,dates_sat)
     tides_sat = np.array(tide_sat)
     
@@ -928,16 +914,140 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath
         
         
         TransectInterShp = TransectInterGDF.copy()
-
+        
         # reformat fields with lists to strings
         KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
         for Key in KeyName:
+            # round any floating points numbers before export
+            if type(TransectInterShp[Key][0][0]) == np.float64:  
+                for Tr in range(len(TransectInterShp[Key])):
+                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
             TransectInterShp[Key] = TransectInterShp[Key].astype(str)
         # Save as shapefile of intersected transects
         TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
             
         return TransectInterGDF    
             
+
+def WavesIntersect(TransectInterGDF):
+    
+    
+    
+    return TransectInterGDF
+
+
+# TO DO: reformat waves functions
+def GetWaveData(CellDF, WavePath, Site, DateMin, DateMax, User, Pwd):
+    """ 
+    Download command for CMEMS wave forecast data. User supplies date range, username and password.
+    Bounding box location comes from the cell polygon boundaries
+    
+    FM, Oct 2021 (updated Aug 2023)
+    
+    Parameters
+    ----------
+    CellDF : GeoDataFrame
+        GDF of cell polygon to obtain boundaries from
+    WavePath : string
+        path to directory to save wave file to
+    Site : string
+        location name, usually Cell number or recognisable name e.g. Montrose
+    DateMin, DateMax : string of format '%YYYY-%mm-%dd HH:MM:SS'
+    User : string
+        username for CMEMS service
+    Pwd : string
+        password for CMEMS service
+        
+       
+    """
+    print('Downloading wave data up to '+ DateMax +' from CMEMS ...')        
+    #Bounding box for downloading wave data defined by Cell outline
+    if CellDF.crs != 'EPSG:4326':
+        CellDF = CellDF.to_crs('EPSG:4326') # convert to lat long if needed
+    CellBBox = CellDF.bounds # x = long, y = lat
+    
+    # I need to figure out a way to store multiple wave heights for each date of forecast, not just one
+    # NetCDF file will be a set of rasters at different times with different wave params
+    # params get pulled out further down after downloading
+    
+    WaveOutFile = 'MetO-NWS-WAV-hi_'+Site+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
+    motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
+                   '--longitude-min '+ str(CellBBox.minx.item()) +' --longitude-max '+ str(CellBBox.maxx.item()) +' --latitude-min '+ str(CellBBox.miny.item()) +' --latitude-max '+ str(CellBBox.maxy.item()) +' '
+                   '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
+                   '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
+                   '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
+    os.system(motuCommand)
+
+
+def SampleWaves(CellDF, WaveOutFile):
+    """
+    Function to extract wave information from NWS forecasts
+    
+    FM, Oct 2021 (updated Aug 2023)
+    """
+    
+    print('Extracting wave data to transects ...')
+    # open the raster dataset to work on
+    with netCDF4.Dataset(WaveOutFile) as WaveData:
+    
+        # spatial coords returned as arrays of lat and long representing boundaries of raster axis
+        # can be rectangular, resulting in differently sized arrays, so transforming as two coordinate arrays doesn't work
+        WaveX  = WaveData.variables['longitude'][:]
+        WaveY  = WaveData.variables['latitude'][:]
+        
+        SigWaveHeight = WaveData.variables['VHM0'][:,:,:]  #total sea Hs
+        MeanWaveDir = WaveData.variables['VMDR'][:,:,:] #Total sea mean dir
+        PeakWavePeriod = WaveData.variables['VTPK'][:,:,:] #Total sea peak period
+        
+        WaveSeconds = WaveData.variables['time'][:]
+        WaveTime = []
+        for i in range(0,len(WaveSeconds)):
+            WaveTime.append(datetime.datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'))
+        
+        # loop through transects and sample
+        for Line in self.CoastLines:
+            for i, Transect in enumerate(Line.Transects[:]):
+                
+                
+                if CellDF.crs != 'EPSG:4326':
+                    # Transform coastal nodes to lat long for indexing 
+                    ToWGS84 = Transformer.from_crs(CellDF.crs,"epsg:4326")
+                    CoastLat,CoastLong = ToWGS84.transform(Transect.CoastNode.X,Transect.CoastNode.Y)
+                else:
+                    CoastLat,CoastLong = (Transect.CoastNode.Y,Transect.CoastNode.X) #x = long, y = lat
+                
+                # get index of closest matching grid square of wave data
+                IDLat = (np.abs(WaveY - CoastLat)).argmin() 
+                IDLong = (np.abs(WaveX - CoastLong)).argmin()
+
+                # Some grid squares are masked because they are too far inland
+                # Option 1: copy previous transect's wave conditions onto current transect
+                # Need to add interpolation to this!
+                if SigWaveHeight[:,IDLat, IDLong].mask.all():
+                    Transect.WaveHeight = Line.Transects[i-1].WaveHeight
+                    Transect.WaveDirection = Line.Transects[i-1].WaveDirection
+                    Transect.WavePeriod = Line.Transects[i-1].WavePeriod
+                
+                # Option 2: search for closest real value
+                '''while SigWaveHeight[:,IDLat, IDLong].mask.all():
+                     IDLat += 1
+                     IDLong += 1
+                     if IDLat > len(WaveY): # if edge is reached without a real value, go back the other way
+                         while SigWaveHeight[:,IDLat, IDLong].mask.all():
+                            IDLat -= 1
+                            IDLong -= 1 '''
+                            
+                            
+                Transect.WaveHeight = SigWaveHeight[:,IDLat, IDLong] #time, lat, long
+                Transect.WaveDirection = MeanWaveDir[:,IDLat, IDLong] #time, lat, long
+                Transect.WavePeriod = PeakWavePeriod[:,IDLat, IDLong] #time, lat, long
+                Transect.WaveTime = WaveTime
+
+
+
+
+
+
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     """
@@ -1367,3 +1477,4 @@ def transect_compiler(Rows, transect_proj, transect_range, output):
         transect_condensed['Transect_'+str(transect_range[i][0])+'-'+str(transect_range[i][1])] = np.mean(trans_arr,0).astype(np.double)#[NaN_mask]
         
     return cross_distance_condensed, standard_err_condensed, transect_condensed, Dates
+
