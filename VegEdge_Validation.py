@@ -435,7 +435,13 @@ EastVeglineGDF = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
 BasePath = 'Data/' + 'StAndrewsWest' + '/veglines'
 WestVeglineGDF = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
 
+BasePath = 'Data/' + 'StAndrewsEast' + '/veglines'
+EastWaterlineGDF = gpd.read_file(glob.glob(BasePath+'/*waterlines.shp')[0])
+BasePath = 'Data/' + 'StAndrewsWest' + '/veglines'
+WestWaterlineGDF = gpd.read_file(glob.glob(BasePath+'/*waterlines.shp')[0])
+
 FullVeglineGDF = gpd.pd.concat([EastVeglineGDF, WestVeglineGDF])
+FullWaterlineGDF = gpd.pd.concat([EastWaterlineGDF, WestWaterlineGDF])
 
 #%% Combine Planet East and West
 with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetEast', 'validation','StAndrewsPlanetEast' + '_valid_dict.pkl'), 'rb') as f:
@@ -453,8 +459,13 @@ EastPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
 BasePlPath = 'Data/' + 'StAndrewsPlanetWest' + '/veglines'
 WestPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
 
-FullPlVeglineGDF = gpd.pd.concat([EastPlVeglineGDF, WestPlVeglineGDF])
+BasePlPath = 'Data/' + 'StAndrewsPlanetEast' + '/veglines'
+EastPlWaterlineGDF = gpd.read_file(glob.glob(BasePlPath+'/*waterlines.shp')[0])
+BasePlPath = 'Data/' + 'StAndrewsPlanetWest' + '/veglines'
+WestPlWaterlineGDF = gpd.read_file(glob.glob(BasePlPath+'/*waterlines.shp')[0])
 
+FullPlVeglineGDF = gpd.pd.concat([EastPlVeglineGDF, WestPlVeglineGDF])
+FullPlWaterlineGDF = gpd.pd.concat([EastPlWaterlineGDF, WestPlWaterlineGDF])
 
 #%% Full violin and errors
 
@@ -509,6 +520,7 @@ for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold',
             EWPValidDict[keyname][i].append(FullPlValidDict[keyname][i][j])
 
 EWPVeglineGDF = gpd.pd.concat([FullVeglineGDF, FullPlVeglineGDF])
+EWPWaterlineGDF = gpd.pd.concat([FullWaterlineGDF, FullPlWaterlineGDF])
 
 #%% save full dict and vegline shp
 validpath = os.path.join(os.getcwd(), 'Data', 'StAndrewsEWP', 'validation')
@@ -546,11 +558,11 @@ for keyname in EWPValidDict.keys():
 TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
 
 # PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 
-# for TransectID in [TransectIDs]:
-#     Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
+for TransectID in [TransectIDs]:
+    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
 
 #%%
 TransectIDList = [(20,30),(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
@@ -558,7 +570,7 @@ for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     # PlottingSeaborn.SatViolin(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
     PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidDict,TransectIDs, PlotTitle)
-    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidDict,TransectIDs)
+    # Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidDict,TransectIDs)
 
 
 #%%
@@ -604,12 +616,32 @@ Plotting.MultivariateMatrix(sitename, TransectInterGDF, [232,290], [1661,1719])
 
 #%% WP Errors plot
 CSVpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_Errors_Planet.csv'
-filepath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegPaperFigs'
-Plotting.WPErrors(filepath, sitename, CSVpath)
+figpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegPaperFigs'
+Plotting.WPErrors(figpath, sitename, CSVpath)
 
-#%%
+#%% Tide heights vs RMSE plot
+slicedates = ['2007-04-17',
+              '2011-04-28',
+              '2011-11-06', 
+              '2015-09-30',
+              '2017-07-24',
+              '2018-06-24',
+              '2019-02-04',
+              '2019-08-12',
+              '2018-08-18',
+              '2020-04-20',
+              '2021-07-01',
+              '2022-02-11',
+              '2022-02-22']
+#2011-10-28
+
 ErrorsCSV = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Data/StAndrewsEWP/validation/StAndrewsEWP_Errors_Transects972to1297.csv'
 # ErrorsCSV = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Data/StAndrewsEWP/validation/StAndrewsEWP_Errors_Transects595to889.csv'
-Plotting.TideHeights(EWPVeglineGDF, ErrorsCSV)
+figpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegPaperFigs'
 
+Plotting.TideHeights(figpath, 'StAndrewsEWP', EWPVeglineGDF, ErrorsCSV, slicedates)
 
+#%% Get correct tide heights for EWP vegline GDF
+EWPVeglineGDFdates = EWPVeglineGDF.groupby('dates').min()
+dates_sat = [datetime.strptime(d+' '+t, '%Y-%m-%d %H:%M:%S.%f') for d,t in zip(EWPVeglineGDFdates.index, EWPVeglineGDFdates['times'])]
+tides_sat = Toolbox.GetWaterElevs(settings, dates_sat)
