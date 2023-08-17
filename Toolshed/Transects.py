@@ -597,6 +597,10 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     # reformat fields with lists to strings
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
+        # round any floating points numbers before export
+        if type(TransectInterShp[Key][0][0]) == np.float64:  
+            for Tr in range(len(TransectInterShp[Key])):
+                TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
     TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
@@ -604,6 +608,7 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     print("Shapefile with sat intersections saved.")
     
     return TransectInterGDF
+
     
 def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BasePath, sitename, projection):
     '''
@@ -717,6 +722,10 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
     # reformat fields with lists to strings
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
+        # round any floating points numbers before export
+        if type(TransectInterShp[Key][0][0]) == np.float64:  
+            for Tr in range(len(TransectInterShp[Key])):
+                TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     
     
@@ -837,16 +846,19 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath):
         TransectInterGDF['TZwidthMn'].iloc[i] = np.nanmean(TransectInterGDF['TZwidth'].iloc[i])
     
     TransectInterShp = TransectInterGDF.copy()
-
+    
     # reformat fields with lists to strings
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
+        # round any floating points numbers before export
+        if type(TransectInterShp[Key][0][0]) == np.float64:  
+            for Tr in range(len(TransectInterShp[Key])):
+                TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
     # Save as shapefile of intersected transects
     TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
         
-
-    return TransectInterGDF
+    return TransectInterGDF    
 
 
 def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=None):
