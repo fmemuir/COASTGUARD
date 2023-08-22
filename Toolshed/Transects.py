@@ -949,7 +949,7 @@ def WavesIntersect(TransectInterGDF):
 
 
 # TO DO: reformat waves functions
-def GetWaveData(CellDF, WavePath, Site, DateMin, DateMax, User, Pwd):
+def GetForecastWaveData(CellDF, WavePath, Site, DateMin, DateMax, User, Pwd):
     """ 
     Download command for CMEMS wave forecast data. User supplies date range, username and password.
     Bounding box location comes from the cell polygon boundaries
