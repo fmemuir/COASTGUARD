@@ -941,9 +941,9 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath
         return TransectInterGDF    
             
 
-def WavesIntersect(TransectInterGDF, settings, output, lonmin, lonmax, latmin, latmax, User, Pwd):
+def WavesIntersect(TransectInterGDF, settings, output, lonmin, lonmax, latmin, latmax):
     
-    Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, Pwd)
+    Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     
     
     return TransectInterGDF

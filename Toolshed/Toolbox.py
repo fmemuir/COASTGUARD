@@ -1957,7 +1957,7 @@ def GetWaterElevs(settings, dates_sat):
     return tides_sat
 
 
-def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, Pwd):
+def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     """
     Download command for CMEMS wave hindcast data. User supplies date range, AOI, username and password.
     
@@ -1984,6 +1984,9 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, 
     # DateMin = settings['inputs']['dates'][0]
     # DateMax = settings['inputs']['dates'][1]
     
+    User =  input('CMEMS username: ')
+    Pwd = input('CMEMS password: ')
+    
     # Buffer dates from output by 1 day either side
     DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=1), '%Y-%m-%d %H:%M:%S')
     DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d')+timedelta(days=1), '%Y-%m-%d %H:%M:%S')
@@ -1992,10 +1995,10 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, 
     # params get pulled out further down after downloading
     WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
-    motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
+    motuCommand = ('python -m motuclient --motu http://my.cmems-du.eu/motu-web/Motu --service-id NWSHELF_REANALYSIS_WAV_004_015-TDS --product-id MetO-NWS-WAV-RAN '
                    '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
                    '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
-                   '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
+                   '--variable VHM0  --variable VMDR --variable VTPK '
                    '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
     os.system(motuCommand)
 
