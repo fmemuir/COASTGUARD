@@ -1957,6 +1957,96 @@ def GetWaterElevs(settings, dates_sat):
     return tides_sat
 
 
+def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, Pwd):
+    """
+    Download command for CMEMS wave hindcast data. User supplies date range, AOI, username and password.
+    
+    FM, Oct 2021 (updated Aug 2023)
+
+    Parameters
+    ----------
+    settings : dict
+        Veg edge model settings (including user inputs).
+    output : dict
+        Output veg edges produced by model.
+    lonmin, lonmax, latmin, latmax : float
+        Bounding box coords.
+    User : str
+        CMEMS username.
+    Pwd : str
+        CMEMS password.
+
+    """
+    
+    print('Downloading wave data from CMEMS ...')   
+    WavePath = os.path.join(settings['inputs']['filepath'],'tides')   
+    
+    # DateMin = settings['inputs']['dates'][0]
+    # DateMax = settings['inputs']['dates'][1]
+    
+    # Buffer dates from output by 1 day either side
+    DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=1), '%Y-%m-%d %H:%M:%S')
+    DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d')+timedelta(days=1), '%Y-%m-%d %H:%M:%S')
+    
+    # NetCDF file will be a set of rasters at different times with different wave params
+    # params get pulled out further down after downloading
+    WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
+    
+    motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
+                   '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
+                   '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
+                   '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
+                   '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
+    os.system(motuCommand)
+
+
+def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, Pwd):
+    """
+    Download command for CMEMS wave forecast data. User supplies date range, AOI, username and password.
+    
+    FM, Oct 2021 (updated Aug 2023)
+
+    Parameters
+    ----------
+    settings : dict
+        Veg edge model settings (including user inputs).
+    output : dict
+        Output veg edges produced by model.
+    lonmin, lonmax, latmin, latmax : float
+        Bounding box coords.
+    User : str
+        CMEMS username.
+    Pwd : str
+        CMEMS password.
+
+    """
+    
+    print('Downloading wave data from CMEMS ...')   
+    WavePath = os.path.join(settings['inputs']['filepath'],'tides')   
+    
+    # DateMin = settings['inputs']['dates'][0]
+    # DateMax = settings['inputs']['dates'][1]
+    
+    # Buffer dates from output by 1 day either side
+    DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=1), '%Y-%m-%d %H:%M:%S')
+    DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d')+timedelta(days=1), '%Y-%m-%d %H:%M:%S')
+    
+    # NetCDF file will be a set of rasters at different times with different wave params
+    # params get pulled out further down after downloading
+    WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
+    
+    motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
+                   '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
+                   '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
+                   '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
+                   '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
+    os.system(motuCommand)
+    
+    
+
+
+
+
 def ExtendLine(LineGeom, dist):
     '''
     FM Jun 2023
