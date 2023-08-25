@@ -14,7 +14,7 @@ import pandas as pd
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pdb
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import pyproj
 from pyproj import Proj
@@ -941,54 +941,14 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath
         return TransectInterGDF    
             
 
-def WavesIntersect(TransectInterGDF):
+def WavesIntersect(TransectInterGDF, settings, output, lonmin, lonmax, latmin, latmax, User, Pwd):
     
+    Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, Pwd)
     
     
     return TransectInterGDF
 
 
-# TO DO: reformat waves functions
-def GetForecastWaveData(CellDF, WavePath, Site, DateMin, DateMax, User, Pwd):
-    """ 
-    Download command for CMEMS wave forecast data. User supplies date range, username and password.
-    Bounding box location comes from the cell polygon boundaries
-    
-    FM, Oct 2021 (updated Aug 2023)
-    
-    Parameters
-    ----------
-    CellDF : GeoDataFrame
-        GDF of cell polygon to obtain boundaries from
-    WavePath : string
-        path to directory to save wave file to
-    Site : string
-        location name, usually Cell number or recognisable name e.g. Montrose
-    DateMin, DateMax : string of format '%YYYY-%mm-%dd HH:MM:SS'
-    User : string
-        username for CMEMS service
-    Pwd : string
-        password for CMEMS service
-        
-       
-    """
-    print('Downloading wave data up to '+ DateMax +' from CMEMS ...')        
-    #Bounding box for downloading wave data defined by Cell outline
-    if CellDF.crs != 'EPSG:4326':
-        CellDF = CellDF.to_crs('EPSG:4326') # convert to lat long if needed
-    CellBBox = CellDF.bounds # x = long, y = lat
-    
-    # I need to figure out a way to store multiple wave heights for each date of forecast, not just one
-    # NetCDF file will be a set of rasters at different times with different wave params
-    # params get pulled out further down after downloading
-    
-    WaveOutFile = 'MetO-NWS-WAV-hi_'+Site+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
-    motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
-                   '--longitude-min '+ str(CellBBox.minx.item()) +' --longitude-max '+ str(CellBBox.maxx.item()) +' --latitude-min '+ str(CellBBox.miny.item()) +' --latitude-max '+ str(CellBBox.maxy.item()) +' '
-                   '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
-                   '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
-                   '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
-    os.system(motuCommand)
 
 
 def SampleWaves(CellDF, WaveOutFile):
