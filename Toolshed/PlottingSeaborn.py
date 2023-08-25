@@ -226,7 +226,7 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
     patches.append(rect15)
     coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
     
-    sns.set_style("whitegrid", {'axes.grid' : False})
+    sns.set_style("ticks", {'axes.grid' : False})
     if len(violindates) > 1:
         # plot stacked violin plots
         ax = sns.violinplot(data = df, linewidth=0, palette = 'magma_r', orient='h', cut=0, inner='quartile')
@@ -478,6 +478,208 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     plt.show()
     
     #mpl.rcParams.update(mpl.rcParamsDefault)
+    
+    
+    
+def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
+    """
+    Prob density function plot showing distances between validation and satellite, for each date of validation line.
+    FM Oct 2022
+
+    Parameters
+    ----------
+    ValidationShp : str
+        Path to validation lines shapefile.
+    DatesCol : str
+        Name of dates column in shapefile.
+    ValidDict : dict
+        Validation dictionary created from ValidateIntersects().
+
+    """
+    
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+        
+    violin = []
+    violindates = []
+    Sdates = SatGDF[DatesCol].unique()
+    
+    for Sdate in Sdates:
+        valsatdist = []
+        # for each transect in given range
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
+            if Sdate in ValidDict['dates'][Tr]:
+                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                else:
+                    continue
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
+        if valsatdist != []: 
+            violin.append(valsatdist)
+            violindates.append(Sdate)
+    # sort both dates and list of values by date
+    if len(violindates) > 1:
+        violindatesrt, violinsrt = [list(d) for d in zip(*sorted(zip(violindates, violin), key=lambda x: x[0]))]
+    else:
+        violindatesrt = violindates
+        violinsrt = violin
+    df = pd.DataFrame(violinsrt)
+    df = df.transpose()
+    df.columns = violindatesrt
+    
+    # initialise matching list of sat names for labelling
+    satnames = dict.fromkeys(violindatesrt)
+    # for each date in sorted list
+    for Sdate in violindatesrt:    
+        satmatch = []
+        for Tr in range(len(ValidDict['TransectID'])):
+            # loop through transects to find matching date from which to find satname
+            if Sdate not in ValidDict['dates'][Tr]:
+                continue
+            else:
+                satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
+        # cycling through transects leads to list of repeating satnames; take the unique entry
+        satnames[Sdate] = list(set(satmatch))[0]
+    
+    
+    mpl.rcParams.update({'font.size':26})       
+    fig,ax = plt.subplots(figsize=(7.5,6.5),dpi=300)
+
+    sns.set(font='Avenir', font_scale=2.1)
+    
+    patches = []
+    rect10 = mpatches.Rectangle((-10, -50), 20, 100)
+    rect15 = mpatches.Rectangle((-15, -50), 30, 100)
+    patches.append(rect10)
+    patches.append(rect15)
+    coll=PatchCollection(patches, facecolor="black", alpha=0.1, zorder=0)
+    
+    textcolor = '#0B2D32'
+    sns.set_style("ticks", {'axes.facecolor':'#CDCDCD', 'axes.grid' : False, 
+                            'text.color':textcolor,
+                            'axes.labelcolor':textcolor,
+                            'xtick.color':textcolor,
+                            'ytick.color':textcolor,
+                            'font.sans-serif':'Avenir LT Std'})
+    
+
+    if len(violindates) > 1:
+                   
+        # kdecmap = cm.get_cmap('Greens',len(violindates))
+        kdecmap = plt.cm.Greens(np.linspace(0, 1, len(violindates)))
+        for i in range(len(violindates)):
+            if df.iloc[:,i].isnull().sum() == df.shape[0]:
+                kdelabel = None
+            else:
+                # find name of column for legend labelling (sat date)
+                kdelabel = df.columns[i]
+            sns.kdeplot(data = df.iloc[:,i], color=kdecmap[i], label=kdelabel, alpha=0.8, linewidth=3.5)
+            
+        ax.add_collection(coll)
+        # leg1 = ax.legend(loc='upper left', facecolor='w', framealpha=0.4, handlelength=1)
+            
+    ax.set(xlabel='X-shore distance$_{satellite - validation}$ (m)', ylabel='')
+    ax.set_title(PlotTitle)
+    plt.yticks([])
+    if abs(df.max().max()) > 100:
+        majort = np.arange(-150,200,50)
+    else:
+        majort = np.arange(-150,200,25)
+    ax.set_xticks(majort)  
+    
+    # set axis limits to rounded maximum value of all violins (either +ve or -ve)
+    # round UP to nearest 10
+    try:
+        axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
+        ax.set_xlim(-axlim, axlim)
+    except:
+        ax.set_xlim(-100, 100)
+      
+
+    # create specific median lines for specific platforms
+    medians = []
+    labels = []
+    # dataframe dates and matching satnames
+    satdf = pd.DataFrame(satnames, index=[0])
+    # remove empty columns to make plotting/legends easier
+    df = df.dropna(axis=1, how='all')
+    commondates=[col for col in df.columns.intersection(satdf.columns)]
+    satdf = satdf[commondates]
+    
+    # for each platform name
+    uniquesats = sorted(set(list(satnames.values())))
+    colors = plt.cm.Blues(np.linspace(0.4, 1, len(uniquesats)))
+    for satname, c in zip(uniquesats, colors):
+        try:
+            sats = satdf.apply(lambda row: row[row == satname].index, axis=1)
+        except:
+            print("Can't plot empty Transects with no validation data!")
+            continue
+        sats = sats[0].tolist()
+        # skip calculating satellite median if transects are empty for this satellite
+        if sats == []:
+            continue
+        # get dataframe column indices for each date that matches the sat name
+        # colind = [df.columns.get_loc(sat) for sat in sats]
+        # set the date legend label for each date to corresponding satname colour
+        # [leg1.get_texts()[ind].set_color(c) for ind in colind]
+            
+        # get median of only the columns that match each sat name
+        concatl = []
+        for s in sats:
+            concatl.append(df[s])
+        concatpd = pd.concat(concatl)
+        medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=3))
+        if 'PSScene4Band' in satname:
+            satname = 'PS'
+        labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
+    
+    # Overall error as text
+    totald = []
+    for date in df.columns:
+        d = df[date]
+        for i,datum in enumerate(d):
+            totald.append(datum)
+
+    totald = np.array(totald)
+    mse = np.mean(np.power(totald[~np.isnan(totald)], 2))
+    mae = np.mean(abs(totald[~np.isnan(totald)]))
+    rmse = np.sqrt(mse)
+    
+    l = Line2D([],[], color='none')
+    medians.append(l)
+    labels.append('RMSE = ' + str(round(rmse,1)) +'m')
+    
+    # set legend for median lines  
+    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=2)
+    medleg = ax.legend(medians,labels, loc='upper left',facecolor='w', framealpha=0.5, handlelength=0.8)
+    # plt.gca().add_artist(leg1)
+    
+    
+    # plt.draw()
+    # # get bounding box loc of legend to plot text underneath it
+    # p = medleg.get_window_extent()
+    # ax.annotate('Hi', (p.p0[1], p.p1[0]), (p.p0[1], p.p1[0]), xycoords='figure pixels', zorder=9, ha='right')    
+    ax.set_axisbelow(False)
+    plt.tight_layout()
+    
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_PDF_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'_Large.png')
+    plt.savefig(figpath, dpi=300, bbox_inches='tight')
+    print('figure saved under '+figpath)
+    
+    plt.show()
+    
+    #mpl.rcParams.update(mpl.rcParamsDefault)    
+    
+    
 
 def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None):
     """
@@ -550,8 +752,8 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
     patches.append(rect15)
     coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
     colors = plt.cm.Blues(np.linspace(0.4, 1, len(violinsatsrt)))
-    
-    sns.set_style("whitegrid", {'axes.grid' : False})
+    textcolor = '#0B2D32'
+    sns.set_style("whitegrid", {'axes.grid':False, 'axes.linewidth':0.5} )
     if len(violinsatsrt) > 1:
         # plot stacked violin plots
         ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
@@ -586,7 +788,9 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
         ax.set_xlim(-axlim, axlim)
     else:
         ax.set_xlim(-150, 150)
-    # ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
+        
+    majort = np.arange(-150,200,50)
+    ax.set_xticks(majort)  
     # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
     # # create specific median lines for specific platforms
@@ -597,14 +801,14 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
         satMSE = np.mean(df[satname]**2)
         satMAE = np.mean(abs(df[satname]))
         satRMSE = np.sqrt(satMSE)
-        leglabel = 'MAE = ' +str(round(satMAE,1))+'m\nRMSE = '+str(round(satRMSE,1))+'m'
+        leglabel = 'RMSE = '+str(round(satRMSE,1))+'m'
         medianlabel = '$\eta_{dist}$ = '+str(round(satmedian,1))+'m'
         LegPatch = Patch( facecolor=colors[i], label = leglabel)
         legend_elements.append(LegPatch)
         if axlim < 150:
-            ax.text(-axlim+1, i+0.1, leglabel)
+            ax.text(-axlim+1, i, leglabel, va='center')
         else:
-            ax.text(-149, i+0.1, leglabel)
+            ax.text(-149, i, leglabel, va='center')
         medianline = ax.lines[iline].get_data()[1][0]
         ax.text(satmedian, medianline-0.05, medianlabel,ha='center')
     
@@ -690,10 +894,11 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitl
     df = pd.DataFrame(violinsrt)
     df = df.transpose()
     df.columns = violinsatsrt
-       
-    f = plt.figure(figsize=(7.48,7.48),dpi=300)
-    mpl.rcParams.update({'font.size':7})
-    sns.set(font_scale=0.6)
+
+    mpl.rcParams.update({'font.size':26})       
+    f = plt.figure(figsize=(7.5,9),dpi=300)
+
+    sns.set(font='Avenir', font_scale=2.1)
     
     patches = []
     rect10 = mpatches.Rectangle((-10, -50), 20, 100)
@@ -701,28 +906,37 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitl
     patches.append(rect10)
     patches.append(rect15)
     coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
+    # colors = plt.cm.GnBu(np.linspace(0.4, 1, len(violinsatsrt)))
     colors = plt.cm.Blues(np.linspace(0.4, 1, len(violinsatsrt)))
+
+    # colors=np.array( [[170,201,201,255],[110,150,150,255],[71,116,116,255],[11,45,50,255]] ) / 255
     
-    sns.set_style("whitegrid", {'axes.grid' : False})
+    textcolor = '#0B2D32'
+    sns.set_style("ticks", {'axes.grid' : False, 'text.color':textcolor,
+                            'axes.labelcolor':textcolor,
+                            'xtick.color':textcolor,
+                            'ytick.color':textcolor,
+                            'font.sans-serif':'Avenir LT Std'})
+    
     if len(violinsatsrt) > 1:
         # plot stacked violin plots
         ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
         ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
         for il, l in enumerate(ax.lines):
             l.set_linestyle('--')
-            l.set_linewidth(0.7)
+            l.set_linewidth(2)
             l.set_color('white')
             # overwrite middle line (median) setting to a thicker white line
             for i in range(0,3*len(violinsatsrt))[1::3]:
                 if i == il:
                     l.set_linestyle('-')
-                    l.set_linewidth(1)
+                    l.set_linewidth(3)
                     l.set_color('white')
     else:
         ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
         ax.add_collection(coll)
         
-    ax.set(xlabel='Distance$_{satellite - validation}$ (m)', ylabel='Satellite image platform')
+    ax.set(xlabel='X-shore distance$_{satellite - validation}$ (m)', ylabel='Satellite image platform')
     if 'PSScene4Band' in violinsatsrt:
         yticklabels = [item.get_text() for item in ax.get_yticklabels()]
         yticklabels[yticklabels.index('PSScene4Band')] = 'PS'
@@ -738,7 +952,9 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitl
         ax.set_xlim(-axlim, axlim)
     else:
         ax.set_xlim(-150, 150)
-    # ax.set_xticks([-30,-15,-10,10,15,30],minor=True)
+    
+    majort = np.arange(-150,200,50)
+    ax.set_xticks(majort)    
     # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
     # # create specific median lines for specific platforms
@@ -749,24 +965,27 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitl
         satMSE = np.mean(df[satname]**2)
         satMAE = np.mean(abs(df[satname]))
         satRMSE = np.sqrt(satMSE)
-        leglabel = 'MAE = ' +str(round(satMAE,1))+'m\nRMSE = '+str(round(satRMSE,1))+'m'
+        leglabel = '\nRMSE = '+str(round(satRMSE,1))+'m'
         medianlabel = '$\eta_{dist}$ = '+str(round(satmedian,1))+'m'
         LegPatch = Patch( facecolor=colors[i], label = leglabel)
         legend_elements.append(LegPatch)
         if axlim < 150:
-            ax.text(-axlim+1, i+0.1, leglabel)
+            ax.text(-axlim+1, i+0.02, leglabel, va='center')
         else:
-            ax.text(-149, i+0.1, leglabel)
+            ax.text(-149, i+0.02, leglabel, va='center')
         medianline = ax.lines[iline].get_data()[1][0]
-        ax.text(satmedian, medianline-0.05, medianlabel,ha='center')
+        if satname == 'PSScene4Band' or satname == 'S2':
+            ax.text(satmedian, medianline-0.05, medianlabel, ha='center')
+        else:
+            ax.text(satmedian, medianline-0.12, medianlabel, ha='center')
     
-    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
+    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=2)
     
     ax.set_axisbelow(False)
     plt.tight_layout()
     
     figpath = os.path.join(filepath,sitename+'_Validation_Satellite_PlatformDistances_Violin_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'_Large.png')
-    plt.savefig(figpath, dpi=300)
+    plt.savefig(figpath, dpi=300, bbox_inches='tight')
     print('figure saved under '+figpath)
     
     plt.show()
@@ -805,7 +1024,7 @@ def ThresholdViolin(filepath,sites):
 
     # sns.set(font="Arial", font_scale=0.55)
     sns.set(font="Arial", font_scale=0.6)
-    sns.set_style("whitegrid", {'axes.grid' : False})
+    sns.set_style("ticks", {'axes.grid' : False})
     
     ax = sns.violinplot(data = violinDF, linewidth=0, palette = 'YlGnBu', orient='v', cut=0, inner='quart')
     # change quartile line styles
