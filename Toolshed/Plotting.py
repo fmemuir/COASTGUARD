@@ -782,6 +782,199 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     
     
     
+    
+def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
+       
+    
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+        
+    valdists = []
+    satdists = []
+    satplotdates = []
+    validplotdates = []
+    # get unique sat dates
+    Sdates = SatGDF[DatesCol].unique()
+    # get unique validation dates
+    Vdates = []
+    for Tr in range(TransectIDs[0], TransectIDs[1]):
+        for i in ValidDict['Vdates'][Tr]:
+            if i != []:
+                try:
+                    Vdates.append(ValidDict['Vdates'][Tr][i]) 
+                except:
+                    Vdates.append(ValidDict['Vdates'][Tr][0])
+    Vdates = set(Vdates)
+    
+    for Sdate in Sdates:
+        satdist = []
+        valdist = []
+        # for each transect in given range
+        for Tr in range(TransectIDs[0],TransectIDs[1]): 
+            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+                print("check your chosen transect values!")
+                return
+            if Sdate in ValidDict['dates'][Tr]:
+                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+                # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
+                if ValidDict['valsatdist'][Tr] != []:
+                    satdist.append(ValidDict['distances'][Tr][DateIndex])
+                    # extract validation dists by performing difference calc back on sat dists
+                    try:
+                        valdist.append(ValidDict['distances'][Tr][DateIndex]-ValidDict['valsatdist'][Tr][DateIndex])
+                    except:
+                        pdb.set_trace()
+                else:
+                    continue
+            else:
+                continue
+        # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
+        if satdist != []: 
+            satdists.append(satdist)
+            satplotdates.append(Sdate)
+            valdists.append(valdist)
+    # sort both dates and list of values by date
+    if len(satplotdates) > 1:
+        satplotdatesrt, satsrt, valsrt = [list(d) for d in zip(*sorted(zip(satplotdates, satdists, valdists), key=lambda x: x[0]))]
+    else:
+        satplotdatesrt = satplotdates
+        satsrt = satdists
+        valsrt = valdists
+
+    textcolor = '#0B2D32'
+    mpl.rcParams.update({'font.size':26, 
+                         'text.color':textcolor,
+                         'axes.labelcolor':textcolor,
+                         'xtick.color':textcolor,
+                         'ytick.color':textcolor,
+                         'font.sans-serif':'Avenir LT Std'})
+
+    fig, ax = plt.subplots(figsize=(7.5,9),dpi=300)
+
+    ax.set_facecolor('#D5D5D5')
+    
+    valsrtclean = []
+    satsrtclean = []
+    satdateclean = []
+    # for each list of transects for a particular date
+    for dat, vallist, satlist in zip(range(len(valsrt)), valsrt, satsrt):
+        vallistclean = []
+        satlistclean = []
+        # for each transect obs
+        for i in range(len(vallist)):
+            if np.isnan(vallist[i]) == False: # if transect obs is not empty
+                vallistclean.append(vallist[i])
+                satlistclean.append(satlist[i])
+        if vallistclean != []: # skip completely empty dates
+            satdateclean.append(satplotdatesrt[dat])
+            valsrtclean.append(vallistclean)
+            satsrtclean.append(satlistclean)
+
+    maxlim = max( max(max(satsrt)), max(max(valsrt)) )
+    minlim = min( min(min(satsrt)), min(min(valsrt)) )
+    majort = np.arange(0,300,50)
+    minort = np.arange(0,270,20)
+    ax.set_xticks(majort)
+    ax.set_yticks(majort)
+    
+    # line through the origin as a guide for error
+    plt.plot([0,250],[0,250],c=[0.6,0.5,0.5], lw=2, linestyle='-', zorder=3, alpha=0.4)
+
+    ax.grid(which='major', color='#BBB4BB', alpha=0.5, zorder=0)
+    # ax.grid(which='minor', color='#BBB4BB', alpha=0.2, zorder=0)
+    
+    r2s = []
+    lines = []
+    cmap = cm.get_cmap('Greens',len(valsrtclean))
+    for i in range(len(valsrtclean)): 
+        # plot scatter of validation (observed) vs satellite (predicted) distances along each transect
+        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=10, alpha=0.4, edgecolors='none', zorder=2)
+        # linear regressions
+        X = np.array(valsrtclean[i]).reshape((-1,1))
+        y = np.array(satsrtclean[i])
+        model = LinearRegression(fit_intercept=True).fit(X,y)
+        r2 = model.score(X,y)
+        r2s.append(r2)
+        
+        valfit = np.linspace(0,round(np.max(valsrtclean[i])),len(valsrtclean[i])).reshape((-1,1))
+        satfit = model.predict(valfit)
+
+        line = plt.plot(valfit,satfit, c=cmap(i), alpha=0.5, linewidth=3, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))), zorder=3)
+        lines.append(line)
+        
+    besti = r2s.index(max(r2s))
+    worsti = r2s.index(min(r2s))
+    
+    # plt.text(valsrtclean[besti][-1], satsrtclean[besti][-1], satdateclean[besti]+' (R$^2$ = '+str(round(r2s[besti],2))+')', c=cmap(besti))
+    # plt.text(valsrtclean[worsti][-1], satsrtclean[worsti][-1], satdateclean[worsti]+' (R$^2$ = '+str(round(r2s[worsti],2))+')', c=cmap(worsti))
+
+    hands = [ lines[besti][0], lines[worsti][0] ]
+    labs = [ satdateclean[besti]+'\nS2, R$^2$ = '+str(round(r2s[besti],2)), satdateclean[worsti]+'\nL5, R$^2$ = '+str(round(r2s[worsti],2)) ]
+    plt.legend(hands,labs, loc='lower right',facecolor='#D5D5D5')
+    
+    # overall linear regression
+    valfull = [item for sublist in valsrtclean for item in sublist]
+    satfull =[item for sublist in satsrtclean for item in sublist]
+    X = np.array(valfull).reshape((-1,1))
+    y = np.array(satfull)
+    model = LinearRegression(fit_intercept=True).fit(X,y)
+    r2 = model.score(X,y)
+    
+    
+    valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
+    satfit = model.predict(valfit)
+
+    plt.plot(valfit,satfit, c='k', linestyle='--', linewidth=3, zorder=3)
+    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2))+'\nRMSE = 23 m', zorder=3, horizontalalignment='right')
+
+    plt.xlim(0,225)
+    plt.ylim(0,250)
+
+    plt.xlabel('X-shore distance$_{validation}$ (m)')
+    plt.ylabel('X-shore distance$_{satellite}$ (m)')
+    
+    # ax.axis('equal')
+    plt.tight_layout()
+    
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_LinReg_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'_Large.png')
+    plt.savefig(figpath, dpi=300, bbox_inches='tight')
+    print('figure saved under '+figpath)
+
+    plt.show()
+    
+    # Get unique dates and satnames    
+    SatGDFNames = SatGDF.groupby(['dates']).max()
+    SatNames = []
+    
+    for d in satdateclean:
+        SatNames.append(SatGDFNames.loc[d]['satname'])
+    SatNameList = sorted(set(SatNames))
+    
+    for SatN in SatNameList:
+        SatInd = []
+        for i, e in enumerate(SatNames):
+            if e == SatN:
+                SatInd.append(i)
+        
+        valsrtN = []
+        satsrtN = []
+        for SatI in SatInd:
+            valsrtN.append(valsrtclean[SatI])
+            satsrtN.append(satsrtclean[SatI])
+
+        valN = [item for sublist in valsrtN for item in sublist]
+        satN =[item for sublist in satsrtN for item in sublist]
+        X = np.array(valN).reshape((-1,1))
+        y = np.array(satN)
+        model = LinearRegression(fit_intercept=True).fit(X,y)
+        r2 = model.score(X,y)
+        
+        print(SatN, r2)
+    
+    
+    
+    
 def ClusterRates(sitename, TransectInterGDF, Sloc, Nloc):
     
     ## Cluster Plot
