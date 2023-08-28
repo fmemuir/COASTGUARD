@@ -2045,10 +2045,7 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, 
                    '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
     os.system(motuCommand)
     
-    
-
-
-
+    return WaveOutFile
 
 def ExtendLine(LineGeom, dist):
     '''
