@@ -1995,12 +1995,16 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     # params get pulled out further down after downloading
     WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
-    motuCommand = ('python -m motuclient --motu http://my.cmems-du.eu/motu-web/Motu --service-id NWSHELF_REANALYSIS_WAV_004_015-TDS --product-id MetO-NWS-WAV-RAN '
-                   '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
-                   '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
-                   '--variable VHM0  --variable VMDR --variable VTPK '
-                   '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
-    os.system(motuCommand)
+    if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
+        return WaveOutFile
+    else:
+        motuCommand = ('python -m motuclient --motu http://my.cmems-du.eu/motu-web/Motu --service-id NWSHELF_REANALYSIS_WAV_004_015-TDS --product-id MetO-NWS-WAV-RAN '
+                       '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
+                       '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
+                       '--variable VHM0  --variable VMDR --variable VTPK '
+                       '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
+        os.system(motuCommand)
+        return WaveOutFile
 
 
 def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, Pwd):
@@ -2038,14 +2042,18 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, 
     # params get pulled out further down after downloading
     WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
-    motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
-                   '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
-                   '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
-                   '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
-                   '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
-    os.system(motuCommand)
+    if os.path.isfile(os.path.join(WavePath, WaveOutFile)):
+        return WaveOutFile
+    else:
     
-    return WaveOutFile
+        motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
+                       '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
+                       '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
+                       '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
+                       '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
+        os.system(motuCommand)
+        
+        return WaveOutFile
 
 def ExtendLine(LineGeom, dist):
     '''
