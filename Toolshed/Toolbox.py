@@ -1984,9 +1984,6 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     # DateMin = settings['inputs']['dates'][0]
     # DateMax = settings['inputs']['dates'][1]
     
-    User =  input('CMEMS username: ')
-    Pwd = input('CMEMS password: ')
-    
     # Buffer dates from output by 1 day either side
     DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=1), '%Y-%m-%d %H:%M:%S')
     DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d')+timedelta(days=1), '%Y-%m-%d %H:%M:%S')
@@ -1997,17 +1994,22 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
         return WaveOutFile
+    
     else:
+        User =  input('CMEMS username: ')
+        Pwd = input('CMEMS password: ')
+        
         motuCommand = ('python -m motuclient --motu http://my.cmems-du.eu/motu-web/Motu --service-id NWSHELF_REANALYSIS_WAV_004_015-TDS --product-id MetO-NWS-WAV-RAN '
                        '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
                        '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
                        '--variable VHM0  --variable VMDR --variable VTPK '
                        '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
         os.system(motuCommand)
+        
         return WaveOutFile
 
 
-def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, Pwd):
+def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     """
     Download command for CMEMS wave forecast data. User supplies date range, AOI, username and password.
     
@@ -2044,8 +2046,11 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax, User, 
     
     if os.path.isfile(os.path.join(WavePath, WaveOutFile)):
         return WaveOutFile
-    else:
     
+    else:
+        User =  input('CMEMS username: ')
+        Pwd = input('CMEMS password: ')
+        
         motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
                        '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
                        '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
