@@ -756,7 +756,7 @@ def CalculateChanges(TransectDict,TransectInterGDF):
     return TransectDict
 
 
-def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath):
+def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
     
     
     print('Intersecting transects with transition zones... ')
@@ -862,7 +862,7 @@ def TZIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath):
     return TransectInterGDF    
 
 
-def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=None):
+def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=None):
     
     if DTMfile is None:
         print('No DTM file provided.')
@@ -942,7 +942,7 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath
         return TransectInterGDF    
             
 
-def WavesIntersect(TransectInterGDF, settings, output, lonmin, lonmax, latmin, latmax):
+def WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax):
     
     WaveOutFile = Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     
