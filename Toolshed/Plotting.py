@@ -1266,5 +1266,31 @@ def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
     return
     
 
-
+def StormsTimeline(figpath, sitename, CSVpath):
+    
+    
+    # Read in errors CSV
+    StormsDF = pd.read_csv(CSVpath)
+    
+    
+    mpl.rcParams.update({'font.size':7})
+    
+    # Set up plot
+    fig, ax = plt.subplots(figsize=(2.07,2.01), dpi=300)
+    
+    StormsDF['StartDate'] = [datetime.strptime(i, '%d-%m-%y') for i in StormsDF['Start']]
+    StormsDF['EndDate'] = [datetime.strptime(i, '%d-%m-%y') for i in StormsDF['End']]
+    StormsDF['Duration'] = StormsDF['EndDate']-StormsDF['StartDate']
+    
+    ax.barh(y=StormsDF['Name'], width=StormsDF['Duration'], left=StormsDF['StartDate'])
+    
+    plt.tight_layout()
+    
+    figname = os.path.join(figpath,sitename+'_VedgeSat_TideHeights_Errors.png')
+    plt.savefig(figname)
+    print('figure saved under '+figname)
+    
+    plt.show()
+    
+    return
 
