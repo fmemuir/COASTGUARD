@@ -978,9 +978,9 @@ def SampleWaves(TransectInterGDF, WaveOutFile):
         # for i in range(0,len(WaveSeconds)):
             # WaveTime.append(datetime.datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'))
         
-        TrWaveHs = []
-        TrWaveDir = []
-        TrWaveTp = []
+        WaveHs = []
+        WaveDir = []
+        WaveTp = []
         
         def find(item, lst):
             start = 0
@@ -997,54 +997,35 @@ def SampleWaves(TransectInterGDF, WaveOutFile):
             IDLat = (np.abs(WaveY - InterPnts.iloc[0].y)).argmin() 
             IDLong = (np.abs(WaveX - InterPnts.iloc[0].x)).argmin()
           
-
+            DateTimeSat = TransectInterGDF['dates'].iloc[Tr] + ' ' + TransectInterGDF['times'].iloc[Tr]
+            
+            TrWaveHs = []
+            TrWaveDir = []
+            TrWaveTp = []
+            
             # Interpolate wave data using number of minutes through the hour the satellite image was captured
-            for i,date in enumerate(dates_sat):
-                # find preceding and following hourly tide levels and times
-                time_1 = dates_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
-                tide_1 = tides_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
-                time_2 = dates_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
-                tide_2 = tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
-                
-                # Find time difference of actual satellite timestamp (next hour minus sat timestamp)
-                timediff = time_2 - date
-                # Get proportion of time through the hour (e.g. 59mins past = 0.01)
-                timeprop = timediff / timedelta(hours=1)
-                
-                # Get difference between the two tidal stages
-                tidediff = (tide_2 - tide_1) / 2
-                tide_sat = tide_2 - (tidediff * timeprop)
+            for i,date in enumerate(DateTimeSat):
+                for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong],MeanWaveDir[:,IDLat, IDLong],PeakWavePeriod[:,IDLat, IDLong]], 
+                                             [TrWaveHs,TrWaveDir,TrWaveTp]):
+                    # find preceding and following hourly tide levels and times
+                    time_1 = WaveTime[find(min(item for item in WaveTime if item > date-timedelta(hours=3)), WaveTime)]
+                    wave_1 = WaveProp[find(min(item for item in WaveTime if item > date-timedelta(hours=3)), WaveTime)]
+                    
+                    time_2 = WaveTime[find(min(item for item in WaveTime if item > date), WaveTime)]
+                    wave_2 = WaveProp[find(min(item for item in WaveTime if item > date), WaveTime)]
+                    
+                    # Find time difference of actual satellite timestamp (next wave timestamp minus sat timestamp)
+                    timediff = time_2 - date
+                    # Get proportion of time through the 3-hour window
+                    timeprop = timediff / timedelta(hours=3)
+                    
+                    # Get difference between the two tidal stages
+                    wavediff = (wave_2 - wave_1) / 2
+                    WaveSat.append(wave_2 - (wavediff * timeprop))
 
-                
-            TrWaveHs.append()
-            TrWaveDir.append()
-            TrWaveTp.append()
-
-# Previously found first following tide time, but incorrect when time is e.g. only 1min past the hour
-# for i,date in enumerate(dates_sat):
-#     tides_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
-
-# Interpolate tide using number of minutes through the hour the satellite image was captured
-for i,date in enumerate(dates_sat):
-    # find preceding and following hourly tide levels and times
-    time_1 = dates_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
-    tide_1 = tides_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
-    time_2 = dates_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
-    tide_2 = tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
-    
-    # Find time difference of actual satellite timestamp (next hour minus sat timestamp)
-    timediff = time_2 - date
-    # Get proportion of time through the hour (e.g. 59mins past = 0.01)
-    timeprop = timediff / timedelta(hours=1)
-    
-    # Get difference between the two tidal stages
-    tidediff = (tide_2 - tide_1) / 2
-    tide_sat = tide_2 - (tidediff * timeprop)
-    
-    tides_sat.append(tide_sat)
-
-
-
+            WaveHs.append(TrWaveHs)
+            WaveDir.appendTrWaveDir
+            WaveTp.append(TrWaveTp)
 
 
 
