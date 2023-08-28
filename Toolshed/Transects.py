@@ -333,7 +333,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
     AllIntersects['waterelev'] = TidalStages
     
     # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
-    TideSteps = BeachTideLoc(settings)
+    TideSteps = Toolbox.BeachTideLoc(settings)
     ShoreLevels = []
     for i in range(len(AllIntersects)):
         if AllIntersects['waterelev'][i] > TideSteps[0] and AllIntersects['waterelev'][i] < TideSteps[1]:
@@ -342,7 +342,10 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
             ShoreLevels.append('middle')
         elif AllIntersects['waterelev'][i] > TideSteps[2] and AllIntersects['waterelev'][i] < TideSteps[3]:
             ShoreLevels.append('upper')
-    AllIntersects['tidezone'] = ShoreLevels
+    try:
+        AllIntersects['tidezone'] = ShoreLevels
+    except:
+        pdb.set_trace()
     
     #initialise lists used for storing each transect's intersection values
     dates, distances, corrdists, welev, tzone, interpnt = ([] for i in range(6)) # per-transect lists of values
@@ -443,34 +446,6 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
     
     return CorrIntDistances, TidalStages
 
-def BeachTideLoc(settings):
-    '''
-    Create steps of water elevation based on a tidal range, which correspond to the 'lower', 'middle' and 'upper' beach.
-    FM July 2023
-
-    Parameters
-    ----------
-    settings : dict
-        Tool settings stored here
-
-    Returns
-    -------
-    TideSteps : list
-        Array of 4 elevations running from lowest to highest tide.
-        Beach zone class is then 'lower' = TideSteps[0] to TideSteps[1], etc.
-
-    '''
-    tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
-    tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
-    tides_ts = np.array(tide_data['tide'])
-    
-    MaxTide = np.max(tides_ts)
-    MinTide = np.min(tides_ts)
-    TideStep = (MaxTide - MinTide)/3
-    
-    TideSteps = [MinTide, MinTide+TideStep, MaxTide-TideStep, MaxTide]
-    
-    return TideSteps
 
 def GetBeachSlopesDEM(MSL, MHWS, DEMpath):
     """

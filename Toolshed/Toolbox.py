@@ -1957,6 +1957,38 @@ def GetWaterElevs(settings, dates_sat):
     return tides_sat
 
 
+
+def BeachTideLoc(settings):
+    '''
+    Create steps of water elevation based on a tidal range, which correspond to the 'lower', 'middle' and 'upper' beach.
+    FM July 2023
+
+    Parameters
+    ----------
+    settings : dict
+        Tool settings stored here
+
+    Returns
+    -------
+    TideSteps : list
+        Array of 4 elevations running from lowest to highest tide.
+        Beach zone class is then 'lower' = TideSteps[0] to TideSteps[1], etc.
+
+    '''
+    tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+    tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
+    tides_ts = np.array(tide_data['tide'])
+    
+    MaxTide = np.max(tides_ts)
+    MinTide = np.min(tides_ts)
+    TideStep = (MaxTide - MinTide)/3
+    
+    TideSteps = [MinTide, MinTide+TideStep, MaxTide-TideStep, MaxTide]
+    
+    return TideSteps
+
+
+
 def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     """
     Download command for CMEMS wave hindcast data. User supplies date range, AOI, username and password.
