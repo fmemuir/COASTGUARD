@@ -25,6 +25,7 @@ from sklearn.linear_model import LinearRegression
 from pylab import ginput
 import rasterio as rio
 from rasterio.features import shapes
+import netCDF4
 
 from Toolshed import Toolbox
 from Toolshed.Coast import *
@@ -943,15 +944,16 @@ def SlopeIntersect(settings,TransectDict,TransectInterGDF, VeglinesGDF, BasePath
 
 def WavesIntersect(TransectInterGDF, settings, output, lonmin, lonmax, latmin, latmax):
     
-    Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
+    WaveOutFile = Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     
+    SampleWaves(TransectInterGDF, WaveOutFile)
     
     return TransectInterGDF
 
 
 
 
-def SampleWaves(CellDF, WaveOutFile):
+def SampleWaves(TransectInterGDF, WaveOutFile):
     """
     Function to extract wave information from NWS forecasts
     
@@ -966,55 +968,80 @@ def SampleWaves(CellDF, WaveOutFile):
         # can be rectangular, resulting in differently sized arrays, so transforming as two coordinate arrays doesn't work
         WaveX  = WaveData.variables['longitude'][:]
         WaveY  = WaveData.variables['latitude'][:]
-        
+
         SigWaveHeight = WaveData.variables['VHM0'][:,:,:]  #total sea Hs
         MeanWaveDir = WaveData.variables['VMDR'][:,:,:] #Total sea mean dir
         PeakWavePeriod = WaveData.variables['VTPK'][:,:,:] #Total sea peak period
-        
         WaveSeconds = WaveData.variables['time'][:]
-        WaveTime = []
-        for i in range(0,len(WaveSeconds)):
-            WaveTime.append(datetime.datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'))
         
+        # WaveTime = []
+        # for i in range(0,len(WaveSeconds)):
+            # WaveTime.append(datetime.datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'))
+        
+        TrWaveHs = []
+        TrWaveDir = []
+        TrWaveTp = []
+        
+        def find(item, lst):
+            start = 0
+            start = lst.index(item, start)
+            return start
+
         # loop through transects and sample
-        for Line in self.CoastLines:
-            for i, Transect in enumerate(Line.Transects[:]):
-                
-                
-                if CellDF.crs != 'EPSG:4326':
-                    # Transform coastal nodes to lat long for indexing 
-                    ToWGS84 = Transformer.from_crs(CellDF.crs,"epsg:4326")
-                    CoastLat,CoastLong = ToWGS84.transform(Transect.CoastNode.X,Transect.CoastNode.Y)
-                else:
-                    CoastLat,CoastLong = (Transect.CoastNode.Y,Transect.CoastNode.X) #x = long, y = lat
-                
-                # get index of closest matching grid square of wave data
-                IDLat = (np.abs(WaveY - CoastLat)).argmin() 
-                IDLong = (np.abs(WaveX - CoastLong)).argmin()
+        for Tr in range(len(TransectInterGDF)):
+            print('\r %0.3f %% transects processed' % ( (Tr/len(TransectInterGDF))*100 ), end='')
 
-                # Some grid squares are masked because they are too far inland
-                # Option 1: copy previous transect's wave conditions onto current transect
-                # Need to add interpolation to this!
-                if SigWaveHeight[:,IDLat, IDLong].mask.all():
-                    Transect.WaveHeight = Line.Transects[i-1].WaveHeight
-                    Transect.WaveDirection = Line.Transects[i-1].WaveDirection
-                    Transect.WavePeriod = Line.Transects[i-1].WavePeriod
-                
-                # Option 2: search for closest real value
-                '''while SigWaveHeight[:,IDLat, IDLong].mask.all():
-                     IDLat += 1
-                     IDLong += 1
-                     if IDLat > len(WaveY): # if edge is reached without a real value, go back the other way
-                         while SigWaveHeight[:,IDLat, IDLong].mask.all():
-                            IDLat -= 1
-                            IDLong -= 1 '''
-                            
-                            
-                Transect.WaveHeight = SigWaveHeight[:,IDLat, IDLong] #time, lat, long
-                Transect.WaveDirection = MeanWaveDir[:,IDLat, IDLong] #time, lat, long
-                Transect.WavePeriod = PeakWavePeriod[:,IDLat, IDLong] #time, lat, long
-                Transect.WaveTime = WaveTime
+            InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # midpoints of each transect
+        
+            # get index of closest matching grid square of wave data
+            IDLat = (np.abs(WaveY - InterPnts.iloc[0].y)).argmin() 
+            IDLong = (np.abs(WaveX - InterPnts.iloc[0].x)).argmin()
+          
 
+            # Interpolate wave data using number of minutes through the hour the satellite image was captured
+            for i,date in enumerate(dates_sat):
+                # find preceding and following hourly tide levels and times
+                time_1 = dates_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
+                tide_1 = tides_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
+                time_2 = dates_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
+                tide_2 = tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
+                
+                # Find time difference of actual satellite timestamp (next hour minus sat timestamp)
+                timediff = time_2 - date
+                # Get proportion of time through the hour (e.g. 59mins past = 0.01)
+                timeprop = timediff / timedelta(hours=1)
+                
+                # Get difference between the two tidal stages
+                tidediff = (tide_2 - tide_1) / 2
+                tide_sat = tide_2 - (tidediff * timeprop)
+
+                
+            TrWaveHs.append()
+            TrWaveDir.append()
+            TrWaveTp.append()
+
+# Previously found first following tide time, but incorrect when time is e.g. only 1min past the hour
+# for i,date in enumerate(dates_sat):
+#     tides_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
+
+# Interpolate tide using number of minutes through the hour the satellite image was captured
+for i,date in enumerate(dates_sat):
+    # find preceding and following hourly tide levels and times
+    time_1 = dates_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
+    tide_1 = tides_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
+    time_2 = dates_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
+    tide_2 = tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
+    
+    # Find time difference of actual satellite timestamp (next hour minus sat timestamp)
+    timediff = time_2 - date
+    # Get proportion of time through the hour (e.g. 59mins past = 0.01)
+    timeprop = timediff / timedelta(hours=1)
+    
+    # Get difference between the two tidal stages
+    tidediff = (tide_2 - tide_1) / 2
+    tide_sat = tide_2 - (tidediff * timeprop)
+    
+    tides_sat.append(tide_sat)
 
 
 
