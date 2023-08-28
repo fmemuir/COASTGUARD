@@ -48,6 +48,7 @@ dependencies:
   - certifi=2023.7.22=pyhd8ed1ab_0
   - cffi=1.15.1=py38h4a40e3a_0
   - cfitsio=4.1.0=hd9d235c_0
+  - cftime=1.6.2=py38h26c90d9_1
   - chardet=5.0.0=py38h578d9bd_0
   - charls=2.3.4=h9c3ff4c_0
   - charset-normalizer=2.1.0=pyhd8ed1ab_0
@@ -273,6 +274,7 @@ dependencies:
   - nbformat=5.4.0=pyhd8ed1ab_0
   - ncurses=6.3=h27087fc_1
   - nest-asyncio=1.5.5=pyhd8ed1ab_0
+  - netcdf4=1.6.0=nompi_py38h2a9f00d_102
   - nettle=3.8.1=hc379101_1
   - networkx=2.8.5=pyhd8ed1ab_0
   - notebook=6.4.12=pyha770c72_0
