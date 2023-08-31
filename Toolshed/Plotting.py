@@ -14,20 +14,16 @@ import pdb
 
 import matplotlib as mpl
 from matplotlib import cm
-import matplotlib.colors as pltcls
 mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
-from matplotlib.gridspec import GridSpec
 import matplotlib.patches as mpatches
-from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch, Rectangle
 import matplotlib.dates as mdates
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 plt.ion()
 
 import rasterio
-import geopandas as gpd
 import pandas as pd
 from sklearn.neighbors import KernelDensity
 from sklearn.linear_model import LinearRegression
@@ -109,11 +105,12 @@ def SatGIF(metadata,settings,output):
             ims_ms.append(im_RGB)
             ims_date.append(filedates[i])
             
-    shorelineArr = output['shorelines']
-    sl_date = output['dates']
-    
+ 
     # shoreline dataframe back to array
     # TO DO: need to load in shorelines from shapefile and match up each date to corresponding image
+    # shorelineArr = output['shorelines']
+    # sl_date = output['dates']
+    
     #shorelineArr = Toolbox.GStoArr(shoreline)
     # sl_pix=[]
     # for line in shorelineArr:
@@ -179,8 +176,6 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     ax.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='k', markersize=6, markeredgecolor='k', label='Satellite VegEdge')
     plt.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5)
     
-    recjanlist = []
-    recmarchlist = []
     for i in range(plotdate[0].year-1, plotdate[-1].year):
         recjan = mdates.date2num(datetime(i, 12, 1, 0, 0))
         recmarch = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
@@ -329,7 +324,7 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
     plt.show()
     
 
-def ValidTimeseries(sitename, ValidDict, TransectID):
+def ValidTimeseries(sitename, ValidInterGDF, TransectID):
     """
     
 
@@ -350,9 +345,9 @@ def ValidTimeseries(sitename, ValidDict, TransectID):
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
     
-    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in ValidDict['Vdates'][TransectID]]
-    plotsatdist = ValidDict['distances'][TransectID]
-    plotvaliddist = ValidDict['Vdists'][TransectID]
+    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in ValidInterGDF['Vdates'].iloc[TransectID]]
+    plotsatdist = ValidInterGDF['distances'].iloc[TransectID]
+    plotvaliddist = ValidInterGDF['Vdists'].iloc[TransectID]
     
     plotdate, plotvaliddist = [list(d) for d in zip(*sorted(zip(plotdate, plotvaliddist), key=lambda x: x[0]))]
     plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]
@@ -461,48 +456,40 @@ def WidthTimeseries(sitename, TransectDict, TransectID, daterange):
     
     plt.show()
 
-
-
-def BeachWidthSeries(TransectID):
-    
-    f = plt.figure(figsize=(8, 3))
-    
-    
-    plt.plot('.-', color='k')
-    
+  
     
 
-def ResultsPlot(outfilepath, outfilename, sitename):
+# def ResultsPlot(outfilepath, outfilename, sitename):
     
     
-    def formatAxes(fig):
-        for i, ax in enumerate(fig.axes):
-            ax.tick_params(labelbottom=False, labelleft=False)
+#     def formatAxes(fig):
+#         for i, ax in enumerate(fig.axes):
+#             ax.tick_params(labelbottom=False, labelleft=False)
     
-    fig = plt.figure(layout='constrained', figsize=(6.55,5))
+#     fig = plt.figure(layout='constrained', figsize=(6.55,5))
     
-    gs = GridSpec(3,3, figure=fig)
-    ax1 = fig.add_subplot(gs[0,:])
-    ax2 = fig.add_subplot(gs[1,:-1])
-    ax3 = fig.add_subplot(gs[1:,-1])
-    ax4 = fig.add_subplot(gs[-1,0])
-    ax5 = fig.add_subplot(gs[-1,-2])
+#     gs = GridSpec(3,3, figure=fig)
+#     ax1 = fig.add_subplot(gs[0,:])
+#     ax2 = fig.add_subplot(gs[1,:-1])
+#     ax3 = fig.add_subplot(gs[1:,-1])
+#     ax4 = fig.add_subplot(gs[-1,0])
+#     ax5 = fig.add_subplot(gs[-1,-2])
     
-    formatAxes(fig)
+#     formatAxes(fig)
     
-    # # font size 8 and width of 6.55in fit 2-column journal formatting
-    # plt.rcParams['font.size'] = 8
-    # fig, ax = plt.subplots(3,2, figsize=(6.55,5), dpi=300, gridspec_kw={'height_ratios':[3,2,2]})
+#     # # font size 8 and width of 6.55in fit 2-column journal formatting
+#     # plt.rcParams['font.size'] = 8
+#     # fig, ax = plt.subplots(3,2, figsize=(6.55,5), dpi=300, gridspec_kw={'height_ratios':[3,2,2]})
     
-    # # outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
-    # if os.path.isdir(outfilepath) is False:
-    #     os.mkdir(outfilepath)
+#     # # outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+#     # if os.path.isdir(outfilepath) is False:
+#     #     os.mkdir(outfilepath)
     
-    plt.tight_layout()
-    #plt.savefig(os.path.join(outfilepath,outfilename), dpi=300)
-    print('Plot saved under '+os.path.join(outfilepath,outfilename))
+#     plt.tight_layout()
+#     #plt.savefig(os.path.join(outfilepath,outfilename), dpi=300)
+#     print('Plot saved under '+os.path.join(outfilepath,outfilename))
     
-    plt.show()
+#     plt.show()
     
     
 def ValidPDF(sitename, ValidGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):    
@@ -620,7 +607,6 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     valdists = []
     satdists = []
     satplotdates = []
-    validplotdates = []
     # get unique sat dates
     Sdates = SatGDF[DatesCol].unique()
     # get unique validation dates
@@ -696,7 +682,6 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
             satsrtclean.append(satlistclean)
 
     maxlim = max( max(max(satsrt)), max(max(valsrt)) )
-    minlim = min( min(min(satsrt)), min(min(valsrt)) )
     majort = np.arange(-100,maxlim+200,100)
     minort = np.arange(-100,maxlim+200,20)
     ax.set_xticks(majort)
@@ -794,7 +779,6 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     valdists = []
     satdists = []
     satplotdates = []
-    validplotdates = []
     # get unique sat dates
     Sdates = SatGDF[DatesCol].unique()
     # get unique validation dates
@@ -872,10 +856,10 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
             valsrtclean.append(vallistclean)
             satsrtclean.append(satlistclean)
 
-    maxlim = max( max(max(satsrt)), max(max(valsrt)) )
-    minlim = min( min(min(satsrt)), min(min(valsrt)) )
+    # maxlim = max( max(max(satsrt)), max(max(valsrt)) )
+    # minlim = min( min(min(satsrt)), min(min(valsrt)) )
     majort = np.arange(0,300,50)
-    minort = np.arange(0,270,20)
+    # minort = np.arange(0,270,20)
     ax.set_xticks(majort)
     ax.set_yticks(majort)
     
@@ -1288,7 +1272,7 @@ def StormsTimeline(figpath, sitename, CSVpath):
     
     inum = round(len(StormsDF) / 2)
 
-    cmap = plt.get_cmap("magma_r", len(StormsDF['WindGust']))
+    # cmap = plt.get_cmap("magma_r", len(StormsDF['WindGust']))
     
     # Plot gantt style timeline of storms where length of bar = duration of storm
     for ax, DFhalf in zip([ax1, ax2], [StormsDF.iloc[inum:],StormsDF.iloc[0:inum]]):
@@ -1311,7 +1295,7 @@ def StormsTimeline(figpath, sitename, CSVpath):
     
     plt.tight_layout()
     cbax = inset_axes(ax2, width='30%', height='5%', loc=3)
-    cb = plt.colorbar(scatter, cax=cbax, ticks=range(80,max(StormsDF['WindGust']),20), orientation='horizontal') 
+    plt.colorbar(scatter, cax=cbax, ticks=range(80,max(StormsDF['WindGust']),20), orientation='horizontal') 
     cbax.xaxis.set_ticks_position('top')
     cbax.text(max(StormsDF['WindGust'])-min(StormsDF['WindGust']),5,'Maximum wind gust (km/h)', ha='center')
     # plt.gcf().autofmt_xdate()
