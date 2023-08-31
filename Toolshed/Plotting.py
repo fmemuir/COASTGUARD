@@ -21,8 +21,9 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.gridspec import GridSpec
 import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
-from matplotlib.patches import Patch
+from matplotlib.patches import Patch, Rectangle
 import matplotlib.dates as mdates
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 plt.ion()
 
 import rasterio
@@ -1271,22 +1272,54 @@ def StormsTimeline(figpath, sitename, CSVpath):
     
     # Read in errors CSV
     StormsDF = pd.read_csv(CSVpath)
+    StormsDF = StormsDF.iloc[::-1]
     
     
     mpl.rcParams.update({'font.size':7})
     
     # Set up plot
-    fig, ax = plt.subplots(figsize=(2.07,2.01), dpi=300)
+    fig, (ax1, ax2) = plt.subplots(2,1, figsize=(6.55,3), dpi=300)
     
-    StormsDF['StartDate'] = [datetime.strptime(i, '%d-%m-%y') for i in StormsDF['Start']]
-    StormsDF['EndDate'] = [datetime.strptime(i, '%d-%m-%y') for i in StormsDF['End']]
+    # format date fields and calculate length of storms
+    StormsDF['StartDate'] = [datetime.strptime(i, '%d/%m/%Y') for i in StormsDF['Start']]
+    StormsDF['EndDate'] = [datetime.strptime(i, '%d/%m/%Y') for i in StormsDF['End']]
     StormsDF['Duration'] = StormsDF['EndDate']-StormsDF['StartDate']
     
-    ax.barh(y=StormsDF['Name'], width=StormsDF['Duration'], left=StormsDF['StartDate'])
+    
+    inum = round(len(StormsDF) / 2)
+
+    cmap = plt.get_cmap("magma_r", len(StormsDF['WindGust']))
+    
+    # Plot gantt style timeline of storms where length of bar = duration of storm
+    for ax, DFhalf in zip([ax1, ax2], [StormsDF.iloc[inum:],StormsDF.iloc[0:inum]]):
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%Y'))
+        ax.xaxis.set_major_locator(mdates.MonthLocator(interval=3))
+        ax.xaxis.set_minor_locator(mdates.MonthLocator(interval=1))
+        # Approach for colormap is to plot a scatter, then access the colors from those objects for plotting Rectangles
+        scatter = ax.scatter(x=DFhalf['StartDate'], y=DFhalf['Name'], c=DFhalf['WindGust'], cmap="Spectral_r", s=0.1, marker='.')
+        
+        # Plot Rectangle symbols where width = duration of storm and color = intensity
+        for i in range(len(DFhalf['Name'])):
+            ax.add_patch(Rectangle(
+            xy=(DFhalf['StartDate'].iloc[i], i-0.75), width=DFhalf['Duration'].iloc[i], height=1.5, color=scatter.to_rgba(DFhalf['WindGust'])[i]))
+            
+        # Label most intense storms
+        for i in range(len(ax.get_yticklabels())):
+            if DFhalf['WindGust'].iloc[i] > 179:
+                ax.get_yticklabels()[i].set_color('red')
+                ax.text(DFhalf['EndDate'].iloc[i], i-0.2, str(DFhalf['WindGust'].iloc[i]), color='red', va='center')
     
     plt.tight_layout()
+    cbax = inset_axes(ax2, width='30%', height='5%', loc=3)
+    cb = plt.colorbar(scatter, cax=cbax, ticks=range(80,max(StormsDF['WindGust']),20), orientation='horizontal') 
+    cbax.xaxis.set_ticks_position('top')
+    cbax.text(max(StormsDF['WindGust'])-min(StormsDF['WindGust']),5,'Maximum wind gust (km/h)', ha='center')
+    # plt.gcf().autofmt_xdate()
     
-    figname = os.path.join(figpath,sitename+'_VedgeSat_TideHeights_Errors.png')
+
+    mpl.rcParams.update({'font.size':7})
+    
+    figname = os.path.join(figpath,sitename+'_VedgeSat_UKStorms.png')
     plt.savefig(figname)
     print('figure saved under '+figname)
     
