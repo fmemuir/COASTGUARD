@@ -1899,7 +1899,7 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
     return 
 
 
-def GetWaterElevs(settings, dates_sat):
+def GetWaterElevs(settings, Dates_Sat):
     '''
     Extracts matching water elevations from formatted CSV of tide heights and times.
     FM Jun 2023
@@ -1919,13 +1919,15 @@ def GetWaterElevs(settings, dates_sat):
     '''
 
     # load tidal data
-    tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
-    tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
-    dates_ts = [_.to_pydatetime() for _ in tide_data['date']]
-    tides_ts = np.array(tide_data['tide'])
+    TideFilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+    Tide_Data = pd.read_csv(TideFilepath, parse_dates=['date'])
+    Dates_ts = [_.to_pydatetime() for _ in Tide_Data['date']]
+    Tides_ts = np.array(Tide_Data['tide'])
 
+    # Calculate time step used for interpolating data between
+    TimeStep = (Dates_ts[1]-Dates_ts[0]).total_seconds()/(60*60)
     
-    tides_sat = []
+    Tides_Sat = []
     def find(item, lst):
         start = 0
         start = lst.index(item, start)
@@ -1936,29 +1938,29 @@ def GetWaterElevs(settings, dates_sat):
     #     tides_sat.append(tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
     
     # Interpolate tide using number of minutes through the hour the satellite image was captured
-    for i,date in enumerate(dates_sat):
+    for i,date in enumerate(Dates_Sat):
         # find preceding and following hourly tide levels and times
-        time_1 = dates_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
-        tide_1 = tides_ts[find(min(item for item in dates_ts if item > date-timedelta(hours=1)), dates_ts)]
-        time_2 = dates_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
-        tide_2 = tides_ts[find(min(item for item in dates_ts if item > date), dates_ts)]
+        Time_1 = Dates_ts[find(min(item for item in Dates_ts if item > date-timedelta(hours=TimeStep)), Dates_ts)]
+        Tide_1 = Tides_ts[find(min(item for item in Dates_ts if item > date-timedelta(hours=TimeStep)), Dates_ts)]
+        Time_2 = Dates_ts[find(min(item for item in Dates_ts if item > date), Dates_ts)]
+        Tide_2 = Tides_ts[find(min(item for item in Dates_ts if item > date), Dates_ts)]
         
         # Find time difference of actual satellite timestamp (next hour minus sat timestamp)
-        timediff = time_2 - date
+        TimeDiff = Time_2 - date
         # Get proportion of time through the hour (e.g. 59mins past = 0.01)
-        timeprop = timediff / timedelta(hours=1)
+        TimeProp = TimeDiff / timedelta(hours=TimeStep)
         
         # Get difference between the two tidal stages
-        tidediff = (tide_2 - tide_1) / 2
-        tide_sat = tide_2 - (tidediff * timeprop)
+        TideDiff = (Tide_2 - Tide_1)
+        Tide_Sat = Tide_2 - (TideDiff * TimeProp)
         
-        tides_sat.append(tide_sat)
+        Tides_Sat.append(Tide_Sat)
     
-    return tides_sat
+    return Tides_Sat
 
 
 
-def BeachTideLoc(settings):
+def BeachTideLoc(settings, TideSeries=None):
     '''
     Create steps of water elevation based on a tidal range, which correspond to the 'lower', 'middle' and 'upper' beach.
     FM July 2023
@@ -1975,9 +1977,13 @@ def BeachTideLoc(settings):
         Beach zone class is then 'lower' = TideSteps[0] to TideSteps[1], etc.
 
     '''
-    tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
-    tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
-    tides_ts = np.array(tide_data['tide'])
+    
+    if TideSeries is None:
+        tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+        tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
+        tides_ts = np.array(tide_data['tide'])
+    else:
+        tides_ts = TideSeries
     
     MaxTide = np.max(tides_ts)
     MinTide = np.min(tides_ts)
@@ -2024,6 +2030,7 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     # params get pulled out further down after downloading
     WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
+    # if file already exists, just return filepath to existing file
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
         return WaveOutFile
     
