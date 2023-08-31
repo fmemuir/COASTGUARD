@@ -265,7 +265,7 @@ def GetTransitionDists(TransectDict,TransectInterGDF):
     
     
 
-def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, AvBeachSlope):
+def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, AvBeachSlope):
     
     '''
     Intersection between veglines and lines, based on geopandas GDFs/shapefiles.
@@ -284,7 +284,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
 
     Returns
     -------
-    TransectDict : dict
+     : dict
         Transects with newly added intersection info.
 
     '''
@@ -367,16 +367,16 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
                 TrKey.append(AllIntersects[KeyName[i]].loc[AllIntersects['TransectID']==Tr].iloc[j]) 
             Key[i].append(TrKey)
     
-        TransectDict[KeyName[i]] = Key[i]
+        TransectInterGDF[KeyName[i]] = Key[i]
           
     # Create beach width attribute
     print('calculating distances between veg and water lines...')
-    TransectDict['beachwidth'] = TransectDict['TransectID'].copy()
+    TransectInterGDF['beachwidth'] = TransectInterGDF['TransectID'].copy()
     # for each transect
     for Tr in range(len(TransectGDF['TransectID'])):
         # dates into transect-specific list
-        WLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectDict['wldates'][Tr]]
-        VLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectDict['dates'][Tr]]
+        WLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDF['wldates'].iloc[Tr]]
+        VLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDF['dates'].iloc[Tr]]
         # find index of closest waterline date to each vegline date
         VLSLDists = []
         for D, WLDate in enumerate(WLDateList):
@@ -392,13 +392,13 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
                 continue
             # use date index to identify matching distance along transect
             # and calculate distance between two intersections (veg - water means +ve is veg measured seaward towards water)
-            VLSLDists.append(TransectDict['wlcorrdist'][Tr][D] - TransectDict['distances'][Tr][DateIndex])
+            VLSLDists.append(TransectInterGDF['wlcorrdist'].iloc[Tr][D] - TransectInterGDF['distances'].iloc[Tr][DateIndex])
             
-        TransectDict['beachwidth'][Tr] = VLSLDists
+        TransectInterGDF['beachwidth'].iloc[Tr] = VLSLDists
     
     print("TransectDict with beach width and waterline intersections created.")
         
-    return TransectDict
+    return TransectInterGDF
     
 
 def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
