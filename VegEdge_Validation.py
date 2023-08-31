@@ -306,46 +306,36 @@ else:
 #%% Create (or load) intersections with sat and validation lines per transect
 
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
-    print('TransectDict exists and was loaded')
+    print('Transect Intersect GDF exists and was loaded')
     with open(os.path.join
               (filepath , sitename, sitename + '_transect_intersects.pkl'), 'rb') as f:
-        TransectDict, TransectInterGDF = pickle.load(f)
+        TransectInterGDF = pickle.load(f)
 else:
     # Get intersections
-    TransectDict = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
+    TransectInterGDF = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
     # Save newly intersected transects as shapefile
-    TransectInterGDF = Transects.SaveIntersections(TransectDict, VeglineGDF, BasePath, sitename, settings['projection_epsg'])
+    TransectInterGDF = Transects.SaveIntersections(TransectInterGDF, VeglineGDF, BasePath, sitename)
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
-    TransectDict = Transects.CalculateChanges(TransectDict,TransectInterGDF)
-    # TransectDict = Transects.GetTransitionDists(TransectDict,TransectInterGDF)
+    TransectInterGDF = Transects.CalculateChanges(TransectInterGDF)
     
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDF], f)
-#%%        
-if settings['wetdry'] == True:
-    # beachslope = 0.006 # tanBeta StAnd W
-    beachslope = 0.04 # tanBeta StAnE
-    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-
-with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    pickle.dump([TransectDict,TransectInterGDF], f)
-
-#%%
-DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20201120_Phase5DTM_1m_Slope.tif'
-           
-# Update Transects with Transition Zone widths and slope if available
-# TransectInterGDF = Transects.TZIntersect(settings,TransectInterGDF, VeglineGDF, BasePath)
-TransectInterGDF = Transects.SlopeIntersect(settings,TransectInterGDF, VeglineGDF, BasePath, DTM)
-
-with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    pickle.dump([TransectDict,TransectInterGDF], f)
-#%%
-TransectInterGDF = Transects.WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax)
-
-with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-    pickle.dump([TransectDict,TransectInterGDF], f)
+    with open(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectInterGDF, f)
         
+#%% Instantaneous waterline intersect info
+if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_water_intersects.pkl')):
+    print('Transect Intersect + Water GDF exists and was loaded')
+    with open(os.path.join
+              (filepath , sitename, sitename + '_transect_water_intersects.pkl'), 'rb') as f:
+        TransectInterGDFWater = pickle.load(f)
+else:        
+    if settings['wetdry'] == True:
+        # beachslope = 0.006 # tanBeta StAnd W
+        beachslope = 0.04 # tanBeta StAnE
+        TransectInterGDFWater = Transects.GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
+        TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  BasePath, sitename, settings['projection_epsg'])
+    
+    with open(os.path.join(filepath, sitename, sitename + '_transect_water_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectInterGDFWater, f)
 
 
 #%% VALIDATION
@@ -360,11 +350,11 @@ validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
     print('ValidDict exists and was loaded')
     with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'rb') as f:
-        ValidDict = pickle.load(f)
+        ValidInterGDF = pickle.load(f)
 else:
-    ValidDict = Transects.ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectDict)
+    ValidInterGDF = Transects.ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectInterGDF)
     with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'wb') as f:
-        pickle.dump(ValidDict, f)
+        pickle.dump(ValidInterGDF, f)
 
 
 # %% Validation Plots

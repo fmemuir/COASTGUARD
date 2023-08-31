@@ -1086,7 +1086,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     
     return ValidDict
 
-def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectDict):
+def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectInterGDF):
     """
     Intersects transects with validation lines from shapefile, matches date of
     each sat line to nearest valid. line, and calculates distance along 
@@ -1163,7 +1163,7 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
 
     Key = [Vdates, Vdists, Vinterpnt]
     KeyName = ['Vdates', 'Vdists', 'Vinterpnt']
-    ValidDict = TransectDict.copy()
+    ValidInterGDF = TransectInterGDF.copy()
     
     # for each column name
     for i in range(len(Key)):
@@ -1178,21 +1178,21 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
                 TrKey.append(AllIntersects[KeyName[i]].loc[AllIntersects['TransectID']==Tr].iloc[j]) 
             Key[i].append(TrKey)
     
-        ValidDict[KeyName[i]] = Key[i]
+        ValidInterGDF[KeyName[i]] = Key[i]
     
     print('calculating distances between validation and sat lines...')
-    ValidDict['valsatdist'] = ValidDict['TransectID'].copy()
-    ValidDict['valsatdate'] = ValidDict['TransectID'].copy()
+    ValidInterGDF['valsatdist'] = ValidInterGDF['TransectID'].copy()
+    ValidInterGDF['valsatdate'] = ValidInterGDF['TransectID'].copy()
     # for each transect
     for Tr in range(len(TransectGDF['TransectID'])):
         # dates into transect-specific list
-        VDateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['Vdates'][Tr]]
-        DateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidDict['dates'][Tr]]
+        VDateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidInterGDF['Vdates'].iloc[Tr]]
+        DateList = [datetime.strptime(date, '%Y-%m-%d') for date in ValidInterGDF['dates'].iloc[Tr]]
         # find index of closest validation date to each sat date
         # previously was empty list with nans or distances appended
         # now should start with list of nans with n=n(dates)
-        ValSatDists = list(np.empty(len(ValidDict['dates'][Tr]))*np.nan)
-        ValSatDates = list(np.empty(len(ValidDict['dates'][Tr]))*np.nan)
+        ValSatDists = list(np.empty(len(ValidInterGDF['dates'].iloc[Tr]))*np.nan)
+        ValSatDates = list(np.empty(len(ValidInterGDF['dates'].iloc[Tr]))*np.nan)
         for D, Date in enumerate(DateList):
             # index of matching nearest date
             if VDateList != []:
@@ -1203,20 +1203,20 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
                     # use date index to identify matching distance along transect
                     # and calculate distance between two intersections (sat - validation means +ve is seaward/-ve is landward)
                     DateStr = datetime.strftime(Date,'%Y-%m-%d')
-                    SDateIndex = ValidDict['dates'][Tr].index(DateStr)
+                    SDateIndex = ValidInterGDF['dates'].iloc[Tr].index(DateStr)
                     VDateIndex = VDateList.index(NearestDate)
-                    ValSatDists[SDateIndex] = ValidDict['distances'][Tr][D] - ValidDict['Vdists'][Tr][VDateIndex]
-                    ValSatDates[SDateIndex] = ValidDict['Vdates'][Tr][VDateIndex]
+                    ValSatDists[SDateIndex] = ValidInterGDF['distances'].iloc[Tr][D] - ValidInterGDF['Vdists'].iloc[Tr][VDateIndex]
+                    ValSatDates[SDateIndex] = ValidInterGDF['Vdates'].iloc[Tr][VDateIndex]
             else:
                 continue
        
 
-        ValidDict['valsatdist'][Tr] = ValSatDists
-        ValidDict['valsatdate'][Tr] = ValSatDates
+        ValidInterGDF['valsatdist'].iloc[Tr] = ValSatDists
+        ValidInterGDF['valsatdate'].iloc[Tr] = ValSatDates
         
-    print("ValidDict with intersections created.")
+    print("ValidInterGDF with intersections created.")
     
-    return ValidDict
+    return ValidInterGDF
 
 
 def compute_intersection(output, transects, settings, linetype):
