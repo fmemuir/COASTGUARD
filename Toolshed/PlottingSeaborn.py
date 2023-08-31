@@ -297,7 +297,7 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
     plt.show()
     
 
-def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
+def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
     """
     Prob density function plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -325,14 +325,14 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
         valsatdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidInterGDF['dates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sdate in ValidDict['dates'][Tr]:
-                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+            if Sdate in ValidInterGDF['dates'].iloc[Tr]:
+                DateIndex = (ValidInterGDF['dates'].iloc[Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                if ValidInterGDF['valsatdist'].iloc[Tr] != []:
+                    valsatdist.append(ValidInterGDF['valsatdist'].iloc[Tr][DateIndex])
                 else:
                     continue
             else:
@@ -356,12 +356,12 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     # for each date in sorted list
     for Sdate in violindatesrt:    
         satmatch = []
-        for Tr in range(len(ValidDict['TransectID'])):
+        for Tr in range(len(ValidInterGDF['TransectID'])):
             # loop through transects to find matching date from which to find satname
-            if Sdate not in ValidDict['dates'][Tr]:
+            if Sdate not in ValidInterGDF['dates'].iloc[Tr]:
                 continue
             else:
-                satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
+                satmatch.append(ValidInterGDF['satname'].iloc[Tr][ValidInterGDF['dates'].iloc[Tr].index(Sdate)])
         # cycling through transects leads to list of repeating satnames; take the unique entry
         satnames[Sdate] = list(set(satmatch))[0]
     
@@ -451,7 +451,7 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
 
     totald = np.array(totald)
     mse = np.mean(np.power(totald[~np.isnan(totald)], 2))
-    mae = np.mean(abs(totald[~np.isnan(totald)]))
+    # mae = np.mean(abs(totald[~np.isnan(totald)]))
     rmse = np.sqrt(mse)
     
     l = Line2D([],[], color='none')
@@ -467,7 +467,6 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     # plt.draw()
     # # get bounding box loc of legend to plot text underneath it
     # p = medleg.get_window_extent()
-    # ax.annotate('Hi', (p.p0[1], p.p1[0]), (p.p0[1], p.p1[0]), xycoords='figure pixels', zorder=9, ha='right')    
     ax.set_axisbelow(False)
     plt.tight_layout()
     
@@ -476,9 +475,7 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     print('figure saved under '+figpath)
     
     plt.show()
-    
-    #mpl.rcParams.update(mpl.rcParamsDefault)
-    
+     
     
     
 def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):

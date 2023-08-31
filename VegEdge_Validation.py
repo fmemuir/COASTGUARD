@@ -347,13 +347,13 @@ ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp'
  
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
-if os.path.isfile(os.path.join(validpath, sitename + '_valid_dict.pkl')):
+if os.path.isfile(os.path.join(validpath, sitename + '_valid_intersects.pkl')):
     print('ValidDict exists and was loaded')
-    with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'rb') as f:
+    with open(os.path.join(validpath, sitename + '_valid_intersects.pkl'), 'rb') as f:
         ValidInterGDF = pickle.load(f)
 else:
     ValidInterGDF = Transects.ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, TransectInterGDF)
-    with open(os.path.join(validpath, sitename + '_valid_dict.pkl'), 'wb') as f:
+    with open(os.path.join(validpath, sitename + '_valid_intersects.pkl'), 'wb') as f:
         pickle.dump(ValidInterGDF, f)
 
 
@@ -370,14 +370,14 @@ TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     # PlottingSeaborn.SatViolin(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
-    PlottingSeaborn.SatPDF(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
+    PlottingSeaborn.SatPDF(sitename,VeglineGDF,'dates',ValidInterGDF,TransectIDs, PlotTitle)
 
     
 #%% not finished
 TransectIDList = [(40,281)]
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    Plotting.ValidPDF(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
+    Plotting.ValidPDF(sitename,VeglineGDF,'dates',ValidInterGDF,TransectIDs, PlotTitle)
  
     
 #%% Error stats
@@ -387,17 +387,17 @@ TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,173
 # West errors
 # TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
-    Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidDict,TransectIDs)
+    Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidInterGDF,TransectIDs)
 
 #%% Combine East and West
-with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEast', 'validation','StAndrewsEast' + '_valid_dict.pkl'), 'rb') as f:
-    EastValidDict = pickle.load(f)
-with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWest', 'validation', 'StAndrewsWest' + '_valid_dict.pkl'), 'rb') as f:
-    WestValidDict = pickle.load(f)
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsEast', 'validation','StAndrewsEast' + '_valid_intersects.pkl'), 'rb') as f:
+    EastValidInterGDF = pickle.load(f)
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWest', 'validation', 'StAndrewsWest' + '_valid_intersects.pkl'), 'rb') as f:
+    WestValidInterGDF = pickle.load(f)
 
-FullValidDict = deepcopy(EastValidDict)
-for keyname in FullValidDict.keys():
-    FullValidDict[keyname][586:1303] = WestValidDict[keyname][586:1303].copy()
+FullValidInterGDF = deepcopy(EastValidInterGDF)
+for keyname in FullValidInterGDF.keys():
+    FullValidInterGDF[keyname].iloc[586:1303] = WestValidInterGDF[keyname].iloc[586:1303].copy()
 
 BasePath = 'Data/' + 'StAndrewsEast' + '/veglines'
 EastVeglineGDF = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
@@ -413,15 +413,15 @@ FullVeglineGDF = gpd.pd.concat([EastVeglineGDF, WestVeglineGDF])
 FullWaterlineGDF = gpd.pd.concat([EastWaterlineGDF, WestWaterlineGDF])
 
 #%% Combine Planet East and West
-with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetEast', 'validation','StAndrewsPlanetEast' + '_valid_dict.pkl'), 'rb') as f:
-    EastPlValidDict = pickle.load(f)
-with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetWest', 'validation', 'StAndrewsPlanetWest' + '_valid_dict.pkl'), 'rb') as f:
-    WestPlValidDict = pickle.load(f)
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetEast', 'validation','StAndrewsPlanetEast' + '_valid_intersects.pkl'), 'rb') as f:
+    EastPlValidInterGDF = pickle.load(f)
+with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetWest', 'validation', 'StAndrewsPlanetWest' + '_valid_intersects.pkl'), 'rb') as f:
+    WestPlValidInterGDF = pickle.load(f)
 
-FullPlValidDict = deepcopy(EastPlValidDict)
+FullPlValidInterGDF = deepcopy(EastPlValidInterGDF)
 
-for keyname in FullPlValidDict.keys():
-    FullPlValidDict[keyname][586:1303] = WestPlValidDict[keyname][586:1303].copy()
+for keyname in FullPlValidInterGDF.keys():
+    FullPlValidInterGDF[keyname].iloc[586:1303] = WestPlValidInterGDF[keyname].iloc[586:1303].copy()
 
 BasePlPath = 'Data/' + 'StAndrewsPlanetEast' + '/veglines'
 EastPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
@@ -439,65 +439,62 @@ FullPlWaterlineGDF = gpd.pd.concat([EastPlWaterlineGDF, WestPlWaterlineGDF])
 
 #%% Combine East West AND Planet
 
-EWPValidDict = deepcopy(FullValidDict)
+EWPValidInterGDF = deepcopy(FullValidInterGDF)
 
 for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold', 'satname', 'wthreshold', 'interpnt', 'distances', 'normdists', 'wldates', 'wldists', 'wlcorrdist', 'wlinterpnt', 'beachwidth', 'Vdates', 'Vdists', 'Vinterpnt', 'valsatdist']:
-    for i in range(len(FullPlValidDict[keyname])): # for each transect
-        for j in range(len(FullPlValidDict[keyname][i])): # for each data entry on each transect
-            EWPValidDict[keyname][i].append(FullPlValidDict[keyname][i][j])
+    for i in range(len(FullPlValidInterGDF[keyname])): # for each transect
+        for j in range(len(FullPlValidInterGDF[keyname].iloc[i])): # for each data entry on each transect
+            EWPValidInterGDF[keyname].iloc[i].append(FullPlValidInterGDF[keyname].iloc[i][j])
 
 EWPVeglineGDF = gpd.pd.concat([FullVeglineGDF, FullPlVeglineGDF])
 EWPWaterlineGDF = gpd.pd.concat([FullWaterlineGDF, FullPlWaterlineGDF])
 
 #%% save full dict and vegline shp
 validpath = os.path.join(os.getcwd(), 'Data', 'StAndrewsEWP', 'validation')
-with open(os.path.join(validpath, 'StAndrewsEWP' + '_valid_dict.pkl'), 'wb') as f:
-    pickle.dump(EWPValidDict, f)
+with open(os.path.join(validpath, 'StAndrewsEWP' + '_valid_intersects.pkl'), 'wb') as f:
+    pickle.dump(EWPValidInterGDF, f)
     
 VegShpPath = os.path.join(os.getcwd(), 'Data', 'StAndrewsEWP', 'veglines', 'StAndrewsEWP' + '_' + str(dates[0]) + '_' + str(dates[1]) + '_veglines.shp')
 EWPVeglineGDF.to_file(VegShpPath)
 
-#%%
-ClipEWPValidDict = dict.fromkeys(EWPValidDict.keys())
-for keyname in EWPValidDict.keys():
-    ClipEWPValidDict[keyname] = []
-    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][40:281])
-    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][312:711])
-    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][726:889])
-    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][972:1297])
-    ClipEWPValidDict[keyname].extend(EWPValidDict[keyname][1365:1741])
+#%% Clipping to focus areas
+
+ClipEWPValidInterGDF = gpd.GeoDataFrame(columns=EWPValidInterGDF.columns)
+for keyname in EWPValidInterGDF.columns:
+    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[40:281]])
+    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[312:711]])
+    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[726:889]])
+    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[972:1297]])
+    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[1365:1741]])
+
+
+# ClipEWPValidDict = dict.fromkeys(EWPValidInterGDF.keys())
+# for keyname in EWPValidInterGDF.keys():
+#     ClipEWPValidInterGDF[keyname] = []
+#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][40:281])
+#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][312:711])
+#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][726:889])
+#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][972:1297])
+#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][1365:1741])
     
-# ClipEPValidDict = dict.fromkeys(EWPValidDict.keys())
-# for keyname in EWPValidDict.keys():
-#     ClipEPValidDict[keyname] = []
-#     ClipEPValidDict[keyname].extend(EWPValidDict[keyname][40:281])
-#     ClipEPValidDict[keyname].extend(EWPValidDict[keyname][312:586])
-#     ClipEPValidDict[keyname].extend(EWPValidDict[keyname][1303:1736])
-    
-# ClipWPValidDict = dict.fromkeys(EWPValidDict.keys())
-# for keyname in EWPValidDict.keys():
-#     ClipWPValidDict[keyname] = []
-#     ClipWPValidDict[keyname].extend(EWPValidDict[keyname][587:889])
-#     ClipWPValidDict[keyname].extend(EWPValidDict[keyname][972:1302])
 
 
 #%% Plotting full validation results
-TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
+TransectIDs = (0,len(ClipEWPValidInterGDF['dates'])) # full
 
-PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
+Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
+    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectID)
 
 #%% Plotting full validation results for specific transects
 TransectIDList = [(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
-    # PlottingSeaborn.SatViolin(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
-    PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidDict,TransectIDs, PlotTitle)
-    # Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidDict,TransectIDs)
+    PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidInterGDF,TransectIDs, PlotTitle)
+    # Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidInterGDF,TransectIDs)
 
 
 #%% Poster Figures 
@@ -506,11 +503,11 @@ for TransectIDs in TransectIDList:
 TransectIDList = [(40,281), (40,281), (312,415), (972,1297), (1576,1741)]
 TitleList = ['Open Sandy Coast', 'Open Sandy Coast','Defended/Complex Shore', 'Marsh/Estuary', 'Dynamic Accretion Zone']
 for TransectIDs, Title in zip(TransectIDList, TitleList):
-    PlottingSeaborn.SatPDFPoster('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidDict,TransectIDs,Title)
+    PlottingSeaborn.SatPDFPoster('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidInterGDF,TransectIDs,Title)
 
-TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
+TransectIDs = (0,len(ClipEWPValidInterGDF['dates'])) # full
 
-PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidDict,TransectIDs)
+PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidInterGDF,TransectIDs)
 # PlottingSeaborn.PlatformViolinPoster('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidDict,TransectIDs)
 # Plotting.SatRegressPoster('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 
@@ -523,7 +520,7 @@ PlottingSeaborn.ThresholdViolin(filepath, sites)
 
 #%% Validation vs satellite cross-shore distance through time
 
-Plotting.ValidTimeseries(sitename, ValidDict, 1575)
+Plotting.ValidTimeseries(sitename, ValidInterGDF, 1575)
 
 #%% WP Errors plot
 CSVpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_Errors_Planet.csv'

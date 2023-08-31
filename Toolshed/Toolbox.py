@@ -1711,7 +1711,7 @@ def TZValues(int_veg, int_nonveg):
     
     return [minval,maxval]
 
-def QuantifyErrors(sitename, SatGDF, DatesCol,ValidDict,TransectIDs):
+def QuantifyErrors(sitename, SatGDF, DatesCol,ValidInterGDF,TransectIDs):
     
     
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
@@ -1726,14 +1726,14 @@ def QuantifyErrors(sitename, SatGDF, DatesCol,ValidDict,TransectIDs):
         valsatdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidInterGDF['dates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sdate in ValidDict['dates'][Tr]:
-                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+            if Sdate in ValidInterGDF['dates'].iloc[Tr]:
+                DateIndex = (ValidInterGDF['dates'].iloc[Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                if ValidInterGDF['valsatdist'].iloc[Tr] != []:
+                    valsatdist.append(ValidInterGDF['valsatdist'].iloc[Tr][DateIndex])
                 else:
                     continue
             else:
