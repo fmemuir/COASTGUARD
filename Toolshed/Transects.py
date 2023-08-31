@@ -333,19 +333,18 @@ def GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, o
     AllIntersects['waterelev'] = TidalStages
     
     # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
-    TideSteps = Toolbox.BeachTideLoc(settings)
+    TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=AllIntersects['waterelev'])
     ShoreLevels = []
     for i in range(len(AllIntersects)):
-        if AllIntersects['waterelev'][i] > TideSteps[0] and AllIntersects['waterelev'][i] < TideSteps[1]:
+        if AllIntersects['waterelev'][i] >= TideSteps[0] and AllIntersects['waterelev'][i] <= TideSteps[1]:
             ShoreLevels.append('lower')
-        elif AllIntersects['waterelev'][i] > TideSteps[1] and AllIntersects['waterelev'][i] < TideSteps[2]:
+        elif AllIntersects['waterelev'][i] >= TideSteps[1] and AllIntersects['waterelev'][i] <= TideSteps[2]:
             ShoreLevels.append('middle')
-        elif AllIntersects['waterelev'][i] > TideSteps[2] and AllIntersects['waterelev'][i] < TideSteps[3]:
+        elif AllIntersects['waterelev'][i] >= TideSteps[2] and AllIntersects['waterelev'][i] <= TideSteps[3]:
             ShoreLevels.append('upper')
-    try:
-        AllIntersects['tidezone'] = ShoreLevels
-    except:
-        pdb.set_trace()
+
+    AllIntersects['tidezone'] = ShoreLevels
+
     
     #initialise lists used for storing each transect's intersection values
     dates, distances, corrdists, welev, tzone, interpnt = ([] for i in range(6)) # per-transect lists of values
@@ -868,8 +867,10 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
                 # Extend Tr in either direction along transect from intersection point
                 intx, Trx, inty, Try = InterPnt.coords.xy[0][0], TransectInterGDF.iloc[Tr].geometry.coords.xy[0][0], InterPnt.coords.xy[1][0],TransectInterGDF.iloc[Tr].geometry.coords.xy[1][0]
                 # Distance decided by cross-shore width of TZ plus extra 5m buffer
-                # dist = 20
-                dist = round(TransectInterGDF['TZwidthMn'].iloc[Tr]) + 5
+                if np.isnan(TransectInterGDF['TZwidthMn'].iloc[Tr]) == True:
+                    dist = 5 # buffer transects with no TZ by 5m
+                else:
+                    dist = round(TransectInterGDF['TZwidthMn'].iloc[Tr]) + 5
                 # calculate vector
                 v = (Trx-intx, Try-inty)
                 v_ = np.sqrt((Trx-intx)**2 + (Try-inty)**2)
@@ -921,14 +922,17 @@ def WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, l
     
     WaveOutFile = Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     
-    SampleWaves(TransectInterGDF, WaveOutFile)
+    WavePath = os.path.join(settings['inputs']['filepath'],'tides') 
+    WaveFilePath = os.path.join(WavePath, WaveOutFile)
+    
+    SampleWaves(settings, TransectInterGDF, WaveFilePath)
     
     return TransectInterGDF
 
 
 
 
-def SampleWaves(TransectInterGDF, WaveOutFile):
+def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     """
     Function to extract wave information from NWS forecasts
     
@@ -937,7 +941,7 @@ def SampleWaves(TransectInterGDF, WaveOutFile):
     
     print('Extracting wave data to transects ...')
     # open the raster dataset to work on
-    with netCDF4.Dataset(WaveOutFile) as WaveData:
+    with netCDF4.Dataset(WaveFilePath) as WaveData:
     
         # spatial coords returned as arrays of lat and long representing boundaries of raster axis
         # can be rectangular, resulting in differently sized arrays, so transforming as two coordinate arrays doesn't work
@@ -949,9 +953,12 @@ def SampleWaves(TransectInterGDF, WaveOutFile):
         PeakWavePeriod = WaveData.variables['VTPK'][:,:,:] #Total sea peak period
         WaveSeconds = WaveData.variables['time'][:]
         
-        # WaveTime = []
-        # for i in range(0,len(WaveSeconds)):
-            # WaveTime.append(datetime.datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'))
+        # Calculate time step used for interpolating data between
+        TimeStep = (WaveTime[1]-WaveTime[0]).total_seconds()/(60*60)
+        
+        WaveTime = []
+        for i in range(0,len(WaveSeconds)):
+            WaveTime.append(datetime.strptime(datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'),'%Y-%m-%d %H:%M:%S'))
         
         WaveHs = []
         WaveDir = []
@@ -969,37 +976,37 @@ def SampleWaves(TransectInterGDF, WaveOutFile):
             InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # midpoints of each transect
         
             # get index of closest matching grid square of wave data
-            IDLat = (np.abs(WaveY - InterPnts.iloc[0].y)).argmin() 
-            IDLong = (np.abs(WaveX - InterPnts.iloc[0].x)).argmin()
-          
-            DateTimeSat = TransectInterGDF['dates'].iloc[Tr] + ' ' + TransectInterGDF['times'].iloc[Tr]
-            
+            IDLat = (np.abs(WaveY - InterPnts[0].y)).argmin() 
+            IDLong = (np.abs(WaveX - InterPnts[0].x)).argmin()
+                        
             TrWaveHs = []
             TrWaveDir = []
             TrWaveTp = []
             
-            # Interpolate wave data using number of minutes through the hour the satellite image was captured
-            for i,date in enumerate(DateTimeSat):
-                for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong],MeanWaveDir[:,IDLat, IDLong],PeakWavePeriod[:,IDLat, IDLong]], 
-                                             [TrWaveHs,TrWaveDir,TrWaveTp]):
+            for i in range(len(TransectInterGDF['dates'].iloc[Tr])):
+                DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
+
+                # Interpolate wave data using number of minutes through the hour the satellite image was captured
+                for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong], PeakWavePeriod[:,IDLat, IDLong]], 
+                                             [TrWaveHs, TrWaveDir, TrWaveTp]):
                     # find preceding and following hourly tide levels and times
-                    time_1 = WaveTime[find(min(item for item in WaveTime if item > date-timedelta(hours=3)), WaveTime)]
-                    wave_1 = WaveProp[find(min(item for item in WaveTime if item > date-timedelta(hours=3)), WaveTime)]
+                    Time_1 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
+                    Wave_1 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
                     
-                    time_2 = WaveTime[find(min(item for item in WaveTime if item > date), WaveTime)]
-                    wave_2 = WaveProp[find(min(item for item in WaveTime if item > date), WaveTime)]
+                    Time_2 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
+                    Wave_2 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
                     
                     # Find time difference of actual satellite timestamp (next wave timestamp minus sat timestamp)
-                    timediff = time_2 - date
-                    # Get proportion of time through the 3-hour window
-                    timeprop = timediff / timedelta(hours=3)
+                    TimeDiff = Time_2 - DateTimeSat
+                    # Get proportion of time back from the next 3-hour timestep
+                    TimeProp = TimeDiff / timedelta(hours=TimeStep)
                     
-                    # Get difference between the two tidal stages
-                    wavediff = (wave_2 - wave_1) / 2
-                    WaveSat.append(wave_2 - (wavediff * timeprop))
+                    # Get proportional difference between the two tidal stages
+                    WaveDiff = (Wave_2 - Wave_1)
+                    WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
 
             WaveHs.append(TrWaveHs)
-            WaveDir.appendTrWaveDir
+            WaveDir.append(TrWaveDir)
             WaveTp.append(TrWaveTp)
 
 
