@@ -41,13 +41,6 @@ lonmin, lonmax = -2.84869, -2.79878
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['L5','L7','L8','S2']
 
-#%%
-sitename = 'StAndrewsEastS2Full'
-lonmin, lonmax = -2.84869, -2.79878
-latmin, latmax = 56.32641, 56.39814
-sat_list = ['S2']
-dates = ['2015-06-28', '2023-06-13']
-
 
 #%%ST ANDREWS WEST
 sitename = 'StAndrewsWest'
@@ -70,20 +63,6 @@ lonmin, lonmax = -2.89087, -2.84869
 latmin, latmax = 56.32641, 56.39814
 sat_list = ['PSScene4Band']
 
-# lonmin, lonmax = -2.842023, -2.774955
-# latmin, latmax = 56.338343, 56.368490
-
-##FELIXSTOWE
-#lonmin, lonmax = 1.316128, 1.370888
-#latmin, latmax = 51.930771, 51.965265
-
-##BAY OF SKAILL
-#lonmin, lonmax = -3.351555, -3.332693
-#latmin, latmax = 59.048456, 59.057759
-
-##SHINGLE STREET
-#lonmin, lonmax = 1.446131, 1.460008
-#latmin, latmax = 52.027039, 52.037448
 
 #%%
 
@@ -108,9 +87,8 @@ vegdatemin = vegsurvey.Date.min()
 vegdatemax = vegsurvey.Date.max()
 # vegdatemin = datetime.strftime(datetime.strptime(vegsurvey.Date.min(), '%Y-%m-%d') - timedelta(weeks=4),'%Y-%m-%d')
 # vegdatemax = datetime.strftime(datetime.strptime(vegsurvey.Date.max(), '%Y-%m-%d') + timedelta(weeks=4),'%Y-%m-%d')
-dates = [vegdatemin, vegdatemax]
-# dates = list(vegsurvey.Date.unique())
-# dates = ['2007-04-04', '2011-05-05']
+# dates = [vegdatemin, vegdatemax]
+dates = list(vegsurvey.Date.unique())
 
 print(dates)
 
@@ -119,9 +97,7 @@ if len(dates)>2:
 else:
     daterange='yes'
 
-
 years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.strptime(dates[-1],'%Y-%m-%d')))
-
 
 # put all the inputs into a dictionnary
 inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list': sat_list, 'sitename': sitename, 'filepath':filepath}
@@ -304,9 +280,6 @@ Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['projection_epsg
 if settings['wetdry'] == True:
     Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['projection_epsg'])
 
-#%% Create GIF of satellite images and related shorelines
-
-Plotting.SatGIF(metadata,settings,output)
 
 #%% Create Transects
 SmoothingWindowSize = 21 
@@ -332,8 +305,6 @@ else:
 
 #%% Create (or load) intersections with sat and validation lines per transect
 
-DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20201120_Phase5DTM_1m.tif'
-
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
     print('TransectDict exists and was loaded')
     with open(os.path.join
@@ -350,22 +321,30 @@ else:
     
     with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDF], f)
-        
-    if settings['wetdry'] == True:
-        # beachslope = 0.006 # tanBeta StAnd W
-        beachslope = 0.04 # tanBeta StAnE
-        TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
-        TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
-    
-    with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDF], f)
-           
-# # Update Transects with Transition Zone widths and slope if available
-# TransectInterGDF = Transects.TZIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath)
-# TransectInterGDF = Transects.SlopeIntersect(settings, TransectDict,TransectInterGDF, VeglineGDF, BasePath, DTM)
+#%%        
+if settings['wetdry'] == True:
+    # beachslope = 0.006 # tanBeta StAnd W
+    beachslope = 0.04 # tanBeta StAnE
+    TransectDict = Transects.GetBeachWidth(BasePath, TransectGDF, TransectDict, WaterlineGDF, settings, output, beachslope)  
+    TransectInterGDF = Transects.SaveWaterIntersections(TransectDict, WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
 
-# with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
-#     pickle.dump([TransectDict,TransectInterGDF], f)
+with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+    pickle.dump([TransectDict,TransectInterGDF], f)
+
+#%%
+DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20201120_Phase5DTM_1m_Slope.tif'
+           
+# Update Transects with Transition Zone widths and slope if available
+# TransectInterGDF = Transects.TZIntersect(settings,TransectInterGDF, VeglineGDF, BasePath)
+TransectInterGDF = Transects.SlopeIntersect(settings,TransectInterGDF, VeglineGDF, BasePath, DTM)
+
+with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+    pickle.dump([TransectDict,TransectInterGDF], f)
+#%%
+TransectInterGDF = Transects.WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax)
+
+with open(os.path.join(filepath , sitename, sitename + '_transect_intersects.pkl'), 'wb') as f:
+    pickle.dump([TransectDict,TransectInterGDF], f)
         
 
 
@@ -467,48 +446,6 @@ WestPlWaterlineGDF = gpd.read_file(glob.glob(BasePlPath+'/*waterlines.shp')[0])
 FullPlVeglineGDF = gpd.pd.concat([EastPlVeglineGDF, WestPlVeglineGDF])
 FullPlWaterlineGDF = gpd.pd.concat([EastPlWaterlineGDF, WestPlWaterlineGDF])
 
-#%% Full violin and errors
-
-ClipValidDict = dict.fromkeys(FullValidDict.keys())
-for keyname in FullValidDict.keys():
-    ClipValidDict[keyname] = []
-    ClipValidDict[keyname].extend(FullValidDict[keyname][40:281])
-    ClipValidDict[keyname].extend(FullValidDict[keyname][312:711])
-    ClipValidDict[keyname].extend(FullValidDict[keyname][726:889])
-    ClipValidDict[keyname].extend(FullValidDict[keyname][972:1297])
-    ClipValidDict[keyname].extend(FullValidDict[keyname][1365:1741])
-
-TransectIDs = (0,len(ClipValidDict['dates'])) # full
-
-# PlottingSeaborn.SatViolin('StAndrewsEast',FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-# PlottingSeaborn.SatPDF('StAndrewsEast',FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-# Plotting.SatRegress('StAndrewsEast',FullVeglineGDF,'dates',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-
-# #full errors are in East 
-# for TransectID in [TransectIDs]:
-#     Toolbox.QuantifyErrors('StAndrewsEast', FullVeglineGDF,'dates',ClipValidDict,TransectID)
-    
-
-#%% Full Planet violin and errors
-
-ClipPlValidDict = dict.fromkeys(FullPlValidDict.keys())
-for keyname in FullPlValidDict.keys():
-    ClipPlValidDict[keyname] = []
-    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][40:281])
-    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][312:711])
-    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][726:889])
-    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][972:1297])
-    ClipPlValidDict[keyname].extend(FullPlValidDict[keyname][1365:1741])
-
-TransectIDs = (0,len(ClipPlValidDict['dates'])) # full
-
-PlottingSeaborn.SatViolin(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress(sitename,FullPlVeglineGDF,'dates',ClipPlValidDict,TransectIDs, 'Full Site Accuracy')
-
-for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors(sitename, FullPlVeglineGDF,'dates',ClipPlValidDict,TransectID)
-
 
 #%% Combine East West AND Planet
 
@@ -554,18 +491,18 @@ for keyname in EWPValidDict.keys():
 #     ClipWPValidDict[keyname].extend(EWPValidDict[keyname][972:1302])
 
 
-#%%
+#%% Plotting full validation results
 TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
 
-# PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
-# PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 
 for TransectID in [TransectIDs]:
     Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidDict,TransectID)
 
-#%%
-TransectIDList = [(20,30),(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
+#%% Plotting full validation results for specific transects
+TransectIDList = [(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     # PlottingSeaborn.SatViolin(sitename,VeglineGDF,'dates',ValidDict,TransectIDs, PlotTitle)
@@ -573,15 +510,22 @@ for TransectIDs in TransectIDList:
     # Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidDict,TransectIDs)
 
 
-#%%
+#%% Poster Figures 
+
+
+TransectIDList = [(40,281), (40,281), (312,415), (972,1297), (1576,1741)]
+TitleList = ['Open Sandy Coast', 'Open Sandy Coast','Defended/Complex Shore', 'Marsh/Estuary', 'Dynamic Accretion Zone']
+for TransectIDs, Title in zip(TransectIDList, TitleList):
+    PlottingSeaborn.SatPDFPoster('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidDict,TransectIDs,Title)
+
 TransectIDs = (0,len(ClipEWPValidDict['dates'])) # full
 
-# PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,TransectIDs)
 PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidDict,TransectIDs)
+# PlottingSeaborn.PlatformViolinPoster('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidDict,TransectIDs)
+# Plotting.SatRegressPoster('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 
 
 #%% Theshold plotting
-
 
 sites = ['StAndrewsWest', 'StAndrewsEast']
 PlottingSeaborn.ThresholdViolin(filepath, sites)
@@ -590,29 +534,6 @@ PlottingSeaborn.ThresholdViolin(filepath, sites)
 #%% Validation vs satellite cross-shore distance through time
 
 Plotting.ValidTimeseries(sitename, ValidDict, 1575)
-
-#%%
-TransectIDs = [[1575,309]]
-for TransectID in TransectIDs:
-    
-    # Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
-    Plotting.VegWaterTimeseries(sitename, TransectDict, TransectID, 'N')
-    
-#%%
-TransectIDs = [180,1650]
-for TransectID in TransectIDs:
-    DateRange = [0,len(TransectDict['dates'][TransectID])]
-    Plotting.WidthTimeseries(sitename, TransectDict, TransectID, DateRange)
-
-#%% 
-
-PlottingSeaborn.PlatformViolin(sitename,FullVeglineGDF,'satname',ClipValidDict,TransectIDs, 'Full Site Accuracy')
-
-#%%
-# Plot multivariate matrix of different variables per transect subsets (subsets should have same number of transects)
-# Plotting.ClusterRates(sitename, TransectInterGDF, [232,290], [1661,1719])
-Plotting.MultivariateMatrix(sitename, TransectInterGDF, [232,290], [1661,1719])
-
 
 #%% WP Errors plot
 CSVpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_Errors_Planet.csv'
@@ -645,3 +566,7 @@ Plotting.TideHeights(figpath, 'StAndrewsEWP', EWPVeglineGDF, ErrorsCSV, slicedat
 EWPVeglineGDFdates = EWPVeglineGDF.groupby('dates').min()
 dates_sat = [datetime.strptime(d+' '+t, '%Y-%m-%d %H:%M:%S.%f') for d,t in zip(EWPVeglineGDFdates.index, EWPVeglineGDFdates['times'])]
 tides_sat = Toolbox.GetWaterElevs(settings, dates_sat)
+
+
+
+
