@@ -235,7 +235,7 @@ else:
         # beachslope = 0.006 # tanBeta StAnd W
         beachslope = 0.04 # tanBeta StAnE
         TransectInterGDFWater = Transects.GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
-        TransectInterGDFWater = Transects.SaveWaterIntersections( WaterlineGDF, TransectInterGDF, BasePath, sitename, settings['projection_epsg'])
+        TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  BasePath, sitename, settings['projection_epsg'])
     
     with open(os.path.join(filepath, sitename, sitename + '_transect_water_intersects.pkl'), 'wb') as f:
         pickle.dump([TransectDict,TransectInterGDFWater], f)
