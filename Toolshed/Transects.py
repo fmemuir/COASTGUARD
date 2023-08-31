@@ -166,7 +166,7 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
 
     Returns
     -------
-    TransectDict : dict
+    TransectInterGDF : GeoDataFrame
         Transects with newly added intersection info.
 
     '''
@@ -238,8 +238,10 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
         TransectDict[KeyName[i]] = Key[i]
     
     print("TransectDict with intersections created.")
-        
-    return TransectDict
+    
+    TransectInterGDF = gpd.GeoDataFrame(TransectDict, crs=ShorelineGDF.crs)
+
+    return TransectInterGDF
 
 
 def GetTransitionDists(TransectDict,TransectInterGDF):
@@ -469,7 +471,7 @@ def GetBeachSlopesDEM(MSL, MHWS, DEMpath):
     
     
 
-def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
+def SaveIntersections(TransectInterGDF, LinesGDF, BasePath, sitename):
     '''
     Save transects with intersection info as shapefile. Rates of change also calculated.
     FM Sept 2022
@@ -493,29 +495,7 @@ def SaveIntersections(TransectDict, LinesGDF, BasePath, sitename, projection):
     
     
     print('saving new transect shapefile ...')
-    
-    TransectInterGDF = gpd.GeoDataFrame(TransectDict, crs="EPSG:"+str(projection))
-    
-    DateList = LinesGDF['dates'].unique()
-    
-    # # for each unique date in satellitee-derived shorelines list
-    # for Date in DateList:
-    #     # shortened date format to YYMMDD to fit in field heading
-    #     dateshort = Date[2:].replace('-','')
-    #     ColData = []
-    #     # for each transect
-    #     for Tr in range(len(TransectInterGDF)):
-    #         if Date in TransectInterGDF['dates'].iloc[Tr]:
-    #             # find matching distance along transect for  that date
-    #             DateIndex = TransectInterGDF['dates'].iloc[Tr].index(Date)
-    #             # append found distance to list which will make up a new attribute field of distances
-    #             ColData.append(TransectInterGDF['distances'].iloc[Tr][DateIndex])
-    #         else:
-    #             ColData.append(np.nan)
-    #     # attach back onto GDF as a new field per image date
-    #     TransectInterGDF[dateshort + 'dist'] = ColData
-    
-    
+         
 
     olddate, youngdate, oldyoungT, oldyoungRt, recentT, recentRt = ([] for i in range(6))
     for Tr in range(len(TransectInterGDF)):
@@ -715,7 +695,7 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
 def CalculateChanges(TransectDict,TransectInterGDF):
     
     
-    TransectDict['normdists'] = TransectDict['distances'].copy()
+    TransectInterGDF['normdists'] = TransectInterGDF['distances'].copy()
     # for each transect
     for Tr in range(len(TransectDict['TransectID'])):
         Dists = []
