@@ -238,7 +238,7 @@ else:
         TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  BasePath, sitename, settings['projection_epsg'])
     
     with open(os.path.join(filepath, sitename, sitename + '_transect_water_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDFWater], f)
+        pickle.dump(TransectInterGDFWater, f)
 
 #%% Topography and TZ intersect info
 
@@ -246,28 +246,28 @@ if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_topo_in
     print('Transect Intersect + Topo GDF exists and was loaded')
     with open(os.path.join
               (filepath , sitename, sitename + '_transect_topo_intersects.pkl'), 'rb') as f:
-        TransectDict, TransectInterGDFTopo = pickle.load(f)
+        TransectInterGDFTopo = pickle.load(f)
 else:
     DTM = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Validation/StAndrews_20201120_Phase5DTM_1m_Slope.tif'
                
     # Update Transects with Transition Zone widths and slope if available
-    TransectInterGDFTopo = Transects.TZIntersect(settings,TransectInterGDF, VeglineGDF, BasePath)
-    TransectInterGDFTopo = Transects.SlopeIntersect(settings,TransectInterGDFTopo, VeglineGDF, BasePath, DTM)
+    TransectInterGDFTopo = Transects.TZIntersect(settings, TransectInterGDF, VeglineGDF, BasePath)
+    TransectInterGDFTopo = Transects.SlopeIntersect(settings, TransectInterGDFTopo, VeglineGDF, BasePath, DTM)
     
     with open(os.path.join(filepath, sitename, sitename + '_transect_topo_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDFTopo], f)
+        pickle.dump(TransectInterGDFTopo, f)
         
 #%% Wave hindcast intersect info
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_wave_intersects.pkl')):
     print('Transect Intersect + Wave GDF exists and was loaded')
     with open(os.path.join
               (filepath , sitename, sitename + '_transect_wave_intersects.pkl'), 'rb') as f:
-        TransectDict, TransectInterGDFWave = pickle.load(f)
+        TransectInterGDFWave = pickle.load(f)
 else:
     TransectInterGDFWave = Transects.WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax)
     
     with open(os.path.join(filepath, sitename, sitename + '_transect_wave_intersects.pkl'), 'wb') as f:
-        pickle.dump([TransectDict,TransectInterGDFWave], f)
+        pickle.dump(TransectInterGDFWave, f)
 
 
 
