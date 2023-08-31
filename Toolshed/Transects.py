@@ -692,22 +692,35 @@ def SaveWaterIntersections(TransectDict, LinesGDF, TransectInterGDFwDates, BaseP
     return TransectInterGDF
 
 
-def CalculateChanges(TransectDict,TransectInterGDF):
-    
-    
+def CalculateChanges(TransectInterGDF):
+    """
+    Calculate distances of each veg edge intersect along transect, normalised to transect midpoint.
+    FM Sept 2022
+
+    Parameters
+    ----------
+    TransectInterGDF : GeoDataFrame
+        GDF of transects with veg edge intersection info.
+
+    Returns
+    -------
+    TransectInterGDF : GeoDataFrame
+        GDF of transects with veg edge intersection info (plus new normalised dists).
+
+    """
     TransectInterGDF['normdists'] = TransectInterGDF['distances'].copy()
     # for each transect
-    for Tr in range(len(TransectDict['TransectID'])):
+    for Tr in range(len(TransectInterGDF['TransectID'])):
         Dists = []
         # for each intersection on each transect
         for i, Dist in enumerate(TransectInterGDF['distances'][Tr]):
             # intersection distance along transect minus midpoint distance gives +ve for seaward and -ve for landward
             Dists.append(Dist - TransectInterGDF.geometry[Tr].length/2)
-        TransectDict['normdists'][Tr] = Dists
+        TransectInterGDF['normdists'][Tr] = Dists
     
     print("TransectDict updated with distances between sat lines.")
             
-    return TransectDict
+    return TransectInterGDF
 
 
 def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
