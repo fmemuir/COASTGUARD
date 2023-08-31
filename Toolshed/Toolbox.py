@@ -1940,7 +1940,7 @@ def GetWaterElevs(settings, Dates_Sat):
     # Interpolate tide using number of minutes through the hour the satellite image was captured
     for i,date in enumerate(Dates_Sat):
         # find preceding and following hourly tide levels and times
-        Time_1 = Dates_ts[find(min(item for item in Dates_ts if item > date-timedelta(hours=TimeStep)), Dates_ts)]
+        # Time_1 = Dates_ts[find(min(item for item in Dates_ts if item > date-timedelta(hours=TimeStep)), Dates_ts)]
         Tide_1 = Tides_ts[find(min(item for item in Dates_ts if item > date-timedelta(hours=TimeStep)), Dates_ts)]
         Time_2 = Dates_ts[find(min(item for item in Dates_ts if item > date), Dates_ts)]
         Tide_2 = Tides_ts[find(min(item for item in Dates_ts if item > date), Dates_ts)]
