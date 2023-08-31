@@ -98,7 +98,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         filenames = metadata[satname]['filenames']
 
         # initialise the output variables
-        output_timestamp = []       # datetime at which the image was acquired (YYYY-MM-DD)
+        output_date = []       # datetime at which the image was acquired (YYYY-MM-DD)
         output_time = []            # UTC timestamp
         output_vegline = []         # vector of vegline points
         output_vegline_latlon = []
@@ -246,7 +246,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
             
 
             # append to output variables
-            output_timestamp.append(metadata[satname]['dates'][i])
+            output_date.append(metadata[satname]['dates'][i])
             output_time.append(acqtime)
             output_vegline.append(vegline)
             output_vegline_latlon.append(vegline_latlon)
@@ -265,7 +265,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         
         # create dictionary of output
         output[satname] = {
-                'dates': output_timestamp,
+                'dates': output_date,
                 'times':output_time,
                 'shorelines': output_vegline,
                 'waterlines':output_shoreline,
@@ -278,7 +278,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         print('')
     
         output_latlon[satname] = {
-                'dates': output_timestamp,
+                'dates': output_date,
                 'times':output_time,
                 'shorelines': output_vegline_latlon,
                 'waterlines':output_shoreline_latlon,
@@ -290,7 +290,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
                 }
         
         output_proj[satname] = {
-                'dates': output_timestamp,
+                'dates': output_date,
                 'times':output_time,
                 'shorelines': output_vegline_proj,
                 'waterlines':output_shoreline_proj,
@@ -303,8 +303,8 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         
 
         dates_sat = []
-        for i in range(len(output_timestamp)):
-            dates_sat_str = output_timestamp[i] +' '+output_time[i]
+        for i in range(len(output_date)):
+            dates_sat_str = output_date[i] +' '+output_time[i]
             dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
         
         output_waterelev = Toolbox.GetWaterElevs(settings, dates_sat)
@@ -2125,7 +2125,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
         filenames = metadata[satname]['filenames']
 
         # initialise the output variables
-        output_timestamp = []  # datetime at which the image was acquired (UTC time)
+        output_date = []  # datetime at which the image was acquired (UTC time)
         output_shoreline = []  # vector of shoreline points
         output_shoreline_latlon = []
         output_shoreline_proj = []
@@ -2231,7 +2231,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
             #     continue
          
             # append to output variables
-            output_timestamp.append(metadata[satname]['dates'][i])
+            output_date.append(metadata[satname]['dates'][i])
             output_shoreline.append(shoreline)
             output_shoreline_latlon.append(shoreline_latlon)
             output_shoreline_proj.append(shoreline_proj)
@@ -2243,7 +2243,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
 
         # create dictionnary of output
         output[satname] = {
-                'dates': output_timestamp,
+                'dates': output_date,
                 'shorelines': output_shoreline,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
@@ -2253,7 +2253,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
         print('')
     
         output_latlon[satname] = {
-                'dates': output_timestamp,
+                'dates': output_date,
                 'shorelines': output_shoreline_latlon,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
@@ -2262,7 +2262,7 @@ def extract_veglines_year(settings, metadata, sat_list, polygon):#(metadata, set
                 }
         
         output_proj[satname] = {
-                'dates': output_timestamp,
+                'dates': output_date,
                 'shorelines': output_shoreline_proj,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
