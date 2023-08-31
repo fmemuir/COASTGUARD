@@ -278,13 +278,13 @@ TransectIDs = [[1575,309]]
 for TransectID in TransectIDs:
     
     # Plotting.VegTimeseries(sitename, TransectDict, TransectID, DateRange)
-    Plotting.VegWaterTimeseries(sitename, TransectDict, TransectID, 'N')
+    Plotting.VegWaterTimeseries(sitename, TransectInterGDF, TransectID, 'N')
     
 #%% Beach width timeseries plot
 TransectIDs = [180,1650]
 for TransectID in TransectIDs:
-    DateRange = [0,len(TransectDict['dates'][TransectID])]
-    Plotting.WidthTimeseries(sitename, TransectDict, TransectID, DateRange)
+    DateRange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
+    Plotting.WidthTimeseries(sitename, TransectInterGDF, TransectID, DateRange)
 
 #%% Plot multivariate matrix of different variables per transect subsets
 # Subsets should have same number of transects

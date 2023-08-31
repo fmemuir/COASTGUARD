@@ -209,7 +209,7 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     plt.show()
     
     
-def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
+def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     """
     
 
@@ -241,10 +241,10 @@ def VegWaterTimeseries(sitename, TransectDict, TransectIDs, Hemisphere='N'):
         fig, axs = plt.subplots(2,1,figsize=(6.55,3), dpi=300, gridspec_kw={'height_ratios':[100,1]})
         
     for TransectID, ax in zip(TransectIDs,axs):
-        daterange = [0,len(TransectDict['dates'][TransectID])]
-        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['dates'][TransectID][daterange[0]:daterange[1]]]
-        plotsatdist = TransectDict['distances'][TransectID][daterange[0]:daterange[1]]
-        plotwldist = TransectDict['wldists'][TransectID][daterange[0]:daterange[1]]
+        daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotwldist = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
         plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
         
         plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
@@ -389,7 +389,7 @@ def ValidTimeseries(sitename, ValidInterGDF, TransectID):
     plt.show()
 
 
-def WidthTimeseries(sitename, TransectDict, TransectID, daterange):
+def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
     """
     
 
@@ -410,14 +410,14 @@ def WidthTimeseries(sitename, TransectDict, TransectID, daterange):
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
     
-    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['wldates'][TransectID][daterange[0]:daterange[1]]]
+    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID][daterange[0]:daterange[1]]]
 
-    plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['wldates'][TransectID][daterange[0]:daterange[1]]]
-    plotvegdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['dates'][TransectID][daterange[0]:daterange[1]]]
+    plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID][daterange[0]:daterange[1]]]
+    plotvegdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
 
-    plotvegdist = TransectDict['distances'][TransectID][daterange[0]:daterange[1]]
-    plotwldist = TransectDict['wlcorrdist'][TransectID][daterange[0]:daterange[1]]
-    plotsatdist = TransectDict['beachwidth'][TransectID][daterange[0]:daterange[1]]
+    plotvegdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+    plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID][daterange[0]:daterange[1]]
+    plotsatdist = TransectInterGDF['beachwidth'].iloc[TransectID][daterange[0]:daterange[1]]
 
     plotvegdate, plotvegdist = [list(d) for d in zip(*sorted(zip(plotvegdate, plotvegdist), key=lambda x: x[0]))]
     plotwldate, plotwldist = [list(d) for d in zip(*sorted(zip(plotwldate, plotwldist), key=lambda x: x[0]))]
