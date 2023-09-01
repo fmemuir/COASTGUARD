@@ -198,7 +198,7 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     
-    print("formatting back into dict...")
+    print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
     distances = []
     # for each intersection
@@ -318,7 +318,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     
-    print("formatting back into dict...")
+    print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
     distances = []
     # for each intersection
@@ -371,7 +371,8 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
           
     # Create beach width attribute
     print('calculating distances between veg and water lines...')
-    TransectInterGDF['beachwidth'] = TransectInterGDF['TransectID'].copy()
+    # must initialise with list of same length as waterline dates
+    TransectInterGDF['beachwidth'] = TransectInterGDF['wldates'].copy() 
     # for each transect
     for Tr in range(len(TransectGDF['TransectID'])):
         # dates into transect-specific list
@@ -553,7 +554,8 @@ def SaveIntersections(TransectInterGDF, LinesGDF, BasePath, sitename):
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
         # round any floating points numbers before export
-        if type(TransectInterShp[Key][0][0]) == np.float64:  
+        realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
+        if type(TransectInterShp[Key][realInd][0]) == np.float64:  
             for Tr in range(len(TransectInterShp[Key])):
                 TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
@@ -646,7 +648,8 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename, 
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
         # round any floating points numbers before export
-        if type(TransectInterShp[Key][0][0]) == np.float64:  
+        realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
+        if type(TransectInterShp[Key][realInd][0]) == np.float64:    
             for Tr in range(len(TransectInterShp[Key])):
                 TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
@@ -676,6 +679,7 @@ def CalculateChanges(TransectInterGDF):
         GDF of transects with veg edge intersection info (plus new normalised dists).
 
     """
+    # must initialise with list of same length as veg dists
     TransectInterGDF['normdists'] = TransectInterGDF['distances'].copy()
     # for each transect
     for Tr in range(len(TransectInterGDF['TransectID'])):
@@ -787,7 +791,8 @@ def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
         # round any floating points numbers before export
-        if type(TransectInterShp[Key][0][0]) == np.float64:  
+        realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
+        if type(TransectInterShp[Key][realInd][0]) == np.float64:   
             for Tr in range(len(TransectInterShp[Key])):
                 TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
@@ -869,7 +874,8 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
         KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
         for Key in KeyName:
             # round any floating points numbers before export
-            if type(TransectInterShp[Key][0][0]) == np.float64:  
+            realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
+            if type(TransectInterShp[Key][realInd][0]) == np.float64:  
                 for Tr in range(len(TransectInterShp[Key])):
                     TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
             TransectInterShp[Key] = TransectInterShp[Key].astype(str)
@@ -1030,7 +1036,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     
-    print("formatting back into dict...")
+    print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
     distances = []
     # for each intersection
@@ -1149,7 +1155,7 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     
-    print("formatting back into dict...")
+    print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
     distances = []
     # for each intersection
@@ -1181,8 +1187,9 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
         ValidInterGDF[KeyName[i]] = Key[i]
     
     print('calculating distances between validation and sat lines...')
-    ValidInterGDF['valsatdist'] = ValidInterGDF['TransectID'].copy()
-    ValidInterGDF['valsatdate'] = ValidInterGDF['TransectID'].copy()
+    # must initialise with list of same length as veg dates
+    ValidInterGDF['valsatdist'] = ValidInterGDF['dates'].copy()
+    ValidInterGDF['valsatdate'] = ValidInterGDF['dates'].copy()
     # for each transect
     for Tr in range(len(TransectGDF['TransectID'])):
         # dates into transect-specific list
