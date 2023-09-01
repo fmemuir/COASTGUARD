@@ -1005,7 +1005,7 @@ def ClusterRates(sitename, TransectInterGDF, Sloc, Nloc):
     plt.show()
     
 
-def MultivariateMatrix(sitename, TransectInterGDF, Sloc, Nloc):
+def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Sloc, Nloc):
     
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(filepath) is False:
@@ -1014,9 +1014,19 @@ def MultivariateMatrix(sitename, TransectInterGDF, Sloc, Nloc):
     ## Multivariate Plot
     # Subset into south and north transects
     RateArrayS = TransectInterGDF.iloc[Sloc[0]:Sloc[1]]
+    RateArrayS = pd.concat([RateArrayS, 
+                           TransectInterGDFWater.iloc[Sloc[0]:Sloc[1]],
+                           TransectInterGDFTopo.iloc[Sloc[0]:Sloc[1]],
+                           TransectInterGDFWave.iloc[Sloc[0]:Sloc[1]]])
     RateArrayS['LocLabel'] = 'blue'
+    
     RateArrayN = TransectInterGDF.iloc[Nloc[0]:Nloc[1]]
+    RateArrayN = pd.concat([RateArrayN, 
+                           TransectInterGDFWater.iloc[Nloc[0]:Nloc[1]],
+                           TransectInterGDFTopo.iloc[Nloc[0]:Nloc[1]],
+                           TransectInterGDFWave.iloc[Nloc[0]:Nloc[1]]])
     RateArrayN['LocLabel'] = 'red'
+    
     RateArray = pd.concat([RateArrayS, RateArrayN], axis=0)
     # Extract desired columns to an array for plotting
     RateArray = np.array(RateArray[['oldyoungRt','oldyungRtW','TZwidthmed','maxslope','LocLabel']])
