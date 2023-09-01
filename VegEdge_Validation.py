@@ -87,8 +87,8 @@ vegdatemin = vegsurvey.Date.min()
 vegdatemax = vegsurvey.Date.max()
 # vegdatemin = datetime.strftime(datetime.strptime(vegsurvey.Date.min(), '%Y-%m-%d') - timedelta(weeks=4),'%Y-%m-%d')
 # vegdatemax = datetime.strftime(datetime.strptime(vegsurvey.Date.max(), '%Y-%m-%d') + timedelta(weeks=4),'%Y-%m-%d')
-# dates = [vegdatemin, vegdatemax]
-dates = list(vegsurvey.Date.unique())
+dates = [vegdatemin, vegdatemax]
+# dates = list(vegsurvey.Date.unique())
 
 print(dates)
 
@@ -156,7 +156,7 @@ for satkey in dict.fromkeys(metadata['L5'].keys()):
 
             
 metadata = {'L5':L5, 'L7':L7, 'L8':L8, 'S2':S2}
-with open(os.path.join(filepath, sitename, sitename + '_validation_metadata.pkl'), 'wb') as f:
+with open(os.path.join(filepath, sitename, 'validation', sitename + '_validation_metadata.pkl'), 'wb') as f:
     pickle.dump(metadata, f)
 
 
