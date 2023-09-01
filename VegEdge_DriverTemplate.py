@@ -233,6 +233,7 @@ else:
         pickle.dump(TransectInterGDF, f)
         
 #%% Transect-Water Intersections
+
 if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl')):
     print('Transect Intersect + Water GDF exists and was loaded')
     with open(os.path.join
@@ -247,10 +248,35 @@ else:
         pickle.dump(TransectInterGDFWater, f)
 
 #%% Transect-Topo Intersections
+# EDIT ME: Path to slope raster for extracting slope values
+DTM = '/path/to/Slope_Raster.tif'
+    
 
+if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_topo_intersects.pkl')):
+    print('Transect Intersect + Topo GDF exists and was loaded')
+    with open(os.path.join
+              (filepath , sitename, 'intersections', sitename + '_transect_topo_intersects.pkl'), 'rb') as f:
+        TransectInterGDFTopo = pickle.load(f)
+else:
+    # Update Transects with Transition Zone widths and slope if available
+    TransectInterGDFTopo = Transects.TZIntersect(settings, TransectInterGDF, VeglineGDF, BasePath)
+    TransectInterGDFTopo = Transects.SlopeIntersect(settings, TransectInterGDFTopo, VeglineGDF, BasePath, DTM)
+    
+    with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_topo_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectInterGDFTopo, f)
 
 #%% Transect-Waves Intersections
 
+if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl')):
+    print('Transect Intersect + Wave GDF exists and was loaded')
+    with open(os.path.join
+              (filepath , sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'rb') as f:
+        TransectInterGDFWave = pickle.load(f)
+else:
+    TransectInterGDFWave = Transects.WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax)
+    
+    with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectInterGDFWave, f)
 
 #%% Timeseries Plotting
 
