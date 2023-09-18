@@ -212,6 +212,10 @@ if os.path.isfile(TransectSpec) is False:
 else:
     print('Transects already exist and were loaded')
     TransectGDF = gpd.read_file(TransectSpec)
+    
+# make new transect intersections folder
+if os.path.isdir(os.path.join(filepath, sitename, 'intersections')) is False:
+    os.mkdir(os.path.join(filepath, sitename, 'intersections'))
 
 #%% Transect-Veg Intersections
 # Create (or load) intersections with satellite and validation lines per transect
