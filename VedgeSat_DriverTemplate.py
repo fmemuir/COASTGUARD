@@ -78,7 +78,7 @@ else:
     daterange='yes'
 years = list(Toolbox.daterange(datetime.strptime(dates[0],'%Y-%m-%d'), datetime.strptime(dates[-1],'%Y-%m-%d')))
 
-# Put all the inputs into a dictionnary
+# Put all the inputs into a dictionary
 inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list': sat_list, 'sitename': sitename, 'filepath':filepath}
 
 
@@ -103,6 +103,11 @@ BasePath = 'Data/' + sitename + '/Veglines'
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
 
+# Choose which ANN classifier to use (the default is already uncommented)
+# clf_model = 'MLPClassifier_Veg_L8S2.pkl'
+# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
+clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
+
 settings = {
     # general parameters:
     'cloud_thresh': cloud_thresh,        # threshold on maximum cloud cover
@@ -117,6 +122,7 @@ settings = {
     'buffer_size': 250,         # radius (in metres) for buffer around sandy pixels considered in the shoreline detection
     'min_length_sl': 500,       # minimum length (in metres) of shoreline perimeter to be valid
     'cloud_mask_issue': False,  # switch this parameter to True if sand pixels are masked (in black) on many images  
+    'clf_model': clf_model,
     # add the inputs defined previously
     'inputs': inputs,
     'projection_epsg': projection_epsg,
@@ -145,11 +151,6 @@ settings['max_dist_ref'] = max_dist_ref
 """
 OPTION 1: Run extraction tool and return output veg edges as a dictionary of lines
 """
-
-# Choose which ANN classifier to use (default is uncommented)
-# clf_model = 'MLPClassifier_Veg_L8S2.pkl'
-# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
-clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
 
 output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates)
 

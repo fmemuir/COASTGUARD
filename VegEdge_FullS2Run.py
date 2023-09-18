@@ -88,6 +88,11 @@ BasePath = 'Data/' + sitename + '/veglines'
 
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
+    
+# Choose which ANN classifier to use (the default is already uncommented)
+# clf_model = 'MLPClassifier_Veg_L8S2.pkl'
+# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
+clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
 
 settings = {
     # general parameters:
@@ -103,6 +108,7 @@ settings = {
     'buffer_size': 250,         # radius (in metres) for buffer around sandy pixels considered in the shoreline detection
     'min_length_sl': 500,       # minimum length (in metres) of shoreline perimeter to be valid
     'cloud_mask_issue': False,  # switch this parameter to True if sand pixels are masked (in black) on many images  
+    'clf_model': clf_model,
     # add the inputs defined previously
     'inputs': inputs,
     'projection_epsg': projection_epsg,
@@ -141,11 +147,8 @@ if os.path.isfile(os.path.join('./Data/tides',sitename+'_tides.csv')) == False:
 OPTION 1: Run extraction tool and return output dates, lines, filenames and 
 image properties.
 """
-#get_ipython().run_line_magic('matplotlib', 'qt')
-# clf_model = 'MLPClassifier_Veg_L8S2.pkl'
-# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
-clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
-output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates, clf_model)
+
+output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, settings, polygon, dates)
 
 # L5: 44 images, 2:13 (133s) = 0.33 im/s OR 3 s/im
 # L8: 20 images (10% of 198), 4:23 (263s) = 0.08 im/s OR 13 s/im

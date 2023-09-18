@@ -41,7 +41,7 @@ from Toolshed import Toolbox, Image_Processing
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function for batch vegline detection
-def extract_veglines(metadata, settings, polygon, dates, clf_model):
+def extract_veglines(metadata, settings, polygon, dates):
     """
     Main function to extract vegetation edges from satellite imagery (Landsat 5-9, Sentinel-2 or local images (e.g. Planet)).
     
@@ -57,8 +57,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         List of 5 WGS84 coordinate pairs marking rectangle of interest.
     dates : list
         Start and end dates of interest as yyyy-mm-dd strings.
-    clf_model : str
-        Name of classification model to use.
+
 
     Returns
     -------
@@ -123,6 +122,7 @@ def extract_veglines(metadata, settings, polygon, dates, clf_model):
         else:
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
         
+        clf_model = settings['clf_model']
         # load in trained classifier pkl file
         clf = joblib.load(os.path.join(filepath_models, clf_model))
             
