@@ -163,18 +163,18 @@ OPTION 2: Load in pre-existing outputs
 SiteFilepath = os.path.join(inputs['filepath'], sitename)
 with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
     output = pickle.load(f)
-with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
-    output_latlon = pickle.load(f)
-with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
-    output_proj = pickle.load(f)
+# with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
+#     output_latlon = pickle.load(f)
+# with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
+#     output_proj = pickle.load(f)
     
 
 #%% Remove Duplicate Lines
 # (images taken on the same date by the same satellite)
 
 output = Toolbox.remove_duplicates(output) 
-output_latlon = Toolbox.remove_duplicates(output_latlon)
-output_proj = Toolbox.remove_duplicates(output_proj)
+# output_latlon = Toolbox.remove_duplicates(output_latlon)
+# output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Save Veglines as Local Shapefiles
 
@@ -254,8 +254,7 @@ else:
 
 #%% Transect-Topo Intersections
 # EDIT ME: Path to slope raster for extracting slope values
-DTM = '/path/to/Slope_Raster.tif'
-    
+TIF = '/path/to/Slope_Raster.tif'
 
 if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_topo_intersects.pkl')):
     print('Transect Intersect + Topo GDF exists and was loaded')
@@ -265,7 +264,7 @@ if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '
 else:
     # Update Transects with Transition Zone widths and slope if available
     TransectInterGDFTopo = Transects.TZIntersect(settings, TransectInterGDF, VeglineGDF, BasePath)
-    TransectInterGDFTopo = Transects.SlopeIntersect(settings, TransectInterGDFTopo, VeglineGDF, BasePath, DTM)
+    TransectInterGDFTopo = Transects.SlopeIntersect(settings, TransectInterGDFTopo, VeglineGDF, BasePath, TIF)
     
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_topo_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDFTopo, f)
