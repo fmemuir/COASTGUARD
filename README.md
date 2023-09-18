@@ -81,13 +81,13 @@ A web browser will open; log in with the GMail account you used to sign up to GE
 ## Getting Started
 
 The process of extracting coastal vegetation edges from satellite data is run through a driver file. Driver files can be customised for your own site of interest. There are a couple of template examples in the repository to help you get started. 
-The interactive python notebook [`VegEdge_DriverTemplate.ipynb`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.ipynb) can be viewed and executed in an interactive notebook environment such as jupyter-notebook which can be launched at the command line:
+The interactive python notebook [`VedgeSat_DriverTemplate.ipynb`](https://github.com/fmemuir/CoastLearn-main/blob/master/VedgeSat_DriverTemplate.ipynb) can be viewed and executed in an interactive notebook environment such as jupyter-notebook which can be launched at the command line:
 ```
-(coastlearn) $ jupyter-notebook VegEdge_DriverTemplate.ipynb
+(coastlearn) $ jupyter-notebook VedgeSat_DriverTemplate.ipynb
 ```
-Alternatively, you can customise and run the standard python script [`VegEdge_DriverTemplate.py`](https://github.com/fmemuir/CoastLearn-main/blob/master/VegEdge_DriverTemplate.py) using a python IDE such as spyder:
+Alternatively, you can customise and run the standard python script [`VedgeSat_DriverTemplate.py`](https://github.com/fmemuir/CoastLearn-main/blob/master/VedgeSat_DriverTemplate.py) using a python IDE such as spyder:
 ```
-(coastlearn) $ spyder VegEdge_DriverTemplate.py
+(coastlearn) $ spyder VedgeSat_DriverTemplate.py
 ```
 https://github.com/fmemuir/CoastLearn-main/assets/22475417/1bd4722b-ece9-4ed9-a9ac-104f71c241d7
 
