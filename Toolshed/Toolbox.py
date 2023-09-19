@@ -860,6 +860,9 @@ def CreateFileStructure(sitename, sat_list):
 
     if os.path.isdir(direc) is False:
         os.mkdir(direc)
+        os.mkdir(direc+'/referenceLines')
+        os.mkdir(direc+'/tides')
+        
     
     if 'PSScene4Band' in sat_list:
         if os.path.isdir(direc+'/local_images') is False:
