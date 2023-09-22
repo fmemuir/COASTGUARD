@@ -141,7 +141,7 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
 
     Parameters
     ----------
-    ValidDict : TYPE
+    ValidDF : TYPE
         DESCRIPTION.
     TransectID : TYPE
         DESCRIPTION.
@@ -215,7 +215,7 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
 
     Parameters
     ----------
-    ValidDict : TYPE
+    ValidDF : TYPE
         DESCRIPTION.
     TransectID : TYPE
         DESCRIPTION.
@@ -330,7 +330,7 @@ def ValidTimeseries(sitename, ValidInterGDF, TransectID):
 
     Parameters
     ----------
-    ValidDict : TYPE
+    ValidDF : TYPE
         DESCRIPTION.
     TransectID : TYPE
         DESCRIPTION.
@@ -395,7 +395,7 @@ def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
 
     Parameters
     ----------
-    ValidDict : TYPE
+    ValidDF : TYPE
         DESCRIPTION.
     TransectID : TYPE
         DESCRIPTION.
@@ -492,7 +492,7 @@ def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
 #     plt.show()
     
     
-def ValidPDF(sitename, ValidGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):    
+def ValidPDF(sitename, ValidGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):    
     """
     Generate probability density function of validation vs sat lines
     FM 2023
@@ -505,7 +505,7 @@ def ValidPDF(sitename, ValidGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
         DESCRIPTION.
     DatesCol : TYPE
         DESCRIPTION.
-    ValidDict : TYPE
+    ValidDF : TYPE
         DESCRIPTION.
     TransectIDs : TYPE
         DESCRIPTION.
@@ -530,14 +530,14 @@ def ValidPDF(sitename, ValidGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     for Vdate in Vdates:
         valsatdist = []
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['Vdates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF['Vdates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Vdate in ValidDict['Vdates'][Tr]:
-                DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
+            if Vdate in ValidDF['Vdates'].iloc[Tr]:
+                DateIndex = (ValidDF['Vdates'].iloc[Tr].index(Vdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                if ValidDF['valsatdist'].iloc[Tr] != []:
+                    valsatdist.append(ValidDF['valsatdist'].iloc[Tr][DateIndex])
                 else:
                     continue
             else:
@@ -597,7 +597,7 @@ def ValidPDF(sitename, ValidGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     plt.show()
     
     
-def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
+def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
        
     
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
@@ -612,12 +612,12 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     # get unique validation dates
     Vdates = []
     for Tr in range(TransectIDs[0], TransectIDs[1]):
-        for i in ValidDict['Vdates'][Tr]:
+        for i in ValidDF['Vdates'].iloc[Tr]:
             if i != []:
                 try:
-                    Vdates.append(ValidDict['Vdates'][Tr][i]) 
+                    Vdates.append(ValidDF['Vdates'].iloc[Tr][i]) 
                 except:
-                    Vdates.append(ValidDict['Vdates'][Tr][0])
+                    Vdates.append(ValidDF['Vdates'].iloc[Tr][0])
     Vdates = set(Vdates)
     
     for Sdate in Sdates:
@@ -625,17 +625,17 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
         valdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF['dates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sdate in ValidDict['dates'][Tr]:
-                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+            if Sdate in ValidDF['dates'].iloc[Tr]:
+                DateIndex = (ValidDF['dates'].iloc[Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    satdist.append(ValidDict['distances'][Tr][DateIndex])
+                if ValidDF['valsatdist'][Tr] != []:
+                    satdist.append(ValidDF['distances'].iloc[Tr][DateIndex])
                     # extract validation dists by performing difference calc back on sat dists
                     try:
-                        valdist.append(ValidDict['distances'][Tr][DateIndex]-ValidDict['valsatdist'][Tr][DateIndex])
+                        valdist.append(ValidDF['distances'].iloc[Tr][DateIndex]-ValidDF['valsatdist'].iloc[Tr][DateIndex])
                     except:
                         pdb.set_trace()
                 else:
@@ -769,7 +769,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     
     
     
-def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
+def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
        
     
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
@@ -784,12 +784,12 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
     # get unique validation dates
     Vdates = []
     for Tr in range(TransectIDs[0], TransectIDs[1]):
-        for i in ValidDict['Vdates'][Tr]:
+        for i in ValidDF['Vdates'].iloc[Tr]:
             if i != []:
                 try:
-                    Vdates.append(ValidDict['Vdates'][Tr][i]) 
+                    Vdates.append(ValidDF['Vdates'].iloc[Tr][i]) 
                 except:
-                    Vdates.append(ValidDict['Vdates'][Tr][0])
+                    Vdates.append(ValidDF['Vdates'].iloc[Tr][0])
     Vdates = set(Vdates)
     
     for Sdate in Sdates:
@@ -797,17 +797,17 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDict,TransectIDs,PlotTitle):
         valdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF['dates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sdate in ValidDict['dates'][Tr]:
-                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+            if Sdate in ValidDF['dates'].iloc[Tr]:
+                DateIndex = (ValidDF['dates'].iloc[Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    satdist.append(ValidDict['distances'][Tr][DateIndex])
+                if ValidDF['valsatdist'].iloc[Tr] != []:
+                    satdist.append(ValidDF['distances'].iloc[Tr][DateIndex])
                     # extract validation dists by performing difference calc back on sat dists
                     try:
-                        valdist.append(ValidDict['distances'][Tr][DateIndex]-ValidDict['valsatdist'][Tr][DateIndex])
+                        valdist.append(ValidDF['distances'].iloc[Tr][DateIndex]-ValidDF['valsatdist'].iloc[Tr][DateIndex])
                     except:
                         pdb.set_trace()
                 else:
