@@ -2035,6 +2035,7 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     
     # if file already exists, just return filepath to existing file
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
+        print('Wave data file already exists.')
         return WaveOutFile
     
     else:
