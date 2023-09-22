@@ -242,17 +242,17 @@ OPTION 2: Load in pre-existing output dates, lines, filenames and image properti
 SiteFilepath = os.path.join(inputs['filepath'], sitename)
 with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
     output = pickle.load(f)
-with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
-    output_latlon = pickle.load(f)
-with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
-    output_proj = pickle.load(f)
+# with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
+#     output_latlon = pickle.load(f)
+# with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
+#     output_proj = pickle.load(f)
 
 
 #%% remove duplicate date lines 
 
 output = Toolbox.remove_duplicates(output) # removes duplicates (images taken on the same date by the same satellite)
-output_latlon = Toolbox.remove_duplicates(output_latlon)
-output_proj = Toolbox.remove_duplicates(output_proj)
+# output_latlon = Toolbox.remove_duplicates(output_latlon)
+# output_proj = Toolbox.remove_duplicates(output_proj)
 
 #%% Slice up output for validation
 # east dates
@@ -464,33 +464,22 @@ EWPVeglineGDF.to_file(VegShpPath)
 
 ClipEWPValidInterGDF = gpd.GeoDataFrame(columns=EWPValidInterGDF.columns)
 for keyname in EWPValidInterGDF.columns:
-    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[40:281]])
-    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[312:711]])
-    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[726:889]])
-    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[972:1297]])
-    ClipEWPValidInterGDF[keyname] = pd.concat([ClipEWPValidInterGDF[keyname], EWPValidInterGDF[keyname].iloc[1365:1741]])
-
-
-# ClipEWPValidDict = dict.fromkeys(EWPValidInterGDF.keys())
-# for keyname in EWPValidInterGDF.keys():
-#     ClipEWPValidInterGDF[keyname] = []
-#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][40:281])
-#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][312:711])
-#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][726:889])
-#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][972:1297])
-#     ClipEWPValidInterGDF[keyname].extend(EWPValidInterGDF[keyname][1365:1741])
-    
+    ClipEWPValidInterGDF[keyname] = pd.concat([EWPValidInterGDF[keyname].iloc[40:281], 
+                                               EWPValidInterGDF[keyname].iloc[312:711], 
+                                               EWPValidInterGDF[keyname].iloc[726:889],
+                                               EWPValidInterGDF[keyname].iloc[972:1297],
+                                               EWPValidInterGDF[keyname].iloc[1365:1741]])
 
 
 #%% Plotting full validation results
 TransectIDs = (0,len(ClipEWPValidInterGDF['dates'])) # full
 
-PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
 Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
 
-for TransectID in [TransectIDs]:
-    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectID)
+# for TransectID in [TransectIDs]:
+    # Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectID)
 
 #%% Plotting full validation results for specific transects
 TransectIDList = [(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
