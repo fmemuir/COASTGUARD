@@ -968,12 +968,14 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         PeakWavePeriod = WaveData.variables['VTPK'][:,:,:] #Total sea peak period
         WaveSeconds = WaveData.variables['time'][:]
         
-        # Calculate time step used for interpolating data between
-        TimeStep = (WaveTime[1]-WaveTime[0]).total_seconds()/(60*60)
+        
         
         WaveTime = []
         for i in range(0,len(WaveSeconds)):
             WaveTime.append(datetime.strptime(datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'),'%Y-%m-%d %H:%M:%S'))
+        
+        # Calculate time step used for interpolating data between
+        TimeStep = (WaveTime[1]-WaveTime[0]).total_seconds()/(60*60)
         
         WaveHs = []
         WaveDir = []
