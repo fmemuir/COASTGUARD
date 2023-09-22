@@ -63,7 +63,7 @@ ee.Initialize()
 #%%
 
 
-def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
+def ValidViolin(sitename, ValidationShp,DatesCol,ValidDF,TransectIDs):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -74,8 +74,8 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
         Path to validation lines shapefile.
     DatesCol : str
         Name of dates column in shapefile.
-    ValidDict : dict
-        Validation dictionary created from ValidateIntersects().
+    ValidDF : GeoDataFrame
+        Validation GDF created from ValidateIntersects().
 
     """
     
@@ -90,14 +90,14 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     for Vdate in Vdates:
         valsatdist = []
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['Vdates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF['Vdates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Vdate in ValidDict['Vdates'][Tr]:
-                DateIndex = (ValidDict['Vdates'][Tr].index(Vdate))
+            if Vdate in ValidDF['Vdates'].iloc[Tr]:
+                DateIndex = (ValidDF['Vdates'].iloc[Tr].index(Vdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                if ValidDF['valsatdist'].iloc[Tr] != []:
+                    valsatdist.append(ValidDF['valsatdist'].iloc[Tr][DateIndex])
                 else:
                     continue
             else:
@@ -144,7 +144,7 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDict,TransectIDs):
     print('figure saved under '+figpath)
     
 
-def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
+def SatViolin(sitename, SatGDF, DatesCol,ValidDF,TransectIDs, PlotTitle):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -155,7 +155,7 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
         Path to validation lines shapefile.
     DatesCol : str
         Name of dates column in shapefile.
-    ValidDict : dict
+    ValidDF : GeoDataFrame
         Validation dictionary created from ValidateIntersects().
 
     """
@@ -173,15 +173,15 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
         valsatdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF['dates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sdate in ValidDict['dates'][Tr]:
-                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+            if Sdate in ValidDF['dates'].iloc[Tr]:
+                DateIndex = (ValidDF['dates'].iloc[Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
+                if ValidDF['valsatdist'].iloc[Tr] != []:
                     try:
-                        valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                        valsatdist.append(ValidDF['valsatdist'].iloc[Tr][DateIndex])
                     except:
                         pdb.set_trace()
                 else:
@@ -207,12 +207,12 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDict,TransectIDs, PlotTitle):
     # for each date in sorted list
     for Sdate in violindatesrt:    
         satmatch = []
-        for Tr in range(len(ValidDict['TransectID'])):
+        for Tr in range(len(ValidDF['TransectID'])):
             # loop through transects to find matching date from which to find satname
-            if Sdate not in ValidDict['dates'][Tr]:
+            if Sdate not in ValidDF['dates'].iloc[Tr]:
                 continue
             else:
-                satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
+                satmatch.append(ValidDF['satname'].iloc[Tr][ValidDF['dates'].iloc[Tr].index(Sdate)])
         # cycling through transects leads to list of repeating satnames; take the unique entry
         satnames[Sdate] = list(set(satmatch))[0]
     
@@ -308,8 +308,8 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
         Path to validation lines shapefile.
     DatesCol : str
         Name of dates column in shapefile.
-    ValidDict : dict
-        Validation dictionary created from ValidateIntersects().
+    ValidDF : GeoDataFrame
+        Validation GDF created from ValidateIntersects().
 
     """
     
@@ -478,7 +478,7 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
      
     
     
-def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
+def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
     """
     Prob density function plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
@@ -489,8 +489,8 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
         Path to validation lines shapefile.
     DatesCol : str
         Name of dates column in shapefile.
-    ValidDict : dict
-        Validation dictionary created from ValidateIntersects().
+    ValidDF : GeoDataFrame
+        Validation GDF created from ValidateIntersects().
 
     """
     
@@ -506,14 +506,14 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
         valsatdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict['dates']): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF['dates']): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sdate in ValidDict['dates'][Tr]:
-                DateIndex = (ValidDict['dates'][Tr].index(Sdate))
+            if Sdate in ValidDF['dates'].iloc[Tr]:
+                DateIndex = (ValidDF['dates'].iloc[Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
-                    valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
+                if ValidDF['valsatdist'].iloc[Tr] != []:
+                    valsatdist.append(ValidDF['valsatdist'].iloc[Tr][DateIndex])
                 else:
                     continue
             else:
@@ -537,12 +537,12 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     # for each date in sorted list
     for Sdate in violindatesrt:    
         satmatch = []
-        for Tr in range(len(ValidDict['TransectID'])):
+        for Tr in range(len(ValidDF['TransectID'])):
             # loop through transects to find matching date from which to find satname
-            if Sdate not in ValidDict['dates'][Tr]:
+            if Sdate not in ValidDF['dates'].iloc[Tr]:
                 continue
             else:
-                satmatch.append(ValidDict['satname'][Tr][ValidDict['dates'][Tr].index(Sdate)])
+                satmatch.append(ValidDF['satname'].iloc[Tr][ValidDF['dates'].iloc[Tr].index(Sdate)])
         # cycling through transects leads to list of repeating satnames; take the unique entry
         satnames[Sdate] = list(set(satmatch))[0]
     
@@ -678,7 +678,7 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDict,TransectIDs, PlotTitle):
     
     
 
-def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None):
+def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
     """
     Violin plot showing distances between validation and satellite, for each platform used.
     FM Oct 2022
@@ -689,8 +689,8 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
         Path to validation lines shapefile.
     DatesCol : str
         Name of sat column in shapefile.
-    ValidDict : dict
-        Validation dictionary created from ValidateIntersects().
+    ValidDF : GeoDataFrame
+        Validation GDF created from ValidateIntersects().
 
     """
     
@@ -711,19 +711,19 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
         valsatdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict[SatCol]): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF[SatCol]): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sname in ValidDict[SatCol][Tr]:
+            if Sname in ValidDF[SatCol].iloc[Tr]:
                 # need to build list instead of using .index(), as there are multiple occurrences of sat names per transect
-                DateIndexes = [i for i, x in enumerate(ValidDict[SatCol][Tr]) if x == Sname]
+                DateIndexes = [i for i, x in enumerate(ValidDF[SatCol].iloc[Tr]) if x == Sname]
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
+                if ValidDF['valsatdist'].iloc[Tr] != []:
                     for DateIndex in DateIndexes:
-                        valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
-                else: # if ValidDict['valsatdist'][Tr] is empty
+                        valsatdist.append(ValidDF['valsatdist'].iloc[Tr][DateIndex])
+                else: # if ValidDF['valsatdist'][Tr] is empty
                     continue
-            else: # if Sname isn't in ValidDict[Tr]
+            else: # if Sname isn't in ValidDF[Tr]
                 continue
         # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
         if valsatdist != []: 
@@ -750,7 +750,8 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
     coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
     colors = plt.cm.Blues(np.linspace(0.4, 1, len(violinsatsrt)))
     textcolor = '#0B2D32'
-    sns.set_style("whitegrid", {'axes.grid':False, 'axes.linewidth':0.5} )
+    
+    sns.set_style("ticks", {'axes.grid' : False, 'axes.linewidth':0.5})
     if len(violinsatsrt) > 1:
         # plot stacked violin plots
         ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
@@ -831,7 +832,7 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None
         
         
         
-def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitle=None):
+def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
     """
     Violin plot showing distances between validation and satellite, for each platform used.
     FM Oct 2022
@@ -842,8 +843,8 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitl
         Path to validation lines shapefile.
     DatesCol : str
         Name of sat column in shapefile.
-    ValidDict : dict
-        Validation dictionary created from ValidateIntersects().
+    ValidDF : GeoDataFrame
+        Validation GDF created from ValidateIntersects().
 
     """
     
@@ -864,19 +865,19 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDict,TransectIDs, PlotTitl
         valsatdist = []
         # for each transect in given range
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
-            if Tr > len(ValidDict[SatCol]): # for when transect values extend beyond what transects exist
+            if Tr > len(ValidDF[SatCol]): # for when transect values extend beyond what transects exist
                 print("check your chosen transect values!")
                 return
-            if Sname in ValidDict[SatCol][Tr]:
+            if Sname in ValidDF[SatCol].iloc[Tr]:
                 # need to build list instead of using .index(), as there are multiple occurrences of sat names per transect
-                DateIndexes = [i for i, x in enumerate(ValidDict[SatCol][Tr]) if x == Sname]
+                DateIndexes = [i for i, x in enumerate(ValidDF[SatCol].iloc[Tr]) if x == Sname]
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDict['valsatdist'][Tr] != []:
+                if ValidDF['valsatdist'].iloc[Tr] != []:
                     for DateIndex in DateIndexes:
-                        valsatdist.append(ValidDict['valsatdist'][Tr][DateIndex])
-                else: # if ValidDict['valsatdist'][Tr] is empty
+                        valsatdist.append(ValidDF['valsatdist'].iloc[Tr][DateIndex])
+                else: # if ValidDF['valsatdist'][Tr] is empty
                     continue
-            else: # if Sname isn't in ValidDict[Tr]
+            else: # if Sname isn't in ValidDF[Tr]
                 continue
         # due to way dates are used, some transects might be missing validation dates so violin collection will be empty
         if valsatdist != []: 
