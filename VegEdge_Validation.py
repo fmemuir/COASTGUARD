@@ -202,7 +202,7 @@ the veg extraction.
 """
 
 #referenceLineShp = os.path.join(inputs['filepath'], sitename,'StAndrews_refLine.shp')
-referenceLineShp = os.path.join(inputs['filepath'], 'StAndrews_refLine.shp')
+referenceLineShp = os.path.join(inputs['filepath'], 'referenceLines', 'StAndrews_refLine.shp')
 referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLineShp,settings)
 
 settings['reference_shoreline'] = referenceLine
@@ -292,7 +292,7 @@ DistanceInland = 100
 DistanceOffshore = 350
 # DistanceInland = 150 # East
 # DistanceOffshore = 700 # East
-BasePath = 'Data/' + sitename + '/veglines'
+VegBasePath = 'Data/' + sitename + '/veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
 WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
@@ -301,12 +301,12 @@ WaterlineGDF = gpd.read_file(WaterlineShp[0])
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
 if os.path.isfile(TransectSpec) is False:
-    TransectGDF = Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLineShp)
+    TransectGDF = Transects.ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, VegBasePath, referenceLineShp)
 else:
     print('Transects already exist and were loaded')
     TransectGDF = gpd.read_file(TransectSpec)
 
-#%% Create (or load) intersections with sat and validation lines per transect
+#%% Create (or load) intersections with satellite lines per transect
 
 if os.path.isfile(os.path.join(filepath, sitename, sitename + '_transect_intersects.pkl')):
     print('Transect Intersect GDF exists and was loaded')
@@ -345,8 +345,8 @@ else:
 
 # Name of date column in validation shapefile (case sensitive!) 
 DatesCol = 'Date'
-# ValidationShp = './Validation/StAndrews_Veg_Edge_combined_PlanetScope.shp' # Planet
-ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp' # L5L8S2
+ValidationShp = './Validation/StAndrews_Veg_Edge_combined_PlanetScope.shp' # Planet
+# ValidationShp = './Validation/StAndrews_Veg_Edge_combined_20070404_20220223.shp' # L5L8S2
  
 validpath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
 
@@ -385,10 +385,10 @@ for TransectIDs in TransectIDList:
     
 #%% Error stats
 # East errors
-TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
+# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
 
 # West errors
-# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidInterGDF,TransectIDs)
 
@@ -476,10 +476,12 @@ TransectIDs = (0,len(ClipEWPValidInterGDF['dates'])) # full
 
 # PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
 # PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
-Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
+# Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
+PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidInterGDF,TransectIDs)
 
-# for TransectID in [TransectIDs]:
-    # Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectID)
+
+for TransectID in [TransectIDs]:
+    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectID)
 
 #%% Plotting full validation results for specific transects
 TransectIDList = [(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
