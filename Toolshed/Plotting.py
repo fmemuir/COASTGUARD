@@ -631,7 +631,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
             if Sdate in ValidDF['dates'].iloc[Tr]:
                 DateIndex = (ValidDF['dates'].iloc[Tr].index(Sdate))
                 # rare occasion where transect intersects valid line but NOT sat line (i.e. no distance between them)
-                if ValidDF['valsatdist'][Tr] != []:
+                if ValidDF['valsatdist'].iloc[Tr] != []:
                     satdist.append(ValidDF['distances'].iloc[Tr][DateIndex])
                     # extract validation dists by performing difference calc back on sat dists
                     try:
@@ -656,7 +656,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
         valsrt = valdists
 
 
-    f = plt.figure(figsize=(3.31, 3.31), dpi=300)
+    f = plt.figure(figsize=(3.31, 4.31), dpi=300)
     mpl.rcParams.update({'font.size':7})
     ax = f.add_subplot(1,1,1)
     ax.set_facecolor('#ECEAEC')
@@ -706,7 +706,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
 
         plt.plot(valfit,satfit, c=cmap(i), alpha=0.8, linewidth=1.2, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))), zorder=3)
 
-    plt.legend(ncol=1)
+    plt.legend(facecolor='#ECEAEC', framealpha=1, bbox_to_anchor=(0.5,0), loc='lower center', bbox_transform=f.transFigure, ncol=2)
     
     # overall linear regression
     valfull = [item for sublist in valsrtclean for item in sublist]
@@ -719,25 +719,27 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
     satfit = model.predict(valfit)
 
-    plt.plot(valfit,satfit, c='#A5A5AF', linestyle='--', linewidth=1.2, zorder=3)
-    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2)), c='#7A7A7A', zorder=3)
+    plt.plot(valfit,satfit, c='#818C93', linestyle='--', linewidth=1.2, zorder=3)
+    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2)), c='#818C93', zorder=3, ha='right')
 
-    plt.xlim(-20,round(maxlim)+200)
-    plt.ylim(-20,maxlim)
+    plt.xlim(0,220)
+    plt.ylim(0,220)
     
     plt.xlabel('Validation Veg Edge cross-shore distance (m)')
     plt.ylabel('Satellite Veg Edge cross-shore distance (m)')
     
+    ax.set_aspect('equal')
+    ax.set_anchor('N')
     plt.tight_layout()
     
     figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_LinReg_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
-    mpl.rcParams.update({'font.size':7})
 
     plt.show()
     
-    # Get unique dates and satnames    
+    
+    # Print out unique dates and satnames    
     SatGDFNames = SatGDF.groupby(['dates']).max()
     SatNames = []
     
@@ -764,6 +766,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
         model = LinearRegression(fit_intercept=True).fit(X,y)
         r2 = model.score(X,y)
         
+        print('Sat name: R^2')
         print(SatN, r2)
     
     
