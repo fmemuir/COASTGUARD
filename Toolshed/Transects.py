@@ -77,53 +77,30 @@ def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, Distanc
                     pickle.dump(CellCoast, PFile)
     return
 
-def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, sitename, BasePath, RefShapePath, projection_epsg):
+def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, VegBasePath, referenceLinePath):
     """
     Produce shore-normal transects using CoastalMappingTools
     FM Oct 2022
 
-    Parameters
-    ----------
-    SmoothingWindowSize : TYPE
-        DESCRIPTION.
-    NoSmooths : TYPE
-        DESCRIPTION.
-    TransectSpacing : TYPE
-        DESCRIPTION.
-    DistanceInland : TYPE
-        DESCRIPTION.
-    DistanceOffshore : TYPE
-        DESCRIPTION.
-    proj : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    BasePath : TYPE
-        DESCRIPTION.
-    RefShapePath : TYPE
-        DESCRIPTION.
 
-    Returns
-    -------
-    TransectGDF : TYPE
-        DESCRIPTION.
-
-    """    
-    FileSpec = RefShapePath
-    ReprojSpec = BasePath + '/Baseline_Reproj.shp'
-    TransectSpec = os.path.join(BasePath, sitename+'_Transects.shp')
-    CoastSpec = BasePath + '/Coast.shp'
-    Filename2SaveCoast = BasePath + '/Coast.pydata'
+    """
+    
+    sitename = settings['inputs']['sitename']
+    ReprojSpec = VegBasePath + '/Baseline_Reproj.shp'
+    TransectPath = os.path.join(VegBasePath, sitename+'_Transects.shp')
+    CoastSpec = VegBasePath + '/Coast.shp'
+    Filename2SaveCoast = VegBasePath + '/Coast.pydata'
     
     if (SmoothingWindowSize % 2) == 0:
         SmoothingWindowSize = SmoothingWindowSize + 1
         print('Window size should be odd; changed to %s m' % SmoothingWindowSize)
     
-    shape = gpd.read_file(FileSpec)
+    refGDF = gpd.read_file(referenceLinePath)
     # change CRS to desired projected EPSG
-    shape = shape.to_crs(epsg=projection_epsg)
+    projection_epsg = settings['projection_epsg']
+    refGDF = refGDF.to_crs(epsg=projection_epsg)
     # write shp file
-    shape.to_file(ReprojSpec)
+    refGDF.to_file(ReprojSpec)
         
     #Creates coast objects
     CellCoast = Coast(ReprojSpec, MinLength=10)
@@ -138,16 +115,16 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
         
         CellCoast.BuiltTransects = True
             
-        CellCoast.WriteSimpleTransectsShp(TransectSpec)
+        CellCoast.WriteSimpleTransectsShp(TransectPath)
             
         with open(str(Filename2SaveCoast), 'wb') as PFile:
             pickle.dump(CellCoast, PFile)
             
-    TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
-    TransectGDF = gpd.read_file(TransectSpec)
+    TransectGDF = gpd.read_file(TransectPath)
     
-    # TO DO: add ref line intersect points to raw transect GDF
+    # Add reference line intersect points to raw transect GDF
     TransectGDF.set_crs(epsg=projection_epsg, inplace=True)
+    
     # intersect each transect with original baseline to get ref line points
     columnsdata = []
     geoms = []
@@ -164,6 +141,9 @@ def ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceIn
             allintersection['geometry'][inter] = list(allintersection['geometry'][inter])[0]
     
     TransectGDF['reflinepnt'] = allintersection['geometry']
+    
+    # Re-export transects to shapefile
+    # TransectGDF.to_file(TransectPath)
     
     return TransectGDF
     
@@ -195,16 +175,16 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     ColumnData = []
     Geoms = []
     # for each row/feature in transect
-    for _, _, ID, TrGeom in TransectGDF.itertuples():
+    for _, _, ID, TrGeom, refpnt in TransectGDF.itertuples():
         # for each row/feature shoreline
         for _,dates,times,filename,cloud,ids,vthresh,wthresh,tideelev,satn,SGeom in ShorelineGDF.itertuples():
             # calculate intersections between each transect and shoreline
             Intersects = TrGeom.intersection(SGeom)
-            ColumnData.append((ID,dates,times,filename,cloud,ids,vthresh,wthresh,tideelev,satn))
+            ColumnData.append((ID,refpnt,dates,times,filename,cloud,ids,vthresh,wthresh,tideelev,satn))
             Geoms.append(Intersects)
             
     # create GDF from appended lists of intersections        
-    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','tideelev','satname'])
+    AllIntersects = gpd.GeoDataFrame(ColumnData,geometry=Geoms,columns=['TransectID','reflinepnt','dates','times','filename','cloud_cove','idx','vthreshold','wthreshold','tideelev','satname'])
     # remove any rows with no intersections
     AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index().drop('index',axis=1)
     # duplicate geom column to save point intersections
@@ -236,10 +216,10 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     
 
     #initialise lists used for storing each transect's intersection values
-    dates, times, filename, cloud_cove, idx, vthreshold, wthreshold, satname, tideelev, distances, interpnt = ([] for i in range(11)) # per-transect lists of values
+    reflinepnt, dates, times, filename, cloud_cove, idx, vthreshold, wthreshold, satname, tideelev, distances, interpnt = ([] for i in range(12)) # per-transect lists of values
 
-    Key = [dates,times,filename,cloud_cove,idx,vthreshold, wthreshold,satname,tideelev,  distances, interpnt]
-    KeyName = ['dates','times','filename','cloud_cove','idx','vthreshold', 'wthreshold','tideelev','satname', 'distances', 'interpnt']
+    Key = [reflinepnt,dates,times,filename,cloud_cove,idx,vthreshold, wthreshold,satname,tideelev,  distances, interpnt]
+    KeyName = ['reflinepnt','dates','times','filename','cloud_cove','idx','vthreshold', 'wthreshold','tideelev','satname', 'distances', 'interpnt']
     
     # for each column name
     for i in range(len(Key)):
@@ -313,7 +293,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     ColumnData = []
     Geoms = []
     # for each row/feature in transect
-    for _, _, ID, TrGeom in TransectGDF.itertuples():
+    for _, _, ID, TrGeom, refpnt in TransectGDF.itertuples():
         # Extend transect line out to sea and inland
         TrGeom = Toolbox.ExtendLine(TrGeom, 300)
         # for each row/feature shoreline
@@ -1064,7 +1044,7 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     ColumnData = []
     Geoms = []
      # for each row/feature in transect
-    for _, _, ID, TrGeom in TransectGDF.itertuples():
+    for _, _, ID, TrGeom, refpnt in TransectGDF.itertuples():
          # for each row/feature shoreline
         for _,dates,SGeom in ValidGDF.itertuples():
              # calculate intersections between each transect and shoreline
@@ -1183,7 +1163,7 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
     ColumnData = []
     Geoms = []
      # for each row/feature in transect
-    for _, _, ID, TrGeom in TransectGDF.itertuples():
+    for _, _, ID, TrGeom, refpnt in TransectGDF.itertuples():
          # for each row/feature shoreline
         for _,dates,SGeom in ValidGDF.itertuples():
              # calculate intersections between each transect and shoreline
