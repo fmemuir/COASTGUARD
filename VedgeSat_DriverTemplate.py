@@ -199,7 +199,7 @@ beachslope = 0.02
 
 #%% Create Cross-shore Transects
 
-BasePath = 'Data/' + sitename + '/veglines'
+VegBasePath = 'Data/' + sitename + '/veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
 WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
@@ -209,7 +209,8 @@ TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
 # If transects already exist, load them in
 if os.path.isfile(TransectSpec) is False:
-    TransectGDF = Transects.ProduceTransects(SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, settings['output_epsg'], sitename, BasePath, referenceLinePath)
+    TransectGDF = Transects.ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, VegBasePath, referenceLineShp)
+
 else:
     print('Transects already exist and were loaded')
     TransectGDF = gpd.read_file(TransectSpec)
@@ -219,7 +220,7 @@ if os.path.isdir(os.path.join(filepath, sitename, 'intersections')) is False:
     os.mkdir(os.path.join(filepath, sitename, 'intersections'))
 
 #%% Transect-Veg Intersections
-# Create (or load) intersections with satellite and validation lines per transect
+# Create (or load) intersections with all satellite lines per transect
 
 if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_intersects.pkl')):
     print('Transect Intersect GDF exists and was loaded')
