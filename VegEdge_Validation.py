@@ -178,7 +178,7 @@ settings = {
     'output_epsg': image_epsg,  # epsg code of spatial reference system desired for the output  
     'wetdry':True,              # extract wet-dry boundary as well as veg
     # quality control:
-    'check_detection': False,    # if True, shows each shoreline detection to the user for validation
+    'check_detection': True,    # if True, shows each shoreline detection to the user for validation
     'adjust_detection': False,  # if True, allows user to adjust the postion of each shoreline by changing the threhold
     'save_figure': True,        # if True, saves a figure showing the mapped shoreline for each image
     # [ONLY FOR ADVANCED USERS] shoreline detection parameters:
@@ -444,7 +444,10 @@ FullPlWaterlineGDF = gpd.pd.concat([EastPlWaterlineGDF, WestPlWaterlineGDF])
 
 EWPValidInterGDF = deepcopy(FullValidInterGDF)
 
-for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold', 'satname', 'wthreshold', 'interpnt', 'distances', 'normdists', 'wldates', 'wldists', 'wlcorrdist', 'wlinterpnt', 'beachwidth', 'Vdates', 'Vdists', 'Vinterpnt', 'valsatdist']:
+for keyname in ['dates', 'times', 'filename', 'cloud_cove', 'idx', 'vthreshold',
+                'wthreshold', 'tideelev', 'satname', 'interpnt', 'distances',
+                'normdists', 'Vdates', 'Vdists',
+                'Vinterpnt', 'valsatdist', 'valsatdate']:
     for i in range(len(FullPlValidInterGDF[keyname])): # for each transect
         for j in range(len(FullPlValidInterGDF[keyname].iloc[i])): # for each data entry on each transect
             EWPValidInterGDF[keyname].iloc[i].append(FullPlValidInterGDF[keyname].iloc[i][j])
@@ -506,10 +509,10 @@ PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPVal
 # Plotting.SatRegressPoster('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidDict,TransectIDs, 'Full Site Accuracy')
 
 
-#%% Theshold plotting
+#%% Threshold plotting
 
 sites = ['StAndrewsWest', 'StAndrewsEast']
-PlottingSeaborn.ThresholdViolin(filepath, sites)
+PlottingSeaborn.ThresholdViolin('StAndrewsEWP', filepath, sites)
 
 
 #%% Validation vs satellite cross-shore distance through time
@@ -517,9 +520,10 @@ PlottingSeaborn.ThresholdViolin(filepath, sites)
 Plotting.ValidTimeseries(sitename, ValidInterGDF, 1575)
 
 #%% WP Errors plot
-CSVpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_Errors_Planet.csv'
+WPErrorPath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_Errors_Planet.csv'
+WPPath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_ExamplePDF.csv'
 figpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegPaperFigs'
-Plotting.WPErrors(figpath, sitename, CSVpath)
+Plotting.WPErrors(figpath, sitename, WPErrorPath, WPPath)
 
 #%% Tide heights vs RMSE plot
 slicedates = ['2007-04-17',
