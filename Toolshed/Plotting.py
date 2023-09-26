@@ -33,6 +33,8 @@ import scipy.stats
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
 
+from Toolshed import Toolbox
+
 # SCALING:
 # Journal 2-column width: 224pt or 3.11in
 # Journal 1-column width: 384pt or 5.33in
@@ -719,6 +721,8 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
     satfit = model.predict(valfit)
 
+    # plot glowing background line for overall lin reg first
+    plt.plot(valfit,satfit, c='w', linestyle='-', linewidth=1.6, alpha=0.7, zorder=3)
     plt.plot(valfit,satfit, c='#818C93', linestyle='--', linewidth=1.2, zorder=3)
     plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2)), c='#818C93', zorder=3, ha='right')
 
@@ -1114,7 +1118,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     return
     
 
-def WPErrors(filepath, sitename, CSVpath):
+def WPErrors(filepath, sitename, WPErrorPath, WPPath):
     """
     Generate plot error values associated with different Weighted Peaks thresholding values.
     FM Aug 2023
@@ -1133,11 +1137,44 @@ def WPErrors(filepath, sitename, CSVpath):
     None.
 
     """
-    fig, ax = plt.subplots(figsize=(3.31, 3.31), dpi=300)  
-    ax2 = ax.twiny()
+    
+    fig, axs = plt.subplots(2,1,figsize=(3.31, 5), dpi=300, gridspec_kw={'height_ratios':[1,2]})  
+    
+    # First Plot (values)
+    # read in arrays of NDVI pixel values for each class
+    peaksDF = pd.read_csv(WPPath)
+    int_veg = peaksDF['int_veg'].to_numpy()
+    int_nonveg = peaksDF['int_nonveg'].to_numpy()
+    
+    # calculate WP threshold and TZ
+    thresh = Toolbox.FindWPThresh(int_veg, int_nonveg)
+    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
+
+    # define hist properties
+    binwidth = 0.01
+    bins = np.arange(-1, 1, binwidth)
+    cmap = cm.get_cmap('Paired')
+    # slice up colormap into desired colours
+    vegc = cmap.colors[3]  # veg
+    nonvegc = cmap.colors[8]  # non-veg
+    threshc = cmap.colors[7] # threshold
+    TZc = cmap.colors[6] # TZ
+    vy, _, _ = axs[0].hist(int_veg, bins=bins, density=True, color=vegc, label='Vegetation')
+    nvy, _, _ = axs[0].hist(int_nonveg, bins=bins, density=True, color=nonvegc, label='Non-Vegetation', alpha=0.75) 
+    
+    # plot WP threshold as dashed vertical line on PDF
+    axs[0].plot(thresh, max(nvy), color=threshc)
+    # plot TZ as transparent rectangle (xy, width, height, *)
+    TZrec = mpatches.Rectangle((TZbuffer[0], 0), TZbuffer[1]-TZbuffer[0], max(nvy), fc=[0,0.3,1], ec=None, alpha=0.3)
+    axs[0].add_patch(TZrec)    
+    
+    
+    
+    # Second Plot (errors linked to different weights for each satellite)
+    ax2 = axs[1].twiny()
     
     #read in CSV of errors
-    errorDF = pd.read_csv(CSVpath)
+    errorDF = pd.read_csv(WPErrorPath)
     # sort sat names alphabetically
     errorDF = pd.concat([errorDF['veg'], errorDF['nonveg'], errorDF.iloc[:,2:].reindex(sorted(errorDF.columns[2:]), axis=1)], axis=1)
     
@@ -1149,25 +1186,25 @@ def WPErrors(filepath, sitename, CSVpath):
     for i,sat in enumerate(uniquesats):
         # plot graph of errors and max value of each sat as diamond
         ax2.plot(errorDF['nonveg'][errorDF[sat]==min(errorDF[sat])], errorDF[sat][errorDF[sat]==min(errorDF[sat])], marker='d', color=colors[i], markeredgecolor='r', markeredgewidth=0.5, markersize=5, zorder=5)
-        ax.plot(errorDF['veg'], errorDF[sat], marker='o', markersize=2, color=colors[i], linewidth=1, label=sat)
+        axs[1].plot(errorDF['veg'], errorDF[sat], marker='o', markersize=2, color=colors[i], linewidth=1, label=sat)
     
     
-    ax.set_xticks(errorDF['veg'],minor=True)
-    ax.set_xticks(list(errorDF['veg'])[0::2], major=True)
+    axs[1].set_xticks(errorDF['veg'],minor=True)
+    axs[1].set_xticks(list(errorDF['veg'])[0::2], major=True)
     ax2.set_xticks(errorDF['nonveg'],minor=True)
     ax2.set_xticks(list(errorDF['nonveg'])[0::2], major=True)
     # ax2.invert_axis()
-    ax.set_xlim(min(errorDF['veg'])-0.05, max(errorDF['veg'])+0.05)
+    axs[1].set_xlim(min(errorDF['veg'])-0.05, max(errorDF['veg'])+0.05)
     ax2.set_xlim(max(errorDF['nonveg'])+0.05, min(errorDF['nonveg'])-0.05)
     
-    ax.grid(which='major', color='#BBB4BB', alpha=0.5)
-    ax.grid(which='minor', color='#BBB4BB', alpha=0.2)
+    axs[1].grid(which='major', color='#BBB4BB', alpha=0.5)
+    axs[1].grid(which='minor', color='#BBB4BB', alpha=0.2)
     
-    ax.set_xlabel('$\omega_{veg}$')
+    axs[1].set_xlabel('$\omega_{veg}$')
     ax2.set_xlabel('$\omega_{nonveg}$')
-    ax.set_ylabel('RMSE (m)')
+    axs[1].set_ylabel('RMSE (m)')
     
-    ax.legend(loc='upper left',ncol=2)
+    axs[1].legend(loc='upper left',ncol=2)
     plt.tight_layout()
     mpl.rcParams.update({'font.size':7})
     
