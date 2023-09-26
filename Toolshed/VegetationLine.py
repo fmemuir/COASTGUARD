@@ -958,42 +958,7 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     # clip down classified band index values to coastal buffer
     int_veg, int_nonveg = ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer)
     
-    # Find the peaks of veg and nonveg classes using KDE
-    bins = np.arange(-1, 1, 0.01) # start, stop, bin width
-    peaks = []
-    for i, intdata in enumerate([int_veg, int_nonveg]):
-        model = sklearn.neighbors.KernelDensity(bandwidth=0.01, kernel='gaussian')
-        sample = intdata.reshape((len(intdata), 1))
-        model.fit(sample)
-        # sample probabilities for a range of outcomes
-        values = np.asarray([value for value in bins])
-        values = values.reshape((len(values), 1))
-        # calculate probability fns 
-        probabilities = model.score_samples(values)
-        probabilities = np.exp(probabilities)
-        
-        if i == 0: # class with weaker signal
-            # take value of band index where probability is max
-            peaks.append(values[list(probabilities).index(np.nanmax(probabilities))])
-        else:
-            # clip to > 0 to deal with sand peak only
-            clipbins = bins[bins>0]
-            clipprobs = probabilities[bins>0]
-            # find peaks of bimodal KDE using prominence
-            prom, _ = scipy.signal.find_peaks(clipprobs, prominence=0.5)
-            if len(prom) == 0: # for marshland where no peak above NDVI = 0 exists
-                promlimit = 0.5
-                # decrease prominence til peak is found
-                while len(prom) == 0:
-                    prom, _ = scipy.signal.find_peaks(clipprobs, prominence=promlimit)
-                    promlimit -= 0.05 
-                peaks.append(clipbins[prom[0]])
-            else:    
-                # always take first peak over 0 (corresponds to bare land/sand in veg classification)
-                peaks.append(clipbins[prom[0]])
-            
-    # Calculate index value using weighted peaks
-    t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
+    t_ndi = Toolbox.FindWPThresh(int_veg, int_nonveg)
             
     # find contour with Marching-Squares algorithm
     im_ndi_buffer = np.copy(im_ndi)
@@ -1670,9 +1635,11 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     labels_other = np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]) # for only veg/nonveg
     int_other = im_ndvi[labels_other]
     
+    # clip down classified band index values to coastal buffer
+    int_veg_clip, int_nonveg_clip = ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
     # FM: create transition zone mask
     im_TZ = im_ndvi.copy()
-    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
+    TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
     
     for i in range(len(im_ndvi[:,0])):
         for j in range(len(im_ndvi[0,:])):
@@ -1699,10 +1666,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     # cb.set_label('NDVI values')
     #    ax3.set_anchor('W')
 
-    # plot histogram of NDVI values
-    # clip down classified band index values to coastal buffer
-    int_veg_clip, int_nonveg_clip = ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
-    
+    # plot histogram of NDVI values    
     binwidth = 0.01
     ax4.set_facecolor('0.75')
     ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
