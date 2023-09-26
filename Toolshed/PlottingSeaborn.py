@@ -806,7 +806,7 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
         if axlim < 150:
             ax.text(-axlim+1, i, leglabel, va='center')
         else:
-            ax.text(-149, i, leglabel, va='center')
+            ax.text(-145, i, leglabel, va='center')
         medianline = ax.lines[iline].get_data()[1][0]
         ax.text(satmedian, medianline-0.05, medianlabel,ha='center')
     
@@ -996,9 +996,9 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=
             subpix = (df[i].between(-10,10).sum()/df[i].count())*100
         print(str(round(subpix,2))+'%')
     
-def ThresholdViolin(filepath,sites):
+def ThresholdViolin(sitename,filepath,sites):
     
-    outfilepath = os.path.join(os.getcwd(), 'Data', sites[0], 'plots')
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
       
@@ -1007,6 +1007,15 @@ def ThresholdViolin(filepath,sites):
         with open(os.path.join(filepath,site ,site+ '_output.pkl'), 'rb') as f:
             outputdict = pickle.load(f)
         violindict[site] = outputdict['vthreshold']
+    
+    violindictPl = {}
+    for site in ['StAndrewsPlanetEast', 'StAndrewsPlanetWest']:
+        with open(os.path.join(filepath,site ,site+ '_output.pkl'), 'rb') as f:
+            outputdict = pickle.load(f)
+        violindictPl[site] = outputdict['vthreshold']
+    
+    violindict['StAndrewsEast'].extend(violindictPl['StAndrewsPlanetEast'])
+    violindict['StAndrewsWest'].extend(violindictPl['StAndrewsPlanetWest'])
     
     # concat together threshold columns (even if different sizes; fills with nans)
     violinDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in violindict.items()]))
@@ -1027,17 +1036,18 @@ def ThresholdViolin(filepath,sites):
     ax = sns.violinplot(data = violinDF, linewidth=0, palette = 'YlGnBu', orient='v', cut=0, inner='quart')
     # change quartile line styles
     for il, l in enumerate(ax.lines):
-        l.set_linestyle(':')
-        l.set_linewidth(0.5)
+        l.set_linestyle('--')
+        l.set_linewidth(0.7)
         l.set_color('white')
         # overwrite middle line (median) setting to a thicker white line
         for i in range(0,3*len(violinDF.columns))[1::3]:
             if i == il:
-                l.set_linestyle('--')
+                l.set_linestyle('-')
+                l.set_linewidth(1)
     
     ax.set_xticklabels(['Inner Estuarine','Open Coast'])
     plt.ylabel('NDVI threshold value')
-    plt.ylim(0,0.5)
+    plt.ylim(0.05,0.55)
     
     # create legend with medians and data labels for each violin
     legend_elements = []
