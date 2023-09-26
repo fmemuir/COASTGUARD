@@ -22,6 +22,8 @@ from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiP
 import folium
 
 import skimage.transform as transform
+import sklearn
+import scipy
 from astropy.convolution import convolve
 from datetime import datetime, timedelta
 from IPython.display import clear_output
@@ -1598,6 +1600,67 @@ def NearDate(target,items):
         return False
     else:
         return nearestDate
+
+
+def FindWPThresh(int_veg, int_nonveg):
+    """
+    Find threshold normalised difference value using Weighted Peaks, based on 
+    a weighting between the two probability density function peaks of 0.2:0.8.
+    FM Sept 2023
+    
+    
+    Parameters
+    ----------
+    int_veg : array of float64
+        Array of normalised difference pixel values for the vegetation class.
+    int_nonveg : array of float64
+        Array of normalised difference pixel values for the 'other' class.
+
+    Returns
+    -------
+    t_ndi : float64
+        Threshold value with which to extract veg contour from normalised diff image.
+
+    """
+    
+    # Find the peaks of veg and nonveg classes using KDE
+    bins = np.arange(-1, 1, 0.01) # start, stop, bin width
+    peaks = []
+    for i, intdata in enumerate([int_veg, int_nonveg]):
+        model = sklearn.neighbors.KernelDensity(bandwidth=0.01, kernel='gaussian')
+        sample = intdata.reshape((len(intdata), 1))
+        model.fit(sample)
+        # sample probabilities for a range of outcomes
+        values = np.asarray([value for value in bins])
+        values = values.reshape((len(values), 1))
+        # calculate probability fns 
+        probabilities = model.score_samples(values)
+        probabilities = np.exp(probabilities)
+        
+        if i == 0: # class with weaker signal
+            # take value of band index where probability is max
+            peaks.append(values[list(probabilities).index(np.nanmax(probabilities))])
+        else:
+            # clip to > 0 to deal with sand peak only
+            clipbins = bins[bins>0]
+            clipprobs = probabilities[bins>0]
+            # find peaks of bimodal KDE using prominence
+            prom, _ = scipy.signal.find_peaks(clipprobs, prominence=0.5)
+            if len(prom) == 0: # for marshland where no peak above NDVI = 0 exists
+                promlimit = 0.5
+                # decrease prominence til peak is found
+                while len(prom) == 0:
+                    prom, _ = scipy.signal.find_peaks(clipprobs, prominence=promlimit)
+                    promlimit -= 0.05 
+                peaks.append(clipbins[prom[0]])
+            else:    
+                # always take first peak over 0 (corresponds to bare land/sand in veg classification)
+                peaks.append(clipbins[prom[0]])
+            
+    # Calculate index value using weighted peaks
+    t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
+    
+    return t_ndi
 
 
 
