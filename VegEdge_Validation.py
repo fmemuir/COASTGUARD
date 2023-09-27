@@ -287,7 +287,7 @@ if settings['wetdry'] == True:
 #%% Create Transects
 SmoothingWindowSize = 21 
 NoSmooths = 100
-TransectSpacing = 10
+TransectSpacing = 3
 DistanceInland = 100
 DistanceOffshore = 350
 # DistanceInland = 150 # East
@@ -300,11 +300,12 @@ WaterlineGDF = gpd.read_file(WaterlineShp[0])
 # Produces Transects for the reference line
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
-if os.path.isfile(TransectSpec) is False:
+if os.path.isfile(TransectSpec[:-3]+'pkl') is False:
     TransectGDF = Transects.ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, VegBasePath, referenceLineShp)
 else:
     print('Transects already exist and were loaded')
-    TransectGDF = gpd.read_file(TransectSpec)
+    with open(TransectSpec[:-3]+'pkl', 'rb') as Tfile: 
+        TransectGDF = pickle.load(Tfile)
 
 #%% Create (or load) intersections with satellite lines per transect
 
@@ -361,9 +362,12 @@ else:
 
 
 # %% Validation Plots
-TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)] # east 
+# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)] # east 
+TransectIDList = [(136,939),(1042,1386),(1387,1982),(4552,4876),(4877,5456),(5457,5789)] # east 3m 
+
 #%%    
-TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
+# TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)] # west
+TransectIDList = [(1983,2373),(2422,2966),(3243,3802),(3803,4326)] # west 3m
 
 #%%
 TransectIDList = [(40,281),(312,415),(416,711),(726,889),(972,1140),(1141,1297),(1365,1462),(1463,1636),(1637,1741)]
@@ -384,11 +388,6 @@ for TransectIDs in TransectIDList:
  
     
 #%% Error stats
-# East errors
-# TransectIDList = [(40,281),(312,415),(416,594),(1365,1462),(1463,1636),(1637,1736)]
-
-# West errors
-TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidInterGDF,TransectIDs)
 
@@ -523,7 +522,7 @@ Plotting.ValidTimeseries(sitename, ValidInterGDF, 1575)
 WPErrorPath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_Errors_Planet.csv'
 WPPath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Spreadsheets/StAndrews_VegIntersect_WeightedPeaks_ExamplePDF.csv'
 figpath = '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/Outputs/Figures/VegPaperFigs'
-Plotting.WPErrors(figpath, sitename, WPErrorPath, WPPath)
+Plotting.WPErrors(figpath, 'StAndrewsEWP', WPErrorPath, WPPath)
 
 #%% Tide heights vs RMSE plot
 slicedates = ['2007-04-17',
