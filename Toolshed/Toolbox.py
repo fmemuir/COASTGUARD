@@ -1660,7 +1660,7 @@ def FindWPThresh(int_veg, int_nonveg):
     # Calculate index value using weighted peaks
     t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
     
-    return t_ndi
+    return t_ndi, peaks
 
 
 

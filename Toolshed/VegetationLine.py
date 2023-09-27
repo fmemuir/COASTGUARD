@@ -958,7 +958,7 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     # clip down classified band index values to coastal buffer
     int_veg, int_nonveg = ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer)
     
-    t_ndi = Toolbox.FindWPThresh(int_veg, int_nonveg)
+    t_ndi, _ = Toolbox.FindWPThresh(int_veg, int_nonveg)
             
     # find contour with Marching-Squares algorithm
     im_ndi_buffer = np.copy(im_ndi)
