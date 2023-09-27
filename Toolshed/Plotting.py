@@ -1138,40 +1138,12 @@ def WPErrors(filepath, sitename, WPErrorPath, WPPath):
 
     """
     
-    fig, axs = plt.subplots(2,1,figsize=(3.31, 5), dpi=300, gridspec_kw={'height_ratios':[1,2]})  
-    
-    # First Plot (values)
-    # read in arrays of NDVI pixel values for each class
-    peaksDF = pd.read_csv(WPPath)
-    int_veg = peaksDF['int_veg'].to_numpy()
-    int_nonveg = peaksDF['int_nonveg'].to_numpy()
-    
-    # calculate WP threshold and TZ
-    thresh = Toolbox.FindWPThresh(int_veg, int_nonveg)
-    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
+    mpl.rcParams.update({'font.size':7})
 
-    # define hist properties
-    binwidth = 0.01
-    bins = np.arange(-1, 1, binwidth)
-    cmap = cm.get_cmap('Paired')
-    # slice up colormap into desired colours
-    vegc = cmap.colors[3]  # veg
-    nonvegc = cmap.colors[8]  # non-veg
-    threshc = cmap.colors[7] # threshold
-    TZc = cmap.colors[6] # TZ
-    vy, _, _ = axs[0].hist(int_veg, bins=bins, density=True, color=vegc, label='Vegetation')
-    nvy, _, _ = axs[0].hist(int_nonveg, bins=bins, density=True, color=nonvegc, label='Non-Vegetation', alpha=0.75) 
+    fig, axs = plt.subplots(2,1,figsize=(3.31, 5), dpi=300, gridspec_kw={'height_ratios':[2,1]})  
     
-    # plot WP threshold as dashed vertical line on PDF
-    axs[0].plot(thresh, max(nvy), color=threshc)
-    # plot TZ as transparent rectangle (xy, width, height, *)
-    TZrec = mpatches.Rectangle((TZbuffer[0], 0), TZbuffer[1]-TZbuffer[0], max(nvy), fc=[0,0.3,1], ec=None, alpha=0.3)
-    axs[0].add_patch(TZrec)    
-    
-    
-    
-    # Second Plot (errors linked to different weights for each satellite)
-    ax2 = axs[1].twiny()
+    # First Plot (errors linked to different weights for each satellite)
+    ax2 = axs[0].twiny()
     
     #read in CSV of errors
     errorDF = pd.read_csv(WPErrorPath)
@@ -1186,33 +1158,84 @@ def WPErrors(filepath, sitename, WPErrorPath, WPPath):
     for i,sat in enumerate(uniquesats):
         # plot graph of errors and max value of each sat as diamond
         ax2.plot(errorDF['nonveg'][errorDF[sat]==min(errorDF[sat])], errorDF[sat][errorDF[sat]==min(errorDF[sat])], marker='d', color=colors[i], markeredgecolor='r', markeredgewidth=0.5, markersize=5, zorder=5)
-        axs[1].plot(errorDF['veg'], errorDF[sat], marker='o', markersize=2, color=colors[i], linewidth=1, label=sat)
+        axs[0].plot(errorDF['veg'], errorDF[sat], marker='o', markersize=2, color=colors[i], linewidth=1, label=sat)
     
-    
-    axs[1].set_xticks(errorDF['veg'],minor=True)
-    axs[1].set_xticks(list(errorDF['veg'])[0::2], major=True)
+    # set xticks using WP values
+    axs[0].set_xticks(errorDF['veg'],minor=True)
+    axs[0].set_xticks(list(errorDF['veg'])[0::2], major=True)
     ax2.set_xticks(errorDF['nonveg'],minor=True)
     ax2.set_xticks(list(errorDF['nonveg'])[0::2], major=True)
     # ax2.invert_axis()
-    axs[1].set_xlim(min(errorDF['veg'])-0.05, max(errorDF['veg'])+0.05)
+    axs[0].set_xlim(min(errorDF['veg'])-0.05, max(errorDF['veg'])+0.05)
     ax2.set_xlim(max(errorDF['nonveg'])+0.05, min(errorDF['nonveg'])-0.05)
+    axs[0].set_ylim(-10,215)
     
-    axs[1].grid(which='major', color='#BBB4BB', alpha=0.5)
-    axs[1].grid(which='minor', color='#BBB4BB', alpha=0.2)
+    axs[0].grid(which='major', color='#BBB4BB', alpha=0.5)
+    axs[0].grid(which='minor', color='#BBB4BB', alpha=0.2)
     
-    axs[1].set_xlabel('$\omega_{veg}$')
+    axs[0].set_xlabel('$\omega_{veg}$')
     ax2.set_xlabel('$\omega_{nonveg}$')
-    axs[1].set_ylabel('RMSE (m)')
+    axs[0].set_ylabel('RMSE (m)')
     
-    axs[1].legend(loc='upper left',ncol=2)
+    axs[0].legend(loc='upper left',ncol=2)
     plt.tight_layout()
     mpl.rcParams.update({'font.size':7})
+    
+    
+    # Second Plot (values)
+    # read in arrays of NDVI pixel values for each class
+    peaksDF = pd.read_csv(WPPath)
+    int_veg = peaksDF['int_veg'].to_numpy()
+    int_nonveg = peaksDF['int_nonveg'].to_numpy()
+    
+    # calculate WP threshold and TZ
+    thresh, peaks = Toolbox.FindWPThresh(int_veg, int_nonveg)
+    thresh = round(thresh,2)+0.03
+    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
+
+    # define hist properties
+    binwidth = 0.01
+    bins = np.arange(-1, 1, binwidth)
+    cmap = cm.get_cmap('Paired')
+    # slice up colormap into desired colours
+    vegc = cmap.colors[2]  # veg
+    nonvegc = cmap.colors[8]  # non-veg
+    threshc = cmap.colors[7] # threshold
+    TZc = cmap.colors[6] # TZ
+    vy, _, _ = axs[1].hist(int_veg, bins=bins, density=True, color=vegc)
+    nvy, _, _ = axs[1].hist(int_nonveg, bins=bins, density=True, color=nonvegc, alpha=0.75) 
+    
+    # plot WP threshold and peaks as dashed vertical lines on PDF
+    axs[1].plot([thresh,thresh], [0,max(nvy)+5], color=threshc, lw=1, ls='--', label='$I_{0}$')
+    axs[1].plot([peaks[0],peaks[0]], [0,max(nvy)], color=cmap.colors[3], lw=1, ls='--', label='$\zeta_{veg}$') # veg
+    axs[1].plot([peaks[1],peaks[1]], [0,max(nvy)], color=cmap.colors[9], lw=1, ls='--', label='$\zeta_{nonveg}$') # nonveg
+    # plot TZ as transparent rectangle (xy, width, height, *)
+    TZrec = mpatches.Rectangle((TZbuffer[0], 0), TZbuffer[1]-TZbuffer[0], max(nvy)+5, fc=TZc, ec=None, alpha=0.3, label='TZ')
+    axs[1].add_patch(TZrec)    
+    
+    axs[1].set_xlim(-0.4, 1)
+    axs[1].set_ylim(0, 6.1)
+    axs[1].set_yticks([])
+    axs[1].set_xlabel('NDVI')
+    axs[1].set_ylabel('Density')
+    
+    axs[1].legend(loc='upper left',ncol=1)   
+    
+    
+    # subplot labels
+    axs[0].text(1-0.012,215-3,'A', ha='right', va='top', 
+             bbox=dict(boxstyle='square', fc='w', ec='k'), zorder=5)
+    
+    axs[1].text(1-0.015,6.1-0.15,'B', ha='right', va='top', 
+             bbox=dict(boxstyle='square', fc='w', ec='k'), zorder=5)
+    
+    plt.tight_layout()
+    plt.show()
     
     figpath = os.path.join(filepath,sitename+'_VedgeSat_WP_Errors.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
-    
-    plt.show()
+        
     
     return
 
