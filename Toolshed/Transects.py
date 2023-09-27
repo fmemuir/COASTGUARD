@@ -142,8 +142,9 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
     
     TransectGDF['reflinepnt'] = allintersection['geometry']
     
-    # Re-export transects to shapefile
-    # TransectGDF.to_file(TransectPath)
+    # Re-export transects to pkl to retain reflinepnt field
+    with open(TransectPath[:-3]+'pkl', 'wb') as Tfile:
+        pickle.dump(TransectGDF,Tfile)
     
     return TransectGDF
     
