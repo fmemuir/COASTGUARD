@@ -208,12 +208,12 @@ WaterlineGDF = gpd.read_file(WaterlineShp[0])
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
 # If transects already exist, load them in
-if os.path.isfile(TransectSpec) is False:
+if os.path.isfile(TransectSpec[:-3]+'pkl') is False:
     TransectGDF = Transects.ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, VegBasePath, referenceLineShp)
-
 else:
     print('Transects already exist and were loaded')
-    TransectGDF = gpd.read_file(TransectSpec)
+    with open(TransectSpec[:-3]+'pkl', 'rb') as Tfile: 
+        TransectGDF = pickle.load(Tfile)
     
 # make new transect intersections folder
 if os.path.isdir(os.path.join(filepath, sitename, 'intersections')) is False:
