@@ -626,6 +626,60 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
 # AUXILIARY FUNCTIONS
 ###################################################################################################
 
+def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
+    """
+    Create classified band index value vectors and clip them to coastal buffer.
+    FM Nov 2022
+
+    Parameters
+    ----------
+    cloud_mask : TYPE
+        DESCRIPTION.
+    im_ndi : TYPE
+        DESCRIPTION.
+    im_labels : TYPE
+        DESCRIPTION.
+    im_ref_buffer : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    int_veg : TYPE
+        DESCRIPTION.
+    int_nonveg : TYPE
+        DESCRIPTION.
+
+    """
+    nrows = cloud_mask.shape[0]
+    ncols = cloud_mask.shape[1]
+    
+    # reshape spectral index image to vector
+    vec_ndi = im_ndi.reshape(nrows*ncols)
+
+    # reshape labels into vectors (0 is veg, 1 is nonveg)
+    vec_veg = im_labels[:,:,0].reshape(ncols*nrows)
+    vec_nonveg = im_labels[:,:,1].reshape(ncols*nrows)
+
+    # use im_ref_buffer and dilate it by 5 pixels
+    se = morphology.disk(5)
+    im_ref_buffer_extra = morphology.binary_dilation(im_ref_buffer, se)
+    # create a buffer
+    vec_buffer = im_ref_buffer_extra.reshape(nrows*ncols)
+    
+    # select pixels that are within the buffer
+    int_veg = vec_ndi[np.logical_and(vec_buffer,vec_veg)]
+    int_nonveg = vec_ndi[np.logical_and(vec_buffer,vec_nonveg)]
+
+    # make sure both classes have the same number of pixels before thresholding
+    if len(int_veg) > 0 and len(int_nonveg) > 0:
+        if np.argmin([int_veg.shape[0],int_nonveg.shape[0]]) == 1:
+            int_veg = int_veg[np.random.choice(int_veg.shape[0],int_nonveg.shape[0], replace=False)]
+        else:
+            int_nonveg = int_nonveg[np.random.choice(int_nonveg.shape[0],int_veg.shape[0], replace=False)]
+            
+    return int_veg, int_nonveg
+
+
 def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
     '''
     Saves local georeferenced versions of the RGB and NDVI images to be investigated in a GIS.
@@ -714,7 +768,7 @@ def save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames, settings)
     ) as tif:
         tif.write(im_classif,1)
        
-def save_TZone(im_ms, im_labels, cloud_mask, georef, filenames, settings):
+def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, settings):
     '''
     Saves local georeferenced version of the transition zone to be investigated in a GIS.
     FM Sept 2022
@@ -734,32 +788,35 @@ def save_TZone(im_ms, im_labels, cloud_mask, georef, filenames, settings):
         tifname = tifname[:-4]
     transform = rasterio.transform.from_origin(georef[0], georef[3], georef[1], georef[1]) # use georef to get affine
     im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-    int_veg = im_ndvi[im_labels[:,:,0]]
-    int_nonveg = im_ndvi[im_labels[:,:,1]] 
+    # int_veg = im_ndvi[im_labels[:,:,0]]
+    # int_nonveg = im_ndvi[im_labels[:,:,1]] 
 
-    im_TZ = im_ndvi.copy()
-    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
+    # clip down classified band index values to coastal buffer
+    int_veg_clip, int_nonveg_clip = ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
     
-    for i in range(len(im_ndvi[:,0])):
-        for j in range(len(im_ndvi[0,:])):
-            if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
-                im_TZ[i,j] = 1.0
-            else:
-                im_TZ[i,j] = np.nan
+    # calculate TZ min and max values with which to classify the NDVI into a binary raster
+    im_TZ = Toolbox.TZimage(im_ndvi,int_veg_clip, int_nonveg_clip)
+    
+    # use im_ref_buffer and dilate it by 5 pixels
+    se = morphology.disk(5)
+    im_ref_buffer_extra = morphology.binary_dilation(im_ref_buffer, se)
+    
+    # select pixels that are within the buffer
+    im_TZ_cl = np.ma.masked_where(im_ref_buffer_extra==False, im_TZ)
     
     # Binary classified image
     with rasterio.open(
         os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+'TZ.tif'),
         'w',
         driver='GTiff',
-        height=im_TZ.shape[0],
-        width=im_TZ.shape[1],
+        height=im_TZ_cl.shape[0],
+        width=im_TZ_cl.shape[1],
         count=1,
-        dtype=im_TZ.dtype,
+        dtype=im_TZ_cl.dtype,
         crs='EPSG:'+str(settings['output_epsg']),
         transform=transform,
     ) as tif:
-        tif.write(im_TZ,1)
+        tif.write(im_TZ_cl,1)
 
 def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """

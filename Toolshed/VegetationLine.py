@@ -194,7 +194,7 @@ def extract_veglines(metadata, settings, polygon, dates):
             
             # save classified image and transition zone mask after classification takes place
             Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
-            Image_Processing.save_TZone(im_ms, im_labels, cloud_mask, georef, filenames[fn], settings)
+            Image_Processing.save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames[fn], settings)
             
             # if adjust_detection is True, let the user adjust the detected shoreline
             if settings['adjust_detection']:
@@ -876,59 +876,6 @@ def FindShoreContours_Water(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     return contours_ndi, t_ndi
 
 
-def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
-    """
-    Create classified band index value vectors and clip them to coastal buffer.
-    FM Nov 2022
-
-    Parameters
-    ----------
-    cloud_mask : TYPE
-        DESCRIPTION.
-    im_ndi : TYPE
-        DESCRIPTION.
-    im_labels : TYPE
-        DESCRIPTION.
-    im_ref_buffer : TYPE
-        DESCRIPTION.
-
-    Returns
-    -------
-    int_veg : TYPE
-        DESCRIPTION.
-    int_nonveg : TYPE
-        DESCRIPTION.
-
-    """
-    nrows = cloud_mask.shape[0]
-    ncols = cloud_mask.shape[1]
-    
-    # reshape spectral index image to vector
-    vec_ndi = im_ndi.reshape(nrows*ncols)
-
-    # reshape labels into vectors (0 is veg, 1 is nonveg)
-    vec_veg = im_labels[:,:,0].reshape(ncols*nrows)
-    vec_nonveg = im_labels[:,:,1].reshape(ncols*nrows)
-
-    # use im_ref_buffer and dilate it by 5 pixels
-    se = morphology.disk(5)
-    im_ref_buffer_extra = morphology.binary_dilation(im_ref_buffer, se)
-    # create a buffer around the sandy beach
-    vec_buffer = im_ref_buffer_extra.reshape(nrows*ncols)
-    
-    # select water/sand pixels that are within the buffer
-    int_veg = vec_ndi[np.logical_and(vec_buffer,vec_veg)]
-    int_nonveg = vec_ndi[np.logical_and(vec_buffer,vec_nonveg)]
-
-    # make sure both classes have the same number of pixels before thresholding
-    if len(int_veg) > 0 and len(int_nonveg) > 0:
-        if np.argmin([int_veg.shape[0],int_nonveg.shape[0]]) == 1:
-            int_veg = int_veg[np.random.choice(int_veg.shape[0],int_nonveg.shape[0], replace=False)]
-        else:
-            int_nonveg = int_nonveg[np.random.choice(int_nonveg.shape[0],int_veg.shape[0], replace=False)]
-            
-    return int_veg, int_nonveg
-
 
 def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     """
@@ -956,7 +903,7 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     """
     
     # clip down classified band index values to coastal buffer
-    int_veg, int_nonveg = ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer)
+    int_veg, int_nonveg = Image_Processing.ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer)
     
     t_ndi, _ = Toolbox.FindWPThresh(int_veg, int_nonveg)
             
@@ -1636,17 +1583,11 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     int_other = im_ndvi[labels_other]
     
     # clip down classified band index values to coastal buffer
-    int_veg_clip, int_nonveg_clip = ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
+    int_veg_clip, int_nonveg_clip = Image_Processing.ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
     # FM: create transition zone mask
-    im_TZ = im_ndvi.copy()
-    TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
+    im_TZ = Toolbox.TZimage
     
-    for i in range(len(im_ndvi[:,0])):
-        for j in range(len(im_ndvi[0,:])):
-            if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
-                im_TZ[i,j] = 1.0
-            else:
-                im_TZ[i,j] = np.nan
+    
     cmap = colors.ListedColormap(['orange'])
     tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
     
