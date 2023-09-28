@@ -696,7 +696,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     cmap = cm.get_cmap('magma_r',len(valsrtclean))
     for i in range(len(valsrtclean)): 
         # plot scatter of validation (observed) vs satellite (predicted) distances along each transect
-        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=2, alpha=0.4, edgecolors='none', zorder=2)
+        plt.scatter(valsrtclean[i], satsrtclean[i], color=cmap(i), s=2, alpha=0.2, edgecolors='none', zorder=2)
         # linear regression
         X = np.array(valsrtclean[i]).reshape((-1,1))
         y = np.array(satsrtclean[i])
@@ -724,10 +724,10 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     # plot glowing background line for overall lin reg first
     plt.plot(valfit,satfit, c='w', linestyle='-', linewidth=1.6, alpha=0.7, zorder=3)
     plt.plot(valfit,satfit, c='#818C93', linestyle='--', linewidth=1.2, zorder=3)
-    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2)), c='#818C93', zorder=3, ha='right')
+    plt.text(valfit[-1],satfit[-1]-9,'R$^2$ = '+str(round(r2,2)), c='#818C93', zorder=3, ha='right', va='top', rotation=41)
 
-    plt.xlim(0,220)
-    plt.ylim(0,220)
+    plt.xlim(0,230)
+    plt.ylim(0,230)
     
     plt.xlabel('Validation Veg Edge cross-shore distance (m)')
     plt.ylabel('Satellite Veg Edge cross-shore distance (m)')
