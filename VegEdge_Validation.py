@@ -399,7 +399,8 @@ with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsWest', 'validation', 'StAn
 
 FullValidInterGDF = deepcopy(EastValidInterGDF)
 for keyname in FullValidInterGDF.keys():
-    FullValidInterGDF[keyname].iloc[586:1303] = WestValidInterGDF[keyname].iloc[586:1303].copy()
+    # FullValidInterGDF[keyname].iloc[586:1303] = WestValidInterGDF[keyname].iloc[586:1303].copy() 
+    FullValidInterGDF[keyname].iloc[1952:4346] = WestValidInterGDF[keyname].iloc[1952:4346].copy() # 3m
 
 BasePath = 'Data/' + 'StAndrewsEast' + '/veglines'
 EastVeglineGDF = gpd.read_file(glob.glob(BasePath+'/*veglines.shp')[0])
@@ -423,7 +424,8 @@ with open(os.path.join(os.getcwd(), 'Data', 'StAndrewsPlanetWest', 'validation',
 FullPlValidInterGDF = deepcopy(EastPlValidInterGDF)
 
 for keyname in FullPlValidInterGDF.keys():
-    FullPlValidInterGDF[keyname].iloc[586:1303] = WestPlValidInterGDF[keyname].iloc[586:1303].copy()
+    # FullPlValidInterGDF[keyname].iloc[586:1303] = WestPlValidInterGDF[keyname].iloc[586:1303].copy()
+    FullPlValidInterGDF[keyname].iloc[1952:4346] = WestPlValidInterGDF[keyname].iloc[1952:4346].copy() # 3m
 
 BasePlPath = 'Data/' + 'StAndrewsPlanetEast' + '/veglines'
 EastPlVeglineGDF = gpd.read_file(glob.glob(BasePlPath+'/*veglines.shp')[0])
@@ -466,11 +468,16 @@ EWPVeglineGDF.to_file(VegShpPath)
 
 ClipEWPValidInterGDF = gpd.GeoDataFrame(columns=EWPValidInterGDF.columns)
 for keyname in EWPValidInterGDF.columns:
-    ClipEWPValidInterGDF[keyname] = pd.concat([EWPValidInterGDF[keyname].iloc[40:281], 
-                                               EWPValidInterGDF[keyname].iloc[312:711], 
-                                               EWPValidInterGDF[keyname].iloc[726:889],
-                                               EWPValidInterGDF[keyname].iloc[972:1297],
-                                               EWPValidInterGDF[keyname].iloc[1365:1741]])
+    # ClipEWPValidInterGDF[keyname] = pd.concat([EWPValidInterGDF[keyname].iloc[40:281], 
+    #                                            EWPValidInterGDF[keyname].iloc[312:711], 
+    #                                            EWPValidInterGDF[keyname].iloc[726:889],
+    #                                            EWPValidInterGDF[keyname].iloc[972:1297],
+    #                                            EWPValidInterGDF[keyname].iloc[1365:1741]])
+    ClipEWPValidInterGDF[keyname] = pd.concat([EWPValidInterGDF[keyname].iloc[136:939], 
+                                               EWPValidInterGDF[keyname].iloc[1042:2373], 
+                                               EWPValidInterGDF[keyname].iloc[2422:2966],
+                                               EWPValidInterGDF[keyname].iloc[3242:4326],
+                                               EWPValidInterGDF[keyname].iloc[4552:5789]]) #3m
 
 
 #%% Plotting full validation results
@@ -478,19 +485,19 @@ TransectIDs = (0,len(ClipEWPValidInterGDF['dates'])) # full
 
 # PlottingSeaborn.SatViolin('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
 # PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
-# Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
-PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidInterGDF,TransectIDs)
+Plotting.SatRegress('StAndrewsEWP',EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectIDs, 'Full Site Accuracy')
+# PlottingSeaborn.PlatformViolin('StAndrewsEWP',EWPVeglineGDF,'satname',ClipEWPValidInterGDF,TransectIDs)
 
 
 for TransectID in [TransectIDs]:
     Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',ClipEWPValidInterGDF,TransectID)
 
 #%% Plotting full validation results for specific transects
-TransectIDList = [(40,281),(312,415),(595,889),(1637,1736),(972,1297), (1576,1741)]
+TransectIDList = [(136,939),(1042,1386),(1983,2966),(3242,4326),(5256,5789)] #3m
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
     PlottingSeaborn.SatPDF('StAndrewsEWP',EWPVeglineGDF,'dates',EWPValidInterGDF,TransectIDs, PlotTitle)
-    # Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidInterGDF,TransectIDs)
+    Toolbox.QuantifyErrors('StAndrewsEWP', EWPVeglineGDF,'dates',EWPValidInterGDF,TransectIDs)
 
 
 #%% Poster Figures 
