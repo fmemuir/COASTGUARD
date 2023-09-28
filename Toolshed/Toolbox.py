@@ -1747,6 +1747,21 @@ def TZValuesPeak(int_veg, int_nonveg):
     return [minval,maxval]
 
 
+def TZimage(im_ndvi,int_veg_clip, int_nonveg_clip):
+    
+    im_TZ = im_ndvi.copy()
+    TZbuffer = TZValues(int_veg_clip, int_nonveg_clip)
+    
+    for i in range(len(im_ndvi[:,0])):
+        for j in range(len(im_ndvi[0,:])):
+            if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
+                im_TZ[i,j] = 1.0
+            else:
+                im_TZ[i,j] = np.nan
+        
+    return im_TZ
+    
+
 def TZValues(int_veg, int_nonveg):
     """
     Generate bounds for transition zone plot by finding the minimum NDVI value which could be veg,
