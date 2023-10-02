@@ -1,13 +1,13 @@
-# CoastLearn
+# COASTGUARD
 
-CoastLearn is a Python toolkit for coastal monitoring and modelling using machine learning approaches. 
+COASTGUARD (Coastal Observation + Analysis using Satellite-derived Timeseries, Generated using AI + Real-time Data) is a Python toolkit for coastal monitoring and modelling using machine learning approaches. 
 
 ## Description and Scope
 The goal of this toolkit is to have a fully operational framework for predicting coastal change, using machine learning techniques that are trained with satellite observations. We have a plethora of satellite imagery being generated every day to be used freely in a number of automated, API-based ways. These datasets are therefore well-suited to machine learning approaches which require a lot of data to train sufficiently. With just one satellite image, multiple indicators of coastal change can be automatically extracted such as wave breaking zones, wet-dry boundaries, high water marks and vegetation edges. These automatically extracted indicators can then be fed into a machine learning network which makes future predictions based on the past changes and relationships between these indicators. The result is an automated, early warning system for coastal erosion at a potentially global scale.
 
 Currently, the main toolset <b>VedgeSat</b> is for extracting <b><span style="color:#2EA043">coastal vegetation edges</span></b> from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
 
-https://github.com/fmemuir/CoastLearn-main/assets/22475417/cb27e704-f361-4f34-b999-dcd5c990816c
+https://github.com/fmemuir/COASTGUARD/assets/22475417/cb27e704-f361-4f34-b999-dcd5c990816c
 
 
 ## Enhancements
@@ -28,7 +28,7 @@ Jump to the short version [down below](#install-quick-version)
 ### 1.1 Download the code
 The Python tool relies on packages downloaded through Anaconda and the Google Earth Engine API to run. The preliminary step is downloading this repository. You can do this either by clicking the <span style="color:white;background-color:#2EA043;">Code</span> button at the top and downloading + extracting the zipped folder, or by navigating to where you want to download it on your local machine and running 
 ```
-git clone https://github.com/fmemuir/CoastLearn-main.git
+git clone https://github.com/fmemuir/COASTGUARD.git
 ```
 from a command line (if you have git command line tools installed).
 
@@ -42,17 +42,17 @@ Once you have Anaconda installed on your PC:
 
 and navigate to the folder with the repository files. If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!.
 
-Navigate to the repository folder and then create a new `conda` environment named `coastlearn` with all the required packages by entering this command (make sure you're in the repo folder!):
+Navigate to the repository folder and then create a new `conda` environment named `coastguard` with all the required packages by entering this command (make sure you're in the repo folder!):
 
 ```
-cd CoastLearn
+cd coastguard
 
-conda env create -f coastlearn_environment.yml
+conda env create -f coastguard_environment.yml
 ```
-Please note that solving and building the environment can take some time (minutes to hours depending on the the nature of your base environment). Once this step is complete, all the required packages will have been installed in an environment called `coastlearn`. Always make sure that the environment is activated with:
+Please note that solving and building the environment can take some time (minutes to hours depending on the the nature of your base environment). Once this step is complete, all the required packages will have been installed in an environment called `coastguard`. Always make sure that the environment is activated with:
 
 ```
-conda activate coastlearn
+conda activate coastguard
 ```
 ### 1.3 Activate Google Earth Engine API
 
@@ -60,7 +60,7 @@ This tool uses Google Earth Engine (GEE) API to access satellite image metadata.
 
 In the meantime, you will also need to install a program called Google Cloud Command Line Interface (gcloud CLI). It shouldn't matter where you download this to. Find installation instructions here: https://cloud.google.com/sdk/docs/install. 
 
-Once your GEE request has been approved, you should get a confirmation email. Open a prompt/terminal window and `activate coastlearn` environment. Run this command to link your `conda` environment to the GEE server:
+Once your GEE request has been approved, you should get a confirmation email. Open a prompt/terminal window and `activate coastguard` environment. Run this command to link your `conda` environment to the GEE server:
 
 ```
 earthengine authenticate
@@ -70,26 +70,26 @@ A web browser will open; log in with the GMail account you used to sign up to GE
 
 
 ### **INSTALL QUICK VERSION**
-1. Download repo: `$ git clone https://github.com/fmemuir/CoastLearn-main.git`
-2. Create conda environment: `conda env create -f coastlearn_environment.yml`
-3. Activate env: `conda activate coastlearn`
+1. Download repo: `$ git clone https://github.com/fmemuir/COASTGUARD.git`
+2. Create conda environment: `conda env create -f coastguard_environment.yml`
+3. Activate env: `conda activate coastguard`
 4. Authenticate GEE: `earthengine authenticate`
 
-**Remember!**: Always run `conda activate coastlearn` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing. 
+**Remember!**: Always run `conda activate coastguard` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing. 
 
 
 ## Getting Started
 
 The process of extracting coastal vegetation edges from satellite data is run through a driver file. Driver files can be customised for your own site of interest. There are a couple of template examples in the repository to help you get started. 
-The interactive python notebook [`VedgeSat_DriverTemplate.ipynb`](https://github.com/fmemuir/CoastLearn-main/blob/master/VedgeSat_DriverTemplate.ipynb) can be viewed and executed in an interactive notebook environment such as jupyter-notebook which can be launched at the command line:
+The interactive python notebook [`VedgeSat_DriverTemplate.ipynb`](https://github.com/fmemuir/COASTGUARD/blob/master/VedgeSat_DriverTemplate.ipynb) can be viewed and executed in an interactive notebook environment such as jupyter-notebook which can be launched at the command line:
 ```
-(coastlearn) $ jupyter-notebook VedgeSat_DriverTemplate.ipynb
+(coastguard) $ jupyter-notebook VedgeSat_DriverTemplate.ipynb
 ```
-Alternatively, you can customise and run the standard python script [`VedgeSat_DriverTemplate.py`](https://github.com/fmemuir/CoastLearn-main/blob/master/VedgeSat_DriverTemplate.py) using a python IDE such as spyder:
+Alternatively, you can customise and run the standard python script [`VedgeSat_DriverTemplate.py`](https://github.com/fmemuir/COASTGUARD/blob/master/VedgeSat_DriverTemplate.py) using a python IDE such as spyder:
 ```
-(coastlearn) $ spyder VedgeSat_DriverTemplate.py
+(coastguard) $ spyder VedgeSat_DriverTemplate.py
 ```
-https://github.com/fmemuir/CoastLearn-main/assets/22475417/1bd4722b-ece9-4ed9-a9ac-104f71c241d7
+https://github.com/fmemuir/COASTGUARD/assets/22475417/1bd4722b-ece9-4ed9-a9ac-104f71c241d7
 
 There are 7 main steps to setting up the vegetation extraction tool. You can see [this paper]() for a flowchart and more info on the methodology. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
 
