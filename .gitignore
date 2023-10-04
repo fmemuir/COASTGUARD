@@ -1,18 +1,27 @@
-﻿CoastWatch.ipynb
-.ipynb_checkpoints/CoastWatch-checkpoint.ipynb
+﻿READMEnotes.md
+
 Classification/Data/
 Classification/training_data/
-READMEnotes.md
-*.pyc
-CL_DriverTemplate_Test.py
 Validation/
+
+CL_DriverTemplate_Test.py
 VegEdge_Montrose2022.py
+VegEdge_Validation.py
 VegEdge_StAndrewsTimeseries.py
 VegEdge_Validation_Notebook.py
 VegEdge_Validation_HiRes.py
+VegEdge_Validation_Planet.py
+VegEdge_RedRiver.py
+VegEdge_FullS2Run.py
+
 VegEdge_Validation.ipynb
 VegEdge.ipynb
 Shoreline.ipynb
+
 .ipynb_checkpoints/
+CoastWatch.ipynb
+.ipynb_checkpoints/CoastWatch-checkpoint.ipynb
+*.pyc
+
 
 
