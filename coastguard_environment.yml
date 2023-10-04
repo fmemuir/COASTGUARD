@@ -1,5 +1,6 @@
 name: coastguard
 channels:
+  - fbriol
   - conda-forge
   - defaults
 dependencies:
