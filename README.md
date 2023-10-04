@@ -45,7 +45,7 @@ and navigate to the folder with the repository files. If you downloaded the code
 Navigate to the repository folder and then create a new `conda` environment named `coastguard` with all the required packages by entering this command (make sure you're in the repo folder!):
 
 ```
-cd coastguard
+cd COASTGUARD
 
 conda env create -f coastguard_environment.yml
 ```
