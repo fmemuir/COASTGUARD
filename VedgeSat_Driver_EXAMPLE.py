@@ -3,7 +3,6 @@
 """
 Created on Thu Sep 15 13:08:30 2022
 
-@author: fmuir
 """
 
 
@@ -36,17 +35,17 @@ image_epsg = 32630 # UTM Zone 30N
 
 # Define AOI using coordinates of a rectangle
 # The points represent the corners of a bounding box that go around your site
-sitename = 'SITENAME'
-lonmin, lonmax = -2.84869, -2.79878
-latmin, latmax = 56.32641, 56.39814
+sitename = 'EXAMPLE'
+lonmin, lonmax = 1.7025, 1.7104
+latmin, latmax = 52.6948, 52.7030
 
 # Date range
-dates = ['2021-05-01', '2021-07-02']
+dates = ['2016-01-01', '2019-01-01']
 
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
 # L5: 1984-2013; L7: 1999-2017 (SLC error from 2003); L8: 2013-present; S2: 2014-present; L9: 2021-present
-sat_list = ['L5','L8','S2']
+sat_list = ['S2']
 
 # Cloud threshold for screening out cloudy imagery (0.5 or 50% recommended)
 cloud_thresh = 0.5
@@ -55,9 +54,9 @@ cloud_thresh = 0.5
 wetdry = True
 
 # Reference shoreline/veg line shapefile name (should be stored in a folder called referenceLines in Data)
-referenceLineShp = 'SITENAME_refLine.shp'
+referenceLineShp = 'EXAMPLE_refLine.shp'
 # Maximum amount in metres by which to buffer the reference line for capturing veg edges within
-max_dist_ref = 150
+max_dist_ref = 100
 
 
 #%% Set Up Site Directory
@@ -131,7 +130,8 @@ settings = {
 
 
 #%% Compute Tides from FES2014
-tidepath = "/path/to/your/FES2014/files/aviso-fes/data/fes2014"
+
+tidepath = "../aviso-fes/data/fes2014"
 daterange = dates
 tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N
 Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 

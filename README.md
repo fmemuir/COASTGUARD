@@ -111,6 +111,9 @@ The tool takes all the input settings the user has defined, and performs these s
 4. Show/adjust detected boundary between image classes (depending on if user has requested to be shown the interactive plot window);
 5. Export boundaries and relevant metadata to a `.pkl` file and a shapefile of lines.
 
+### Extracting Waterlines Alongside Vegetation Edges
+As this tool is built from the original CoastSat toolkit, it is possible to extract instantaneous waterlines as well as vegetation edges from each satellite image. To do this, change the `wetdry` flag in the user requirements to `True`. Any tidal correction on the extracted waterlines is performed using the FES2014 tidal model. You will need to use pyFES and the Aviso FES2014 repo for this, which **you should clone** from [their github repo](https://github.com/CNES/aviso-fes). When loading in the tidal data, you should **change the tidal files path to wherever you have cloned the FES2014 repo to on your machine.**
+
 ## Roadmap
 This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!
 
