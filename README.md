@@ -23,7 +23,14 @@ Various improvements have been made to the toolkit to address more accurate appr
 
 ## Installation
 
-Jump to the short version [down below](#install-quick-version)
+### **INSTALL QUICK VERSION**
+1. Download repo: `$ git clone https://github.com/fmemuir/COASTGUARD.git`
+2. Create conda environment: `conda env create -f coastguard_environment.yml`
+3. Activate env: `conda activate coastguard`
+4. Authenticate GEE: `earthengine authenticate`
+
+**Remember!**: Always run `conda activate coastguard` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing.
+
 
 ### 1.1 Download the code
 The Python tool relies on packages downloaded through Anaconda and the Google Earth Engine API to run. The preliminary step is downloading this repository. You can do this either by clicking the <span style="color:white;background-color:#2EA043;">Code</span> button at the top and downloading + extracting the zipped folder, or by navigating to where you want to download it on your local machine and running 
@@ -40,20 +47,46 @@ Once you have Anaconda installed on your PC:
 - Windows: open the Anaconda Prompt (not Powershell)
 - Mac and Linux: open a terminal window
 
-and navigate to the folder with the repository files. If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!.
+and navigate to the folder with the repository files. If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!
 
-Navigate to the repository folder and then create a new `conda` environment named `coastguard` with all the required packages by entering this command (make sure you're in the repo folder!):
-
+Navigate to the COASTGUARD repository folder and then create a new `conda` environment named `coastguard` with all the required packages by entering this command (make sure you're in the repo folder!):
 ```
 cd COASTGUARD
 
-conda env create -f coastguard_environment.yml
+conda env create --name coastguard python=3.10
 ```
-Please note that solving and building the environment can take some time (minutes to hours depending on the the nature of your base environment). Once this step is complete, all the required packages will have been installed in an environment called `coastguard`. Always make sure that the environment is activated with:
+Note: the Python version is currently dependent on `pyfes`, see these issues [here](https://github.com/CNES/aviso-fes/issues/19) for details.
 
+#### OPTIONAL: Install pyFES for FES2014 tidal corrections
+If you would like to call the original CoastSat functions to get cross-shore shoreline timeseries, there are some tidal correction shortcuts you can now run using the [FES2014] tide model. The [tidal corrections](https://www.sciencedirect.com/science/article/pii/S1364815219300490#sectitle0065) are performed using a calculation based on shoreface slope, to correct cross-shore waterline positions (that will be biased by the tidal height at the time an image was captured) to a standard elevation. You don't need this for the VedgeSat vegetation routines, ONLY the waterline extraction routines. But if you do want them, you must run these steps **FIRST** before installing the other packages:
+```
+conda activate coastguard
+
+conda update --all -c conda-forge
+
+conda install pyfes -c fbriol
+```
+You can then continue with installing the other packages (a list of which can be found in [coastguard_environment.yml](https://github.com/fmemuir/COASTGUARD/blob/master/coastguard_environment.yml) in the repo):
+```
+conda install -c conda-forge earthengine-api geopandas spyder geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook motuclient netcdf4
+```
+
+
+Please note that solving and building the environment can take some time (minutes to hours depending on the the nature of your base environment). If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
+```
+conda update -n base conda
+
+conda install -n base conda-libmamba-solver
+conda config --set solver libmamba
+```
+
+Once the installation steps are complete, all the required packages will have been installed in an environment called `coastguard`. Always make sure that the environment is activated with:
 ```
 conda activate coastguard
 ```
+before you start working with the tools each time.
+
+
 ### 1.3 Activate Google Earth Engine API
 
 This tool uses Google Earth Engine (GEE) API to access satellite image metadata. You need to request access to GEE API by signing up at https://signup.earthengine.google.com/ with a Google account and filling in a few questions about your intended usage (the safest bet is 'research'). It can take up to 24 hours to approve a request, but it's usually fairly quick. 
@@ -67,15 +100,7 @@ earthengine authenticate
 ```
 
 A web browser will open; log in with the GMail account you used to sign up to GEE. The authenticator should then redirect back to your terminal window. If it doesn't, copy+paste the authorization code into the terminal.
-
-
-### **INSTALL QUICK VERSION**
-1. Download repo: `$ git clone https://github.com/fmemuir/COASTGUARD.git`
-2. Create conda environment: `conda env create -f coastguard_environment.yml`
-3. Activate env: `conda activate coastguard`
-4. Authenticate GEE: `earthengine authenticate`
-
-**Remember!**: Always run `conda activate coastguard` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing. 
+ 
 
 
 ## Getting Started
