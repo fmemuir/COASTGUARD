@@ -53,7 +53,9 @@ Navigate to the COASTGUARD repository folder and then create a new `conda` envir
 ```
 cd COASTGUARD
 
-conda env create --name coastguard python=3.10
+conda update -n base conda
+
+conda create --name coastguard python=3.10
 ```
 Note: the Python version is currently dependent on `pyfes`, see these issues [here](https://github.com/CNES/aviso-fes/issues/19) for details.
 
