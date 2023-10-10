@@ -36,11 +36,11 @@ image_epsg = 32630 # UTM Zone 30N
 # Define AOI using coordinates of a rectangle
 # The points represent the corners of a bounding box that go around your site
 sitename = 'EXAMPLE'
-lonmin, lonmax = 1.7025, 1.7104
-latmin, latmax = 52.6948, 52.7030
+lonmin, lonmax = 1.6700, 1.7250
+latmin, latmax = 52.6790, 52.7380
 
 # Date range
-dates = ['2016-01-01', '2019-01-01']
+dates = ['2018-01-01', '2019-01-01']
 
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
