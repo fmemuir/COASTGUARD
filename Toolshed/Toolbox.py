@@ -855,7 +855,23 @@ def smallest_rectangle(polygon):
 
 
 def CreateFileStructure(sitename, sat_list):
-    
+    """
+    Create file structure for veg edge extraction.
+    FM 2022
+
+    Parameters
+    ----------
+    sitename : TYPE
+        DESCRIPTION.
+    sat_list : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    filepath : TYPE
+        DESCRIPTION.
+
+    """
     filepath = os.path.join(os.getcwd(), 'Data')
 
     direc = os.path.join(filepath, sitename)
@@ -875,6 +891,24 @@ def CreateFileStructure(sitename, sat_list):
 
 
 def metadata_collection(inputs, Sat):
+    """
+    Compile Google Earth Engine metadata together to create a collection of image properties. 
+    FM 2022
+
+    Parameters
+    ----------
+    inputs : TYPE
+        DESCRIPTION.
+    Sat : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    metadata : TYPE
+        DESCRIPTION.
+
+    """
+    
     
     sat_list = inputs['sat_list']
     filepath_data = inputs['filepath']
