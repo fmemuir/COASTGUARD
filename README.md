@@ -53,7 +53,9 @@ Navigate to the COASTGUARD repository folder and then create a new `conda` envir
 ```
 cd COASTGUARD
 
-conda env create --name coastguard python=3.10
+conda update -n base conda
+
+conda create --name coastguard python=3.10
 ```
 Note: the Python version is currently dependent on `pyfes`, see these issues [here](https://github.com/CNES/aviso-fes/issues/19) for details.
 
@@ -89,9 +91,9 @@ before you start working with the tools each time.
 
 ### 1.3 Activate Google Earth Engine API
 
-This tool uses Google Earth Engine (GEE) API to access satellite image metadata. You need to request access to GEE API by signing up at https://signup.earthengine.google.com/ with a Google account and filling in a few questions about your intended usage (the safest bet is 'research'). It can take up to 24 hours to approve a request, but it's usually fairly quick. 
+This tool uses Google Earth Engine (GEE) API to access satellite image metadata. You need to request access to GEE API by signing up at [https://signup.earthengine.google.com/](https://signup.earthengine.google.com/) with a Google account and filling in a few questions about your intended usage (the safest bet is 'research'). It can take up to 24 hours to approve a request, but it's usually fairly quick. 
 
-In the meantime, you will also need to install a program called Google Cloud Command Line Interface (gcloud CLI). It shouldn't matter where you download this to. Find installation instructions here: https://cloud.google.com/sdk/docs/install. 
+In the meantime, you will also need to install a program called Google Cloud Command Line Interface (gcloud CLI). It shouldn't matter where you download this to. Find installation instructions here: [https://cloud.google.com/sdk/docs/install](https://cloud.google.com/sdk/docs/install). 
 
 Once your GEE request has been approved, you should get a confirmation email. Open a prompt/terminal window and `activate coastguard` environment. Run this command to link your `conda` environment to the GEE server:
 
