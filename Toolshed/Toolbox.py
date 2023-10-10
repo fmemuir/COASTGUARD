@@ -1471,7 +1471,7 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     '''
     Creates area of interest bounding box from provided latitudes and longitudes, and
     checks to see if order is correct and size isn't too large for GEE requests.
-    FM Jun 2022'
+    FM Jun 2022
 
     Parameters
     ----------
@@ -1519,10 +1519,16 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     if (int(BBoxGDF.area)/(10*10))>262144:
         print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
     
+    BBoxGDF['Area'] = BBoxGDF.area/(10*10)
     mapcentrelon = lonmin + ((lonmax - lonmin)/2)
     mapcentrelat = latmin + ((latmax - latmin)/2)
-    m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 10, tiles = 'Stamen Terrain')
-    folium.GeoJson(data=BBoxGDF['geometry']).add_to(m)
+    m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 10, tiles = 'openstreetmap')
+    folium.TileLayer('MapQuest Open Aerial', attr='<a href=https://www.mapquest.com/>MapQuest</a>').add_to(m)
+    folium.LayerControl().add_to(m)
+    # gj = folium.GeoJson(geo_data=BBoxGDF['geometry'], data=BBoxGDF['Area']).add_to(m)
+    gj = folium.Choropleth(geo_data=BBoxGDF['geometry'], name='AOI', data=BBoxGDF['Area'],
+                            columns=['Area'], fill_color='YlGn',
+                            fill_opacity=0.5).add_to(m)
     folium.Marker(location=[BBoxGDF.centroid.x,BBoxGDF.centroid.y],
                   popup=str(round(float(BBoxGDF.to_crs('epsg:32630').area)))+' sq m'
                   ).add_to(m)
