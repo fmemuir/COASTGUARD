@@ -897,15 +897,15 @@ def metadata_collection(inputs, Sat):
 
     Parameters
     ----------
-    inputs : TYPE
-        DESCRIPTION.
-    Sat : TYPE
-        DESCRIPTION.
+    inputs : dict
+        Dictionary of user inputs.
+    Sat : dict
+        Dictionary of returned images based on user inputs.
 
     Returns
     -------
-    metadata : TYPE
-        DESCRIPTION.
+    metadata : dict
+        Dictionary of image metadata.
 
     """
     
