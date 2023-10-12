@@ -1598,11 +1598,10 @@ def AOIfromLine(referenceLinePath, sitename, image_epsg):
     
     # Create bounding box from refline (with small buffer) and convert it to a geodataframe
     referenceLineDF = gpd.read_file(referenceLinePath)
-    lonmin = referenceLineDF.bounds.minx - 0.001
-    lonmax = referenceLineDF.bounds.maxx + 0.001
-    latmin = referenceLineDF.bounds.miny - 0.001
-    latmax = referenceLineDF.bounds.maxy + 0.001
-    
+    buffS = 0.001
+    lonmin, lonmax, latmin, latmax = [float(referenceLineDF.bounds.minx-buffS),float(referenceLineDF.bounds.maxx+buffS),
+                                      float(referenceLineDF.bounds.miny-buffS),float(referenceLineDF.bounds.maxy+buffS)]
+
     BBox = Polygon([[lonmin, latmin],
                     [lonmax,latmin],
                     [lonmax,latmax],

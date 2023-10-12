@@ -34,11 +34,8 @@ ee.Initialize()
 projection_epsg = 27700 # OSGB 1936
 image_epsg = 32630 # UTM Zone 30N
 
-# Define AOI using coordinates of a rectangle
-# The points represent the corners of a bounding box that go around your site
+# Name of site to save directory and files under
 sitename = 'SITENAME'
-lonmin, lonmax = -2.84869, -2.79878
-latmin, latmax = 56.32641, 56.39814
 
 # Date range
 dates = ['2021-05-01', '2021-07-02']
@@ -65,6 +62,10 @@ filepath = Toolbox.CreateFileStructure(sitename, sat_list)
 
 # Return AOI from reference line bounding box and save AOI folium map HTML in sitename directory
 referenceLinePath = os.path.join(filepath, 'referenceLines', referenceLineShp)
+referenceLineDF = gpd.read_file(referenceLinePath)
+buffS = 0.001 # size of buffer around bounding box (in degrees, 0.001 default)
+lonmin, lonmax, latmin, latmax = [float(referenceLineDF.bounds.minx-buffS),float(referenceLineDF.bounds.maxx+buffS),
+                                  float(referenceLineDF.bounds.miny-buffS),float(referenceLineDF.bounds.maxy+buffS)]
 polygon, point = Toolbox.AOIfromLine(referenceLinePath, sitename, image_epsg)
 
 # It's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
