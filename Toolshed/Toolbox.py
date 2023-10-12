@@ -1575,6 +1575,67 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     return polygon, point
 
 
+def AOIfromLine(referenceLinePath, sitename, image_epsg):
+    """
+    Creates area of interest bounding box from provided reference shoreline, and
+    checks to see if order is correct and size isn't too large for GEE requests.
+    FM Oct 2023
+
+    Parameters
+    ----------
+    referenceLineShp : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    image_epsg : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    # Create bounding box from refline (with small buffer) and convert it to a geodataframe
+    referenceLineDF = gpd.read_file(referenceLinePath)
+    lonmin = referenceLineDF.bounds.minx - 0.001
+    lonmax = referenceLineDF.bounds.maxx + 0.001
+    latmin = referenceLineDF.bounds.miny - 0.001
+    latmax = referenceLineDF.bounds.maxy + 0.001
+    
+    BBox = Polygon([[lonmin, latmin],
+                    [lonmax,latmin],
+                    [lonmax,latmax],
+                    [lonmin, latmax]])
+    BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs=referenceLineDF.crs)
+
+    # convert crs of geodataframe to UTM to get metre measurements (not degrees)
+    BBoxGDF = BBoxGDF.to_crs('epsg:'+str(image_epsg))
+    # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
+    if (int(BBoxGDF.area)/(10*10))>262144:
+        print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
+    
+    BBoxGDF['Area'] = BBoxGDF.area/(10*10)
+    mapcentrelon = lonmin + ((lonmax - lonmin)/2)
+    mapcentrelat = latmin + ((latmax - latmin)/2)
+    m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 10, tiles = 'openstreetmap')
+    folium.TileLayer('MapQuest Open Aerial', attr='<a href=https://www.mapquest.com/>MapQuest</a>').add_to(m)
+    folium.LayerControl().add_to(m)
+    # gj = folium.GeoJson(geo_data=BBoxGDF['geometry'], data=BBoxGDF['Area']).add_to(m)
+    gj = folium.Choropleth(geo_data=BBoxGDF['geometry'], name='AOI', data=BBoxGDF['Area'],
+                            columns=['Area'], fill_color='YlGn',
+                            fill_opacity=0.5).add_to(m)
+    folium.Marker(location=[BBoxGDF.centroid.x,BBoxGDF.centroid.y],
+                  popup=str(round(float(BBoxGDF.to_crs('epsg:32630').area)))+' sq m'
+                  ).add_to(m)
+    m.save("./Data/"+sitename+"/AOImap.html")
+    
+    # Export as polygon and ee point for use in clipping satellite image requests
+    polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
+    point = ee.Geometry.Point(polygon[0][0]) 
+    
+    return polygon, point
+
 
 def GStoArr(shoreline):
     """

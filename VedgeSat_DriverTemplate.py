@@ -59,17 +59,16 @@ referenceLineShp = 'SITENAME_refLine.shp'
 # Maximum amount in metres by which to buffer the reference line for capturing veg edges within
 max_dist_ref = 150
 
-
 #%% Set Up Site Directory
 # Directory where the data will be stored
 filepath = Toolbox.CreateFileStructure(sitename, sat_list)
 
-# Return AOI after checking coords and saving folium map HTML in sitename directory
-polygon, point = Toolbox.AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg)
+# Return AOI from reference line bounding box and save AOI folium map HTML in sitename directory
+referenceLinePath = os.path.join(filepath, 'referenceLines', referenceLineShp)
+polygon, point = Toolbox.AOIfromLine(referenceLinePath, sitename, image_epsg)
 
 # It's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
-
 #%% Compile Input Settings for Imagery
 
 if len(dates)>2:
@@ -138,7 +137,6 @@ Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon)
     
 #%% Vegetation Edge Reference Line Load-In
 
-referenceLinePath = os.path.join(inputs['filepath'], 'referenceLines', referenceLineShp)
 referenceLine, ref_epsg = Toolbox.ProcessRefline(referenceLinePath,settings)
 
 settings['reference_shoreline'] = referenceLine
