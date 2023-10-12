@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Sep 15 13:08:30 2022
-
-@author: fmuir
-"""
 
 
 #%% Imports and Initialisation
@@ -70,6 +65,7 @@ polygon, point = Toolbox.AOIfromLine(referenceLinePath, sitename, image_epsg)
 
 # It's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
+
 #%% Compile Input Settings for Imagery
 
 if len(dates)>2:

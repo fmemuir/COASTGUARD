@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Sep 15 13:08:30 2022
-
-"""
 
 
 #%% Imports and Initialisation
