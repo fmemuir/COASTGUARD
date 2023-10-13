@@ -1407,6 +1407,10 @@ def ProcessRefline(referenceLineShp,settings):
         reference line EPSG ID
 
     """
+
+    import pdb
+    pdb.set_trace()
+
     referenceLineDF = gpd.read_file(referenceLineShp)
     # Convert whatever CRS ref line is in to WGS84 to start off with
     referenceLineDF.to_crs(epsg=4326, inplace=True)
