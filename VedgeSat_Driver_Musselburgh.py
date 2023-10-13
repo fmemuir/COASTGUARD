@@ -126,11 +126,11 @@ settings = {
 
 
 #%% Compute Tides from FES2014
-
-tidepath = "../aviso-fes/data/fes2014"
-daterange = dates
-tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N
-Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
+if wetdry is True:
+    tidepath = "../aviso-fes/data/fes2014"
+    daterange = dates
+    tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N
+    Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
     
 #%% Vegetation Edge Reference Line Load-In
 
