@@ -47,7 +47,7 @@ sat_list = ['S2']
 cloud_thresh = 0.5
 
 # Extract shoreline (wet-dry boundary) as well as veg edge
-wetdry = True
+wetdry = False
 
 # Reference shoreline/veg line shapefile name (should be stored in a folder called referenceLines in Data)
 referenceLineShp = 'Cell_1b_Modern_Soft_joinedDissolved.shp'
