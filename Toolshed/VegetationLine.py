@@ -144,7 +144,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 print(" - Skipped: empty raster")
                 continue
             
-            if cloud_mask == []:
+            if cloud_mask is None: # update syntax from == [] to is None
                 print(" - Skipped: no cloud mask available")
                 continue
             
