@@ -1407,6 +1407,10 @@ def ProcessRefline(referenceLineShp,settings):
 
     """
     referenceLineDF = gpd.read_file(referenceLineShp)
+    # Convert whatever CRS ref line is in to WGS84 to start off with
+    referenceLineDF.to_crs(epsg=4326, inplace=True)
+    # Add in here a fn to merge multilinestrings to one contiguous linestring
+    
     refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
     # swap latlon coordinates (or don't? check this) around and format into list
     #referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
