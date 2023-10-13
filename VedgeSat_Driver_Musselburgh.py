@@ -52,7 +52,7 @@ wetdry = False
 # Reference shoreline/veg line shapefile name (should be stored in a folder called referenceLines in Data)
 referenceLineShp = 'Cell_1b_Modern_Soft_joinedDissolved.shp'
 # Maximum amount in metres by which to buffer the reference line for capturing veg edges within
-max_dist_ref = 50
+max_dist_ref = 100
 
 
 #%% Set Up Site Directory
