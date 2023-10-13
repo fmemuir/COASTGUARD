@@ -1408,16 +1408,14 @@ def ProcessRefline(referenceLineShp,settings):
 
     """
 
-    import pdb
-    pdb.set_trace()
-
     referenceLineDF = gpd.read_file(referenceLineShp)
-    # Convert whatever CRS ref line is in to WGS84 to start off with
-    referenceLineDF.to_crs(epsg=4326, inplace=True)
+    referenceLineDF.to_crs(epsg=4326, inplace=True) # Convert whatever CRS ref line is in to WGS84 to start off with
+
     # Add in here a fn to merge multilinestrings to one contiguous linestring
     # linemerge([lineseg for lineseg in referenceLineDF.geometry])
     
-    refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
+    refLinex,refLiney = referenceLineDF.geometry[0].coords.xy # NEED TO ADD TYPE CHECK, linestring vs. multilinestring...
+    
     # swap latlon coordinates (or don't? check this) around and format into list
     #referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
     referenceLineList = list([refLiney[i],refLinex[i]] for i in range(len(refLinex)))
@@ -1501,12 +1499,13 @@ def spaced_vertices(referenceLine):
         New reference line coordinate array with equally spaced vertices.
 
     """
+
     referenceLineString = LineString(referenceLine)
     vertexdist = 10
     vertexdists = np.arange(0, referenceLineString.length, vertexdist)
-    newverts = [referenceLineString.interpolate(dist) for dist in vertexdists] + [referenceLineString.boundary[1]]
+    newverts = [referenceLineString.interpolate(dist) for dist in vertexdists] + [referenceLineString.boundary.geoms[1]] # ERROR - not subscriptable (shapely syntax change)
     newreferenceLineString = LineString(newverts)
-    newreferenceLine = np.asarray(newreferenceLineString)
+    newreferenceLine = np.asarray(newreferenceLineString.coords) # ERROR - new syntax to pass shapely linestring coords to numpy structure
     
     return newreferenceLine
 
