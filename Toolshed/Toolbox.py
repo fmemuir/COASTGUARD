@@ -19,6 +19,7 @@ import pandas as pd
 import geopandas as gpd
 from shapely import geometry
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
+from shapely.ops import linemerge
 import folium
 
 import skimage.transform as transform
@@ -1410,6 +1411,7 @@ def ProcessRefline(referenceLineShp,settings):
     # Convert whatever CRS ref line is in to WGS84 to start off with
     referenceLineDF.to_crs(epsg=4326, inplace=True)
     # Add in here a fn to merge multilinestrings to one contiguous linestring
+    # linemerge([lineseg for lineseg in referenceLineDF.geometry])
     
     refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
     # swap latlon coordinates (or don't? check this) around and format into list
