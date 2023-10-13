@@ -1411,7 +1411,8 @@ def ProcessRefline(referenceLineShp,settings):
     # Convert whatever CRS ref line is in to WGS84 to start off with
     referenceLineDF.to_crs(epsg=4326, inplace=True)
     # Add in here a fn to merge multilinestrings to one contiguous linestring
-    # linemerge([lineseg for lineseg in referenceLineDF.geometry])
+    # merged = linemerge([lineseg for lineseg in referenceLineDF.geometry])
+    # referenceLineDF = gpd.GeoDataFrame(geometry=[merged], crs=4326)
     
     refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
     # swap latlon coordinates (or don't? check this) around and format into list
@@ -1581,7 +1582,7 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     return polygon, point
 
 
-def AOIfromLine(referenceLinePath, sitename, image_epsg):
+def AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg):
     """
     Creates area of interest bounding box from provided reference shoreline, and
     checks to see if order is correct and size isn't too large for GEE requests.
@@ -1604,18 +1605,22 @@ def AOIfromLine(referenceLinePath, sitename, image_epsg):
     
     # Create bounding box from refline (with small buffer) and convert it to a geodataframe
     referenceLineDF = gpd.read_file(referenceLinePath)
-    buffS = 0.001
-    lonmin, lonmax, latmin, latmax = [float(referenceLineDF.bounds.minx-buffS),float(referenceLineDF.bounds.maxx+buffS),
-                                      float(referenceLineDF.bounds.miny-buffS),float(referenceLineDF.bounds.maxy+buffS)]
+    # convert crs of geodataframe to UTM to get metre measurements (not degrees)
+    referenceLineDF.to_crs(epsg=image_epsg, inplace=True)
+    
+    lonmin, lonmax, latmin, latmax = [float(referenceLineDF.bounds.minx-max_dist_ref),
+                                      float(referenceLineDF.bounds.maxx+max_dist_ref),
+                                      float(referenceLineDF.bounds.miny-max_dist_ref),
+                                      float(referenceLineDF.bounds.maxy+max_dist_ref)]
 
     BBox = Polygon([[lonmin, latmin],
                     [lonmax,latmin],
                     [lonmax,latmax],
                     [lonmin, latmax]])
+    
     BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs=referenceLineDF.crs)
 
-    # convert crs of geodataframe to UTM to get metre measurements (not degrees)
-    BBoxGDF = BBoxGDF.to_crs('epsg:'+str(image_epsg))
+    BBoxGDF = BBoxGDF.to_crs(epsg=image_epsg)
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
         print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
@@ -1639,7 +1644,7 @@ def AOIfromLine(referenceLinePath, sitename, image_epsg):
     polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
     point = ee.Geometry.Point(polygon[0][0]) 
     
-    return polygon, point
+    return polygon, point, lonmin, lonmax, latmin, latmax
 
 
 def GStoArr(shoreline):
