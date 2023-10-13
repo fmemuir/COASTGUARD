@@ -32,8 +32,8 @@ image_epsg = 32630 # UTM Zone 30N
 # Define AOI using coordinates of a rectangle
 # The points represent the corners of a bounding box that go around your site
 sitename = 'Musselburgh_refLineTesting'
-lonmin, lonmax = -3.077606, -3.049787
-latmin, latmax = 55.945281, 55.949243
+lonmin, lonmax = -3.079205, -3.0481888
+latmin, latmax = 55.94439, 55.950141
 
 # Date range
 dates = ['2023-01-01', '2023-09-30']
