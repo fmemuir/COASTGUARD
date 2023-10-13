@@ -235,7 +235,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                         skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
                                                     image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
                                                     sh_classif, sh_labels, contours_ndwi, t_ndwi)
-                    else:
+                    else: # error below
                         skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
                                                     image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi)
                         
@@ -1589,7 +1589,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     
     
     cmap = colors.ListedColormap(['orange'])
-    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
+    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5) # error, Image data of dtype object cannot be converted to float      
     
     ax3.axis('off')
     orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.5)
