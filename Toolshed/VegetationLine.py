@@ -1586,7 +1586,8 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     int_veg_clip, int_nonveg_clip = Image_Processing.ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
 
     # FM: create transition zone mask
-    im_TZ = Toolbox.TZimage
+    TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
+    im_TZ = Toolbox.TZimage(im_ndvi, int_veg_clip, int_nonveg_clip)
     
     
     cmap = colors.ListedColormap(['orange'])
