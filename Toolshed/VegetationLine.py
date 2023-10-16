@@ -1584,6 +1584,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     
     # clip down classified band index values to coastal buffer
     int_veg_clip, int_nonveg_clip = Image_Processing.ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
+
     # FM: create transition zone mask
     im_TZ = Toolbox.TZimage
     
