@@ -36,7 +36,7 @@ lonmin, lonmax = -3.079205, -3.0481888
 latmin, latmax = 55.94439, 55.950141
 
 # Date range
-dates = ['2023-01-01', '2023-09-30']
+dates = ['2016-11-01', '2023-10-12']
 
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
@@ -52,7 +52,7 @@ wetdry = False
 # Reference shoreline/veg line shapefile name (should be stored in a folder called referenceLines in Data)
 referenceLineShp = 'Cell_1b_Modern_Soft_joinedDissolved.shp'
 # Maximum amount in metres by which to buffer the reference line for capturing veg edges within
-max_dist_ref = 100
+max_dist_ref = 50
 
 
 #%% Set Up Site Directory
