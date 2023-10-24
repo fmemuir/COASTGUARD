@@ -4,8 +4,8 @@
 
 #%% Imports and Initialisation
 
-
 import os
+import sys
 import glob
 import pickle
 import warnings
@@ -21,8 +21,6 @@ import geopandas as gpd
 
 ee.Initialize()
 
-
-
 #%% EDIT ME: Requirements
 
 # Define desired coordinate projections
@@ -36,7 +34,7 @@ lonmin, lonmax = -3.079205, -3.0481888
 latmin, latmax = 55.94439, 55.950141
 
 # Date range
-dates = ['2016-11-01', '2023-10-12']
+dates = ['2023-01-01', '2023-10-20']
 
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
@@ -88,6 +86,10 @@ Download.check_images_available(inputs)
 # Make the metadata
 Sat = Toolbox.image_retrieval(inputs)
 metadata = Toolbox.metadata_collection(inputs, Sat)
+
+# if Planet in sat_list:
+    #Sat = Toolbox.LocalImageRetrieval(inputs)
+    #metadata = Toolbox.LocalImageMetadata(inputs, Sat)
 
 
 #%% Vegetation Edge Settings
