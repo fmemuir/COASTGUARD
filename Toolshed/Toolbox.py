@@ -885,7 +885,7 @@ def CreateFileStructure(sitename, sat_list):
         if os.path.isdir(direc+'/local_images') is False:
             os.mkdir(direc+'/local_images')
             os.mkdir(direc+'/local_images/PlanetScope')
-            os.mkdir(direc+'/AuxillaryPlanetImages')
+            os.mkdir(direc+'/AuxillaryImages')
             os.mkdir(direc+'/local_images/PlanetScope/cloudmasks')
     
     return filepath
@@ -1608,19 +1608,20 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg):
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
     referenceLineDF.to_crs(epsg=image_epsg, inplace=True)
     
-    lonmin, lonmax, latmin, latmax = [float(referenceLineDF.bounds.minx-max_dist_ref),
+    xmin, xmax, ymin, ymax = [float(referenceLineDF.bounds.minx-max_dist_ref),
                                       float(referenceLineDF.bounds.maxx+max_dist_ref),
                                       float(referenceLineDF.bounds.miny-max_dist_ref),
                                       float(referenceLineDF.bounds.maxy+max_dist_ref)]
 
-    BBox = Polygon([[lonmin, latmin],
-                    [lonmax,latmin],
-                    [lonmax,latmax],
-                    [lonmin, latmax]])
+    BBox = Polygon([[xmin, ymin],
+                    [xmax,ymin],
+                    [xmax,ymax],
+                    [xmin, ymax]])
     
     BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs=referenceLineDF.crs)
+    
+    lonmin, latmin, lonmax, latmax = [BBoxGDF.to_crs(epsg=4326).bounds.iloc[0][i] for i in range(4)]
 
-    BBoxGDF = BBoxGDF.to_crs(epsg=image_epsg)
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
         print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
