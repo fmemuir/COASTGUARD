@@ -470,8 +470,13 @@ def check_images_available(inputs):
         im_dict_T2[satname] = im_list_upt
 
     print('  Total: %d images'%sum_img)
+    
+    # If any satnames returned 0 images, remove them from inputs
+    for satdict in im_dict_T1.keys():
+        if len(im_dict_T1[satdict]) == 0:
+            inputs['sat_list'].remove(satdict)
 
-    return
+    return inputs
 
 
 def download_tif(image, polygon, bandsId, filepath):

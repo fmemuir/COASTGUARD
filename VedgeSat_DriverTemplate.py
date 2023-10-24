@@ -79,7 +79,7 @@ inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list':
 #%% Image Retrieval
 
 # Before downloading the images, check how many images are available for your inputs
-Download.check_images_available(inputs)
+inputs = Download.check_images_available(inputs)
 
 
 #%% Image Download

@@ -39,7 +39,7 @@ dates = ['2018-01-01', '2019-01-01']
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
 # L5: 1984-2013; L7: 1999-2017 (SLC error from 2003); L8: 2013-present; S2: 2014-present; L9: 2021-present
-sat_list = ['L8','S2']
+sat_list = ['L8','L9','S2']
 
 # Cloud threshold for screening out cloudy imagery (0.5 or 50% recommended)
 cloud_thresh = 0.5
@@ -81,7 +81,7 @@ inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list':
 #%% Image Retrieval
 
 # Before downloading the images, check how many images are available for your inputs
-Download.check_images_available(inputs)
+inputs = Download.check_images_available(inputs)
 
 
 #%% Image Download
