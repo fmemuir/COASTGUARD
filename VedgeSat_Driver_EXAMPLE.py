@@ -32,8 +32,6 @@ image_epsg = 32630 # UTM Zone 30N
 # Define AOI using coordinates of a rectangle
 # The points represent the corners of a bounding box that go around your site
 sitename = 'EXAMPLE'
-lonmin, lonmax = 1.6700, 1.7250
-latmin, latmax = 52.6790, 52.7380
 
 # Date range
 dates = ['2018-01-01', '2019-01-01']
@@ -41,7 +39,7 @@ dates = ['2018-01-01', '2019-01-01']
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
 # L5: 1984-2013; L7: 1999-2017 (SLC error from 2003); L8: 2013-present; S2: 2014-present; L9: 2021-present
-sat_list = ['S2']
+sat_list = ['L8','S2']
 
 # Cloud threshold for screening out cloudy imagery (0.5 or 50% recommended)
 cloud_thresh = 0.5
@@ -62,13 +60,11 @@ filepath = Toolbox.CreateFileStructure(sitename, sat_list)
 # Return AOI from reference line bounding box and save AOI folium map HTML in sitename directory
 referenceLinePath = os.path.join(filepath, 'referenceLines', referenceLineShp)
 referenceLineDF = gpd.read_file(referenceLinePath)
-buffS = 0.001 # size of buffer around bounding box (in degrees, 0.001 default)
-lonmin, lonmax, latmin, latmax = [float(referenceLineDF.bounds.minx-buffS),float(referenceLineDF.bounds.maxx+buffS),
-                                  float(referenceLineDF.bounds.miny-buffS),float(referenceLineDF.bounds.maxy+buffS)]
-polygon, point = Toolbox.AOIfromLine(referenceLinePath, sitename, image_epsg)
+polygon, point, lonmin, lonmax, latmin, latmax = Toolbox.AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg)
 
 # It's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
+
 
 #%% Compile Input Settings for Imagery
 
