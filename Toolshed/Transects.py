@@ -916,6 +916,14 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
 
 def WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax):
     
+    # Convert bbox coords back to WGS84
+    BBox = gpd.GeoDataFrame(geometry=[Polygon([[lonmin, latmin],
+                    [lonmax,latmin],
+                    [lonmax,latmax],
+                    [lonmin, latmax]])])
+    BBox.to_crs(espg=4326, inplace=True)
+    # lonmin, lonmax, latmin, latmax = 
+    
     WaveOutFile = Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     
     WavePath = os.path.join(settings['inputs']['filepath'],'tides') 
