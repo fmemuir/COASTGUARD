@@ -28,10 +28,7 @@ Data/
 aviso-fes/
 fes2014/
 *.tar
-<<<<<<< Updated upstream
-=======
 *.nc
 *.ini
->>>>>>> Stashed changes
 
 *.zip
