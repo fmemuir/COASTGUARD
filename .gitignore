@@ -24,11 +24,9 @@ CoastWatch.ipynb
 *.pyc
 
 Data/
-*.tif
-jpg_files/
-*.jpg
 
 aviso-fes/
+fes2014/
 *.tar
-*.nc
-*.ini
+
+*.zip
