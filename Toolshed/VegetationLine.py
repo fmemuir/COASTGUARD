@@ -144,7 +144,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 print(" - Skipped: empty raster")
                 continue
             
-            if cloud_mask == []:
+            if cloud_mask is None:
                 print(" - Skipped: no cloud mask available")
                 continue
             
@@ -196,6 +196,23 @@ def extract_veglines(metadata, settings, polygon, dates):
             Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
             Image_Processing.save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames[fn], settings)
             
+                
+            # compute NDVI image (NIR-R)
+            im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+
+            # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+            contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                
+            if settings['wetdry'] == True:
+                im_ndwi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
+                contours_ndwi, t_ndwi = FindShoreContours_Water(im_ndwi, sh_labels, cloud_mask, im_ref_buffer)
+
+            # process the contours into a vegline
+            vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
+            if settings['wetdry'] == True:
+                shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndwi, cloud_mask, georef, image_epsg, settings)
+
+
             # if adjust_detection is True, let the user adjust the detected shoreline
             if settings['adjust_detection']:
                 date = metadata[satname]['dates'][i]
@@ -205,44 +222,23 @@ def extract_veglines(metadata, settings, polygon, dates):
                 # if the user decides to skip the image, continue and do not save the mapped vegline
                 if skip_image:
                     continue
-                
-            else:
-                # compute NDVI image (NIR-R)
-                im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
 
-                if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
-                    print('(using weighted peaks for contouring)')
-                    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-                    # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+            if settings['check_detection'] or settings['save_figure']:
+                date = metadata[satname]['dates'][i]
+                if not settings['check_detection']:
+                    plt.ioff() # turning interactive plotting off
+                if settings['wetdry'] == True:
+                    skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
+                                                image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
+                                                sh_classif, sh_labels, contours_ndwi, t_ndwi)
                 else:
-                    # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-                    contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
+                    skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
+                                                image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi)
                     
-                if settings['wetdry'] == True:
-                    im_ndwi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
-                    contours_ndwi, t_ndwi = FindShoreContours_Water(im_ndwi, sh_labels, cloud_mask, im_ref_buffer)
-
-                # process the contours into a vegline
-                vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
-                if settings['wetdry'] == True:
-                    shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndwi, cloud_mask, georef, image_epsg, settings)
-
-                if settings['check_detection'] or settings['save_figure']:
-                    date = metadata[satname]['dates'][i]
-                    if not settings['check_detection']:
-                        plt.ioff() # turning interactive plotting off
-                    if settings['wetdry'] == True:
-                        skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
-                                                    image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
-                                                    sh_classif, sh_labels, contours_ndwi, t_ndwi)
-                    else:
-                        skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
-                                                    image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi)
-                        
-                        
-                        # if the user decides to skip the image, continue and do not save the mapped vegline
-                    if skip_image:
-                        continue
+                    
+                    # if the user decides to skip the image, continue and do not save the mapped vegline
+                if skip_image:
+                    continue
             
 
             # append to output variables
@@ -1376,121 +1372,18 @@ def process_shoreline(contours, cloud_mask, georef, image_epsg, settings):
 # PLOTTING FUNCTIONS
 ###################################################################################################
 
-# def PlotDetection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
-#                    settings, date, satname):
-#     sitename = settings['inputs']['sitename']
-#     filepath_data = settings['inputs']['filepath']
-#     # format date
-#     if satname != 'S2':
-#         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
-#     else:
-#         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
-
-#     im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-#     # compute classified image
-#     im_class = np.copy(im_RGB)
-#     cmap = cm.get_cmap('tab20c')
-#     colorpalette = cmap(np.arange(0,17,1))
-#     colours = np.zeros((4,4))
-#     colours[0,:] = colorpalette[9]  # veg
-#     colours[1,:] = colorpalette[14]  # non-veg
-#     # colours[2,:] = colorpalette[0] # water
-#     # colours[3,:] = colorpalette[16] # other
-#     for k in range(0,im_labels.shape[2]):
-#         im_class[im_labels[:,:,k],0] = colours[k,0]
-#         im_class[im_labels[:,:,k],1] = colours[k,1]
-#         im_class[im_labels[:,:,k],2] = colours[k,2]
-#         #im_class[im_labels[:,:,k],3] = colours[k,3]
-
-#     # compute NDVI grayscale image
-#     im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-#     # buffer NDVI using reference shoreline
-#     im_ndvi_buffer = np.copy(im_ndvi)
-#     im_ndvi_buffer[~im_ref_buffer] = np.nan
-
-#     if plt.get_fignums():
-#             # get open figure if it exists
-#             fig = plt.gcf()
-#             ax1 = fig.axes[0]
-#             ax2 = fig.axes[1]
-#             ax3 = fig.axes[2]
-#     else:
-#         # else create a new figure
-#         fig = plt.figure()
-#         fig.set_size_inches([18, 9])
-#         mng = plt.get_current_fig_manager()
-#         mng.window.showMaximized()
-
-#         # according to the image shape, decide whether it is better to have the images
-#         # in vertical subplots or horizontal subplots
-#         if im_RGB.shape[1] > 2.5*im_RGB.shape[0]:
-#             # vertical subplots
-#             gs = gridspec.GridSpec(3, 1)
-#             gs.update(bottom=0.03, top=0.97, left=0.03, right=0.97)
-#             ax1 = fig.add_subplot(gs[0,0])
-#             ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
-#             ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
-#         else:
-#             # horizontal subplots
-#             gs = gridspec.GridSpec(1, 3)
-#             gs.update(bottom=0.05, top=0.95, left=0.05, right=0.95)
-#             ax1 = fig.add_subplot(gs[0,0])
-#             ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
-#             ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
-
-#     # change the color of nans to either black (0.0) or white (1.0) or somewhere in between
-#     nan_color = 1.0
-#     im_RGB = np.where(np.isnan(im_RGB), nan_color, im_RGB)
-#     im_class = np.where(np.isnan(im_class), 1.0, im_class)
-
-#     # create image 1 (RGB)
-#     ax1.imshow(im_RGB)
-#     im_ref_buffer_3d = np.repeat(im_ref_buffer[:,:,np.newaxis],3,axis=2)
-#     im_RGB_masked = im_RGB * im_ref_buffer_3d
-#     ax1.imshow(im_RGB_masked, alpha=0.3) # plot refline mask over top
+def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
+                    im_ref_buffer, date, satname,
+                    fig, ax1, ax2, ax3, ax4,
+                    contours_ndvi, t_ndvi, cloud_mask, georef, image_epsg,
+                    sh_classif, sh_labels, contours_ndwi, t_ndwi):
+    """
     
-#     ax1.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
-#     ax1.axis('off')
-#     ax1.set_title(sitename, fontweight='bold', fontsize=16)
+    Set up full plot window for showing/adjusting veg edge detection.
+    FM Oct 2023
 
-#     # create image 2 (classification)
-#     ax2.imshow(im_class)
-#     ax2.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
-#     ax2.axis('off')
-#     purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
-#     green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
-#     # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
-#     black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
-#     ax2.legend(handles=[purple_patch,green_patch, black_line],
-#                bbox_to_anchor=(1.1, 0.5), fontsize=10)
-#     ax2.set_title(date, fontweight='bold', fontsize=16)
-
-#     # create image 3 (NDVI)
-#     ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
-#     ax3.scatter(sl_pix[:,0], sl_pix[:,1], color='#EAC435', marker='.', s=3)
-#     ax3.axis('off')
-#     ax3.set_title(satname, fontweight='bold', fontsize=16)
-
-#     return fig, ax1, ax2, ax3
-
-
-
-def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
-                   settings, date, satname, contours_ndvi, t_ndvi,
-                   sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
-
-    sitename = settings['inputs']['sitename']
-    filepath_data = settings['inputs']['filepath']
-    # format date
-    if satname != 'S2':
-        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
-    else:
-        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
-
-    im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-    # compute colours for classified image
-    im_class = np.copy(im_RGB)
-    # sh_class = np.copy(im_RGB)
+    """
+    
     
     cmap = cm.get_cmap('tab20c')
     colorpalette = cmap(np.arange(0,17,1))
@@ -1515,40 +1408,6 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
 
     # compute NDVI grayscale image (NIR - R)
     im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-
-    if plt.get_fignums():
-            # get open figure if it exists
-            fig = plt.gcf()
-            ax1 = fig.axes[0]
-            ax2 = fig.axes[1]
-            ax3 = fig.axes[2]
-            ax4 = fig.axes[3]
-    else:
-        # else create a new figure
-        fig = plt.figure()
-        fig.set_size_inches([18, 9])
-        mng = plt.get_current_fig_manager()
-        mng.window.showMaximized()
-
-        # according to the image shape, decide whether it is better to have the images
-        # in vertical subplots or horizontal subplots
-        if im_RGB.shape[1] > 2.5*im_RGB.shape[0]:
-            # vertical subplots (plot in rows)
-            gs = gridspec.GridSpec(4, 1)
-            gs.update(bottom=0.05, top=0.95, left=0.03, right=0.97)
-            ax1 = fig.add_subplot(gs[0,0])
-            ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
-            ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
-            ax4 = fig.add_subplot(gs[3,0])
-
-        else:
-            # horizontal subplots (plot in columns)
-            gs = gridspec.GridSpec(2, 3, height_ratios=[4,1])
-            gs.update(bottom=0.05, top=0.95, left=0.05, right=0.95)
-            ax1 = fig.add_subplot(gs[0,0])
-            ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
-            ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
-            ax4 = fig.add_subplot(gs[1,:])
 
     # change the color of nans to either black (0.0) or white (1.0) or somewhere in between
     nan_color = 1.0
@@ -1669,6 +1528,64 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     ax4.legend(loc=1)
     plt.draw() # to update the plot
 
+    return fig, ax1, ax2, ax3, ax4
+
+
+def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
+                   settings, date, satname, contours_ndvi, t_ndvi,
+                   sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
+
+    sitename = settings['inputs']['sitename']
+    filepath_data = settings['inputs']['filepath']
+    # format date
+    if satname != 'S2':
+        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
+    else:
+        date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
+
+    im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
+    # compute colours for classified image
+    im_class = np.copy(im_RGB)
+    # sh_class = np.copy(im_RGB)
+    if plt.get_fignums():
+            # get open figure if it exists
+            fig = plt.gcf()
+            ax1 = fig.axes[0]
+            ax2 = fig.axes[1]
+            ax3 = fig.axes[2]
+            ax4 = fig.axes[3]
+    else:
+        # else create a new figure
+        fig = plt.figure()
+        fig.set_size_inches([18, 9])
+        mng = plt.get_current_fig_manager()
+        mng.window.showMaximized()
+        # according to the image shape, decide whether it is better to have the images
+        # in vertical subplots or horizontal subplots
+        if im_RGB.shape[1] > 2.5*im_RGB.shape[0]:
+            # vertical subplots (plot in rows)
+            gs = gridspec.GridSpec(4, 1)
+            gs.update(bottom=0.05, top=0.95, left=0.03, right=0.97)
+            ax1 = fig.add_subplot(gs[0,0])
+            ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
+            ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
+            ax4 = fig.add_subplot(gs[3,0])
+
+        else:
+            # horizontal subplots (plot in columns)
+            gs = gridspec.GridSpec(2, 3, height_ratios=[4,1])
+            gs.update(bottom=0.05, top=0.95, left=0.05, right=0.95)
+            ax1 = fig.add_subplot(gs[0,0])
+            ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
+            ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
+            ax4 = fig.add_subplot(gs[1,:])
+        
+    SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
+                    im_ref_buffer, date, satname,
+                    fig, ax1, ax2, ax3, ax4,
+                    contours_ndvi, t_ndvi, cloud_mask, georef, image_epsg,
+                    sh_classif, sh_labels, contours_ndwi, t_ndwi)
+    
 
     # if check_detection is True, let user manually accept/reject the images
     skip_image = False
@@ -1725,191 +1642,63 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
 
     return skip_image
 
-def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, georef,
-                       settings, date, satname, buffer_size_pixels,epsg):
+
+def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
+                   settings, date, satname, contours_ndvi, t_ndvi,
+                   sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
 
     sitename = settings['inputs']['sitename']
     filepath_data = settings['inputs']['filepath']
-    # subfolder where the .jpg file is stored if the user accepts the shoreline detection
-    filepath = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
     # format date
     if satname != 'S2':
         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
     else:
         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
-    
+
     im_RGB = Image_Processing.rescale_image_intensity(im_ms[:,:,[2,1,0]], cloud_mask, 99.9)
-    # compute classified image
+    # compute colours for classified image
     im_class = np.copy(im_RGB)
-    cmap = cm.get_cmap('tab20c')
-    colorpalette = cmap(np.arange(0,17,1))
-    colours = np.zeros((4,4))
-    colours[0,:] = colorpalette[9]  # veg
-    colours[1,:] = colorpalette[15]  # non-veg
-    colours[2,:] = colorpalette[1] # other
-    for k in range(0,im_labels.shape[2]):
-        im_class[im_labels[:,:,k],0] = colours[k,0]
-        im_class[im_labels[:,:,k],1] = colours[k,1]
-        im_class[im_labels[:,:,k],2] = colours[k,2]
-        #im_class[im_labels[:,:,k],3] = colours[k,3]
-
-    # compute NDVI grayscale image (NIR - R)
-    im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
-    # buffer NDVI using reference shoreline
-    im_ndvi_buffer = np.copy(im_ndvi)
-    im_ndvi_buffer[~im_ref_buffer] = np.nan
-
-    # get NDVI pixel intensity in each class (for histogram plot)
-    int_veg = im_ndvi[im_labels[:,:,0]]
-    int_nonveg = im_ndvi[im_labels[:,:,1]]
-    # int_water = im_ndvi[im_labels[:,:,2]]
-    # labels_other = np.logical_and(np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]),~im_labels[:,:,2])
-    labels_other = np.logical_and(~im_labels[:,:,0],~im_labels[:,:,1]) # for only veg/nonveg
-    int_other = im_ndvi[labels_other]
-    
-    # create figure
+    # sh_class = np.copy(im_RGB)
     if plt.get_fignums():
-            # if it exists, open the figure 
+            # get open figure if it exists
             fig = plt.gcf()
             ax1 = fig.axes[0]
             ax2 = fig.axes[1]
             ax3 = fig.axes[2]
-            ax4 = fig.axes[3]      
+            ax4 = fig.axes[3]
     else:
         # else create a new figure
         fig = plt.figure()
         fig.set_size_inches([18, 9])
         mng = plt.get_current_fig_manager()
         mng.window.showMaximized()
-        gs = gridspec.GridSpec(2, 3, height_ratios=[4,1])
-        gs.update(bottom=0.05, top=0.95, left=0.03, right=0.97)
-        ax1 = fig.add_subplot(gs[0,0])
-        ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
-        ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
-        ax4 = fig.add_subplot(gs[1,:])
+        # according to the image shape, decide whether it is better to have the images
+        # in vertical subplots or horizontal subplots
+        if im_RGB.shape[1] > 2.5*im_RGB.shape[0]:
+            # vertical subplots (plot in rows)
+            gs = gridspec.GridSpec(4, 1)
+            gs.update(bottom=0.05, top=0.95, left=0.03, right=0.97)
+            ax1 = fig.add_subplot(gs[0,0])
+            ax2 = fig.add_subplot(gs[1,0], sharex=ax1, sharey=ax1)
+            ax3 = fig.add_subplot(gs[2,0], sharex=ax1, sharey=ax1)
+            ax4 = fig.add_subplot(gs[3,0])
 
-    # change the color of nans to either black (0.0) or white (1.0) or somewhere in between
-    nan_color = 1.0
-    im_RGB = np.where(np.isnan(im_RGB), nan_color, im_RGB)
-    im_class = np.where(np.isnan(im_class), 1.0, im_class)
-
-    # plot image 1 (RGB)
-    ax1.imshow(im_RGB)
-    im_ref_buffer_3d = np.repeat(im_ref_buffer[:,:,np.newaxis],3,axis=2)
-    im_RGB_masked = im_RGB * im_ref_buffer_3d
-    ax1.imshow(im_RGB_masked, alpha=0.3) # plot refline mask over top
-
-    ax1.axis('off')
-    ax1.set_title('%s - %s'%(sitename, satname), fontsize=12)
-
-    # plot image 2 (classification)
-    ax2.imshow(im_class)
-    ax2.axis('off')
-    purple_patch = mpatches.Patch(color=colours[0,:], label='Vegetation')
-    green_patch = mpatches.Patch(color=colours[1,:], label='Non-Vegetation')
-    # blue_patch = mpatches.Patch(color=colours[2,:], label='Water')
-    black_line = mlines.Line2D([],[],color='k',linestyle='-', label='Vegetation Line')
-    ax2.legend(handles=[purple_patch,green_patch, black_line],
-               bbox_to_anchor=(1, 1), fontsize=10)
-    ax2.set_title(date_str, fontsize=12)
-
-    # plot image 3 (NDVI)
-    ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
-    
-    # clip down classified band index values to coastal buffer
-    int_veg_clip, int_nonveg_clip = Image_Processing.ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
-    # FM: create transition zone mask
-    TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
-    im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
-
-    cmap = colors.ListedColormap(['orange'])
-    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.7)       
-    
-    ax3.axis('off')
-    orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.7)
-    ax3.legend(handles=[orange_patch],
-               bbox_to_anchor=(1, 1), fontsize=10) #bbox_to_anchor=(1.1, 0.5)
-    ax3.set_title('NDVI', fontsize=12)
-    # cbar = plt.colorbar(mappable=ndviplot, cax=ax3) #location='right', anchor=(0, 0.5), shrink=0.5
+        else:
+            # horizontal subplots (plot in columns)
+            gs = gridspec.GridSpec(2, 3, height_ratios=[4,1])
+            gs.update(bottom=0.05, top=0.95, left=0.05, right=0.95)
+            ax1 = fig.add_subplot(gs[0,0])
+            ax2 = fig.add_subplot(gs[0,1], sharex=ax1, sharey=ax1)
+            ax3 = fig.add_subplot(gs[0,2], sharex=ax1, sharey=ax1)
+            ax4 = fig.add_subplot(gs[1,:])
+        
+    SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
+                    im_ref_buffer, date, satname,
+                    fig, ax1, ax2, ax3, ax4,
+                    contours_ndvi, t_ndvi, cloud_mask, georef, image_epsg,
+                    sh_classif, sh_labels, contours_ndwi, t_ndwi)
     
     
-    # cb = plt.colorbar(ndviplot, ax=ax3)
-    # cb.ax.tick_params(labelsize=10)
-    # cb.set_label('NDVI values')
-    
-    # plot histogram of NDVI values
-    # FM: set max and min bin values to -1 and +1 (since using normalised difference index)
-    binwidth = 0.01
-    ax4.set_facecolor('0.9')
-    ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
-    ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])
-    if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
-        bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_veg, bins=bins, density=True, color=colours[0,:], label='Vegetation')
-    if len(int_nonveg) > 0 and sum(~np.isnan(int_nonveg)) > 0:
-        bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_nonveg, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
-    # if len(int_water) > 0 and sum(~np.isnan(int_water)) > 0:
-    #     bins = np.arange(np.nanmin(int_water), np.nanmax(int_water) + binwidth, binwidth)
-    #     ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
-    if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
-        bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
-    # if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
-    #     bins = np.arange(np.nanmin(int_veg), np.nanmax(int_veg) + binwidth, binwidth)
-    #     ax4.hist(int_veg, bins=bins, density=True, color=colours[0,:], label='Vegetation')
-    # if len(int_nonveg) > 0 and sum(~np.isnan(int_nonveg)) > 0:
-    #     bins = np.arange(np.nanmin(int_nonveg), np.nanmax(int_nonveg) + binwidth, binwidth)
-    #     ax4.hist(int_nonveg, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
-    # # if len(int_water) > 0 and sum(~np.isnan(int_water)) > 0:
-    # #     bins = np.arange(np.nanmin(int_water), np.nanmax(int_water) + binwidth, binwidth)
-    # #     ax4.hist(int_water, bins=bins, density=True, color=colours[2,:], label='water', alpha=0.75) 
-    # if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
-    #     bins = np.arange(np.nanmin(int_other), np.nanmax(int_other) + binwidth, binwidth)
-    #     ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
-    
-    
-    if settings['inputs']['sitename'] == 'StAndrewsWest' or settings['inputs']['sitename'] == 'StAndrewsEast':
-        print('(using weighted peaks for contouring)')
-        contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-        # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-    else:
-        # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-        contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-
-    # automatically map the shoreline based on the classifier if enough sand pixels
-    # if sum(sum(im_labels[:,:,0])) > 10:
-    #     # use classification to refine threshold and extract the sand/water interface
-    #     contours_ndvi, t_ndvi = find_wl_contours2(im_ms, im_labels, cloud_mask, buffer_size_pixels, im_ref_buffer, satname)
-    # else:       
-    #     # find water contours on NDVI grayscale image
-    #     contours_ndvi, t_ndvi = find_wl_contours1(im_ndvi, cloud_mask, im_ref_buffer, satname)
-
-    # process the contours into a shoreline
-    shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
-    #shoreline, shoreline_latlon, shoreline_proj = process_shoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
-    # convert shoreline to pixels
-    # THIS NEEDS FIXED (AFFINE TRANSFORM)
-    if len(shoreline) > 0:
-        # shoreline dataframe back to array
-        shorelineArr = Toolbox.GStoArr(shoreline)
-        sl_pix = Toolbox.convert_world2pix(shorelineArr, georef)
-    else: 
-        sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
-
-
-    # plot the shoreline on the images
-    # TO DO: size pixels based on image size (small dots on small imagery!)
-    sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
-    sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
-    sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
-    t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
-    # FM: plot vertical span where edges of overlapping classes reach (transition zone)
-    TZmin = ax4.axvspan(TZbuffer[0],TZbuffer[1], color='C1',alpha=0.4, label='transition zone')
-    
-    
-    ax4.legend(loc=1)
-    plt.draw() # to update the plot
     # adjust the threshold manually by letting the user change the threshold
     ax4.set_title('Click on the plot below to change the threshold and adjust the line detection. When finished, press <Enter>')
     while True:  
