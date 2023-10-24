@@ -144,7 +144,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 print(" - Skipped: empty raster")
                 continue
             
-            if cloud_mask == []:
+            if cloud_mask is None:
                 print(" - Skipped: no cloud mask available")
                 continue
             
@@ -1594,7 +1594,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     # FM: create transition zone mask
     TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
     
-    im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
+    im_TZ = Toolbox.TZimage(im_ndvi,int_veg_clip, int_nonveg_clip)
     
     cmap = colors.ListedColormap(['orange'])
     tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.7)       
