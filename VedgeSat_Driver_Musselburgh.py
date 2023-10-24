@@ -40,6 +40,7 @@ dates = ['2023-01-01', '2023-10-20']
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
 # L5: 1984-2013; L7: 1999-2017 (SLC error from 2003); L8: 2013-present; S2: 2014-present; L9: 2021-present
 sat_list = ['S2']
+#sat_list = ['PSScene4Band']
 
 # Cloud threshold for screening out cloudy imagery (0.5 or 50% recommended)
 cloud_thresh = 0.5
@@ -128,11 +129,10 @@ settings = {
 
 
 #%% Compute Tides from FES2014
-if wetdry is True:
-    tidepath = "../aviso-fes/data/fes2014"
-    daterange = dates
-    tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N
-    Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
+tidepath = "./fes-2.9.1-Source/data/fes2014"
+daterange = dates
+tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N
+Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
     
 #%% Vegetation Edge Reference Line Load-In
 
