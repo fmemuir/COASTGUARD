@@ -27,7 +27,7 @@ ee.Initialize()
 
 # Define desired coordinate projections
 projection_epsg = 27700 # OSGB 1936
-image_epsg = 32630 # UTM Zone 30N
+image_epsg = 32631 # UTM Zone 31N
 
 # Define AOI using coordinates of a rectangle
 # The points represent the corners of a bounding box that go around your site
