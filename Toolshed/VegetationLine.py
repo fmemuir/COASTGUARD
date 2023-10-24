@@ -273,12 +273,12 @@ def extract_veglines(metadata, settings, polygon, dates):
                 'dates': output_date,
                 'times':output_time,
                 'shorelines': output_vegline,
-                'waterlines':output_shoreline,
+                'waterlines':output_shoreline, #error
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
                 'idx': output_idxkeep,
                 'vthreshold': output_t_ndvi,
-                'wthreshold': output_t_ndwi
+                'wthreshold': output_t_ndwi #error
                 }
         print('')
     

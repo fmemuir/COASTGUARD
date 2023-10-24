@@ -523,9 +523,7 @@ def merge_output(output):
     output_all: dict
         contains the extracted shorelines in a single list sorted by date
     
-    """ 
-
-    pdb.set_trace()    
+    """     
     
     # initialize output dict
     output_all = dict([])

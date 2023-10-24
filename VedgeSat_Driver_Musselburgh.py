@@ -34,7 +34,7 @@ lonmin, lonmax = -3.079205, -3.0481888
 latmin, latmax = 55.94439, 55.950141
 
 # Date range
-dates = ['2023-01-01', '2023-10-20']
+dates = ['2023-08-01', '2023-10-20']
 
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
