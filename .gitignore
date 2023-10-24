@@ -23,7 +23,9 @@ CoastWatch.ipynb
 .ipynb_checkpoints/CoastWatch-checkpoint.ipynb
 *.pyc
 
+Data/
 *.tif
+jpg_files/
 *.jpg
 
 aviso-fes/
