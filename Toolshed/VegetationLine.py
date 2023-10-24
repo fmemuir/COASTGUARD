@@ -256,7 +256,7 @@ def extract_veglines(metadata, settings, polygon, dates):
                 output_shoreline_latlon.append(shoreline_latlon)
                 output_shoreline_proj.append(shoreline_proj)
                 output_t_ndwi.append(t_ndwi)
-            else:
+            else: # if not doing waterlines, fill with nans
                 output_shoreline.append(np.nan)
                 output_shoreline_latlon.append(np.nan)
                 output_shoreline_proj.append(np.nan)
