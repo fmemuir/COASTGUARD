@@ -1587,7 +1587,9 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     # clip down classified band index values to coastal buffer
     int_veg_clip, int_nonveg_clip = Image_Processing.ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
     # FM: create transition zone mask
-    im_TZ = Toolbox.TZimage
+    TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
+    
+    im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
     
     
     cmap = colors.ListedColormap(['orange'])
@@ -1811,16 +1813,12 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # plot image 3 (NDVI)
     ndviplot = ax3.imshow(im_ndvi, cmap='bwr')
     
+    # clip down classified band index values to coastal buffer
+    int_veg_clip, int_nonveg_clip = Image_Processing.ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
     # FM: create transition zone mask
-    im_TZ = im_ndvi.copy()
-    TZbuffer = Toolbox.TZValues(int_veg, int_nonveg)
-    for i in range(len(im_ndvi[:,0])):
-        for j in range(len(im_ndvi[0,:])):
-            if im_ndvi[i,j] > TZbuffer[0] and im_ndvi[i,j] < TZbuffer[1]:
-                im_TZ[i,j] = 1.0
-            else:
-                im_TZ[i,j] = np.nan
-    cmap = colors.ListedColormap(['orange'])
+    TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
+    im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
+
     tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
     
     ax3.axis('off')

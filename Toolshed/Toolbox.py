@@ -1857,10 +1857,9 @@ def TZValuesPeak(int_veg, int_nonveg):
     return [minval,maxval]
 
 
-def TZimage(im_ndvi,int_veg_clip, int_nonveg_clip):
+def TZimage(im_ndvi,TZbuffer):
     
     im_TZ = im_ndvi.copy()
-    TZbuffer = TZValues(int_veg_clip, int_nonveg_clip)
     
     for i in range(len(im_ndvi[:,0])):
         for j in range(len(im_ndvi[0,:])):
