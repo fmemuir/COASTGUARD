@@ -307,6 +307,8 @@ def extract_veglines(metadata, settings, polygon, dates):
             dates_sat_str = output_date[i] +' '+output_time[i]
             dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
         
+        # Water elevations for each image are grabbed from FES2014 to be able to 
+        # filter veg lines by tidal stage (e.g. disregard low tide veg edges)
         output_waterelev = Toolbox.GetWaterElevs(settings, dates_sat)
         output[satname]['tideelev'] = output_waterelev
         output_latlon[satname]['tideelev'] = output_waterelev
