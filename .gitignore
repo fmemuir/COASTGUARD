@@ -3,6 +3,8 @@
 Classification/Data/
 Classification/training_data/
 Validation/
+Data/EXAMPLE/jpg_files/
+
 
 CL_DriverTemplate_Test.py
 VegEdge_Montrose2022.py
