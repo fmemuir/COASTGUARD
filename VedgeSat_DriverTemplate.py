@@ -89,6 +89,18 @@ Sat = Toolbox.image_retrieval(inputs)
 metadata = Toolbox.metadata_collection(inputs, Sat)
 
 
+#%% Local Image Retrieval (Planet)
+# For the time being, Planet API is very slow at downloading files (depending on the size of your area).
+# You may want to use the Planet online data download portal and move the files to local folders that will
+# have been created at the Toolbox.CreateFileStructure() step. 
+# Move the image TIFFs into 'Data/YOURSITENAME/local_images/PlanetScope', 
+# and the respective cloud masks into 'Data/YOURSITENAME/AuxiliaryImages'
+# You can move any leftover extra files into 
+
+Sat = Toolbox.LocalImageRetrieval(inputs)
+metadata = Toolbox.LocalImageMetadata(inputs, Sat)
+
+
 #%% Vegetation Edge Settings
 # ONLY EDIT IF ADJUSTMENTS ARE NEEDED
 
