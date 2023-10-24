@@ -256,6 +256,11 @@ def extract_veglines(metadata, settings, polygon, dates):
                 output_shoreline_latlon.append(shoreline_latlon)
                 output_shoreline_proj.append(shoreline_proj)
                 output_t_ndwi.append(t_ndwi)
+            else:
+                output_shoreline.append(np.nan)
+                output_shoreline_latlon.append(np.nan)
+                output_shoreline_proj.append(np.nan)
+                output_t_ndwi.append(np.nan)
             output_filename.append(filenames[i])
             output_cloudcover.append(cloud_cover)
             output_geoaccuracy.append(metadata[satname]['acc_georef'][i])
@@ -1591,12 +1596,11 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     
     im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
     
-    
     cmap = colors.ListedColormap(['orange'])
-    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
+    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.7)       
     
     ax3.axis('off')
-    orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.5)
+    orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.7)
     ax3.legend(handles=[orange_patch],
                bbox_to_anchor=(1, 1), fontsize=10) #bbox_to_anchor=(1.1, 0.5)
     ax3.set_title('NDVI', fontsize=12)
@@ -1613,15 +1617,15 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
 
     # plot histogram of NDVI values    
     binwidth = 0.01
-    ax4.set_facecolor('0.75')
+    ax4.set_facecolor('0.7')
     ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
-    ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])
-    if len(int_veg_clip) > 0 and sum(~np.isnan(int_veg_clip)) > 0:
-        bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_veg_clip, bins=bins, density=True, color=colours[0,:], label='Vegetation')
+    ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])    
     if len(int_nonveg_clip) > 0 and sum(~np.isnan(int_nonveg_clip)) > 0:
         bins = np.arange(-1, 1, binwidth)
-        ax4.hist(int_nonveg_clip, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation', alpha=0.75) 
+        ax4.hist(int_nonveg_clip, bins=bins, density=True, color=colours[1,:], label='Non-Vegetation')
+    if len(int_veg_clip) > 0 and sum(~np.isnan(int_veg_clip)) > 0:
+        bins = np.arange(-1, 1, binwidth)
+        ax4.hist(int_veg_clip, bins=bins, density=True, color=colours[0,:], label='Vegetation', alpha=0.6)
     # if len(int_other) > 0 and sum(~np.isnan(int_other)) > 0:
     #     bins = np.arange(-1, 1, binwidth)
     #     ax4.hist(int_other, bins=bins, density=True, color='C7', label='other', alpha=0.5) 
@@ -1659,8 +1663,8 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
         sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
         sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
     # FM: plot vert lines where edges of overlapping classes reach (transition zone)
-    TZmin = ax4.axvline(x=TZbuffer[0],ls='--', c='#F2B47C', lw=1.5)
-    TZmax = ax4.axvline(x=TZbuffer[1],ls='--', c='#D4622A', lw=1.5, label='transition zone')
+    TZmin = ax4.axvspan(TZbuffer[0],TZbuffer[1], color='C1',alpha=0.4,label='transition zone')
+
     
     ax4.legend(loc=1)
     plt.draw() # to update the plot
@@ -1741,9 +1745,8 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     colorpalette = cmap(np.arange(0,17,1))
     colours = np.zeros((4,4))
     colours[0,:] = colorpalette[9]  # veg
-    colours[1,:] = colorpalette[14]  # non-veg
-    # colours[2,:] = colorpalette[0] # water
-    # colours[3,:] = colorpalette[16] # other
+    colours[1,:] = colorpalette[15]  # non-veg
+    colours[2,:] = colorpalette[1] # other
     for k in range(0,im_labels.shape[2]):
         im_class[im_labels[:,:,k],0] = colours[k,0]
         im_class[im_labels[:,:,k],1] = colours[k,1]
@@ -1819,10 +1822,11 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
     im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
 
-    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.5)       
+    cmap = colors.ListedColormap(['orange'])
+    tzplot = ax3.imshow(im_TZ, cmap=cmap, alpha=0.7)       
     
     ax3.axis('off')
-    orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.5)
+    orange_patch = mpatches.Patch(color='orange', label='Transition Zone', alpha=0.7)
     ax3.legend(handles=[orange_patch],
                bbox_to_anchor=(1, 1), fontsize=10) #bbox_to_anchor=(1.1, 0.5)
     ax3.set_title('NDVI', fontsize=12)
@@ -1836,7 +1840,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     # plot histogram of NDVI values
     # FM: set max and min bin values to -1 and +1 (since using normalised difference index)
     binwidth = 0.01
-    ax4.set_facecolor('0.75')
+    ax4.set_facecolor('0.9')
     ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
     ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])
     if len(int_veg) > 0 and sum(~np.isnan(int_veg)) > 0:
@@ -1900,9 +1904,8 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, ge
     sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
     sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='k', marker='.', s=5)
     t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
-    # FM: plot vert lines where edges of overlapping classes reach (transition zone)
-    TZmin = ax4.axvline(x=TZbuffer[0],ls='--', c='C1', lw=1.5)
-    TZmax = ax4.axvline(x=TZbuffer[1],ls='--', c='C1', lw=1.5, label='transition zone')
+    # FM: plot vertical span where edges of overlapping classes reach (transition zone)
+    TZmin = ax4.axvspan(TZbuffer[0],TZbuffer[1], color='C1',alpha=0.4, label='transition zone')
     
     
     ax4.legend(loc=1)
