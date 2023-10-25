@@ -47,7 +47,7 @@ cloud_thresh = 0.5
 wetdry = True
 
 # Reference shoreline/veg line shapefile name (should be stored in a folder called referenceLines in Data)
-# Line should be one continuous linestring along the shore, stored as a shapefile in WGS84 coord system
+# Line should be ONE CONTINUOUS linestring along the shore, stored as a shapefile in WGS84 coord system
 referenceLineShp = 'SITENAME_refLine.shp'
 # Maximum amount in metres by which to buffer the reference line for capturing veg edges within
 max_dist_ref = 150
