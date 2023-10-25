@@ -5,6 +5,7 @@ Classification/training_data/
 Validation/
 Data/EXAMPLE/jpg_files/
 Data/EXAMPLE/AOImap.html
+Data/tides/EXAMPLE_tides.csv
 
 CL_DriverTemplate_Test.py
 VegEdge_Montrose2022.py
