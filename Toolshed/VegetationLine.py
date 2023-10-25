@@ -195,7 +195,6 @@ def extract_veglines(metadata, settings, polygon, dates):
             # save classified image and transition zone mask after classification takes place
             Image_Processing.save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames[fn], settings)
             Image_Processing.save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames[fn], settings)
-            
                 
             # compute NDVI image (NIR-R)
             im_ndvi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
@@ -217,32 +216,33 @@ def extract_veglines(metadata, settings, polygon, dates):
             if settings['adjust_detection']:
                 date = metadata[satname]['dates'][i]
                 if settings['wetdry'] == True:
-                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection (im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline, image_epsg, georef,
+                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, image_epsg, georef,
                                                                                                   settings, date, satname, contours_ndvi, t_ndvi,
                                                                                                   sh_classif, sh_labels, contours_ndwi, t_ndwi)
                 else:
-                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection (im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline, image_epsg, georef,
+                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, image_epsg, georef,
                                                                                                   settings, date, satname, contours_ndvi, t_ndvi)
                 # if the user decides to skip the image, continue and do not save the mapped vegline
                 if skip_image:
                     continue
-
-            if settings['check_detection'] or settings['save_figure']:
-                date = metadata[satname]['dates'][i]
-                if not settings['check_detection']:
-                    plt.ioff() # turning interactive plotting off
-                if settings['wetdry'] == True:
-                    skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
-                                                image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
-                                                sh_classif, sh_labels, contours_ndwi, t_ndwi)
-                else:
-                    skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline,
-                                                image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi)
-                    
-                    
-                    # if the user decides to skip the image, continue and do not save the mapped vegline
-                if skip_image:
-                    continue
+            
+            else:
+                if settings['check_detection'] or settings['save_figure']:
+                    date = metadata[satname]['dates'][i]
+                    if not settings['check_detection']:
+                        plt.ioff() # turning interactive plotting off
+                    if settings['wetdry'] == True:
+                        skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer,
+                                                    image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
+                                                    sh_classif, sh_labels, contours_ndwi, t_ndwi)
+                    else:
+                        skip_image = show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer,
+                                                    image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi)
+                        
+                        
+                        # if the user decides to skip the image, continue and do not save the mapped vegline
+                    if skip_image:
+                        continue
             
 
             # append to output variables
@@ -1539,7 +1539,7 @@ def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
     return fig, ax1, ax2, ax3, ax4, t_line, im_ndvi_buffer, vlplots
 
 
-def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
+def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, georef,
                    settings, date, satname, contours_ndvi, t_ndvi,
                    sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
 
@@ -1651,7 +1651,7 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_
     return skip_image
 
 
-def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,image_epsg, georef,
+def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, image_epsg, georef,
                    settings, date, satname, contours_ndvi, t_ndvi,
                    sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
 
@@ -1726,20 +1726,20 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,imag
             contours = measure.find_contours(im_ndvi_buffer, t_ndvi)
             # remove contours that contain NaNs (due to cloud pixels in the contour)
             contours = process_contours(contours) 
-            # process the water contours into a shoreline
-            shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings)
+            # process the contours into a shoreline
+            vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings)
             
             
-            # convert shoreline to pixels
-            if len(shoreline) > 0:
-                shorelineArr = Toolbox.GStoArr(shoreline)
-                sl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(shorelineArr,image_epsg,image_epsg)[:,[0,1]], georef)
+            # convert line to pixels
+            if len(vegline) > 0:
+                veglineArr = Toolbox.GStoArr(vegline)
+                vl_pix = Toolbox.convert_world2pix(Toolbox.convert_epsg(veglineArr,image_epsg,image_epsg)[:,[0,1]], georef)
             else: 
-                sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
+                vl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
             # update the plotted shorelines
-            vlplots[0].set_offsets(sl_pix)
-            vlplots[1].set_offsets(sl_pix)
-            vlplots[2].set_offsets(sl_pix)
+            vlplots[0].set_offsets(vl_pix)
+            vlplots[1].set_offsets(vl_pix)
+            vlplots[2].set_offsets(vl_pix)
             
             fig.canvas.draw_idle()
         else:
@@ -1796,6 +1796,6 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, shoreline,imag
     for ax in fig.axes:
         ax.clear()
 
-    return skip_image, shoreline, shoreline_latlon, shoreline_proj, t_ndvi
+    return skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi
 
 
