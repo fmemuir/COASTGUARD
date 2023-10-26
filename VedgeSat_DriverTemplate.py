@@ -167,18 +167,13 @@ OPTION 2: Load in pre-existing outputs
 SiteFilepath = os.path.join(inputs['filepath'], sitename)
 with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
     output = pickle.load(f)
-# with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
-#     output_latlon = pickle.load(f)
-# with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
-#     output_proj = pickle.load(f)
     
 
 #%% Remove Duplicate Lines
-# (images taken on the same date by the same satellite)
+# For images taken on the same date by the same satellite, keep only the longest line
 
-output = Toolbox.remove_duplicates(output) 
-# output_latlon = Toolbox.remove_duplicates(output_latlon)
-# output_proj = Toolbox.remove_duplicates(output_proj)
+output = Toolbox.RemoveDuplicates(output) 
+
 
 #%% Save Veglines as Local Shapefiles
 
