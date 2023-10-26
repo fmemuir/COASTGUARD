@@ -95,7 +95,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
         SmoothingWindowSize = SmoothingWindowSize + 1
         print('Window size should be odd; changed to %s m' % SmoothingWindowSize)
     
-    refGDF = gpd.read_file(referenceLinePath)
+    refGDF = gpd.read_file(os.path.join('Data','referenceLines',referenceLinePath))
     # change CRS to desired projected EPSG
     projection_epsg = settings['projection_epsg']
     refGDF = refGDF.to_crs(epsg=projection_epsg)
