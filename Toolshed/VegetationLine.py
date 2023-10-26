@@ -272,7 +272,7 @@ def extract_veglines(metadata, settings, polygon, dates):
         output[satname] = {
                 'dates': output_date,
                 'times':output_time,
-                'shorelines': output_vegline,
+                'veglines': output_vegline,
                 'waterlines':output_shoreline,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
@@ -285,7 +285,7 @@ def extract_veglines(metadata, settings, polygon, dates):
         output_latlon[satname] = {
                 'dates': output_date,
                 'times':output_time,
-                'shorelines': output_vegline_latlon,
+                'veglines': output_vegline_latlon,
                 'waterlines':output_shoreline_latlon,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,
@@ -297,7 +297,7 @@ def extract_veglines(metadata, settings, polygon, dates):
         output_proj[satname] = {
                 'dates': output_date,
                 'times':output_time,
-                'shorelines': output_vegline_proj,
+                'veglines': output_vegline_proj,
                 'waterlines':output_shoreline_proj,
                 'filename': output_filename,
                 'cloud_cover': output_cloudcover,

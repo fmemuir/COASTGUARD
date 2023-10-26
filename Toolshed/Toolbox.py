@@ -551,6 +551,7 @@ def remove_duplicates(output):
     Function to remove from the output dictionnary entries containing shorelines for 
     the same date and satellite mission. This happens when there is an overlap between 
     adjacent satellite images.
+    
 
     Arguments:
     -----------
@@ -593,6 +594,67 @@ def remove_duplicates(output):
     else:
         print('0 duplicates')
         return output
+
+
+def RemoveDuplicates(output):
+    """
+    Function to remove entries containing shorelines for the same date and satellite mission. 
+    This happens when there is an overlap between adjacent satellite images.
+    If there is an overlap, this function keeps the longest line from the duplicates.
+    FM Oct 2023
+
+    Arguments:
+    -----------
+        output: dict
+            contains output dict with shoreline and metadata
+
+    Returns:
+    -----------
+        output_no_duplicates: dict
+            contains the updated dict where duplicates have been removed
+
+    """
+
+    # nested function
+    def duplicates_dict(lst):
+        "return duplicates and indices"
+        def duplicates(lst, item):
+                return [i for i, x in enumerate(lst) if x == item]
+        return dict((x, duplicates(lst, x)) for x in set(lst) if lst.count(x) > 1)
+
+    dates = output['dates']
+    
+    # make a list with year/month/day
+    dates_str = [datetime.strptime(_,'%Y-%m-%d').strftime('%Y-%m-%d') for _ in dates]
+    # create a dictionary with the duplicates
+    dupl = duplicates_dict(dates_str)
+    
+    # if there are duplicates, only keep the element with the longest line
+    if dupl:
+        # Keep duplicates with different satnames
+        for key,val in list(dupl.items()): # has to be list so as not to change dict while looping
+            if len(set(output['satname'][val[0]:val[1]+1])) > 1:
+                del(dupl[key])
+        
+        dupl
+        # output_no_duplicates = dict([])
+        # idx_remove = []
+        # for k,v in dupl.items():
+        #     idx_remove.append(v[0])
+        # idx_remove = sorted(idx_remove)
+        
+        # idx_all = np.linspace(0, len(dates_str)-1, len(dates_str))
+        # idx_keep = list(np.where(~np.isin(idx_all,idx_remove))[0])
+        # for key in output.keys():
+        #     output_no_duplicates[key] = [output[key][i] for i in idx_keep]
+        
+        print('%d duplicates' % len(idx_remove))
+        return output_no_duplicates
+    
+    else:
+        print('0 duplicates')
+        return output
+
 
 def get_closest_datapoint(dates, dates_ts, values_ts):
     """
@@ -1226,18 +1288,18 @@ def SaveShapefiles(output, name_prefix, sitename, epsg):
     '''
     
     # for shores stored as array of coords; export as mulitpoint
-    if type(output['shorelines'][0]) == np.ndarray:
+    if type(output['veglines'][0]) == np.ndarray:
         # map to multipoint
-        output_geom = gpd.GeoSeries(map(MultiPoint,output['shorelines']))
+        output_geom = gpd.GeoSeries(map(MultiPoint,output['veglines']))
         # create geodataframe with geometry from output multipoints
         outputGDF = gpd.GeoDataFrame(output, crs='EPSG:'+str(epsg), geometry=output_geom)
         # drop duplicate shorelines column
-        outputsGDF = outputGDF.drop('shorelines', axis=1)
+        outputsGDF = outputGDF.drop('veglines', axis=1)
     else:    
         DFlist = []
-        for i in range(len(output['shorelines'])): # for each image + associated metadata
+        for i in range(len(output['veglines'])): # for each image + associated metadata
             # create geodataframe of individual features from each geoseries (i.e. feature collection)
-            outputGDF = gpd.GeoDataFrame(geometry=output['shorelines'][i])
+            outputGDF = gpd.GeoDataFrame(geometry=output['veglines'][i])
             for key in output.keys(): # for each column
                 # add column to geodataframe with repeated metadata
                 outputGDF[key] = output[key][i]
@@ -1245,7 +1307,7 @@ def SaveShapefiles(output, name_prefix, sitename, epsg):
             DFlist.append(outputGDF)
             # concatenate to one GDF with individual lines exploded out
             outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=DFlist[0].crs)
-            outputsGDF = outputsGDF.drop('shorelines', axis=1)
+            outputsGDF = outputsGDF.drop('veglines', axis=1)
             
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp'))
     
@@ -1261,18 +1323,18 @@ def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg):
     
     output = outputOG.copy()
     # for shores stored as array of coords; export as mulitpoint
-    if type(output['shorelines'][0]) == np.ndarray:
+    if type(output['veglines'][0]) == np.ndarray:
         # map to multipoint
-        output_geom = gpd.GeoSeries(map(MultiPoint,output['shorelines']))
+        output_geom = gpd.GeoSeries(map(MultiPoint,output['veglines']))
         # create geodataframe with geometry from output multipoints
         outputGDF = gpd.GeoDataFrame(output, crs='EPSG:'+str(epsg), geometry=output_geom)
         # drop duplicate shorelines column
-        outputsGDF = outputGDF.drop('shorelines', axis=1)
+        outputsGDF = outputGDF.drop('veglines', axis=1)
     else:    
         DFlist = []
-        for i in range(len(output['shorelines'])): # for each image + associated metadata
+        for i in range(len(output['veglines'])): # for each image + associated metadata
             # create geodataframe of individual features from each geoseries (i.e. feature collection)
-            convlines = output['shorelines'][i].to_crs(str(epsg))
+            convlines = output['veglines'][i].to_crs(str(epsg))
             outputGDF = gpd.GeoDataFrame(geometry=convlines, crs=str(epsg))
             if 'waterlines' in output.keys():
                 del output['waterlines']
@@ -1283,7 +1345,7 @@ def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg):
             DFlist.append(outputGDF)
             # concatenate to one GDF with individual lines exploded out
             outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
-            outputsGDF = outputsGDF.drop('shorelines', axis=1)
+            outputsGDF = outputsGDF.drop('veglines', axis=1)
             
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp'))
     
@@ -1311,8 +1373,8 @@ def SaveConvShapefiles_Water(outputOG, name_prefix, sitename, epsg):
             # create geodataframe of individual features from each geoseries (i.e. feature collection)
             convlines = output['waterlines'][i].to_crs(str(epsg))
             outputGDF = gpd.GeoDataFrame(geometry=convlines, crs=str(epsg))
-            if 'shorelines' in output.keys():
-                del output['shorelines']
+            if 'veglines' in output.keys():
+                del output['veglines']
             for key in output.keys(): # for each column
                 # add column to geodataframe with repeated metadata
                 outputGDF[key] = output[key][i]
