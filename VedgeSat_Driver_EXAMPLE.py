@@ -110,7 +110,7 @@ settings = {
     'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
     'wetdry': wetdry,              # extract wet-dry boundary as well as veg
     # quality control:
-    'check_detection': True,    # if True, shows each shoreline detection to the user for validation
+    'check_detection': False,    # if True, shows each shoreline detection to the user for validation
     'adjust_detection': False,  # if True, allows user to adjust the postion of each shoreline by changing the threhold
     'save_figure': True,        # if True, saves a figure showing the mapped shoreline for each image
     # [ONLY FOR ADVANCED USERS] shoreline detection parameters:
@@ -187,10 +187,10 @@ SmoothingWindowSize = 21
 NoSmooths = 100
 TransectSpacing = 10
 DistanceInland = 100
-DistanceOffshore = 350
+DistanceOffshore = 100
 
 # provide average beach slope for site, for calculating corrected beach widths
-beachslope = 0.02 
+beachslope = 0.24
 
 
 #%% Create Cross-shore Transects
