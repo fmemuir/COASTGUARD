@@ -178,10 +178,10 @@ output = Toolbox.RemoveDuplicates(output)
 #%% Save Veglines as Local Shapefiles
 
 # Save output veglines 
-Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['projection_epsg'])
+Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['output_epsg'])
 # Save output shorelines if they were generated
 if settings['wetdry'] == True:
-    Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['projection_epsg'])
+    Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['output_epsg'])
 
 
 #%% EDIT ME: Define Settings for Cross-shore Transects
@@ -190,7 +190,7 @@ SmoothingWindowSize = 21
 NoSmooths = 100
 TransectSpacing = 10
 DistanceInland = 100
-DistanceOffshore = 350
+DistanceOffshore = 100
 
 # provide average beach slope for site, for calculating corrected beach widths
 beachslope = 0.02 
@@ -198,7 +198,7 @@ beachslope = 0.02
 
 #%% Create Cross-shore Transects
 
-VegBasePath = 'Data/' + sitename + '/veglines'
+VegBasePath = 'Data/' + sitename + '/Veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
 WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')

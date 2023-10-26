@@ -171,10 +171,10 @@ output = Toolbox.RemoveDuplicates(output)
 #%% Save Veglines as Local Shapefiles
 
 # Save output veglines 
-Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['projection_epsg'])
+Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['output_epsg'])
 # Save output shorelines if they were generated
 if settings['wetdry'] == True:
-    Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['projection_epsg'])
+    Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['output_epsg'])
 
 
 #%% EDIT ME: Define Settings for Cross-shore Transects
@@ -191,7 +191,7 @@ beachslope = 0.24
 
 #%% Create Cross-shore Transects
 
-VegBasePath = 'Data/' + sitename + '/veglines'
+VegBasePath = 'Data/' + sitename + '/Veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
 WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
@@ -278,7 +278,7 @@ else:
 #%% Timeseries Plotting
 
 # EDIT ME: Select transect ID to plot
-TransectIDs = [[1575,309]]
+TransectIDs = [25,50,75]
 for TransectID in TransectIDs:
     DateRange = [0,len(TransectInterGDF['dates'][TransectID])]
     # Plot timeseries of cross-shore veg position
@@ -290,7 +290,7 @@ for TransectID in TransectIDs:
 #%% Beach Width Plotting
 
 # Select transect ID to plot
-TransectIDs = [180,1650]
+TransectIDs = [25,50,75]
 for TransectID in TransectIDs:
     # Plot timeseries of cross-shore width between water edge and veg edge 
     DateRange = [0,len(TransectInterGDF['dates'][TransectID])]
@@ -320,7 +320,7 @@ else:
 
 #%% Validation Plots
 # EDIT ME: List of transect ID tuples (startID, finishID)
-TransectIDList = [(0,1741)]
+TransectIDList = [(0,24),(25,49),(50,74),(75,99)]
 
 for TransectIDs in TransectIDList:
     PlotTitle = 'Accuracy of Transects ' + str(TransectIDs[0]) + ' to ' + str(TransectIDs[1])
@@ -331,7 +331,7 @@ for TransectIDs in TransectIDList:
     
 #%% Quantify errors between validation and satellite derived lines
 # EDIT ME: List of transect ID tuples (startID, finishID
-TransectIDList = [(595,711),(726,889),(972,1140),(1141,1297)]
+TransectIDList = [(0,24),(25,49),(50,74),(75,99)]
 
 for TransectIDs in TransectIDList:
     Toolbox.QuantifyErrors(sitename, VeglineGDF,'dates',ValidInterGDF,TransectIDs)
