@@ -419,15 +419,15 @@ def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
 
     plotvegdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
     plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID][daterange[0]:daterange[1]]
-    plotsatdist = TransectInterGDF['beachwidth'].iloc[TransectID][daterange[0]:daterange[1]]
+    plotbwdist = TransectInterGDF['beachwidth'].iloc[TransectID][daterange[0]:daterange[1]]
 
     plotvegdate, plotvegdist = [list(d) for d in zip(*sorted(zip(plotvegdate, plotvegdist), key=lambda x: x[0]))]
     plotwldate, plotwldist = [list(d) for d in zip(*sorted(zip(plotwldate, plotwldist), key=lambda x: x[0]))]
-    plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]
+    plotdate, plotbwdist = [list(d) for d in zip(*sorted(zip(plotdate, plotbwdist), key=lambda x: x[0]))]
 
     # linear regression line
     x = mpl.dates.date2num(plotdate)
-    msat, csat = np.polyfit(x,plotsatdist,1)
+    msat, csat = np.polyfit(x,plotbwdist,1)
     polysat = np.poly1d([msat, csat])
     xx = np.linspace(x.min(), x.max(), 100)
     dd = mpl.dates.num2date(xx)
@@ -436,12 +436,12 @@ def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
     mpl.rcParams.update({'font.size':8})
     fig, ax = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
     
-    ax.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='k', markersize=8, markeredgecolor='k', label='Upper Beach Width')
+    ax.plot(plotdate, plotbwdist, linewidth=0, marker='.', c='k', markersize=8, markeredgecolor='k', label='Upper Beach Width')
     # plt.plot(plotvegdate, plotvegdist, linewidth=0, marker='.', c='g', markersize=8, label='Upper Beach Width')
     # plt.plot(plotwldate, plotwldist, linewidth=0, marker='.', c='b', markersize=8,  label='Upper Beach Width')
 
     # plot trendlines
-    yav = movingaverage(plotsatdist, 3)
+    yav = movingaverage(plotbwdist, 3)
     ax.plot(plotdate, yav, 'r', label='3pt Moving Average')
     ax.plot(dd, polysat(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
 
@@ -450,7 +450,7 @@ def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
     plt.title('Transect '+str(TransectID))
     plt.xlabel('Date (yyyy-mm)')
     plt.ylabel('Cross-shore distance (m)')
-    plt.ylim(-200,1000)
+    # plt.ylim(-200,1000)
     plt.tight_layout()
     
     plt.savefig(os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
