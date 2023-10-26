@@ -168,7 +168,7 @@ with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
 #%% Remove Duplicate Lines
 # (images taken on the same date by the same satellite)
 
-output = Toolbox.remove_duplicates(output) 
+output = Toolbox.RemoveDuplicates(output) 
 # output_latlon = Toolbox.remove_duplicates(output_latlon)
 # output_proj = Toolbox.remove_duplicates(output_proj)
 
