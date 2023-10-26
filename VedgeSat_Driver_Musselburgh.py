@@ -29,18 +29,18 @@ image_epsg = 32630 # UTM Zone 30N
 
 # Define AOI using coordinates of a rectangle
 # The points represent the corners of a bounding box that go around your site
-sitename = 'Musselburgh_refLineTesting'
+sitename = 'Musselburgh_Planetcoords'
 lonmin, lonmax = -3.079205, -3.0481888
 latmin, latmax = 55.94439, 55.950141
 
 # Date range
-dates = ['2016-01-01', '2023-10-20']
+dates = ['2023-01-10', '2023-10-23']
 
 # Satellite missions
 # Input a list of containing any/all of 'L5', 'L7', 'L8', 'L9', 'S2', 'PSScene4Band'
 # L5: 1984-2013; L7: 1999-2017 (SLC error from 2003); L8: 2013-present; S2: 2014-present; L9: 2021-present
-sat_list = ['S2']
-#sat_list = ['PSScene4Band']
+#sat_list = ['S2']
+sat_list = ['PSScene4Band']
 
 # Cloud threshold for screening out cloudy imagery (0.5 or 50% recommended)
 cloud_thresh = 0.5
@@ -79,18 +79,21 @@ inputs = {'polygon': polygon, 'dates': dates, 'daterange':daterange, 'sat_list':
 #%% Image Retrieval
 
 # Before downloading the images, check how many images are available for your inputs
-Download.check_images_available(inputs)
+if len(sat_list) == 1 and sat_list[0] == 'PSScene4Band':
+    print('skipping image download - image should be stored locally')
+else:
+    Download.check_images_available(inputs)
 
 
 #%% Image Download
 
 # Make the metadata
-Sat = Toolbox.image_retrieval(inputs)
-metadata = Toolbox.metadata_collection(inputs, Sat)
-
-# if Planet in sat_list:
-    #Sat = Toolbox.LocalImageRetrieval(inputs)
-    #metadata = Toolbox.LocalImageMetadata(inputs, Sat)
+if len(sat_list) == 1 and sat_list[0] == 'PSScene4Band':
+    Sat = Toolbox.LocalImageRetrieval(inputs)
+    metadata = Toolbox.LocalImageMetadata(inputs, Sat)
+else:
+    Sat = Toolbox.image_retrieval(inputs)
+    metadata = Toolbox.metadata_collection(inputs, Sat)
 
 
 #%% Vegetation Edge Settings
@@ -103,8 +106,8 @@ if os.path.isdir(BasePath) is False:
 
 # Choose which ANN classifier to use (the default is already uncommented)
 # clf_model = 'MLPClassifier_Veg_L8S2.pkl'
-# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
-clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
+clf_model = 'MLPClassifier_Veg_PSScene.pkl'
+# clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
 
 settings = {
     # general parameters:
