@@ -636,20 +636,20 @@ def RemoveDuplicates(output):
             if len(set(output['satname'][val[0]:val[1]+1])) > 1:
                 del(dupl[key])
         
-        dupl
-        # output_no_duplicates = dict([])
-        # idx_remove = []
-        # for k,v in dupl.items():
-        #     idx_remove.append(v[0])
-        # idx_remove = sorted(idx_remove)
+        dupcount = []
+        for key,val in list(dupl.items()):
+            dupcount.append(val[0])
+            lengths = []
+            # calculate lengths of duplicated line features
+            for v in val:
+                lengths.append(output['shorelines'][v].length[0])
+            # keep the longest line (i.e. remove the shortest)
+            for okey in list(output.keys()):
+                del(output[okey][val[lengths.index(min(lengths))]])
+                
         
-        # idx_all = np.linspace(0, len(dates_str)-1, len(dates_str))
-        # idx_keep = list(np.where(~np.isin(idx_all,idx_remove))[0])
-        # for key in output.keys():
-        #     output_no_duplicates[key] = [output[key][i] for i in idx_keep]
-        
-        print('%d duplicates' % len(idx_remove))
-        return output_no_duplicates
+        print('%d duplicates' % len(dupcount))
+        return output
     
     else:
         print('0 duplicates')
