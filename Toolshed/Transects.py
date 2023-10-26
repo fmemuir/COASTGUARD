@@ -96,9 +96,9 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
         print('Window size should be odd; changed to %s m' % SmoothingWindowSize)
     
     refGDF = gpd.read_file(os.path.join('Data','referenceLines',referenceLinePath))
-    # change CRS to desired projected EPSG
-    projection_epsg = settings['projection_epsg']
-    refGDF = refGDF.to_crs(epsg=projection_epsg)
+    # # change CRS to desired projected EPSG
+    # projection_epsg = settings['projection_epsg']
+    refGDF = refGDF.to_crs(epsg=settings['output_epsg'])
     # write shp file
     refGDF.to_file(ReprojSpec)
         
@@ -123,7 +123,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
     TransectGDF = gpd.read_file(TransectPath)
     
     # Add reference line intersect points to raw transect GDF
-    TransectGDF.set_crs(epsg=projection_epsg, inplace=True)
+    TransectGDF.set_crs(epsg=settings['output_epsg'], inplace=True)
     
     # intersect each transect with original baseline to get ref line points
     columnsdata = []
@@ -171,7 +171,12 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
 
     '''
      
-    print("performing intersections between transects")
+    print("performing intersections between transects...")
+    
+    # checking fro mismatched coordinate systems
+    if TransectGDF.crs != ShorelineGDF.crs:
+        print("Your coordiate systems are mismatched; changing transect CRS to match shorelines CRS...")
+        TransectGDF.to_crs(ShorelineGDF.crs, inplace=True)
     # initialise where each intersection between lines and transects will be saved
     ColumnData = []
     Geoms = []
@@ -289,7 +294,12 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
 
     '''
      
-    print("performing intersections between transects and waterlines")
+    print("performing intersections between transects and waterlines...")
+    
+    # checking fro mismatched coordinate systems
+    if TransectGDF.crs != WaterlineGDF.crs:
+        print("Your coordiate systems are mismatched; changing transect CRS to match shorelines CRS...")
+        TransectGDF.to_crs(WaterlineGDF.crs, inplace=True)
     # initialise where each intersection between lines and transects will be saved
     ColumnData = []
     Geoms = []
