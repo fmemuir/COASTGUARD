@@ -278,23 +278,22 @@ else:
 #%% Timeseries Plotting
 
 # EDIT ME: Select transect ID to plot
-TransectIDs = [25,50,75]
+TransectIDs = [[25,30,35],50,75]
 for TransectID in TransectIDs:
-    DateRange = [0,len(TransectInterGDF['dates'][TransectID])]
     # Plot timeseries of cross-shore veg position
-    Plotting.VegTimeseries(sitename, TransectInterGDF, TransectID, DateRange)
+    Plotting.VegTimeseries(sitename, TransectInterGDF, TransectID, Hemisphere='N')
     # If plotting veg and water lines together
-    # Plotting.VegWaterTimeseries(sitename, TransectInterGDF, TransectID, Hemisphere='N')
+    if settings['wetdry']:
+        Plotting.VegWaterTimeseries(sitename, TransectInterGDFWater, TransectID, Hemisphere='N')
 
     
 #%% Beach Width Plotting
 
 # Select transect ID to plot
-TransectIDs = [25,50,75]
+TransectIDs = [[25,30,35],50,75]
 for TransectID in TransectIDs:
     # Plot timeseries of cross-shore width between water edge and veg edge 
-    DateRange = [0,len(TransectInterGDF['dates'][TransectID])]
-    Plotting.WidthTimeseries(sitename, TransectInterGDF, TransectID, DateRange)
+    Plotting.WidthTimeseries(sitename, TransectInterGDFWater, TransectID, Hemisphere='N')
 
 
 #%% EDIT ME: Validation Settings
