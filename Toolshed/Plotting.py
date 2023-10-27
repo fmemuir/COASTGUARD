@@ -137,9 +137,12 @@ def SatGIF(metadata,settings,output):
 
 
 
-def VegTimeseries(sitename, TransectDict, TransectID, daterange):
-    """
+def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     
+    """
+    Plot timeseries of cross-shore veg edge change for selected transect(s).
+    If more than one transect is supplied in a list, create subplots for comparison.
+    FM Nov 2022
 
     Parameters
     ----------
@@ -153,67 +156,109 @@ def VegTimeseries(sitename, TransectDict, TransectID, daterange):
     None.
 
     """
-    
+       
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
+    figID = ''
+        
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300)
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        # use 2 subplots with one empty to be able to loop through them
+        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        axs = [axs] # to be able to loop through
+        
+    # common plot labels
+    lab = fig.add_subplot(111,frameon=False)
+    lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
+    if type(TransectIDs) == list: 
+        lab.set_xlabel('Date (yyyy-mm)', labelpad=22)
+    else:
+        lab.set_xlabel('Date (yyyy-mm)')
+    lab.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
     
-    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectDict['dates'][TransectID][daterange[0]:daterange[1]]]
-    plotsatdist = TransectDict['distances'][TransectID][daterange[0]:daterange[1]]
-    plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+    for TransectID, ax in zip(TransectIDs,axs):
+        daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+        
+        plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
+        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
+                
+        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        
+        # create error bar lines to fill between
+        for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], ['#81A739']):
+            yerrorplus = [x + errorRMSE for x in plotdist]
+            yerrorneg = [x - errorRMSE for x in plotdist]
+            axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
+       
+        # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
+            
+        # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
+        for i in range(plotdate[0].year-1, plotdate[-1].year):
+            if Hemisphere == 'N':
+                rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+            elif Hemisphere == 'S':
+                rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
+            rectwidth = rectWinterEnd - rectWinterStart
+            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+            ax.add_patch(rect)
+          
+        # plot trendlines
+        vegav = movingaverage(plotsatdist, 3)
+        ax.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
     
-    plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]
+        # linear regression lines
+        x = mpl.dates.date2num(plotdate)
+        for y, pltax, clr in zip([plotsatdist], [ax], ['#3A4C1A']):
+            m, c = np.polyfit(x,y,1)
+            polysat = np.poly1d([m, c])
+            xx = np.linspace(x.min(), x.max(), 100)
+            dd = mpl.dates.num2date(xx)
+            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
     
-    # linear regression line
-    x = mpl.dates.date2num(plotdate)
-    msat, csat = np.polyfit(x,plotsatdist,1)
-    polysat = np.poly1d([msat, csat])
-    xx = np.linspace(x.min(), x.max(), 100)
-    dd = mpl.dates.num2date(xx)
+        ax.title.set_text('Transect '+str(TransectID))
+            
+        # ax.set_xlabel('Date (yyyy-mm)')
+        # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+        # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
+        # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
+        ax.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
+        ax.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
+        
+        leg1 = ax.legend(loc=2)
+        # weird zorder with twinned axes; remove first axis legend and plot on top of second
+        # leg1.remove()
+        
+        figID += '_'+str(TransectID)
+        plt.tight_layout()
+        
+    figname = os.path.join(outfilepath,sitename + '_SatVegTimeseries_Transect'+figID+'.png')
     
-    # scaling for single column A4 page
-    mpl.rcParams.update({'font.size':8})
-    fig, ax = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
-    
-    ax.plot(plotdate, plotsatdist, linewidth=0, marker='.', c='k', markersize=6, markeredgecolor='k', label='Satellite VegEdge')
-    plt.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5)
-    
-    for i in range(plotdate[0].year-1, plotdate[-1].year):
-        recjan = mdates.date2num(datetime(i, 12, 1, 0, 0))
-        recmarch = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
-        recwidth = recmarch - recjan
-        rec = mpatches.Rectangle((recjan, -500), recwidth, 1000, fc=[0,0.3,1], ec=None, alpha=0.3)
-        ax.add_patch(rec)
-    
-    # recstart= mdates.date2num(plotdate[0])
-    # recend= mdates.date2num(plotdate[10])
-    # recwidth= recend - recstart
-    
-    # rec = mpatches.Rectangle((recstart,0), recwidth, 50, color=[0.8,0.8,0.8])
-    # ax.add_patch(rec)
-    
-    # plot trendlines
-    yav = movingaverage(plotsatdist, 3)
-    ax.plot(plotdate, yav, 'green', lw=1.5, label='3pt Moving Average')
-    ax.plot(dd, polysat(xx), '--', color='C7', lw=1.5, label=str(round(msat*365.25,2))+'m/yr')
-
-    plt.legend()
-    plt.title('Transect '+str(TransectID))
-    plt.xlabel('Date (yyyy-mm)')
-    plt.ylabel('Cross-shore distance (m)')
-    # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
-    plt.ylim(min(plotsatdist)-10, max(plotsatdist)+10)
     plt.tight_layout()
-    
-    plt.savefig(os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
-    print('Plot saved under '+os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
+            
+    plt.savefig(figname)
+    print('Plot saved under '+figname)
     
     plt.show()
     
     
 def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     """
-    
+    Plot timeseries of cross-shore veg edge and waterline change for selected transect(s).
+    If more than one transect is supplied in a list, create subplots for comparison.
+    FM Nov 2022
 
     Parameters
     ----------
@@ -233,15 +278,35 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         os.mkdir(outfilepath)
     figID = ''
         
-    if len(TransectIDs) > 1:
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
         fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300)
     else:
+        TransectIDs = [TransectIDs]
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(2,1,figsize=(6.55,3), dpi=300, gridspec_kw={'height_ratios':[100,1]})
+        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        axs = [axs] # to be able to loop through
         
+    # common plot labels
+    lab = fig.add_subplot(111,frameon=False)
+    lab2 = lab.twinx()
+    for loc in ['top','right','bottom','left']:
+        lab2.spines[loc].set_visible(False)
+    lab2.get_xaxis().set_ticks([])
+    lab2.get_yaxis().set_ticks([])
+    lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
+    lab2.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
+    if type(TransectIDs) == list: 
+        lab.set_xlabel('Date (yyyy-mm)', labelpad=22)
+    else:
+        lab.set_xlabel('Date (yyyy-mm)')
+    lab.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+    lab2.set_ylabel('Cross-shore distance (water) (m)', labelpad=22, color='#4056F4')
+
+    
     for TransectID, ax in zip(TransectIDs,axs):
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
@@ -292,15 +357,11 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
             dd = mpl.dates.num2date(xx)
             pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
     
-        if TransectID == 309:
-            plt.title('Transect '+str(TransectID)+', Out Head')
-        elif TransectID == 1575:
-            plt.title('Transect '+str(TransectID)+', Reres Wood')
-        else:
-            plt.title('Transect '+str(TransectID))
-        ax.set_xlabel('Date (yyyy-mm)')
-        ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
-        ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
+        ax.title.set_text('Transect '+str(TransectID))
+            
+        # ax.set_xlabel('Date (yyyy-mm)')
+        # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+        # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
         # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
         ax2.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
         ax.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
@@ -313,11 +374,10 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         ax2.add_artist(leg1)
         
         figID += '_'+str(TransectID)
+        plt.tight_layout()
         
     figname = os.path.join(outfilepath,sitename + '_SatVegWaterTimeseries_Transect'+figID+'.png')
     
-    if not axs[1].lines:
-        fig.delaxes(axs[1])
     plt.tight_layout()
             
     plt.savefig(figname)
@@ -391,9 +451,11 @@ def ValidTimeseries(sitename, ValidInterGDF, TransectID):
     plt.show()
 
 
-def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
+def WidthTimeseries(sitename, TransectInterGDFWater, TransectIDs, Hemisphere = 'N'):
     """
-    
+    Plot timeseries of beach width between veg edge and waterline for selected transect(s).
+    If more than one transect is supplied in a list, create subplots for comparison.
+    FM Jul 2023
 
     Parameters
     ----------
@@ -411,51 +473,95 @@ def WidthTimeseries(sitename, TransectInterGDF, TransectID, daterange):
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
+    figID = ''
+        
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300)
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        # use 2 subplots with one empty to be able to loop through them
+        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        axs = [axs] # to be able to loop through
+        
+    # common plot labels
+    lab = fig.add_subplot(111,frameon=False)
+    lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
+    if type(TransectIDs) == list: 
+        lab.set_xlabel('Date (yyyy-mm)', labelpad=22)
+    else:
+        lab.set_xlabel('Date (yyyy-mm)')
+    lab.set_ylabel('Cross-shore beach width (m)')
     
-    plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID][daterange[0]:daterange[1]]]
-
-    plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID][daterange[0]:daterange[1]]]
-    plotvegdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
-
-    plotvegdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
-    plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID][daterange[0]:daterange[1]]
-    plotbwdist = TransectInterGDF['beachwidth'].iloc[TransectID][daterange[0]:daterange[1]]
-
-    plotvegdate, plotvegdist = [list(d) for d in zip(*sorted(zip(plotvegdate, plotvegdist), key=lambda x: x[0]))]
-    plotwldate, plotwldist = [list(d) for d in zip(*sorted(zip(plotwldate, plotwldist), key=lambda x: x[0]))]
-    plotdate, plotbwdist = [list(d) for d in zip(*sorted(zip(plotdate, plotbwdist), key=lambda x: x[0]))]
-
-    # linear regression line
-    x = mpl.dates.date2num(plotdate)
-    msat, csat = np.polyfit(x,plotbwdist,1)
-    polysat = np.poly1d([msat, csat])
-    xx = np.linspace(x.min(), x.max(), 100)
-    dd = mpl.dates.num2date(xx)
+    for TransectID, ax in zip(TransectIDs,axs):
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFWater['wldates'].iloc[TransectID]]
     
-    # scaling for single column A4 page
-    mpl.rcParams.update({'font.size':8})
-    fig, ax = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        plotvegdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFWater['dates'].iloc[TransectID]]
+        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFWater['wldates'].iloc[TransectID]]
     
-    ax.plot(plotdate, plotbwdist, linewidth=0, marker='.', c='k', markersize=8, markeredgecolor='k', label='Upper Beach Width')
-    # plt.plot(plotvegdate, plotvegdist, linewidth=0, marker='.', c='g', markersize=8, label='Upper Beach Width')
-    # plt.plot(plotwldate, plotwldist, linewidth=0, marker='.', c='b', markersize=8,  label='Upper Beach Width')
+        plotvegdist = TransectInterGDFWater['distances'].iloc[TransectID]
+        plotwldist = TransectInterGDFWater['wlcorrdist'].iloc[TransectID]
+        plotbwdist = TransectInterGDFWater['beachwidth'].iloc[TransectID]
+    
+        plotvegdate, plotvegdist = [list(d) for d in zip(*sorted(zip(plotvegdate, plotvegdist), key=lambda x: x[0]))]
+        plotwldate, plotwldist = [list(d) for d in zip(*sorted(zip(plotwldate, plotwldist), key=lambda x: x[0]))]
+        plotdate, plotbwdist = [list(d) for d in zip(*sorted(zip(plotdate, plotbwdist), key=lambda x: x[0]))]
+        
+        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
 
-    # plot trendlines
-    yav = movingaverage(plotbwdist, 3)
-    ax.plot(plotdate, yav, 'r', label='3pt Moving Average')
-    ax.plot(dd, polysat(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
+        # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
+        for i in range(plotdate[0].year-1, plotdate[-1].year):
+            if Hemisphere == 'N':
+                rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+            elif Hemisphere == 'S':
+                rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
+            rectwidth = rectWinterEnd - rectWinterStart
+            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+            ax.add_patch(rect)
+            
+        # linear regression line
+        x = mpl.dates.date2num(plotdate)
+        msat, csat = np.polyfit(x,plotbwdist,1)
+        polysat = np.poly1d([msat, csat])
+        xx = np.linspace(x.min(), x.max(), 100)
+        dd = mpl.dates.num2date(xx)
+        
+        ax.plot(plotdate, plotbwdist, linewidth=0, marker='.', c='k', markersize=8, markeredgecolor='k', label='Upper Beach Width')
+        # plt.plot(plotvegdate, plotvegdist, linewidth=0, marker='.', c='g', markersize=8, label='Upper Beach Width')
+        # plt.plot(plotwldate, plotwldist, linewidth=0, marker='.', c='b', markersize=8,  label='Upper Beach Width')
+    
+        # plot trendlines
+        yav = movingaverage(plotbwdist, 3)
+        ax.plot(plotdate, yav, 'r', label='3pt Moving Average')
+        ax.plot(dd, polysat(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
 
     
-    plt.legend()
-    plt.title('Transect '+str(TransectID))
-    plt.xlabel('Date (yyyy-mm)')
-    plt.ylabel('Cross-shore distance (m)')
-    # plt.ylim(-200,1000)
-    plt.tight_layout()
+        ax.title.set_text('Transect '+str(TransectID))
+            
+        # ax.set_xlabel('Date (yyyy-mm)')
+        # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+        # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
+        # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
+        ax.set_ylim(min(plotbwdist)-10, max(plotbwdist)+30)
+        ax.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
+        
+        leg1 = ax.legend(loc=2)
+        # weird zorder with twinned axes; remove first axis legend and plot on top of second
+        # leg1.remove()
+        
+        figID += '_'+str(TransectID)
+        plt.tight_layout()
     
-    plt.savefig(os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
-    print('Plot saved under '+os.path.join(outfilepath,sitename + '_SatTimeseries_Transect'+str(TransectID)+'.png'))
-    
+    figname = os.path.join(outfilepath,sitename + '_SatBeachWidthTimeseries_Transect'+figID+'.png')
+    plt.savefig(figname)
+    print('Plot saved under '+figname)
+
     plt.show()
 
   
