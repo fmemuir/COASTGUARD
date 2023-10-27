@@ -27,3 +27,12 @@ CoastWatch.ipynb
 *.pyc
 
 Data/EXAMPLE/AOImap.html
+Data/
+
+aviso-fes/
+fes2014/
+*.tar
+*.nc
+*.ini
+
+*.zip
