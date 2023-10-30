@@ -768,20 +768,21 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
     
     # select pixels that are within the buffer
     im_TZ_cl = np.ma.masked_where(im_ref_buffer_extra==False, im_TZ)
+    im_TZ_cl_fill = im_TZ_cl.filled(np.nan)
     
     # Binary classified image
     with rasterio.open(
         os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+'TZ.tif'),
         'w',
         driver='GTiff',
-        height=im_TZ_cl.shape[0],
-        width=im_TZ_cl.shape[1],
+        height=im_TZ_cl_fill.shape[0],
+        width=im_TZ_cl_fill.shape[1],
         count=1,
-        dtype=im_TZ_cl.dtype,
+        dtype=im_TZ_cl_fill.dtype,
         crs='EPSG:'+str(settings['output_epsg']),
         transform=transform,
     ) as tif:
-        tif.write(im_TZ_cl,1)
+        tif.write(im_TZ_cl_fill,1)
 
 def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """
