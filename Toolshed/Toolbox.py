@@ -642,7 +642,10 @@ def RemoveDuplicates(output):
             lengths = []
             # calculate lengths of duplicated line features
             for v in val:
-                lengths.append(output['shorelines'][v].length[0])
+                if len(output['veglines'][v]) > 1: # multiline feature; take sum of line lengths
+                    lengths.append(sum(output['veglines'][v].length))
+                else:
+                    lengths.append(output['veglines'][v].length[0])
             # keep the longest line (i.e. remove the shortest)
             for okey in list(output.keys()):
                 del(output[okey][val[lengths.index(min(lengths))]])
@@ -992,6 +995,7 @@ def metadata_collection(inputs, Sat):
                 metadata = pickle.load(f)
             return metadata
         
+        print('making metadata dictionary...')
         metadata = dict([])
     
         for i in range(len(sat_list)):
@@ -1025,6 +1029,7 @@ def metadata_collection(inputs, Sat):
         
 def image_retrieval(inputs):
     
+    print('retrieving image metadata...')
     point = ee.Geometry.Point(inputs['polygon'][0][0])
     
     Sat = []
