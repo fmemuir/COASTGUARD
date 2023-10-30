@@ -2291,9 +2291,9 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     # DateMin = settings['inputs']['dates'][0]
     # DateMax = settings['inputs']['dates'][1]
     
-    # Buffer dates from output by 1 day either side
-    DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=1), '%Y-%m-%d %H:%M:%S')
-    DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d')+timedelta(days=1), '%Y-%m-%d %H:%M:%S')
+    # Buffer dates from output by 1.5 months either side
+    DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=42), '%Y-%m-%d %H:%M:%S')
+    DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d')+timedelta(days=42), '%Y-%m-%d %H:%M:%S')
     
     # NetCDF file will be a set of rasters at different times with different wave params
     # params get pulled out further down after downloading
