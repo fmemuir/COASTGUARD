@@ -626,34 +626,46 @@ def RemoveDuplicates(output):
     
     # make a list with year/month/day
     dates_str = [datetime.strptime(_,'%Y-%m-%d').strftime('%Y-%m-%d') for _ in dates]
+    
     # create a dictionary with the duplicates
     dupl = duplicates_dict(dates_str)
-    
-    # if there are duplicates, only keep the element with the longest line
-    if dupl:
-        # Keep duplicates with different satnames
-        for key,val in list(dupl.items()): # has to be list so as not to change dict while looping
-            if len(set(output['satname'][val[0]:val[1]+1])) > 1:
-                del(dupl[key])
+
+    while dupl:
+        # create a dictionary with the duplicates
+        dupl = duplicates_dict(dates_str)
         
-        dupcount = []
-        for key,val in list(dupl.items()):
-            dupcount.append(val[0])
-            lengths = []
-            # calculate lengths of duplicated line features
-            for v in val:
-                if len(output['veglines'][v]) > 1: # multiline feature; take sum of line lengths
-                    lengths.append(sum(output['veglines'][v].length))
-                else:
-                    lengths.append(output['veglines'][v].length[0])
-            # keep the longest line (i.e. remove the shortest)
-            for okey in list(output.keys()):
-                del(output[okey][val[lengths.index(min(lengths))]])
-                
+        # if there are duplicates, only keep the element with the longest line
+        if dupl:
+            # Keep duplicates with different satnames
+            for key,val in list(dupl.items()): # has to be list so as not to change dict while looping
+                if len(set(output['satname'][val[0]:val[1]+1])) > 1:
+                    del(dupl[key])
+            
+            dupcount = []
+            for key,val in list(dupl.items()):
+                dupcount.append(val[0])
+                lengths = []
+                # calculate lengths of duplicated line features
+                for v in val:
+                    if len(output['veglines'][v]) > 1: # multiline feature; take sum of line lengths
+                        lengths.append(sum(output['veglines'][v].length))
+                    else:
+                        try:
+                            lengths.append(output['veglines'][v].length.iloc[0])
+                        except:
+                            pdb.set_trace()
+                # keep the longest line (i.e. remove the shortest)
+                for okey in list(output.keys()):
+                    del(output[okey][val[lengths.index(min(lengths))]])
+            
+        dates = output['dates']
+        # make a list with year/month/day
+        dates_str = [datetime.strptime(_,'%Y-%m-%d').strftime('%Y-%m-%d') for _ in dates]
+        # create a dictionary with the duplicates
+        dupl = duplicates_dict(dates_str)
         
         print('%d duplicates' % len(dupcount))
-        return output
-    
+        
     else:
         print('0 duplicates')
         return output
