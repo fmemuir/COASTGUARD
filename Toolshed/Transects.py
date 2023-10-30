@@ -927,11 +927,11 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
 def WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax):
     
     # Convert bbox coords back to WGS84
-    BBox = gpd.GeoDataFrame(geometry=[Polygon([[lonmin, latmin],
+    BBox = gpd.GeoDataFrame(crs=4326,geometry=[Polygon([[lonmin, latmin],
                     [lonmax,latmin],
                     [lonmax,latmax],
                     [lonmin, latmax]])])
-    BBox.to_crs(espg=4326, inplace=True)
+    BBox.to_crs(epsg=4326, inplace=True)
     # lonmin, lonmax, latmin, latmax = 
     
     WaveOutFile = Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
@@ -964,10 +964,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
 
         SigWaveHeight = WaveData.variables['VHM0'][:,:,:]  #total sea Hs
         MeanWaveDir = WaveData.variables['VMDR'][:,:,:] #Total sea mean dir
-        PeakWavePeriod = WaveData.variables['VTPK'][:,:,:] #Total sea peak period
         WaveSeconds = WaveData.variables['time'][:]
-        
-        
         
         WaveTime = []
         for i in range(0,len(WaveSeconds)):
@@ -978,7 +975,10 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         
         WaveHs = []
         WaveDir = []
-        WaveTp = []
+        NormWaveHs = []
+        NormWaveDir = []
+        StDevWaveHs = []
+        StDevWaveDir = []
         
         def find(item, lst):
             start = 0
@@ -994,17 +994,22 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
             # get index of closest matching grid square of wave data
             IDLat = (np.abs(WaveY - InterPnts[0].y)).argmin() 
             IDLong = (np.abs(WaveX - InterPnts[0].x)).argmin()
-                        
+                    
+            # per-transect wave data
             TrWaveHs = []
             TrWaveDir = []
-            TrWaveTp = []
+            TrWaveMnHs = []
+            TrWaveMnDir = []
+            TrWaveStHs = []
+            TrWaveStDir = []
+                        
             
-            for i in range(len(TransectInterGDF['dates'].iloc[Tr])):
+            for i in range(len(TransectInterGDF['dates'].iloc[Tr])): # for each date on each Transect
                 DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
 
                 # Interpolate wave data using number of minutes through the hour the satellite image was captured
-                for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong], PeakWavePeriod[:,IDLat, IDLong]], 
-                                             [TrWaveHs, TrWaveDir, TrWaveTp]):
+                for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
+                                             [TrWaveHs, TrWaveDir]):
                     # find preceding and following hourly tide levels and times
                     Time_1 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
                     Wave_1 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
@@ -1021,9 +1026,16 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                     WaveDiff = (Wave_2 - Wave_1)
                     WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
 
+                # Smooth over 3 month time period and get stdev from this range
+                
+                TrWaveMnHs.append()
+
             WaveHs.append(TrWaveHs)
             WaveDir.append(TrWaveDir)
-            WaveTp.append(TrWaveTp)
+            NormWaveHs.append()
+            NormWaveDir.append()
+            StDevWaveHs.append()
+            StDevWaveDir.append()       
 
 
 
