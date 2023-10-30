@@ -440,7 +440,7 @@ def check_images_available(inputs):
 
     # in only S2 is in sat_list, stop here
     if len(inputs['sat_list']) == 1 and inputs['sat_list'][0] == 'S2':
-        return #im_dict_T1, []
+        return inputs
 
     # otherwise check how many images are available in Landsat Tier 2
     col_names_T2 = {'L5':'LANDSAT/LT05/C01/T2_TOA',
