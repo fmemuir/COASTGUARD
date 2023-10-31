@@ -678,7 +678,7 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename, 
     
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
         
-    TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected.shp'))
+    TransectInterShp.to_file(os.path.join(BasePath,sitename+'_Transects_Intersected_Water.shp'))
 
     
     print("Shapefile with sat intersections saved.")
@@ -760,7 +760,7 @@ def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
                     
         # Intersection between polygon edges and Tr
         for Tr in range(len(TransectInterGDF)):
-            print('\r %0.3f %% images processed : %0.3f %% transects processed' % ( ((fnum)/len(fnames))*100, (Tr/len(TransectInterGDF))*100 ), end='')
+            print('\r %0.3f %% images processed' % ( ((fnum)/len(fnames))*100 ), end='')
             # list of filenames on each transect from intersections with VEs
             TrFiles = [os.path.basename(x) for x in TransectInterGDF['filename'].iloc[Tr]]
             # get matching image index in list of transect's VE filenames 
@@ -828,7 +828,7 @@ def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
                     
     # Save as shapefile of intersected transects
-    TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
+    TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected_TZ.shp'))
         
     return TransectInterGDF    
 
@@ -919,7 +919,7 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
             TransectInterShp[Key] = TransectInterShp[Key].astype(str)
                         
         # Save as shapefile of intersected transects
-        TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected.shp'))
+        TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected_Slope.shp'))
             
         return TransectInterGDF    
             
@@ -939,7 +939,37 @@ def WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, l
     WavePath = os.path.join(settings['inputs']['filepath'],'tides') 
     WaveFilePath = os.path.join(WavePath, WaveOutFile)
     
-    SampleWaves(settings, TransectInterGDF, WaveFilePath)
+    WaveHs, WaveDir, NormWaveHs, NormWaveDir, StDevWaveHs, StDevWaveDir = SampleWaves(settings, TransectInterGDF, WaveFilePath)
+    
+    TransectInterGDF['WaveHs'] = WaveHs
+    TransectInterGDF['WaveDir'] = WaveDir
+    TransectInterGDF['MnWaveHs'] = NormWaveHs
+    TransectInterGDF['MnWaveDir'] = NormWaveDir
+    TransectInterGDF['StDWaveHs'] = StDevWaveHs
+    TransectInterGDF['StDWaveDir'] = StDevWaveDir
+    
+    TransectInterShp = TransectInterGDF.copy()
+    
+    # reformat fields with lists to strings
+    KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
+    for Key in KeyName:
+        # round any floating points numbers before export
+        realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
+            
+        if type(TransectInterShp[Key][realInd]) == list: # for lists of intersected values
+            if type(TransectInterShp[Key][realInd][0]) == np.float64:  
+                for Tr in range(len(TransectInterShp[Key])):
+                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
+        else: # for singular values
+            if type(TransectInterShp[Key][realInd]) == np.float64: 
+                for Tr in range(len(TransectInterShp[Key])):
+                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
+        
+        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+                    
+    # Save as shapefile of intersected transects
+    TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected_Waves.shp'))
+        
     
     return TransectInterGDF
 
@@ -990,54 +1020,87 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
             print('\r %0.3f %% transects processed' % ( (Tr/len(TransectInterGDF))*100 ), end='')
 
             InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # midpoints of each transect
-        
-            # get index of closest matching grid square of wave data
-            IDLat = (np.abs(WaveY - InterPnts[0].y)).argmin() 
-            IDLong = (np.abs(WaveX - InterPnts[0].x)).argmin()
-                    
-            # per-transect wave data
-            TrWaveHs = []
-            TrWaveDir = []
-            TrWaveMnHs = []
-            TrWaveMnDir = []
-            TrWaveStHs = []
-            TrWaveStDir = []
-                        
             
-            for i in range(len(TransectInterGDF['dates'].iloc[Tr])): # for each date on each Transect
-                DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
-
-                # Interpolate wave data using number of minutes through the hour the satellite image was captured
-                for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
-                                             [TrWaveHs, TrWaveDir]):
-                    # find preceding and following hourly tide levels and times
-                    Time_1 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
-                    Wave_1 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
-                    
-                    Time_2 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
-                    Wave_2 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
-                    
-                    # Find time difference of actual satellite timestamp (next wave timestamp minus sat timestamp)
-                    TimeDiff = Time_2 - DateTimeSat
-                    # Get proportion of time back from the next 3-hour timestep
-                    TimeProp = TimeDiff / timedelta(hours=TimeStep)
-                    
-                    # Get proportional difference between the two tidal stages
-                    WaveDiff = (Wave_2 - Wave_1)
-                    WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
-
-                # Smooth over 3 month time period and get stdev from this range
+            if InterPnts == []: # if transect intersect is empty i.e. no veg lines intersected
+                TrWaveHs, TrWaveDir, TrNormWaveHs, TrNormWaveDir, TrStDevWaveHs, TrStDevWaveDir = (np.nan for i in range(6))
+            
+            else:
+                # get index of closest matching grid square of wave data
+                IDLat = (np.abs(WaveY - InterPnts[0].y)).argmin() 
+                IDLong = (np.abs(WaveX - InterPnts[0].x)).argmin()
+                        
+                # per-transect wave data
+                TrWaveHs = []
+                TrWaveDir = []
+                TrNormWaveHs = []
+                TrNormWaveDir = []
+                TrStDevWaveHs = []
+                TrStDevWaveDir = []
                 
-                TrWaveMnHs.append()
-
+                for i in range(len(TransectInterGDF['dates'].iloc[Tr])): # for each date on each Transect
+                    DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
+    
+                    # Interpolate wave data using number of minutes through the hour the satellite image was captured
+                    for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
+                                                 [TrWaveHs, TrWaveDir]):
+                        # if sat imag date falls outside wave data window, assign nan
+                        if WaveTime[-1] < DateTimeSat:
+                            WaveSat.append(np.nan)
+                        else:
+                            # find preceding and following hourly tide levels and times
+                            Time_1 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]                        
+                            Wave_1 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
+                            
+                            Time_2 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
+                            Wave_2 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
+                            
+                            # Find time difference of actual satellite timestamp (next wave timestamp minus sat timestamp)
+                            TimeDiff = Time_2 - DateTimeSat
+                            # Get proportion of time back from the next 3-hour timestep
+                            TimeProp = TimeDiff / timedelta(hours=TimeStep)
+                            
+                            # Get proportional difference between the two tidal stages
+                            WaveDiff = (Wave_2 - Wave_1)
+                            WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
+    
+                    for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
+                                                 [TrNormWaveHs, TrNormWaveDir]):
+                        # if sat imag date falls outside wave data window, assign nan
+                        if WaveTime[-1] < DateTimeSat:
+                            WaveSat.append(np.nan)
+                        else:
+                            # Smooth over previous 3 month time period and get mean from this range
+                            if Time_1-timedelta(days=90) in WaveTime:
+                                Prev3Month = WaveTime.index(Time_1-timedelta(days=90))
+                             # if timestep doesn't exist for exactly 3 months back, minus an hour
+                            elif Time_1-timedelta(days=90,hours=1) in WaveTime:
+                                Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=1))
+                             # if timestep doesn't exist for exactly 3 months back, add an hour
+                            elif Time_1-timedelta(days=90,hours=-1) in WaveTime:
+                                Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=-1))
+                                
+                            SmoothWaveProp = np.mean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                            WaveSat.append(SmoothWaveProp)
+                        
+                    for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
+                                                 [TrStDevWaveHs, TrStDevWaveDir]):
+                        # if sat imag date falls outside wave data window, assign nan
+                        if WaveTime[-1] < DateTimeSat:
+                            WaveSat.append(np.nan)
+                        else:
+                            # Smooth over previous 3 month time period and get stdev from this range
+                            StDevWaveProp = np.std(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                            WaveSat.append(StDevWaveProp)
+    
+            # append per-transects 
             WaveHs.append(TrWaveHs)
             WaveDir.append(TrWaveDir)
-            NormWaveHs.append()
-            NormWaveDir.append()
-            StDevWaveHs.append()
-            StDevWaveDir.append()       
+            NormWaveHs.append(TrNormWaveHs)
+            NormWaveDir.append(TrNormWaveDir)
+            StDevWaveHs.append(TrStDevWaveHs)
+            StDevWaveDir.append(TrStDevWaveDir)
 
-
+    return WaveHs, WaveDir, NormWaveHs, NormWaveDir, StDevWaveHs, StDevWaveDir
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     """
