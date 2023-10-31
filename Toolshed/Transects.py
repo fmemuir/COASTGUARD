@@ -1043,7 +1043,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                     # Interpolate wave data using number of minutes through the hour the satellite image was captured
                     for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
                                                  [TrWaveHs, TrWaveDir]):
-                        # if sat imag date falls outside wave data window, assign nan
+                        # if sat image date falls outside wave data window, assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
                         else:
@@ -1065,7 +1065,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     
                     for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
                                                  [TrNormWaveHs, TrNormWaveDir]):
-                        # if sat imag date falls outside wave data window, assign nan
+                        # if sat image date falls outside wave data window, assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
                         else:
@@ -1084,7 +1084,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                         
                     for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
                                                  [TrStDevWaveHs, TrStDevWaveDir]):
-                        # if sat imag date falls outside wave data window, assign nan
+                        # if sat image date falls outside wave data window, assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
                         else:
