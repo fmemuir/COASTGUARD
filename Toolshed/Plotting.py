@@ -399,37 +399,90 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N')
     if type(TransectIDs) == list:
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(1,len(TransectIDs),figsize=(6.55,6), dpi=300)
+        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(6.55,6), dpi=300)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        fig, axs = plt.subplots(3,1,figsize=(6.55,3), dpi=300)
         axs = [axs] # to be able to loop through
             
-    for TransectID, ax in zip(TransectIDs,axs):
+    for TransectID, col in zip(TransectIDs, range(axs.shape[1])):
+        # Define variables for each subplot per column/Transect
+        ax_TS = axs[0,col]
+        ax_Trend = axs[1,col]
+        ax_Season = axs[2,col]
+        
+        # Process plot data
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         plotwldist = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
         plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
-        
+    
         plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
-        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
         
         # Generate seasonality model
-        VegTimeseries = np.column_stack([plotdate, plotsatdist])
-        Seasonality = seasonal_decompose(VegTimeseries, model='additive')
+        VegTimeseries = pd.DataFrame(plotsatdist, index=plotdate, columns=['VegEdgeDist'])
+        # Calculate period (observations per cycle) to use for seasonality
+        DateDiff = []
+        for i in range(1,len(plotdate)):
+            DateDiff.append(plotdate[i]-plotdate[i-1])
+        MeanDateDiff = np.mean(DateDiff).days # days between each observation
+        P = round(90 / MeanDateDiff) # 90 days = 3 month cycle
+        
+        # Calculate seasonal .trend, .seasonal and .resid
+        Seasonality = seasonal_decompose(VegTimeseries['VegEdgeDist'], model='additive', period=P)        
+        
+        
+        # Set up common subplot design
+        for ax in [ax_TS,ax_Trend,ax_Season]: 
+            ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
+            
+            # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
+            for i in range(plotdate[0].year-1, plotdate[-1].year):
+                if Hemisphere == 'N':
+                    rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
+                    rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+                elif Hemisphere == 'S':
+                    rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
+                    rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
+                rectwidth = rectWinterEnd - rectWinterStart
+                rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+                ax.add_patch(rect)
 
+        # PLOT 1: timeseries scatter plot
+        ax_TS2 = ax_TS.twinx()
+        ax_TS.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
+        ax_TS2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
         
-        ax2 = ax.twinx()
-        # Plot timeseries scatter plot
-        ax.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
-        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
+        # plot trendlines
+        vegav = movingaverage(plotsatdist, 3)
+        wlav = movingaverage(plotwldist, 3)
+        ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
+        ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
+    
+        # linear regression lines
+        x = mpl.dates.date2num(plotdate)
+        for y, pltax, clr in zip([plotwldist,plotsatdist], [ax_TS,ax_TS2], ['#0A1DAE' ,'#3A4C1A']):
+            m, c = np.polyfit(x,y,1)
+            polysat = np.poly1d([m, c])
+            xx = np.linspace(x.min(), x.max(), 100)
+            dd = mpl.dates.num2date(xx)
+            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
         
+        ax_TS2.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
+        ax_TS.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
+        ax_TS.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
+        
+        leg1 = ax_TS.legend(loc=2)
+        leg2 = ax_TS2.legend(loc=1)
+        # weird zorder with twinned axes; remove first axis legend and plot on top of second
+        leg1.remove()
+        ax_TS2.add_artist(leg1)
           
         
-        ax.title.set_text('Transect '+str(TransectID))
+        ax_TS.title.set_text('Transect '+str(TransectID))
                     
         figID += '_'+str(TransectID)
         plt.tight_layout()
