@@ -924,7 +924,7 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
         return TransectInterGDF    
             
 
-def WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax):
+def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax, latmin, latmax):
     
     # Convert bbox coords back to WGS84
     BBox = gpd.GeoDataFrame(crs=4326,geometry=[Polygon([[lonmin, latmin],
