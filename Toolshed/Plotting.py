@@ -29,6 +29,7 @@ from sklearn.neighbors import KernelDensity
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 import scipy.stats
+from statsmodels.tsa.seasonal import seasonal_decompose
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
@@ -303,8 +304,9 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         lab.set_xlabel('Date (yyyy-mm)', labelpad=22)
     else:
         lab.set_xlabel('Date (yyyy-mm)')
-    lab.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
-    lab2.set_ylabel('Cross-shore distance (water) (m)', labelpad=22, color='#4056F4')
+    lab.set_ylabel('Cross-shore distance (water) (m)', labelpad=22, color='#4056F4')
+    lab2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+
 
     
     for TransectID, ax in zip(TransectIDs,axs):
@@ -319,8 +321,8 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         
         ax2 = ax.twinx()
         
-        ax.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=6, alpha=0.8, edgecolors='none', label='Satellite Shoreline')
-        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        ax.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
+        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
         
         # create error bar lines to fill between
         for axloop, errorRMSE, plotdist, col in zip([ax, ax2], [7.2, 10.4], [plotwldist,plotsatdist], ['#4056F4','#81A739']):
@@ -345,8 +347,8 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
         wlav = movingaverage(plotwldist, 3)
-        ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Shoreline')
-        ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
+        ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
+        ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -384,6 +386,63 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     print('Plot saved under '+figname)
     
     plt.show()
+    
+    
+def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+        
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(1,len(TransectIDs),figsize=(6.55,6), dpi=300)
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        axs = [axs] # to be able to loop through
+            
+    for TransectID, ax in zip(TransectIDs,axs):
+        daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotwldist = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+        
+        plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
+        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
+        
+        # Generate seasonality model
+        VegTimeseries = np.column_stack([plotdate, plotsatdist])
+        Seasonality = seasonal_decompose(VegTimeseries, model='additive')
+
+        
+        ax2 = ax.twinx()
+        # Plot timeseries scatter plot
+        ax.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
+        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
+        
+          
+        
+        ax.title.set_text('Transect '+str(TransectID))
+                    
+        figID += '_'+str(TransectID)
+        plt.tight_layout()
+        
+    figname = os.path.join(outfilepath,sitename + '_SatVegWaterSeasonal_Transect'+figID+'.png')
+    
+    plt.tight_layout()
+            
+    plt.savefig(figname)
+    print('Plot saved under '+figname)
+    
+    plt.show()
+    
     
 
 def ValidTimeseries(sitename, ValidInterGDF, TransectID):
@@ -532,7 +591,7 @@ def WidthTimeseries(sitename, TransectInterGDFWater, TransectIDs, Hemisphere = '
         xx = np.linspace(x.min(), x.max(), 100)
         dd = mpl.dates.num2date(xx)
         
-        ax.plot(plotdate, plotbwdist, linewidth=0, marker='.', c='k', markersize=8, markeredgecolor='k', label='Upper Beach Width')
+        ax.plot(plotdate, plotbwdist, linewidth=0, marker='.', c='k', markersize=5, markeredgecolor='k', label='Upper Beach Width')
         # plt.plot(plotvegdate, plotvegdist, linewidth=0, marker='.', c='g', markersize=8, label='Upper Beach Width')
         # plt.plot(plotwldate, plotwldist, linewidth=0, marker='.', c='b', markersize=8,  label='Upper Beach Width')
     
@@ -1118,8 +1177,169 @@ def ClusterRates(sitename, TransectInterGDF, Sloc, Nloc):
     plt.show()
     
 
-def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Sloc, Nloc):
+def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Loc1, Loc2):
+    """
+    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
+    Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
+    FM Aug 2023
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects intersected with veg edges.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of transects intersected with waterlines.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    TransectInterGDFWave : GeoDataFrame
+        GeoDataFrame of transects intersected with wave hindcasts.
+    Loc1 : list
+        Transect IDs to slice array up for north location
+    Loc2 : list
+        Transect IDs to slice array up for south location
+
+    """
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+        
+    ## Multivariate Plot
+    # Subset into south and north transects
+    RateGDF1 = TransectInterGDF.iloc[Loc1[0]:Loc1[1]]
+    RateGDF1 = pd.concat([RateGDF1, 
+                           TransectInterGDFWater.iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFTopo.iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFWave.iloc[Loc1[0]:Loc1[1]]])
+
+
     
+    RateGDF2 = TransectInterGDF.iloc[Loc2[0]:Loc2[1]]
+    RateGDF2 = pd.concat([RateGDF2, 
+                           TransectInterGDFWater.iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFTopo.iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFWave.iloc[Loc2[0]:Loc2[1]]])
+
+    
+    # summer (pale) eroding = #F9C784 
+    # summer (pale) accreting = #9DB4C0
+    
+    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    
+    # Take overall mean values of wave height and direction
+    RateGDF['LongMnWaveHs'] = RateGDF['MnWaveHs']
+    RateGDF['LongMnWaveDir'] = RateGDF['MnWaveDir']
+    
+    # Extract desired columns to an array for plotting
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthmed','SlopeMax',]])
+    
+    # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
+
+    fig, axs = plt.subplots(RateArray.shape[1]-1,RateArray.shape[1]-1, figsize=(6.55,6.55), dpi=300)
+    
+    # Plot matrix of relationships
+    lab = [r'$\Delta$veg (m/yr)',r'$\Delta$water (m/yr)',r'$TZwidth_{\eta}$ (m)',r'$slope_{max}$ ($\circ$)']
+    for row in range(RateArray.shape[1]-1):
+        for col in range(RateArray.shape[1]-1):
+            # remove repeated plots on right hand side
+            # for i in range(RateArray.shape[1]-1):
+                # if row == i and col > i:
+                    # fig.delaxes(axs[row,col])
+            
+            # if plot is same var on x and y, change plot to a histogram    
+            if row == col:
+                binnum = round(np.sqrt(len(RateArray)))+4
+                axs[row,col].hist(RateArray[:int(len(RateArray)/2),row],binnum, color='blue', alpha=0.7,label='S')
+                axs[row,col].hist(RateArray[int(len(RateArray)/2):,row],binnum, color='red', alpha=0.7,label='N')
+                axs[row,col].legend(loc=2,fontsize=6)
+            # otherwise plot scatter of each variable against one another
+            else:
+                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
+                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
+                
+                # overall linear reg line
+                z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                poly = np.poly1d(z)
+                order = np.argsort(RateArray[:,row])
+                axs[row,col].plot(RateArray[:,row][order], poly(RateArray[:,row][order]), c='k', ls='--', lw=0.8)
+                r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                stats = 'r = %.2f' % (r)
+                # axs[row,col].text( RateArray[:,row][order][-1], poly(RateArray[:,row][order])[-1], stats, c='k', fontsize=5, ha='center')
+                axs[row,col].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
+
+                # linear regression lines
+                S, N = [RateArray[:len(RateArrayS),row], RateArray[:len(RateArrayS),col]], [RateArray[len(RateArrayN):,row], RateArray[len(RateArrayN):,col]]
+                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
+                    zArr = np.polyfit(list(Arr[0]), list(Arr[1]), 1)
+                    polyArr = np.poly1d(zArr)
+                    orderArr = np.argsort(Arr[0])
+                    # linear reg line
+                    axs[row,col].plot(Arr[0][orderArr], polyArr(Arr[0][orderArr]), c=regc, ls='--', lw=0.8)
+                    for i in range(RateArray.shape[1]-1):
+                        if row == i and col > i:
+                            # clear plots on RHS
+                            axs[row,col].cla() 
+                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
+                    for i in range(RateArray.shape[1]-1):
+                        if row == i and col > i:      
+                            rArr, pArr = scipy.stats.pearsonr(list(Arr[0]), list(Arr[1]))
+                            statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
+                            axs[row,col].text(0.5, pos, statsArr, c=regc, fontsize=6, ha='center')
+                    
+                        
+
+            axs[row,col].set_xlabel(lab[row])
+            axs[row,col].set_ylabel(lab[col])
+            axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+            axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+            
+            if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
+                axs[row,col].axis('equal')
+            
+            # turn off axes to tighten up layout
+            # if col != 0 and row != RateArray.shape[1]-1: # first col and last row
+            #     axs[row,col].set_xlabel(None)
+            #     axs[row,col].set_ylabel(None)
+                
+    
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.6, hspace=0.5)
+    
+    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
+    plt.show()
+    
+    return
+
+
+def ClusteredMultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Sloc, Nloc):
+    """
+    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
+    Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
+    Differs from MultivariateMatrix() in that points are clustered into south and north (eroding and accreting).
+    FM Aug 2023
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects intersected with veg edges.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of transects intersected with waterlines.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    TransectInterGDFWave : GeoDataFrame
+        GeoDataFrame of transects intersected with wave hindcasts.
+    Nloc : list
+        Transect IDs to slice array up for north location
+    Sloc : list
+        Transect IDs to slice array up for south location
+
+    """
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(filepath) is False:
         os.mkdir(filepath)
@@ -1131,19 +1351,27 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
                            TransectInterGDFWater.iloc[Sloc[0]:Sloc[1]],
                            TransectInterGDFTopo.iloc[Sloc[0]:Sloc[1]],
                            TransectInterGDFWave.iloc[Sloc[0]:Sloc[1]]])
-    RateArrayS['LocLabel'] = 'blue'
+    # RateArrayS['LocLabel'] = 'blue'
+    RateArrayS['LocLabel'] = '#FC7A1E'
+
     
     RateArrayN = TransectInterGDF.iloc[Nloc[0]:Nloc[1]]
     RateArrayN = pd.concat([RateArrayN, 
                            TransectInterGDFWater.iloc[Nloc[0]:Nloc[1]],
                            TransectInterGDFTopo.iloc[Nloc[0]:Nloc[1]],
                            TransectInterGDFWave.iloc[Nloc[0]:Nloc[1]]])
-    RateArrayN['LocLabel'] = 'red'
+    # RateArrayN['LocLabel'] = 'red'
+    RateArrayN['LocLabel'] = '#485696'
+    
+    # summer (pale) eroding = #F9C784 
+    # summer (pale) accreting = #9DB4C0
     
     RateArray = pd.concat([RateArrayS, RateArrayN], axis=0)
     # Extract desired columns to an array for plotting
     RateArray = np.array(RateArray[['oldyoungRt','oldyungRtW','TZwidthmed','maxslope','LocLabel']])
-    # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'])])
+    
+    # 
+    # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
 
     fig, axs = plt.subplots(RateArray.shape[1]-1,RateArray.shape[1]-1, figsize=(6.55,6.55), dpi=300)
     
@@ -1215,7 +1443,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     plt.tight_layout()
     plt.subplots_adjust(wspace=0.6, hspace=0.5)
     
-    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis.png')
+    figpath = os.path.join(filepath,sitename+'_ClusteredMultivariateAnalysis.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
     
