@@ -1486,14 +1486,16 @@ def ProcessRefline(referenceLineShp,settings):
         reference line EPSG ID
 
     """
+
     referenceLineDF = gpd.read_file(referenceLineShp)
-    # Convert whatever CRS ref line is in to WGS84 to start off with
-    referenceLineDF.to_crs(epsg=4326, inplace=True)
+    referenceLineDF.to_crs(epsg=4326, inplace=True) # Convert whatever CRS ref line is in to WGS84 to start off with
+
     # Add in here a fn to merge multilinestrings to one contiguous linestring
     # merged = linemerge([lineseg for lineseg in referenceLineDF.geometry])
     # referenceLineDF = gpd.GeoDataFrame(geometry=[merged], crs=4326)
     
-    refLinex,refLiney = referenceLineDF.geometry[0].coords.xy
+    refLinex,refLiney = referenceLineDF.geometry[0].coords.xy # NEED TO ADD TYPE CHECK, linestring vs. multilinestring...
+    
     # swap latlon coordinates (or don't? check this) around and format into list
     #referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
     referenceLineList = list([refLiney[i],refLinex[i]] for i in range(len(refLinex)))
@@ -1577,12 +1579,13 @@ def spaced_vertices(referenceLine):
         New reference line coordinate array with equally spaced vertices.
 
     """
+
     referenceLineString = LineString(referenceLine)
     vertexdist = 10
     vertexdists = np.arange(0, referenceLineString.length, vertexdist)
-    newverts = [referenceLineString.interpolate(dist) for dist in vertexdists] + [referenceLineString.boundary[1]]
+    newverts = [referenceLineString.interpolate(dist) for dist in vertexdists] + [referenceLineString.boundary.geoms[1]] # ERROR - not subscriptable (shapely syntax change)
     newreferenceLineString = LineString(newverts)
-    newreferenceLine = np.asarray(newreferenceLineString)
+    newreferenceLine = np.asarray(newreferenceLineString.coords) # ERROR - new syntax to pass shapely linestring coords to numpy structure
     
     return newreferenceLine
 
@@ -1642,16 +1645,20 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     BBoxGDF['Area'] = BBoxGDF.area/(10*10)
     mapcentrelon = lonmin + ((lonmax - lonmin)/2)
     mapcentrelat = latmin + ((latmax - latmin)/2)
-    m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 10, tiles = 'openstreetmap')
+    
+    m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 13, tiles = 'openstreetmap')
     folium.TileLayer('MapQuest Open Aerial', attr='<a href=https://www.mapquest.com/>MapQuest</a>').add_to(m)
     folium.LayerControl().add_to(m)
+    
     # gj = folium.GeoJson(geo_data=BBoxGDF['geometry'], data=BBoxGDF['Area']).add_to(m)
     gj = folium.Choropleth(geo_data=BBoxGDF['geometry'], name='AOI', data=BBoxGDF['Area'],
                             columns=['Area'], fill_color='YlGn',
-                            fill_opacity=0.5).add_to(m)
-    folium.Marker(location=[BBoxGDF.centroid.x,BBoxGDF.centroid.y],
+                            fill_opacity=0.5)
+    gj.add_to(m)
+    ct = folium.Marker(location=[BBoxGDF.centroid.x,BBoxGDF.centroid.y],
                   popup=str(round(float(BBoxGDF.to_crs('epsg:32630').area)))+' sq m'
-                  ).add_to(m)
+                  )
+    ct.add_to(m)
     m.save("./Data/"+sitename+"/AOImap.html")
     
     # Export as polygon and ee point for use in clipping satellite image requests
@@ -1708,9 +1715,11 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg):
     BBoxGDF['Area'] = BBoxGDF.area/(10*10)
     mapcentrelon = lonmin + ((lonmax - lonmin)/2)
     mapcentrelat = latmin + ((latmax - latmin)/2)
+    
     m = folium.Map(location=[mapcentrelat, mapcentrelon], zoom_start = 10, tiles = 'openstreetmap')
     folium.TileLayer('MapQuest Open Aerial', attr='<a href=https://www.mapquest.com/>MapQuest</a>').add_to(m)
     folium.LayerControl().add_to(m)
+    
     # gj = folium.GeoJson(geo_data=BBoxGDF['geometry'], data=BBoxGDF['Area']).add_to(m)
     gj = folium.Choropleth(geo_data=BBoxGDF['geometry'], name='AOI', data=BBoxGDF['Area'],
                             columns=['Area'], fill_color='YlGn',
