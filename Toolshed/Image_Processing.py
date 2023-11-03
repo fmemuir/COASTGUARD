@@ -535,12 +535,20 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
         georef = list(img.transform)[0:6] # get transform info from rasterio metadata
-        # x, y = polygon[0][3]
-        # inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        # outProj = Proj(init=img.crs)
-        # im_x, im_y = Transf(inProj, outProj, x, y)
-        # Issue with the above lines caused image to move if bbox was not the same shape as image bounds
+        #x, y = polygon[0][3]
+        #inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+        #outProj = Proj(init=img.crs)
+        #im_x, im_y = Transf(inProj, outProj, x, y)
+        #georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         georef = [round(georef[2]),georef[0],georef[1],round(georef[5]),georef[3],georef[4]] # rearrange
+        
+        
+        
+        # Additional coregistering based on georef to OS (EPSG 27700) imagery
+        if settings['inputs']['sitename'] == 'StAndrewsPlanetWest' or settings['inputs']['sitename'] == 'StAndrewsPlanetEast' or settings['inputs']['sitename'] == 'StAndrewsPlanetEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsPlanetWestSAVI':
+            georef[0] = georef[0] + (3.8)
+            georef[3] = georef[3] + (6.5)
+        
         
         datepath = os.path.basename(filenames[fn])[0:8]
         auxpath = os.path.dirname(filenames[fn])+'/cloudmasks/'
@@ -633,7 +641,7 @@ def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
     # select pixels that are within the buffer
     int_veg = vec_ndi[np.logical_and(vec_buffer,vec_veg)]
     int_nonveg = vec_ndi[np.logical_and(vec_buffer,vec_nonveg)]
-
+        
     # make sure both classes have the same number of pixels before thresholding
     if len(int_veg) > 0 and len(int_nonveg) > 0:
         if np.argmin([int_veg.shape[0],int_nonveg.shape[0]]) == 1:

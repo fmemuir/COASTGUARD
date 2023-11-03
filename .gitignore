@@ -34,8 +34,8 @@ fes2014/
 *.tar
 *.nc
 *.ini
-
 *.zip
+
 Data/referenceLines/Cell_1b_Modern_Soft.CPG
 Data/referenceLines/Cell_1b_Modern_Soft.dbf
 Data/referenceLines/Cell_1b_Modern_Soft.prj
