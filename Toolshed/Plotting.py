@@ -481,6 +481,14 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N')
         leg1.remove()
         ax_TS2.add_artist(leg1)
           
+        # PLOT 2: Seasonal trend with residuals as error window
+        ax_Trend.plot(Seasonality.trend, color='#81A739')
+        ax_Trend.plot(Seasonality.resid, color='#9CD38A')
+        ax_Trend.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
+        
+        # PLOT 3: Seasonality line (moving average)
+        
+        
         
         ax_TS.title.set_text('Transect '+str(TransectID))
                     
