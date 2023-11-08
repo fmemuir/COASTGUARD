@@ -25,6 +25,7 @@ Shoreline.ipynb
 CoastWatch.ipynb
 .ipynb_checkpoints/CoastWatch-checkpoint.ipynb
 *.pyc
+__pycache__/
 
 Data/EXAMPLE/AOImap.html
 Data/
