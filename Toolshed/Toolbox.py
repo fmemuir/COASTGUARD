@@ -616,53 +616,67 @@ def RemoveDuplicates(output):
     """
 
     # nested function
-    def duplicates_dict(lst):
+    def duplicates_dict(dates_str):
         "return duplicates and indices"
-        def duplicates(lst, item):
-                return [i for i, x in enumerate(lst) if x == item]
-        return dict((x, duplicates(lst, x)) for x in set(lst) if lst.count(x) > 1)
+        def duplicateIDs(dates_str, date_str):
+                # need to return output['idx'] and not just enumerate ID
+                # return [i for i, x in enumerate(dates_str) if x == date_str]
+                return [output['idx'][i] for i, x in enumerate(dates_str) if x == date_str]
 
-    dates = output['dates']
-    
-    # make a list with year/month/day
-    dates_str = [datetime.strptime(_,'%Y-%m-%d').strftime('%Y-%m-%d') for _ in dates]
-    
-    # create a dictionary with the duplicates
-    dupl = duplicates_dict(dates_str)
-
-    while dupl:
-        # create a dictionary with the duplicates
-        dupl = duplicates_dict(dates_str)
+        # return dict((date_str, duplicates(dates_str, date_str)) for date_str in set(dates_str) if dates_str.count(date_str) > 1)
+        dupl = {}
+        for date_str in set(dates_str):
+            if dates_str.count(date_str) > 1:
+                dupl[date_str] = duplicateIDs(dates_str, date_str)
+        return dupl
         
-        # if there are duplicates, only keep the element with the longest line
-        if dupl:
-            # Keep duplicates with different satnames
-            for key,val in list(dupl.items()): # has to be list so as not to change dict while looping
-                if len(set(output['satname'][val[0]:val[1]+1])) > 1:
-                    del(dupl[key])
-            
-            dupcount = []
-            for key,val in list(dupl.items()):
-                dupcount.append(val[0])
-                lengths = []
-                # calculate lengths of duplicated line features
-                for v in val:
-                    if len(output['veglines'][v]) > 1: # multiline feature; take sum of line lengths
-                        lengths.append(sum(output['veglines'][v].length))
-                    else:
-                        try:
-                            lengths.append(output['veglines'][v].length.iloc[0])
-                        except:
-                            pdb.set_trace()
-                # keep the longest line (i.e. remove the shortest)
-                for okey in list(output.keys()):
-                    del(output[okey][val[lengths.index(min(lengths))]])
-            
+    def update_dupl(output):
         dates = output['dates']
         # make a list with year/month/day
         dates_str = [datetime.strptime(_,'%Y-%m-%d').strftime('%Y-%m-%d') for _ in dates]
         # create a dictionary with the duplicates
-        dupl = duplicates_dict(dates_str)
+        dupl = dict(sorted(duplicates_dict(dates_str).items(), key=lambda x:x[1]))
+        return dupl
+
+    dupl = update_dupl(output)
+
+    while dupl:
+        
+        dupl = update_dupl(output)
+        
+        # if there are duplicates, only keep the element with the longest line
+        if dupl:
+            # Keep duplicates with different satnames
+            for key,IDval in list(dupl.items()): # has to be list so as not to change dict while looping
+                if len(set(output['satname'][IDval[0]:IDval[1]+1])) > 1:
+                    del(dupl[key])
+            
+            dupcount = []
+            for key,IDval in list(dupl.items()):
+                dupcount.append(IDval[0])
+                lengths = []
+                # calculate lengths of duplicated line features
+                for v in IDval:
+                    if len(output['veglines'][output['idx'].index(v)]) > 1: # multiline feature; take sum of line lengths
+                        lengths.append(sum(output['veglines'][output['idx'].index(v)].length))
+                    else:
+                        if len(output['veglines'][output['idx'].index(v)].length) == 0: # empty geoms
+                            lengths.append(0)
+                        else:
+                            lengths.append(output['veglines'][output['idx'].index(v)].length.iloc[0])
+
+                    minlenID = lengths.index(min(lengths))
+               
+                # keep the longest line (i.e. remove the shortest)
+                for okey in list(output.keys()):
+                    # delete the other keys first, leaving idx for last
+                    if okey != 'idx':
+                        delID = output['idx'].index(IDval[minlenID])
+                        del(output[okey][delID])
+                delID = output['idx'].index(IDval[minlenID])
+                del(output['idx'][delID])
+            
+        dupl = update_dupl(output)
         
         print('%d duplicates' % len(dupcount))
         
