@@ -201,8 +201,9 @@ beachslope = 0.02
 VegBasePath = 'Data/' + sitename + '/Veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
-WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
-WaterlineGDF = gpd.read_file(WaterlineShp[0])
+if settings['wetdry'] == True:
+    WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
+    WaterlineGDF = gpd.read_file(WaterlineShp[0])
 # Produces Transects for the reference line
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
