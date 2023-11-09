@@ -45,10 +45,14 @@ from Toolshed import Toolbox
 
 #%%
 
-def movingaverage(interval, windowsize):
+def movingaverage(series, windowsize):
     # moving average trendline
     window = np.ones(int(windowsize))/float(windowsize)
-    return np.convolve(interval, window, 'same')
+    mvav = np.convolve(series, window, 'same')
+    # Brute force first and last step to match
+    mvav[0] = series[0]
+    mvav[-1] = series[-1]
+    return mvav
 
 #%%
 
@@ -317,7 +321,6 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     lab.set_ylabel('Cross-shore distance (water) (m)', labelpad=22, color='#4056F4')
     lab2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
 
-
     
     for TransectID, ax in zip(TransectIDs,axs):
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
@@ -325,6 +328,9 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         plotwldist = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
         plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+        
+        if len(plotdate) == 0:
+            return
         
         plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
@@ -444,7 +450,7 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
             P = round(90 / MeanDateDiff) # 90 days = 3 month cycle
         
         # Calculate seasonal .trend, .seasonal and .resid
-        Seasonality = seasonal_decompose(VegTimeseries['VegEdgeDist'], model='additive', period=P)        
+        Seasonality = seasonal_decompose(VegTimeseries['VegEdgeDist'], model='additive')        
         
         
         # Set up common subplot design
