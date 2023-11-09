@@ -199,10 +199,14 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
         if AllIntersects['interpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['interpnt'][inter] = list(AllIntersects['interpnt'][inter])[0] # list() accesses individual points in MultiPoint
-    AllIntersects = AllIntersects.drop('geometry',axis=1)
+            AllIntersects['interpnt'][inter] = list(AllIntersects['interpnt'][inter].geoms)[0] # list() accesses individual points in MultiPoint
+    # AllIntersects = AllIntersects.drop('geometry',axis=1)
+    AllIntersects = AllIntersects.rename_geometry('pntgeometry')
+
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
+    AllIntersects = AllIntersects.drop('pntgeometry',axis=1)
+
     
     print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
@@ -324,10 +328,14 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
         if AllIntersects['wlinterpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['wlinterpnt'][inter] = list(AllIntersects['wlinterpnt'][inter])[0] # list() accesses individual points in MultiPoint
-    AllIntersects = AllIntersects.drop('geometry',axis=1)
+            AllIntersects['wlinterpnt'][inter] = list(AllIntersects['wlinterpnt'][inter].geoms)[0] # list() accesses individual points in MultiPoint
+    # AllIntersects = AllIntersects.drop('geometry',axis=1)
+    AllIntersects = AllIntersects.rename_geometry('pntgeometry')
+
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
+    AllIntersects = AllIntersects.drop('pntgeometry',axis=1)
+
     
     print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
@@ -1156,11 +1164,14 @@ def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
         if AllIntersects['Vinterpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['Vinterpnt'][inter] = list(AllIntersects['Vinterpnt'][inter])[0] # list() accesses individual points in MultiPoint
-    AllIntersects = AllIntersects.drop('geometry',axis=1)
+            AllIntersects['Vinterpnt'][inter] = list(AllIntersects['Vinterpnt'][inter].geoms)[0] # list() accesses individual points in MultiPoint
+    # AllIntersects = AllIntersects.drop('geometry',axis=1)
+    AllIntersects = AllIntersects.rename_geometry('pntgeometry')
+
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
-    
+    AllIntersects = AllIntersects.drop('pntgeometry',axis=1)
+
     print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
     distances = []
@@ -1275,10 +1286,13 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
         if AllIntersects['Vinterpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['Vinterpnt'][inter] = list(AllIntersects['Vinterpnt'][inter])[0] # list() accesses individual points in MultiPoint
-    AllIntersects = AllIntersects.drop('geometry',axis=1)
+            AllIntersects['Vinterpnt'][inter] = list(AllIntersects['Vinterpnt'][inter].geoms)[0] # list() accesses individual points in MultiPoint
+    # AllIntersects = AllIntersects.drop('geometry',axis=1)
+    AllIntersects = AllIntersects.rename_geometry('pntgeometry')
+
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
+    AllIntersects = AllIntersects.drop('pntgeometry',axis=1)
     
     print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
