@@ -190,6 +190,9 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+       
+        if len(plotdate) == 0:
+            return
         
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
@@ -390,7 +393,7 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     plt.show()
     
     
-def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
+def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', P=None):
     
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
@@ -431,7 +434,8 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N')
         for i in range(1,len(plotdate)):
             DateDiff.append(plotdate[i]-plotdate[i-1])
         MeanDateDiff = np.mean(DateDiff).days # days between each observation
-        P = round(90 / MeanDateDiff) # 90 days = 3 month cycle
+        if P is None:
+            P = round(90 / MeanDateDiff) # 90 days = 3 month cycle
         
         # Calculate seasonal .trend, .seasonal and .resid
         Seasonality = seasonal_decompose(VegTimeseries['VegEdgeDist'], model='additive', period=P)        
@@ -461,9 +465,9 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N')
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
         wlav = movingaverage(plotwldist, 3)
-        if len(plotdate) >= 3:
-            ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
-            ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
+        # if len(plotdate) >= 3:
+            # ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
+            # ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -474,9 +478,10 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N')
             dd = mpl.dates.num2date(xx)
             pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
         
-        ax_TS2.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
-        ax_TS.set_ylim(min(plotwldist)-10, max(plotwldist)+30)
+        ax_TS2.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
+        ax_TS.set_ylim(np.nanmin(plotwldist)-10, np.nanmax(plotwldist)+30)
         ax_TS.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
+        ax_TS.set_ylabel('Cross-shore dist (m)')
         
         leg1 = ax_TS.legend(loc=2)
         leg2 = ax_TS2.legend(loc=1)
@@ -484,13 +489,16 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N')
         leg1.remove()
         ax_TS2.add_artist(leg1)
           
-        # PLOT 2: Seasonal trend with residuals as error window
-        ax_Trend.plot(Seasonality.trend, color='#81A739')
-        ax_Trend.plot(Seasonality.resid, color='#9CD38A')
-        ax_Trend.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
-        
-        # PLOT 3: Seasonality line (moving average)
-        
+        # PLOT 2: Seasonal trend 
+        ax_Trend.plot(Seasonality.trend, color='#3A4C1A', lw=1)
+        ax_Trend.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
+        ax_Trend.set_ylabel('Overall trend (m)')
+            
+        # PLOT 3: Seasonality line (moving average) with residuals as error window
+        ax_Season.plot(Seasonality.seasonal, color='#3A4C1A', lw=1)
+        ax_Season.plot(Seasonality.resid, color='#81A739', lw=1, alpha=0.5)
+        ax_Season.set_ylim(np.nanmin(Seasonality.resid)-1, np.nanmax(Seasonality.resid)+1)
+        ax_Season.set_ylabel('Seasonal signal (m)')
         
         
         ax_TS.title.set_text('Transect '+str(TransectID))
