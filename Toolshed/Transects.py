@@ -96,6 +96,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
         print('Window size should be odd; changed to %s m' % SmoothingWindowSize)
     
     refGDF = gpd.read_file(os.path.join('Data','referenceLines',referenceLinePath))
+    refGDF = gpd.GeoDataFrame(geometry=refGDF['geometry'])
     # # change CRS to desired projected EPSG
     # projection_epsg = settings['projection_epsg']
     refGDF = refGDF.to_crs(epsg=settings['output_epsg'])
@@ -129,7 +130,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
     columnsdata = []
     geoms = []
     for _,LineID,ID,TrGeom in TransectGDF.itertuples():
-        for _,refID,refGeom in refGDF.itertuples():
+        for _,refGeom in refGDF.itertuples():
             intersect = TrGeom.intersection(refGeom)
             columnsdata.append((LineID, ID))
             geoms.append(intersect)
