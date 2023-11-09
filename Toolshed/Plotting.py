@@ -167,13 +167,13 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     if type(TransectIDs) == list:
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300)
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -218,7 +218,8 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
           
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
-        ax.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
+        if len(plotdate) >= 3:
+            ax.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -283,12 +284,12 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     if type(TransectIDs) == list:
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300)
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -347,8 +348,9 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
         wlav = movingaverage(plotwldist, 3)
-        ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
-        ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
+        if len(plotdate) >= 3:
+            ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
+            ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -459,8 +461,9 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N')
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
         wlav = movingaverage(plotwldist, 3)
-        ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
-        ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
+        if len(plotdate) >= 3:
+            ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
+            ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -658,8 +661,9 @@ def WidthTimeseries(sitename, TransectInterGDFWater, TransectIDs, Hemisphere = '
     
         # plot trendlines
         yav = movingaverage(plotbwdist, 3)
-        ax.plot(plotdate, yav, 'r', label='3pt Moving Average')
-        ax.plot(dd, polysat(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
+        if len(plotdate) >= 3:
+            ax.plot(plotdate, yav, 'r', label='3pt Moving Average')
+            ax.plot(dd, polysat(xx), '--', color=[0.7,0.7,0.7], zorder=0, label=str(round(msat*365.25,2))+'m/yr')
 
     
         ax.title.set_text('Transect '+str(TransectID))
