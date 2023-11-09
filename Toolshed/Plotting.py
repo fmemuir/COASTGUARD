@@ -1293,7 +1293,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     RateGDF['LongMnWaveDir'] = RateGDF['MnWaveDir']
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthmed','SlopeMax',]])
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax',]])
     
     # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
 
@@ -1429,7 +1429,7 @@ def ClusteredMultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWat
     
     RateArray = pd.concat([RateArrayS, RateArrayN], axis=0)
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateArray[['oldyoungRt','oldyungRtW','TZwidthmed','maxslope','LocLabel']])
+    RateArray = np.array(RateArray[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','LocLabel']])
     
     # 
     # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
