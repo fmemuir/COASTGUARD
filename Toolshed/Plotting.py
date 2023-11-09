@@ -138,7 +138,7 @@ def SatGIF(metadata,settings,output):
 
 
 
-def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
+def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowPlot=True):
     
     """
     Plot timeseries of cross-shore veg edge change for selected transect(s).
@@ -162,7 +162,10 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
     figID = ''
-        
+    
+    if ShowPlot is False:
+        plt.ioff()
+    
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page
@@ -259,7 +262,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     plt.show()
     
     
-def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
+def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowPlot=True):
     """
     Plot timeseries of cross-shore veg edge and waterline change for selected transect(s).
     If more than one transect is supplied in a list, create subplots for comparison.
@@ -282,6 +285,9 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
     figID = ''
+       
+    if ShowPlot is False:
+        plt.ioff()
         
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
