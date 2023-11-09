@@ -286,7 +286,13 @@ else:
 #%% Timeseries Plotting
 
 # EDIT ME: Select transect ID to plot
-TransectIDs = [[25,30,35],50,75]
+# You can plot subplots within a list of plot IDs, e.g. [[sub1, sub2], plot2]
+# You can also comment Line 1 out and uncomment Line 2 to create plots for ALL Transect IDs
+# NOTE: If you want to plot ALL transects, it's recommended you switch ShowPlot=False
+
+TransectIDs = [[25,30,35],50,75] # Line 1
+# TransectIDs = list(TransectInterGDF['TransectID']) # Line 2
+
 for TransectID in TransectIDs:
     # Plot timeseries of cross-shore veg position
     Plotting.VegTimeseries(sitename, TransectInterGDF, TransectID, Hemisphere='N', ShowPlot=True)
