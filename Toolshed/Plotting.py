@@ -194,9 +194,9 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
     lab = fig.add_subplot(111,frameon=False)
     lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
     if type(TransectIDs) == list: 
-        lab.set_xlabel('Date (yyyy-mm)', labelpad=22)
+        lab.set_xlabel('Date', labelpad=22)
     else:
-        lab.set_xlabel('Date (yyyy-mm)')
+        lab.set_xlabel('Date')
     lab.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
     
     for TransectID, ax in zip(TransectIDs,axs):
@@ -213,13 +213,17 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
                 
-        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        
+        # xaxis ticks as year with interim Julys marked
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
         
         # create error bar lines to fill between
         for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], ['#81A739']):
             yerrorplus = [x + errorRMSE for x in plotdist]
             yerrorneg = [x - errorRMSE for x in plotdist]
-            axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
+            # axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
        
         # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
             
@@ -238,7 +242,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
         if len(plotdate) >= 3:
-            ax.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
+            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Moving Average VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -247,7 +251,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
             dd = mpl.dates.num2date(xx)
-            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
+            pltax.plot(dd, polysat(xx), '--', color=clr, lw=2, label=str(round(m*365.25,2))+' m/yr')
     
         ax.title.set_text('Transect '+str(TransectID))
             
@@ -355,6 +359,10 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
                 
         # ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
         
+        # xaxis ticks as year with interim Julys marked
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+        
         # create error bar lines to fill between
         for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], ['#81A739']):
             yerrorplus = [x + errorRMSE for x in plotdist]
@@ -362,7 +370,7 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
             # axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
        
         # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
-            
+        
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year):
             if Hemisphere == 'N':
@@ -379,7 +387,6 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
         vegav = MovingAverage(plotsatdist, 3)
         if len(plotdate) >= 3:
             neonplot(plotdate, vegav, colour='#24FC0E',ax=ax)
-    
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -496,6 +503,10 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         ax.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
         ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
         
+        # xaxis ticks as year with interim Julys marked
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+        
         # create error bar lines to fill between
         for axloop, errorRMSE, plotdist, col in zip([ax, ax2], [7.2, 10.4], [plotwldist,plotsatdist], ['#4056F4','#81A739']):
             yerrorplus = [x + errorRMSE for x in plotdist]
@@ -595,19 +606,13 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     
         plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         
-        # Generate seasonality model
-        VegTimeseries = pd.DataFrame(plotsatdist, index=plotdate, columns=['VegEdgeDist'])
         # Calculate period (observations per cycle) to use for seasonality
-        DateDiff = []
-        for i in range(1,len(plotdate)):
-            DateDiff.append(plotdate[i]-plotdate[i-1])
-        MeanDateDiff = np.mean(DateDiff).days # days between each observation
-        if P is None:
-            P = round(90 / MeanDateDiff) # 90 days = 3 month cycle
-        
-        # Calculate seasonal .trend, .seasonal and .resid
-        Seasonality = seasonal_decompose(VegTimeseries['VegEdgeDist'], model='additive')        
-        
+        # DateDiff = []
+        # for i in range(1,len(plotdate)):
+        #     DateDiff.append(plotdate[i]-plotdate[i-1])
+        # MeanDateDiff = np.mean(DateDiff).days # days between each observation
+        # if P is None:
+        #     P = round(90 / MeanDateDiff) # 90 days = 3 month cycle
         
         # Set up common subplot design
         for ax in [ax_TS,ax_Trend,ax_Season]: 
@@ -624,52 +629,66 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
                 rectwidth = rectWinterEnd - rectWinterStart
                 rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
                 ax.add_patch(rect)
-
-        # PLOT 1: timeseries scatter plot
-        ax_TS2 = ax_TS.twinx()
-        ax_TS.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
-        ax_TS2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
         
+        ax_TS_veg = ax_TS.twinx()
+        ax_Trend_veg = ax_Trend.twinx()
+        ax_Season_veg = ax_Season.twinx()
+               
         # plot trendlines
-        vegav = MovingAverage(plotsatdist, 3)
-        wlav = MovingAverage(plotwldist, 3)
+        # vegav = MovingAverage(plotsatdist, 3)
+        # wlav = MovingAverage(plotwldist, 3)
         # if len(plotdate) >= 3:
             # ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
             # ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
-    
-        # linear regression lines
-        x = mpl.dates.date2num(plotdate)
-        for y, pltax, clr in zip([plotwldist,plotsatdist], [ax_TS,ax_TS2], ['#0A1DAE' ,'#3A4C1A']):
+                   
+        for twin_TS, twin_Trend, twin_Season, twin_lab, y, clr in zip([ax_TS, ax_TS_veg],
+                                                            [ax_Trend, ax_Trend_veg],
+                                                            [ax_Season, ax_Season_veg],
+                                                            ['Sat Waterline', 'Sat Veg Edge'],
+                                                            [plotwldist, plotsatdist],
+                                                            ['#0A1DAE', '#81A739']):
+            
+            # Extend and interpolate to create daily observations
+            Timeseries = pd.Series(y, index=plotdate)
+            Timeseries = Timeseries.resample('1D')
+            Timeseries = Timeseries.interpolate(method='time')
+            
+            # Calculate seasonal .trend, .seasonal and .resid, using a year as the detrending period
+            Seasonality = seasonal_decompose(Timeseries, model='additive', period=365)
+            
+            # PLOT 1: timeseries scatter plot     
+            twin_TS.scatter(plotdate, y, marker='o', c=clr, s=4, alpha=0.7, edgecolors='none', label=twin_lab)
+            # linear regression lines
+            x = mpl.dates.date2num(plotdate)
             m, c = np.polyfit(x,y,1)
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
             dd = mpl.dates.num2date(xx)
-            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
-        
-        ax_TS2.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
-        ax_TS.set_ylim(np.nanmin(plotwldist)-10, np.nanmax(plotwldist)+30)
+            twin_TS.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
+            twin_TS.set_ylim(np.nanmin(y)-1, np.nanmax(y)+1)
+
+            # PLOT 2: Seasonal trend 
+            twin_Trend.plot(Seasonality.trend, color=clr, lw=1)
+            twin_Trend.set_ylim(np.nanmin(y)-10, np.nanmax(y)+30)
+            
+            # PLOT 3: Seasonality line (moving average) with residuals as error window
+            twin_Season.plot(Seasonality.seasonal, color=clr, lw=0.5)
+            twin_Season.plot(Seasonality.resid, color=clr, lw=1, alpha=0.3)
+            twin_Season.set_ylim(np.nanmin(Seasonality.resid)-1, np.nanmax(Seasonality.resid)+1)
+            
+            twin_TS.set_ylabel('Cross-shore dist (m)', color=clr)
+            twin_Trend.set_ylabel('Overall trend (m)', color=clr) 
+            twin_Season.set_ylabel('Seasonal signal (m)', color=clr)
+            
+        ax_TS.title.set_text('Transect '+str(TransectID))
         ax_TS.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
-        ax_TS.set_ylabel('Cross-shore dist (m)')
-        
+
         leg1 = ax_TS.legend(loc=2)
-        leg2 = ax_TS2.legend(loc=1)
+        leg2 = ax_TS_veg.legend(loc=1)
         # weird zorder with twinned axes; remove first axis legend and plot on top of second
         leg1.remove()
-        ax_TS2.add_artist(leg1)
-          
-        # PLOT 2: Seasonal trend 
-        ax_Trend.plot(Seasonality.trend, color='#3A4C1A', lw=1)
-        ax_Trend.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
-        ax_Trend.set_ylabel('Overall trend (m)')
-            
-        # PLOT 3: Seasonality line (moving average) with residuals as error window
-        ax_Season.plot(Seasonality.seasonal, color='#3A4C1A', lw=1)
-        ax_Season.plot(Seasonality.resid, color='#81A739', lw=1, alpha=0.5)
-        ax_Season.set_ylim(np.nanmin(Seasonality.resid)-1, np.nanmax(Seasonality.resid)+1)
-        ax_Season.set_ylabel('Seasonal signal (m)')
+        ax_TS_veg.add_artist(leg1)
         
-        
-        ax_TS.title.set_text('Transect '+str(TransectID))
                     
         figID += '_'+str(TransectID)
         plt.tight_layout()
@@ -1610,6 +1629,9 @@ def ClusteredMultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWat
     RateArray = pd.concat([RateArrayS, RateArrayN], axis=0)
     # Extract desired columns to an array for plotting
     RateArray = np.array(RateArray[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','LocLabel']])
+    for Col in ['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']:
+        RateArrayList = RateArray[Col]
+        RateArray[Col] = InterpNaN(RateArrayList)
     
     # 
     # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
@@ -1979,14 +2001,14 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page
-        mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300, sharex=True)
+        mpl.rcParams.update({'font.size':10})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
-        mpl.rcParams.update({'font.size':7})
+        mpl.rcParams.update({'font.size':10})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -2011,13 +2033,17 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
                 
-        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        
+        # xaxis ticks as year with interim Julys marked
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
         
         # create error bar lines to fill between
         for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], ['#81A739']):
             yerrorplus = [x + errorRMSE for x in plotdist]
             yerrorneg = [x - errorRMSE for x in plotdist]
-            axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
+            # axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
        
         # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
             
@@ -2036,7 +2062,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
         if len(plotdate) >= 3:
-            ax.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
+            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Moving Average VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -2045,11 +2071,11 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
             dd = mpl.dates.num2date(xx)
-            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
+            pltax.plot(dd, polysat(xx), '--', color=clr, lw=2, label=str(round(m*365.25,2))+' m/yr')
     
         # Vertical lines marking storm events
         for Storm in range(len(StormsDF)):
-            ax.axvspan(xmin = StormsDF['Start'].iloc[Storm], xmax = StormsDF['End'].iloc[Storm], color='#5B618A', alpha=0.5)
+            ax.axvspan(xmin = StormsDF['Start'].iloc[Storm], xmax = StormsDF['End'].iloc[Storm], facecolor='#5B618A', alpha=0.7)
     
         ax.title.set_text('Transect '+str(TransectID))
             
@@ -2061,7 +2087,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         figID += '_'+str(TransectID)
         plt.tight_layout()
         
-    figname = os.path.join(outfilepath,sitename + '_SatVegTimeseries_Transect'+figID+'.png')
+    figname = os.path.join(outfilepath,sitename + '_SatVegStormTimeseries_Transect'+figID+'.png')
     
     plt.tight_layout()
             
