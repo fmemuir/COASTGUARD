@@ -703,6 +703,140 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     plt.show()
     
     
+def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N', ShowPlot=True):
+    """
+    Plot timeseries of cross-shore veg edge and waterline change for selected transect(s),
+    with TZ widths plotted over top.
+    If more than one transect is supplied in a list, create subplots for comparison.
+    FM Nov 2022
+
+    Parameters
+    ----------
+    ValidDF : TYPE
+        DESCRIPTION.
+    TransectID : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+    
+    if ShowPlot is False:
+        plt.ioff()
+    
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':10})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, sharex=True)
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':10})
+        # use 2 subplots with one empty to be able to loop through them
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        axs = [axs] # to be able to loop through
+        
+    # common plot labels
+    lab = fig.add_subplot(111,frameon=False)
+    lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
+    if type(TransectIDs) == list: 
+        lab.set_xlabel('Date', labelpad=22)
+    else:
+        lab.set_xlabel('Date')
+    lab.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+    
+    for TransectID, ax in zip(TransectIDs,axs):
+        daterange = [0,len(TransectInterGDFTopo['dates'].iloc[TransectID])]
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFTopo['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
+        plotsatdistFull = TransectInterGDFTopo['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        # remove and interpolate outliers
+        plotsatdist = InterpNaN(plotsatdistFull)
+        plotTZ = TransectInterGDFTopo['TZwidth'].iloc[TransectID][daterange[0]:daterange[1]]
+        
+        
+        if len(plotdate) == 0:
+            print('Transect %s is empty! No values to plot.' % (TransectID))
+            return
+        
+        plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
+        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
+                
+        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        
+        # xaxis ticks as year with interim Julys marked
+        ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+        ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+        
+        # create TZ lines to fill between
+        yplus = []
+        yneg = []
+        for i in range(len(plotsatdist)):
+            yplus.append(plotsatdist[i] + plotTZ[i])
+            yneg.append(plotsatdist[i] - plotTZ[i])
+        ax.fill_between(plotdate, yneg, yplus, color='#E7700D', alpha=0.5, edgecolor=None)
+       
+        # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
+            
+        # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
+        for i in range(plotdate[0].year-1, plotdate[-1].year):
+            if Hemisphere == 'N':
+                rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+            elif Hemisphere == 'S':
+                rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
+            rectwidth = rectWinterEnd - rectWinterStart
+            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+            # ax.add_patch(rect)
+          
+        # plot trendlines
+        vegav = MovingAverage(plotsatdist, 3)
+        if len(plotdate) >= 3:
+            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Moving Average VegEdge')
+    
+        # linear regression lines
+        x = mpl.dates.date2num(plotdate)
+        for y, pltax, clr in zip([plotsatdist], [ax], ['#3A4C1A']):
+            m, c = np.polyfit(x,y,1)
+            polysat = np.poly1d([m, c])
+            xx = np.linspace(x.min(), x.max(), 100)
+            dd = mpl.dates.num2date(xx)
+            pltax.plot(dd, polysat(xx), '--', color=clr, lw=2, label=str(round(m*365.25,2))+' m/yr')
+    
+        ax.title.set_text('Transect '+str(TransectID))
+            
+        # ax.set_xlabel('Date (yyyy-mm)')
+        # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
+        # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
+        # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
+        ax.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
+        ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
+        
+        leg1 = ax.legend(loc=2)
+        # weird zorder with twinned axes; remove first axis legend and plot on top of second
+        # leg1.remove()
+        
+        figID += '_'+str(TransectID)
+        plt.tight_layout()
+        
+    figname = os.path.join(outfilepath,sitename + '_SatVegTZTimeseries_Transect'+figID+'.png')
+    
+    plt.tight_layout()
+            
+    plt.savefig(figname)
+    print('Plot saved under '+figname)
+    
+    plt.show()
+    
+    
 
 def ValidTimeseries(sitename, ValidInterGDF, TransectID):
     """
