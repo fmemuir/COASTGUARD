@@ -760,6 +760,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         # remove and interpolate outliers
         plotsatdist = InterpNaN(plotsatdistFull)
         plotTZ = TransectInterGDFTopo['TZwidth'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotTZMn = TransectInterGDFTopo['TZwidthMn'].iloc[TransectID]
         
         
         if len(plotdate) == 0:
@@ -775,16 +776,15 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
         
-        # create TZ lines to fill between
+        # create TZ lines to fill between (per-image width as error bar, mean as fill between)
         yplus = []
         yneg = []
         for i in range(len(plotsatdist)):
-            yplus.append(plotsatdist[i] + plotTZ[i])
-            yneg.append(plotsatdist[i] - plotTZ[i])
-        ax.fill_between(plotdate, yneg, yplus, color='#E7700D', alpha=0.5, edgecolor=None)
-       
-        # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
-            
+            yplus.append(plotsatdist[i] + plotTZMn)
+            yneg.append(plotsatdist[i] - plotTZMn)
+            ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.5, capsize=1, capthick=0.5)
+        ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.3, edgecolor=None, zorder=0)
+                   
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year):
             if Hemisphere == 'N':
