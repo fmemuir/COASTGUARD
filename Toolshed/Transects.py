@@ -856,7 +856,7 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
         # DTM should be in same CRS as Transects; reproject using gdal if not  
         if src.crs != TransectInterGDF.crs:
             dstDTMfile = os.path.join(os.path.splitext(DTMfile)[0] + '_reproj.tif')
-            command = 'gdalwarp ' + DTMfile + ' ' + dstDTMfile + ' -t_srs EPSG:' + str(TransectInterGDF.crs)
+            command = 'gdalwarp ' + DTMfile + ' ' + dstDTMfile + ' -t_srs ' + str(TransectInterGDF.crs)
             os.system(command)
             # read back in reprojected .tif
             src = rio.open(dstDTMfile)
