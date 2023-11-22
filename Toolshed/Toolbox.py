@@ -25,6 +25,8 @@ import folium
 import skimage.transform as transform
 import sklearn
 import scipy
+from scipy.stats import circmean
+from scipy.stats import circstd
 from astropy.convolution import convolve
 from datetime import datetime, timedelta
 from IPython.display import clear_output
@@ -2424,4 +2426,48 @@ def ExtendLine(LineGeom, dist):
     return NewLineGeom
     
     
+def CircMean(Array):
+    """
+    Calculate the mean of a list or array of values that represent circular directions/bearings.
+    To be used in calculating mean wave directions especially when timeseries centres around north (0 degrees).
+    FM Nov 2023
+
+    Parameters
+    ----------
+    Array : list or array
+        Direction values in degrees to be used in calculation.
+
+    Returns
+    -------
+    MeanDeg : float
+        Mean value of Array in degrees.
+
+    """
+    ArrRad = np.deg2rad(Array)
+    MeanRad = circmean(ArrRad, nan_policy='omit')
+    MeanDeg = np.rad2deg(MeanRad)
     
+    return MeanDeg
+
+def CircStd(Array):
+    """
+    Calculate the standard deviation of a list or array of values that represent circular directions/bearings.
+    To be used in calculating stddev wave directions especially when timeseries centres around north (0 degrees).
+    FM Nov 2023
+
+    Parameters
+    ----------
+    Array : list or array
+        Direction values in degrees to be used in calculation.
+
+    Returns
+    -------
+    MeanDeg : float
+        Std Dev value of Array in degrees.
+
+    """
+    ArrRad = np.deg2rad(Array)
+    MeanRad = circstd(ArrRad, nan_policy='omit')
+    MeanDeg = np.rad2deg(MeanRad)
+    
+    return MeanDeg
