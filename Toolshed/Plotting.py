@@ -191,7 +191,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
         axs = [axs] # to be able to loop through
         
     # common plot labels
-    lab = fig.add_subplot(111,frameon=False)
+    lab = fig.add_subplot(111,frameon=False, sharex=True)
     lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
     if type(TransectIDs) == list: 
         lab.set_xlabel('Date', labelpad=22)
@@ -583,12 +583,12 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(11.6,5.2), dpi=300)
+        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(11.6,5.2), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(3,1,figsize=(11.6,5.2), dpi=300)
+        fig, axs = plt.subplots(3,1,figsize=(11.6,5.2), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
             
     for TransectID, col in zip(TransectIDs, range(axs.shape[1])):
@@ -1601,19 +1601,15 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
         
     ## Multivariate Plot
     # Subset into south and north transects
-    RateGDF1 = TransectInterGDF.iloc[Loc1[0]:Loc1[1]]
-    RateGDF1 = pd.concat([RateGDF1, 
-                           TransectInterGDFWater.iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFTopo.iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFWave.iloc[Loc1[0]:Loc1[1]]])
-
-
+    RateGDF1 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+                           TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc1[0]:Loc1[1]]])
     
-    RateGDF2 = TransectInterGDF.iloc[Loc2[0]:Loc2[1]]
-    RateGDF2 = pd.concat([RateGDF2, 
-                           TransectInterGDFWater.iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFTopo.iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFWave.iloc[Loc2[0]:Loc2[1]]])
+    RateGDF2 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+                           TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc2[0]:Loc2[1]]])
 
     
     # summer (pale) eroding = #F9C784 
@@ -1622,11 +1618,13 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
     
     # Take overall mean values of wave height and direction
-    RateGDF['LongMnWaveHs'] = RateGDF['MnWaveHs']
-    RateGDF['LongMnWaveDir'] = RateGDF['MnWaveDir']
+    RateGDF['LongMnWaveHs'] = np.nanmean(RateGDF['MnWaveHs'])
+    RateGDF['LongMnWaveDir'] = Toolbox.CircMean(RateGDF['MnWaveDir'])
+    RateGDF['LongStDWaveHs'] = np.nanmean(RateGDF['StDWaveHs'])
+    RateGDF['LongStDWaveDir'] = Toolbox.CircMean(RateGDF['StDWaveDir'])
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax',]])
+    RateArray = np.array(RateGDF)
     
     # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
 
@@ -1663,23 +1661,21 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
                 axs[row,col].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
 
                 # linear regression lines
-                S, N = [RateArray[:len(RateArrayS),row], RateArray[:len(RateArrayS),col]], [RateArray[len(RateArrayN):,row], RateArray[len(RateArrayN):,col]]
-                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
-                    zArr = np.polyfit(list(Arr[0]), list(Arr[1]), 1)
-                    polyArr = np.poly1d(zArr)
-                    orderArr = np.argsort(Arr[0])
-                    # linear reg line
-                    axs[row,col].plot(Arr[0][orderArr], polyArr(Arr[0][orderArr]), c=regc, ls='--', lw=0.8)
-                    for i in range(RateArray.shape[1]-1):
-                        if row == i and col > i:
-                            # clear plots on RHS
-                            axs[row,col].cla() 
-                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
-                    for i in range(RateArray.shape[1]-1):
-                        if row == i and col > i:      
-                            rArr, pArr = scipy.stats.pearsonr(list(Arr[0]), list(Arr[1]))
-                            statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
-                            axs[row,col].text(0.5, pos, statsArr, c=regc, fontsize=6, ha='center')
+                zArr = np.polyfit(list(RateArray), list(RateArray), 1)
+                polyArr = np.poly1d(RateArray)
+                orderArr = np.argsort(RateArray)
+                # linear reg line
+                axs[row,col].plot(RateArray[orderArr], polyArr(RateArray[orderArr]), c='r', ls='--', lw=0.8)
+                
+                for i in range(RateArray.shape[1]-1):
+                    if row == i and col > i:
+                        # clear plots on RHS
+                        axs[row,col].cla() 
+                for i in range(RateArray.shape[1]-1):
+                    if row == i and col > i:      
+                        rArr, pArr = scipy.stats.pearsonr(list(RateArray))
+                        statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
+                        axs[row,col].text(0.5, 0.6, statsArr, c='r', fontsize=6, ha='center')
                     
                         
 
