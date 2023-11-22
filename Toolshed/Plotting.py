@@ -2227,3 +2227,79 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     plt.show()
     
     
+def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':10})
+        fig, axs = plt.subplots(1, len(TransectIDs),figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':10})
+        # use 2 subplots with one empty to be able to loop through them
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
+        axs = [axs] # to be able to loop through
+        
+    for TransectID, ax in zip(TransectIDs,axs):
+        plotwavedir = np.deg2rad(TransectInterGDFWave['WaveDir'].iloc[TransectID])
+        plotwavehs = np.array(TransectInterGDFWave['WaveHs'].iloc[TransectID])
+        
+        # create stages for wave height breaks
+        cmp = cm.get_cmap('YlGnBu')
+        HsStages = [[0.00,0.25],
+                    [0.25,0.50],
+                    [0.50,0.75],
+                    [0.75,1.00],
+                    [1.00,100]]
+        
+        # initialise dict for dataframe
+        plotL = {}
+        colours = []
+        for step in HsStages:
+            lab = str(step[0]) + '-' + str(step[1]) + ' m/s'
+            # mask each set of wave directions by the range of wave heights
+            mask = [val > step[0] and val <= step[1] for val in plotwavehs]
+            plotL[lab] = plotwavedir[mask]
+            colours.append(cmp(step[0]))
+        # to dataframe for plotting
+        plotDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v, in plotL.items() ]))   
+        
+        # For each wave height break, plot wave direction rose with 5deg bins
+        # for i, c in zip(range(len(plotDF.columns)), np.arange(0,1,0.25)):
+            # if i == 0: # first stage starts from 0 
+        binsize = np.deg2rad(10)
+        binset = np.arange(0,np.deg2rad(360)+binsize,binsize)
+        ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns, edgecolor='0.5', linewidth=0.5)
+            # else: # start each row with previous stage
+                # ax.bar(plotDF[plotDF.columns[i]], color=cmp(c), label=lab, bottom=plotDF[plotDF.columns[i-1]])
+            
+        ax.set_theta_zero_location('N')
+        ax.set_theta_direction(-1)
+        ax.set_yticklabels([])
+        ax.grid(linestyle=':')
+        
+        ax.title.set_text('Transect '+str(TransectID)+' Wave Direction\n'+
+                          TransectInterGDFWave['dates'].iloc[TransectID][0]+' to '+
+                          TransectInterGDFWave['dates'].iloc[TransectID][-1])
+        
+        figID += '_'+str(TransectID)
+        plt.tight_layout()
+        
+        ax.legend()
+        
+    figname = os.path.join(outfilepath,sitename + '_SatWaveDir_Transect'+figID+'.png')
+    
+    plt.tight_layout()
+
+    plt.savefig(figname)
+    print('Plot saved under '+figname)
+    
+    plt.show()
+    
