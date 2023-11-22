@@ -1079,8 +1079,8 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                             WaveDiff = (Wave_2 - Wave_1)
                             WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
     
-                    for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
-                                                 [TrNormWaveHs, TrNormWaveDir]):
+                    for WaveProp, WaveSat, Step in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
+                                                       [TrNormWaveHs, TrNormWaveDir], ['Hs','Dir']):
                         # if sat image date falls outside wave data window, assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
@@ -1094,18 +1094,26 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                              # if timestep doesn't exist for exactly 3 months back, add an hour
                             elif Time_1-timedelta(days=90,hours=-1) in WaveTime:
                                 Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=-1))
-                                
-                            SmoothWaveProp = np.mean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                            
+                            if Step == 'Dir':
+                                # if dealing with wave dir, use circular mean (to avoid problems with dirs around N i.e. 0deg)
+                                SmoothWaveProp = Toolbox.CircMean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                            else:
+                                SmoothWaveProp = np.mean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
                             WaveSat.append(SmoothWaveProp)
                         
-                    for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
-                                                 [TrStDevWaveHs, TrStDevWaveDir]):
-                        # if sat image date falls outside wave data window, assign nan
+                    for WaveProp, WaveSat, Step in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
+                                                       [TrStDevWaveHs, TrStDevWaveDir], ['Hs','Dir']):
+                        # if sat image date falls outside wave data window (only updated every 3 months or so), assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
                         else:
                             # Smooth over previous 3 month time period and get stdev from this range
-                            StDevWaveProp = np.std(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                            if Step == 'Dir':
+                                # if dealing with wave dir, use circular std (to avoid problems with dirs around N i.e. 0deg)
+                                StDevWaveProp = Toolbox.CircStd(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                            else:
+                                StDevWaveProp = np.std(WaveProp[Prev3Month:WaveTime.index(Time_1)])
                             WaveSat.append(StDevWaveProp)
     
             # append per-transects 
