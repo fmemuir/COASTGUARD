@@ -1604,12 +1604,12 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     RateGDF1 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc1[0]:Loc1[1]]])
+                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc1[0]:Loc1[1]]], axis=1)
     
     RateGDF2 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc2[0]:Loc2[1]]])
+                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc2[0]:Loc2[1]]], axis=1)
 
     
     # summer (pale) eroding = #F9C784 
@@ -1618,64 +1618,60 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
     
     # Take overall mean values of wave height and direction
-    RateGDF['LongMnWaveHs'] = np.nanmean(RateGDF['MnWaveHs'])
-    RateGDF['LongMnWaveDir'] = Toolbox.CircMean(RateGDF['MnWaveDir'])
-    RateGDF['LongStDWaveHs'] = np.nanmean(RateGDF['StDWaveHs'])
-    RateGDF['LongStDWaveDir'] = Toolbox.CircMean(RateGDF['StDWaveDir'])
+    RateGDF['LongMnWaveHs'] = [np.nanmean(r) for r in RateGDF['MnWaveHs']]
+    RateGDF['LongMnWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['MnWaveDir']]
+    RateGDF['LongStDWaveHs'] = [np.nanmean(r) for r in RateGDF['StDWaveHs']]
+    RateGDF['LongStDWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['StDWaveDir']]
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF)
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','LongMnWaveHs','LongMnWaveDir']])
     
-    # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
-
-    fig, axs = plt.subplots(RateArray.shape[1]-1,RateArray.shape[1]-1, figsize=(6.55,6.55), dpi=300)
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,8), dpi=300)
     
     # Plot matrix of relationships
-    lab = [r'$\Delta$veg (m/yr)',r'$\Delta$water (m/yr)',r'$TZwidth_{\eta}$ (m)',r'$slope_{max}$ ($\circ$)']
-    for row in range(RateArray.shape[1]-1):
-        for col in range(RateArray.shape[1]-1):
-            # remove repeated plots on right hand side
-            # for i in range(RateArray.shape[1]-1):
-                # if row == i and col > i:
-                    # fig.delaxes(axs[row,col])
+    lab = [r'$\Delta$veg (m/yr)',
+           r'$\Delta$water (m/yr)',
+           r'$TZwidth_{\eta}$ (m)',
+           r'$slope_{max}$ ($\circ$)',
+           r'$Hs_{\eta}$ (m)',
+           r'$Dir_{\eta}$ (m)']
+    
+    for row in range(RateArray.shape[1]):
+        for col in range(RateArray.shape[1]):
             
             # if plot is same var on x and y, change plot to a histogram    
             if row == col:
                 binnum = round(np.sqrt(len(RateArray)))+4
-                axs[row,col].hist(RateArray[:int(len(RateArray)/2),row],binnum, color='blue', alpha=0.7,label='S')
-                axs[row,col].hist(RateArray[int(len(RateArray)/2):,row],binnum, color='red', alpha=0.7,label='N')
-                axs[row,col].legend(loc=2,fontsize=6)
+                axs[row,col].hist(RateArray[:,row],binnum, color='k', alpha=0.7)
             # otherwise plot scatter of each variable against one another
             else:
-                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
-                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
+                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.4, marker='.', c='k', edgecolors='none')
                 
-                # overall linear reg line
-                z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
-                poly = np.poly1d(z)
-                order = np.argsort(RateArray[:,row])
-                axs[row,col].plot(RateArray[:,row][order], poly(RateArray[:,row][order]), c='k', ls='--', lw=0.8)
-                r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
-                stats = 'r = %.2f' % (r)
-                # axs[row,col].text( RateArray[:,row][order][-1], poly(RateArray[:,row][order])[-1], stats, c='k', fontsize=5, ha='center')
-                axs[row,col].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
+                # # overall linear reg line
+                # z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                # poly = np.poly1d(z)
+                # order = np.argsort(RateArray[:,row])
+                # axs[row,col].plot(RateArray[:,row][order], poly(RateArray[:,row][order]), c='k', ls='--', lw=0.8)
+                # r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                # stats = 'r = %.2f' % (r)
+                # axs[row,col].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
 
-                # linear regression lines
-                zArr = np.polyfit(list(RateArray), list(RateArray), 1)
-                polyArr = np.poly1d(RateArray)
-                orderArr = np.argsort(RateArray)
-                # linear reg line
-                axs[row,col].plot(RateArray[orderArr], polyArr(RateArray[orderArr]), c='r', ls='--', lw=0.8)
+                # # linear regression lines
+                # zArr = np.polyfit(list(RateArray), list(RateArray), 1)
+                # polyArr = np.poly1d(RateArray)
+                # orderArr = np.argsort(RateArray)
+                # # linear reg line
+                # axs[row,col].plot(RateArray[orderArr], polyArr(RateArray[orderArr]), c='r', ls='--', lw=0.8)
                 
-                for i in range(RateArray.shape[1]-1):
-                    if row == i and col > i:
-                        # clear plots on RHS
-                        axs[row,col].cla() 
-                for i in range(RateArray.shape[1]-1):
-                    if row == i and col > i:      
-                        rArr, pArr = scipy.stats.pearsonr(list(RateArray))
-                        statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
-                        axs[row,col].text(0.5, 0.6, statsArr, c='r', fontsize=6, ha='center')
+                # for i in range(RateArray.shape[1]-1):
+                #     if row == i and col > i:
+                #         # clear plots on RHS
+                #         axs[row,col].cla() 
+                # for i in range(RateArray.shape[1]-1):
+                #     if row == i and col > i:      
+                #         rArr, pArr = scipy.stats.pearsonr(list(RateArray))
+                #         statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
+                #         axs[row,col].text(0.5, 0.6, statsArr, c='r', fontsize=6, ha='center')
                     
                         
 
