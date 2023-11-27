@@ -31,6 +31,7 @@ import matplotlib.patches as mpatches
 from matplotlib.collections import PatchCollection
 from matplotlib.patches import Patch
 from matplotlib.lines import Line2D
+import matplotlib.patheffects as PathEffects
 plt.ion()
 
 from shapely import geometry
@@ -547,10 +548,14 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
         satnames[Sdate] = list(set(satmatch))[0]
     
     
-    mpl.rcParams.update({'font.size':26})       
-    fig,ax = plt.subplots(figsize=(7.5,6.5),dpi=300)
+    # mpl.rcParams.update({'font.size':26})  
+    mpl.rcParams.update({'font.size':8})       
+     
+    # fig,ax = plt.subplots(figsize=(7.5,6.5),dpi=300)
+    fig, ax = plt.subplots(figsize=(6.1,2.5), dpi=300)
 
-    sns.set(font='Avenir', font_scale=2.1)
+
+    sns.set(font='Avenir', font_scale=0.7)
     
     patches = []
     rect10 = mpatches.Rectangle((-10, -50), 20, 100)
@@ -578,7 +583,7 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
             else:
                 # find name of column for legend labelling (sat date)
                 kdelabel = df.columns[i]
-            sns.kdeplot(data = df.iloc[:,i], color=kdecmap[i], label=kdelabel, alpha=0.8, linewidth=3.5)
+            sns.kdeplot(data = df.iloc[:,i], color=kdecmap[i], label=kdelabel, alpha=0.8, linewidth=2)
             
         ax.add_collection(coll)
         # leg1 = ax.legend(loc='upper left', facecolor='w', framealpha=0.4, handlelength=1)
@@ -596,6 +601,8 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
     # round UP to nearest 10
     try:
         axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
+        if axlim > 150:
+            axlim = 150
         ax.set_xlim(-axlim, axlim)
     except:
         ax.set_xlim(-100, 100)
@@ -634,7 +641,7 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
         for s in sats:
             concatl.append(df[s])
         concatpd = pd.concat(concatl)
-        medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=3))
+        medians.append(ax.axvline(concatpd.median(), c=c, ls='--', lw=1.5))
         if 'PSScene4Band' in satname:
             satname = 'PS'
         labels.append(satname + ' $\eta$ = ' + str(round(concatpd.median(),1)) + 'm')
@@ -656,7 +663,7 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
     labels.append('RMSE = ' + str(round(rmse,1)) +'m')
     
     # set legend for median lines  
-    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=2)
+    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=1.5)
     medleg = ax.legend(medians,labels, loc='upper left',facecolor='w', framealpha=0.5, handlelength=0.8)
     # plt.gca().add_artist(leg1)
     
@@ -893,14 +900,24 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=
     df = df.transpose()
     df.columns = violinsatsrt
 
-    mpl.rcParams.update({'font.size':26})       
-    f = plt.figure(figsize=(7.5,9),dpi=300)
+    # mpl.rcParams.update({'font.size':26})    
+    mpl.rcParams.update({'font.size':8})       
 
-    sns.set(font='Avenir', font_scale=2.1)
+    # f = plt.figure(figsize=(7.5,9),dpi=300)
+    f = plt.subplots(figsize=(6.1,2.5), dpi=300)
+
+    # plot stacked violin plots (switch orientation with orient='h')
+    vorient = 'v'
+    
+    sns.set(font='Avenir', font_scale=0.7)
     
     patches = []
-    rect10 = mpatches.Rectangle((-10, -50), 20, 100)
-    rect15 = mpatches.Rectangle((-15, -50), 30, 100)
+    if vorient == 'h':
+        rect10 = mpatches.Rectangle((-10, -50), 20, 100)
+        rect15 = mpatches.Rectangle((-15, -50), 30, 100)
+    else:
+        rect10 = mpatches.Rectangle((-50, -10), 100, 20)
+        rect15 = mpatches.Rectangle((-50, -15), 100, 30)
     patches.append(rect10)
     patches.append(rect15)
     coll=PatchCollection(patches, facecolor="black", alpha=0.05, zorder=0)
@@ -917,43 +934,68 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=
                             'font.sans-serif':'Avenir LT Std'})
     
     if len(violinsatsrt) > 1:
-        # plot stacked violin plots
-        ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
+        ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient=vorient, cut=0, inner='quartile')
         ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
         for il, l in enumerate(ax.lines):
             l.set_linestyle('--')
-            l.set_linewidth(2)
+            l.set_linewidth(1)
             l.set_color('white')
             # overwrite middle line (median) setting to a thicker white line
             for i in range(0,3*len(violinsatsrt))[1::3]:
                 if i == il:
                     l.set_linestyle('-')
-                    l.set_linewidth(3)
+                    l.set_linewidth(1)
                     l.set_color('white')
     else:
         ax = sns.violinplot(data = df, linewidth=1, orient='h',cut=0, inner='quartile')
         ax.add_collection(coll)
         
-    ax.set(xlabel='X-shore distance$_{satellite - validation}$ (m)', ylabel='Satellite image platform')
-    if 'PSScene4Band' in violinsatsrt:
-        yticklabels = [item.get_text() for item in ax.get_yticklabels()]
-        yticklabels[yticklabels.index('PSScene4Band')] = 'PS'
-        ax.set_yticklabels(yticklabels)
+    
+    if vorient == 'h':
+        ax.set(xlabel='X-shore distance$_{satellite - validation}$ (m)', ylabel='Satellite image platform')
+        
+        if 'PSScene4Band' in violinsatsrt:
+            ticklabels = [item.get_text() for item in ax.get_yticklabels()]
+            ticklabels[ticklabels.index('PSScene4Band')] = 'PS'
+            ax.set_yticklabels(ticklabels)
+        
+        # set axis limits to rounded maximum value of all violins (either +ve or -ve)
+        # round UP to nearest 10
+        axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
+        if axlim < 150:
+            ax.set_xlim(-axlim, axlim)
+        else:
+            ax.set_xlim(-150, 150)
+        
+        majort = np.arange(-150,200,50)
+        ax.set_xticks(majort)    
+        # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
+        ax.axvline(0, c='k', ls='-', alpha=0.4, lw=1)
+            
+    else:
+        ax.set(xlabel='Satellite image platform', ylabel='X-shore distance$_{satellite - validation}$ (m)')
+
+        if 'PSScene4Band' in violinsatsrt:
+            ticklabels = [item.get_text() for item in ax.get_xticklabels()]
+            ticklabels[ticklabels.index('PSScene4Band')] = 'PS'
+            ax.set_xticklabels(ticklabels)
+                
+        # set axis limits to rounded maximum value of all violins (either +ve or -ve)
+        # round UP to nearest 10
+        axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
+        if axlim < 150:
+            ax.set_ylim(-axlim, axlim)
+        else:
+            ax.set_ylim(-150, 150)
+        
+        majort = np.arange(-150,200,50)
+        ax.set_yticks(majort)
+        ax.axhline(0, c='k', ls='-', alpha=0.4, lw=1)
+
 
     if PlotTitle != None:
         ax.set_title(PlotTitle)
-    
-    # set axis limits to rounded maximum value of all violins (either +ve or -ve)
-    # round UP to nearest 10
-    axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
-    if axlim < 150:
-        ax.set_xlim(-axlim, axlim)
-    else:
-        ax.set_xlim(-150, 150)
-    
-    majort = np.arange(-150,200,50)
-    ax.set_xticks(majort)    
-    # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
+
     
     # # create specific median lines for specific platforms
     legend_elements = []
@@ -964,21 +1006,30 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=
         satMAE = np.mean(abs(df[satname]))
         satRMSE = np.sqrt(satMSE)
         leglabel = '\nRMSE = '+str(round(satRMSE,1))+'m'
-        medianlabel = '$\eta_{dist}$ = '+str(round(satmedian,1))+'m'
+        medianlabel = '$\eta_{dist}$ =\n'+str(round(satmedian,1))+'m'
         LegPatch = Patch( facecolor=colors[i], label = leglabel)
         legend_elements.append(LegPatch)
-        if axlim < 150:
-            ax.text(-axlim+1, i+0.02, leglabel, va='center')
+        if vorient == 'h':
+            if axlim < 150:
+                ax.text(-axlim+1, i+0.02, leglabel, va='center')
+            else:
+                ax.text(-149, i+0.02, leglabel, va='center')
         else:
-            ax.text(-149, i+0.02, leglabel, va='center')
+            if axlim < 150:
+                ax.text(i, -140, leglabel, ha='center')
+            else:
+                ax.text(i, -140, leglabel, ha='center')
         medianline = ax.lines[iline].get_data()[1][0]
-        if satname == 'PSScene4Band' or satname == 'S2':
-            ax.text(satmedian, medianline-0.05, medianlabel, ha='center')
+        if vorient == 'h':
+            if satname == 'PSScene4Band' or satname == 'S2':
+                ax.text(satmedian, medianline-0.05, medianlabel, ha='center')
+            else:
+                ax.text(satmedian, medianline-0.12, medianlabel, ha='center')
         else:
-            ax.text(satmedian, medianline-0.12, medianlabel, ha='center')
-    
-    ax.axvline(0, c='k', ls='-', alpha=0.4, lw=2)
-    
+            mediantxt = ax.text(i+0.35, satmedian, medianlabel, va='center',ha='center')
+            mediantxt.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.8)])
+ 
+        
     ax.set_axisbelow(False)
     plt.tight_layout()
     
@@ -988,6 +1039,8 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=
     
     plt.show()
     
+    
+    # print stats after fig
     for i in df.columns:
         print('No. of transects for '+i+' with sub-pixel accuracy:')
         if i == 'L5' or i == 'L7' or i == 'L8' or i == 'L9':

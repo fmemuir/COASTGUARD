@@ -21,6 +21,8 @@ import matplotlib.patches as mpatches
 from matplotlib.patches import Patch, Rectangle
 import matplotlib.dates as mdates
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import matplotlib.patheffects as PathEffects
+
 plt.ion()
 
 import rasterio
@@ -486,6 +488,7 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     for TransectID, ax in zip(TransectIDs,axs):
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
+        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wdates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotsatdistFull = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         plotwldistFull = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
         # remove and interpolate outliers
@@ -495,12 +498,12 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         if len(plotdate) == 0:
             return
         
-        plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
+        plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
         
         ax2 = ax.twinx()
         
-        ax.scatter(plotdate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
+        ax.scatter(plotwldate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
         ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
         
         # xaxis ticks as year with interim Julys marked
@@ -508,10 +511,10 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
         
         # create error bar lines to fill between
-        for axloop, errorRMSE, plotdist, col in zip([ax, ax2], [7.2, 10.4], [plotwldist,plotsatdist], ['#4056F4','#81A739']):
+        for axloop, errorRMSE, xaxis, plotdist, col in zip([ax, ax2], [7.2, 10.4], [plotwldate,plotdate], [plotwldist,plotsatdist], ['#4056F4','#81A739']):
             yerrorplus = [x + errorRMSE for x in plotdist]
             yerrorneg = [x - errorRMSE for x in plotdist]
-            axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
+            axloop.fill_between(xaxis, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
        
         # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
             
@@ -530,13 +533,14 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
         wlav = MovingAverage(plotwldist, 3)
+        if len(plotwldate) >= 3:
+            ax.plot(plotwldate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
         if len(plotdate) >= 3:
-            ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
             ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
     
         # linear regression lines
-        x = mpl.dates.date2num(plotdate)
-        for y, pltax, clr in zip([plotwldist,plotsatdist], [ax,ax2], ['#0A1DAE' ,'#3A4C1A']):
+        for xaxis, y, pltax, clr in zip([plotwldate,plotdate], [plotwldist,plotsatdist], [ax,ax2], ['#0A1DAE' ,'#3A4C1A']):
+            x = mpl.dates.date2num(xaxis)
             m, c = np.polyfit(x,y,1)
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
@@ -545,13 +549,14 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     
         ax.title.set_text('Transect '+str(TransectID))
             
-        # ax.set_xlabel('Date (yyyy-mm)')
-        # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
-        # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
-        # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
+
         ax2.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
         ax.set_ylim(np.nanmin(plotwldist)-10, np.nanmax(plotwldist)+30)
-        ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
+        if len(plotdate) > len(plotwldate): # set axis limits to longer timeframe
+            ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
+        else:
+            ax.set_xlim(np.nanmin(plotwldate)-timedelta(days=100),np.nanmax(plotwldate)+timedelta(days=100))
+
         
         leg1 = ax.legend(loc=2)
         leg2 = ax2.legend(loc=1)
@@ -1394,14 +1399,15 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
         valsrt = valdists
 
     textcolor = '#0B2D32'
-    mpl.rcParams.update({'font.size':26, 
+    mpl.rcParams.update({'font.size':8, 
                          'text.color':textcolor,
                          'axes.labelcolor':textcolor,
                          'xtick.color':textcolor,
                          'ytick.color':textcolor,
                          'font.sans-serif':'Avenir LT Std'})
 
-    fig, ax = plt.subplots(figsize=(7.5,9),dpi=300)
+    # fig, ax = plt.subplots(figsize=(7.5,9),dpi=300)
+    fig, ax = plt.subplots(figsize=(6.1,2.5), dpi=300)
 
     ax.set_facecolor('#D5D5D5')
     
@@ -1430,7 +1436,7 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     ax.set_yticks(majort)
     
     # line through the origin as a guide for error
-    plt.plot([0,250],[0,250],c=[0.6,0.5,0.5], lw=2, linestyle='-', zorder=3, alpha=0.4)
+    plt.plot([0,250],[0,250],c=[0.6,0.5,0.5], lw=1, linestyle='-', zorder=3, alpha=0.4)
 
     ax.grid(which='major', color='#BBB4BB', alpha=0.5, zorder=0)
     # ax.grid(which='minor', color='#BBB4BB', alpha=0.2, zorder=0)
@@ -1451,7 +1457,7 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
         valfit = np.linspace(0,round(np.max(valsrtclean[i])),len(valsrtclean[i])).reshape((-1,1))
         satfit = model.predict(valfit)
 
-        line = plt.plot(valfit,satfit, c=cmap(i), alpha=0.5, linewidth=3, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))), zorder=3)
+        line = plt.plot(valfit,satfit, c=cmap(i), alpha=0.5, linewidth=2, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))), zorder=3)
         lines.append(line)
         
     besti = r2s.index(max(r2s))
@@ -1462,7 +1468,7 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
 
     hands = [ lines[besti][0], lines[worsti][0] ]
     labs = [ satdateclean[besti]+'\nS2, R$^2$ = '+str(round(r2s[besti],2)), satdateclean[worsti]+'\nL5, R$^2$ = '+str(round(r2s[worsti],2)) ]
-    plt.legend(hands,labs, loc='lower right',facecolor='#D5D5D5')
+    plt.legend(hands,labs, loc='upper left',facecolor='#D5D5D5')
     
     # overall linear regression
     valfull = [item for sublist in valsrtclean for item in sublist]
@@ -1476,8 +1482,9 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
     satfit = model.predict(valfit)
 
-    plt.plot(valfit,satfit, c='k', linestyle='--', linewidth=3, zorder=3)
-    plt.text(valfit[-1],satfit[-1],'R$^2$ = '+str(round(r2,2))+'\nRMSE = 23 m', zorder=3, horizontalalignment='right')
+    plt.plot(valfit,satfit, c='k', linestyle='--', linewidth=2, zorder=3)
+    RMSEtxt = plt.text(valfit[int(len(valfit)*0.98)],satfit[int(len(valfit)*0.99)],'R$^2$ = '+str(round(r2,2))+'\nRMSE = 23 m', zorder=3, horizontalalignment='right')
+    RMSEtxt.set_path_effects([PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.8)])
 
     plt.xlim(0,225)
     plt.ylim(0,250)
@@ -1495,7 +1502,7 @@ def SatRegressPoster(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     plt.show()
     
     # Get unique dates and satnames    
-    SatGDFNames = SatGDF.groupby(['dates']).max()
+    SatGDFNames = SatGDF[['dates', 'times', 'filename','satname']].groupby(['dates']).max()
     SatNames = []
     
     for d in satdateclean:
