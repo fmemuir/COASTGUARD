@@ -2394,6 +2394,162 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
         
         return WaveOutFile
 
+
+def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
+    
+    
+        # Mask data for onshore waves only (waves less than shoreline orientation)
+    # need to preserve the matrix size so that theta_0 can be calculated
+    # previous method of taking a mean doesn't work on curved west-facing bay
+    # since half is 270-360 and half is 0-180 giving a weird mean
+    # new way: straight line from edges of hard headland to get mean = 45
+    Dir_mask = Dir;
+    Tp_mask = Tp;
+    Hs_mask = Hs;
+    
+    # create new wave direction with index of masked values
+    shoreAngle=90-np.rad2deg(atan2(S.Y(end-1)-S.Y(1), S.X(end-1)-S.X(1)));
+    for i in range(len(Dir)):
+        if Dir(i) > shoreAngle and Dir(i) < shoreAngle+180:
+            Dir_mask[i]=np.nan
+
+    #Dir_mask(Dir > shoreAngle && Dir < shoreAngle+180) = NaN; 
+    #Dir_mask(Dir > shoreAngle+180) = NaN;
+    mask = isnan(Dir_mask)
+    Tp_mask[mask]=np.nan
+    Hs_mask[mask]=0   # using NaN mask caused issues with breaking condition loop; changed to Hs=0
+  
+    # Preallocation to save memory
+    waves = struct('ID', np.nan ,'t', np.nan ,'Dir', np.nan ,'Hs', np.nan ,'Tp', np.nan );
+    
+    ## Shadow zones
+    # From the intersection of offshore wave directions with two points 
+    # along the shoreline.    
+    
+    g  = 9.81   # gravity m^s^2
+    rho = 1025  # water density
+
+    Ntr = len(TransectInterGDF)
+    
+    for i in range(Ntr):     # for each transect
+        Nloop = 0    # breaking wave loop counter updates
+        
+        # Re-initialise shadow zone logic table for each transect
+        for j in range(len(Hs)):    # for each daily wave condition
+          
+            Hs_maskSh[j,1] = Hs_mask[j]
+            Tp_maskSh[j,1] = Tp_mask[j]
+            Dir_maskSh[j,1] = Dir_mask[j]
+            
+            if shadow[j,i]==1:
+                Hs_maskSh[j,1] = 0
+                Tp_maskSh[j,1] = np.nan
+                Dir_maskSh[j,1] = np.nan
+            
+            H_0 = Hs_maskSh[j,1]
+            C_0 = np.divide( (g*Tp_maskSh[j,1]) , (2*np.pi) )   # Deepwater wave speed (m/s)
+            L_0 = np.multiply( C_0 , Tp_maskSh[j,1] )        # Deepwater wavelength (m) set by speed and period
+            h = 3 * H_0   # water depth at wave base for later calcs of Hs
+            
+            # Define offshore wave condition based on shadow zone masking
+            # Calculate wave energy
+            En = (1/8) * rho * g * np.dot(H_0, 2)
+            
+            BREAK_WAV = 0  # flag for wave breaking  
+            
+            while BREAK_WAV == 0:
+                
+                # Calculate wave conditions in shallow water depth
+                L = np.multiply( L_0 , (np.tanh( ( np.multiply((np.square(np.divide((2*np.pi),Tp_maskSh[j,1]))) , (h/g)) )**(3/4) )) )**(2/3)    # wavelength; tanh(x)=1 when -2pi<x<2pi
+                C = np.multiply( C_0 , np.tanh(np.multiply((2*np.pi*h) , L)) )  # shallow wave speed
+                k = np.divide((2*np.pi),L)    # wave number (1/m)
+                
+                # Calculate shoaling coefficient
+                n = ( np.divide( np.multiply((2*h),k) , (np.sinh(np.multiply((2*h),k))) ) + 1 ) / 2    # shoaling factor
+                Ks = np.sqrt( np.divide(C_0 , np.multiply(np.multiply(n,C),2)) )   # shoaling coefficient
+                
+                # Calculate refraction coefficient
+                if (alpha_shore[i] > 0) and (alpha_shore[i] < 90):
+                    Theta_0 = alpha_shore[i] + 270 - Dir_maskSh[j,1] # theta_0 is wave dir wrt shore angle
+                else:
+                    Theta_0 = alpha_shore[i] - 90 - Dir_maskSh[j,1]
+                
+                Theta = np.rad2deg( asin( np.multiply(np.divide(C,C_0) , sin(np.deg2rad(Theta_0)) )) )   # update theta
+                Kr = sqrt(abs(cos(np.deg2rad(Theta_0))/cos(np.deg2rad(Theta))))
+                # update conditions using refracted shoaled waves
+                Hs_near = H_0*Ks*Kr
+                if (alpha_shore[i] > 0) and (alpha_shore[i] < 90):
+                    Dir_near = alpha_shore[i]+270-Theta    # recalculating direction using theta
+                else:
+                    Dir_near = alpha_shore[i]-90-Theta
+                    if Dir_near < 0:
+                        Dir_near=360+Dir_near   # need to check this! was *-1, but this swings -ve values back W from N
+                    
+                
+                Tp_near = Tp_maskSh[j,1] # offshore period
+                
+                # Test if the wave meets breaking conditions
+                if Hs_near > h*0.78:
+                    BREAK_WAV = 1
+                    Hs_break[j,i] = Hs_near # to record per timeseries AND transect
+                    Dir_break[j,i] = Dir_near #  offshore cond.
+                    Tp_break[j,i] = Tp_maskSh[j,1] 
+                    Nloop = Nloop + 1    # breaking wave loop counter updates
+                
+                
+                # Reduce water depth by -10cm each loop
+                h = h-0.10
+                
+                # Catch negative water depths (assume 0 transport and set
+                # wave height and transport angle to 0)
+                if h<0:
+                    Hs_break[j,i] = 0
+                    if (alpha_shore[i] > 0) and (alpha_shore[i] < 90): # for shoreline angles <90 (perpendicular transformation of -90 leads to -ve values) 
+                        # need conditionals for Dir orientations too
+                        if Dir_near > alpha_shore[i]+270:    # 0-90 + 270 = for waves 270-360
+                            Dir_break[j,i] = alpha_shore[i] # transport rate = 0 when alpha = +90
+                        elif isnan(Dir_near):  # to catch offshore (NaN) wave directions
+                            Dir_break[j,i] = np.nan
+                        else:
+                            Dir_break[j,i] = alpha_shore[i]+180 # transport rate = 0 when alpha = -90
+                        
+                    else: # for shoreline angles 90-360
+                        # need conditionals for Dir orientations too
+                        if Dir_near > alpha_shore[i]-90:     # 90-360 - 90 = for waves 0-270
+                            Dir_break[j,i] = alpha_shore[i] # transport rate = 0 when alpha = +90
+                        elif isnan(Dir_near):  # to catch offshore (NaN) wave directions
+                            Dir_break[j,i] = np.nan
+                        else:    # for Dir_near less than alpha_shore-90                      
+                            Dir_break[j,i] = alpha_shore[i]-180 # transport rate = 0 when alpha = -90
+                            if Dir_break[j,i] < 0: #added condition for when alpha_shore-90 becomes negative (alpha<135)
+                                Dir_break[j,i] = 360 + Dir_break[j,i]
+ 
+                    
+                    Tp_break[j,i] = Tp_maskSh[j,1] # offshore cond.
+                    BREAK_WAV = 1 # ignore refraction in this case, wave has already refracted around
+                     
+                # use loop vars to write transformed wave data to structure
+                waves[i,1].ID = transects[i].ID
+                waves[i,1].t[j,1] = t(j)
+                waves[i,1].alpha_shore = alpha_shore[i]
+                waves[i,1].Dir_near[j,1] = Dir_near    
+                    
+            # condition to store both types of waves (near/breaking)
+            if BREAK_WAV == 1:
+                waves[i,1].Dir[j,1] = Dir_break[j,i]
+                waves[i,1].Hs[j,1] = Hs_break[j,i]
+                waves[i,1].Tp[j,1] = Tp_break[j,i]
+            else:
+                waves[i,1].Hs[j,1] = Hs_near
+                waves[i,1].Tp[j,1] = Tp_near
+                waves[i,1].Dir[j,1] = Dir_near
+                
+
+        print('number of breaking wave conditions: '+str(Nloop))
+    
+
+
+
 def ExtendLine(LineGeom, dist):
     '''
     FM Jun 2023

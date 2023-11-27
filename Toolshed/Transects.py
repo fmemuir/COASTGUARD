@@ -950,12 +950,17 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     BBox.to_crs(epsg=4326, inplace=True)
     # lonmin, lonmax, latmin, latmax = 
     
+    # Download wave hindcast for given time frame and location
     WaveOutFile = Toolbox.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     
     WavePath = os.path.join(settings['inputs']['filepath'],'tides') 
     WaveFilePath = os.path.join(WavePath, WaveOutFile)
     
+    # Sample waves from CEFAS hindcast
     WaveHs, WaveDir, NormWaveHs, NormWaveDir, StDevWaveHs, StDevWaveDir = SampleWaves(settings, TransectInterGDF, WaveFilePath)
+    
+    # Transform offshore wave values to nearshore using Airy wave transformations
+    NSWaveHs, NSWaveDir = TransformWaves(TransectInterGDF, WaveHs, WaveDir)
     
     TransectInterGDF['WaveHs'] = WaveHs
     TransectInterGDF['WaveDir'] = WaveDir
