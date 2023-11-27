@@ -96,6 +96,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
         print('Window size should be odd; changed to %s m' % SmoothingWindowSize)
     
     refGDF = gpd.read_file(os.path.join('Data','referenceLines',referenceLinePath))
+    refGDF = gpd.GeoDataFrame(geometry=refGDF['geometry'])
     # # change CRS to desired projected EPSG
     # projection_epsg = settings['projection_epsg']
     refGDF = refGDF.to_crs(epsg=settings['output_epsg'])
@@ -129,7 +130,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
     columnsdata = []
     geoms = []
     for _,LineID,ID,TrGeom in TransectGDF.itertuples():
-        for _,refID,refGeom in refGDF.itertuples():
+        for _,refGeom in refGDF.itertuples():
             intersect = TrGeom.intersection(refGeom)
             columnsdata.append((LineID, ID))
             geoms.append(intersect)
@@ -198,10 +199,12 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
         if AllIntersects['interpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['interpnt'][inter] = list(AllIntersects['interpnt'][inter])[0] # list() accesses individual points in MultiPoint
-    AllIntersects = AllIntersects.drop('geometry',axis=1)
+            AllIntersects['interpnt'][inter] = list(AllIntersects['interpnt'][inter].geoms)[0] # list() accesses individual points in MultiPoint
+    #AllIntersects = AllIntersects.drop('geometry',axis=1)
+    AllIntersects = AllIntersects.rename_geometry('pntGeometry')
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
+    AllIntersects = AllIntersects.drop('pntGeometry',axis=1)
     
     print("formatting into GeoDataFrame...")
     # initialise distances of intersections 
@@ -323,10 +326,12 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     # take only first point on any transects which intersected a single shoreline more than once
     for inter in range(len(AllIntersects)):
         if AllIntersects['wlinterpnt'][inter].geom_type == 'MultiPoint':
-            AllIntersects['wlinterpnt'][inter] = list(AllIntersects['wlinterpnt'][inter])[0] # list() accesses individual points in MultiPoint
-    AllIntersects = AllIntersects.drop('geometry',axis=1)
+            AllIntersects['wlinterpnt'][inter] = list(AllIntersects['wlinterpnt'][inter].geoms)[0] # list() accesses individual points in MultiPoint
+    #AllIntersects = AllIntersects.drop('geometry',axis=1)
+    AllIntersects = AllIntersects.rename_geometry('pntGeometry')
     # attribute join on transect ID to get transect geometry back
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
+    AllIntersects = AllIntersects.drop('pntGeometry',axis=1)
     
     print("formatting into GeoDataFrame...")
     # initialise distances of intersections 

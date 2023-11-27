@@ -1345,11 +1345,13 @@ def SaveShapefiles(output, name_prefix, sitename, epsg):
     
     return
 
-def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg):
+def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg): #, shpFileName):
 
     '''
     Save converted shapefiles with multiple line features per date.
     FM Apr 2022
+    
+    temporary modified CM - parameter sensitivity testing - change only outputsGDF.tofile and input args
     '''
     
     output = outputOG.copy()
@@ -1379,6 +1381,7 @@ def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg):
             outputsGDF = outputsGDF.drop('veglines', axis=1)
             
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp'))
+    #outputsGDF.to_file(os.path.join(name_prefix, shpFileName))
     
     
     return

@@ -162,18 +162,20 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
     figID = ''
+    
+    plt.ioff()
         
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300)
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
+        fig, axs = plt.subplots(1,1,figsize=(6.55,3), dpi=300,sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -190,6 +192,9 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+        
+        if len(plotdate) == 0:
+            return
         
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
@@ -218,7 +223,10 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
           
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
-        ax.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
+        vegav[0] = plotsatdist[0]
+        vegav[-1] = plotsatdist[-1]
+        if len(plotdate) >= 3:
+            ax.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -252,7 +260,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     plt.savefig(figname)
     print('Plot saved under '+figname)
     
-    plt.show()
+    #plt.show()
     
     
 def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
@@ -278,6 +286,8 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
     figID = ''
+    
+    plt.ioff()
         
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
@@ -306,15 +316,18 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
         lab.set_xlabel('Date (yyyy-mm)')
     lab.set_ylabel('Cross-shore distance (water) (m)', labelpad=22, color='#4056F4')
     lab2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
-
-
     
     for TransectID, ax in zip(TransectIDs,axs):
+        print('plotting transect',TransectID)
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         plotwldist = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
         plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+        
+        if len(plotdate) == 0:
+            print('no intersections on Transect',TransectID)
+            return
         
         plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
@@ -346,7 +359,20 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
           
         # plot trendlines
         vegav = movingaverage(plotsatdist, 3)
+        vegav[0] = plotsatdist[0]
+        vegav[-1] = plotsatdist[-1]
+        
         wlav = movingaverage(plotwldist, 3)
+        wlav[0] = plotwldist[0]
+        wlav[-1] = plotwldist[-1]
+        
+        if len(plotdate) != len(wlav):
+            print('inconsistent number of plot dates to water level moving average (3pts), Transect', TransectID)
+            return
+        if len(plotdate) != len(vegav):
+            print('inconsistent number of plot dates to vegetation edge moving average (3pts), Transect', TransectID)
+            return
+            
         ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
         ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
     
@@ -384,8 +410,6 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
             
     plt.savefig(figname)
     print('Plot saved under '+figname)
-    
-    plt.show()
     
     
 def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N'):
