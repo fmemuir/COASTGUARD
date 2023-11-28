@@ -181,9 +181,9 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
     
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
-        # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
@@ -486,6 +486,7 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
 
     
     for TransectID, ax in zip(TransectIDs,axs):
+        print('plotting transect',TransectID)
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wdates'].iloc[TransectID][daterange[0]:daterange[1]]]
@@ -494,11 +495,12 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         # remove and interpolate outliers
         plotsatdist = InterpNaN(plotsatdistFull)
         plotwldist = InterpNaN(plotwldistFull)
-                
+        
         if len(plotdate) == 0:
+            print('no intersections on Transect',TransectID)
             return
         
-        plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
+        plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
         
         ax2 = ax.twinx()
@@ -533,10 +535,14 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
         wlav = MovingAverage(plotwldist, 3)
-        if len(plotwldate) >= 3:
-            ax.plot(plotwldate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
-        if len(plotdate) >= 3:
-            ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
+        if len(plotwldate) != len(wlav):
+            print('inconsistent number of plot dates to water level moving average (3pts), Transect', TransectID)
+            return
+        if len(plotdate) != len(vegav):
+            print('inconsistent number of plot dates to vegetation edge moving average (3pts), Transect', TransectID)
+            return
+        ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
+        ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
     
         # linear regression lines
         for xaxis, y, pltax, clr in zip([plotwldate,plotdate], [plotwldist,plotsatdist], [ax,ax2], ['#0A1DAE' ,'#3A4C1A']):
@@ -575,7 +581,7 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     print('Plot saved under '+figname)
     
     plt.show()
-    
+
     
 def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', P=None):
     
