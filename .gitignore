@@ -16,6 +16,8 @@ VegEdge_Validation_HiRes.py
 VegEdge_Validation_Planet.py
 VegEdge_RedRiver.py
 VegEdge_FullS2Run.py
+VedgeSat_Driver_Musselburgh.py
+VedgeSat_Driver_StAndrews_StormBabet.py
 
 VegEdge_Validation.ipynb
 VegEdge.ipynb
