@@ -593,12 +593,12 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':7})
+        mpl.rcParams.update({'font.size':10})
         fig, axs = plt.subplots(3,len(TransectIDs),figsize=(11.6,5.2), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':7})
+        mpl.rcParams.update({'font.size':10})
         fig, axs = plt.subplots(3,1,figsize=(11.6,5.2), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
             
@@ -694,8 +694,8 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
         ax_TS.title.set_text('Transect '+str(TransectID))
         ax_TS.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
 
-        leg1 = ax_TS.legend(loc=2)
-        leg2 = ax_TS_veg.legend(loc=1)
+        leg1 = ax_TS.legend(loc=4)
+        leg2 = ax_TS_veg.legend(loc=3)
         # weird zorder with twinned axes; remove first axis legend and plot on top of second
         leg1.remove()
         ax_TS_veg.add_artist(leg1)
@@ -1619,15 +1619,13 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
     
-    # summer (pale) eroding = #F9C784 
-    # summer (pale) accreting = #9DB4C0
-    
     RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
     
     # Extract desired columns to an array for plotting
     RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
     
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,8), dpi=300)
+    mpl.rcParams.update({'font.size':10})
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.2), dpi=300)
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
@@ -1640,64 +1638,373 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
             
             # if plot is same var on x and y, change plot to a histogram    
             if row == col:
-                binnum = round(np.sqrt(len(RateArray)))+4
-                axs[col,row].hist(RateArray[:,row],binnum, color='k', alpha=0.5)
+                binnum = round(np.sqrt(len(RateArray)))*2
+                bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                axs[col,row].hist(RateArray[:,row],bins, color='k', alpha=0.5)
                 axs[col,row].set_yticks([]) # turns off ticks and tick labels
 
             # otherwise plot scatter of each variable against one another
             else:
-                axs[col,row].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.4, marker='.', c='k', edgecolors='none')
+                scatterPl = axs[col,row].scatter(RateArray[:,row], RateArray[:,col], s=20, alpha=0.4, marker='.', c='k', edgecolors='none')
                 
                 # overall linear reg line
                 z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
                 poly = np.poly1d(z)
                 order = np.argsort(RateArray[:,row])
-                axs[col,row].plot(RateArray[:,row][order], poly(RateArray[:,row][order]), c='k', ls='--', lw=0.8)
+                xlr = RateArray[:,row][order]
+                ylr = poly(RateArray[:,row][order])
+                linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
                 r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
-                stats = 'r = %.2f' % (r)
-                axs[col,row].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
+                statstr = 'r = %.2f' % (r)
+                # label with stats [axes.text(x,y,str)]
+                if r > 0: # +ve line slanting up
+                    va = 'top'
+                else: # -ve line slanting down
+                    va = 'bottom'
+                # rtxt = axs[col,row].text(xlr[0], ylr[0], statstr, c='k', fontsize=10, ha='left', va=va)#transform = axs[row,col].transAxes
+                # rtxt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='w', alpha=0.8)])
                 
-                # for half in [len(RateGDF1), len(RateGDF2)]:
-                #     # clustered linear regression lines
-                #     zArr = np.polyfit(list(RateArray[half,row]), list(RateArray[half,col]), 1)
-                #     polyArr = np.poly1d(RateArray)
-                #     orderArr = np.argsort(RateArray)
-                #     # linear reg line
-                #     axs[row,col].plot(RateArray[orderArr], polyArr(RateArray[orderArr]), c='r', ls='--', lw=0.8)
-                
-                    # for i in range(RateArray.shape[1]-1):
-                    #     if row == i and col > i:
-                    #         # clear plots on RHS
-                    #         axs[row,col].cla() 
-                    # for i in range(RateArray.shape[1]-1):
-                    #     if row == i and col > i:      
-                    #         rArr, pArr = scipy.stats.pearsonr(list(RateArray))
-                    #         statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
-                    #         axs[row,col].text(0.5, 0.6, statsArr, c='r', fontsize=6, ha='center')
-                    
-            axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
-            axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+            vLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+            hLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
             
-            if row == RateArray.shape[1]-1:
+            if row == RateArray.shape[1]-1: # set x label for last row only
                 axs[row,col].set_xlabel(lab[col])
-            if col == 0:
+            if col == 0: # set y label for first column only
                 axs[row,col].set_ylabel(lab[row])
             
+            # set veg vs water plots to equal axes to highlight orders of difference
             if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
                 axs[row,col].axis('equal')
+            if lab[row] == r'$\Delta$veg (m/yr)' and lab[col] == r'$\Delta$water (m/yr)' :
+                axs[row,col].axis('equal')
             
-            # turn off axes to tighten up layout
-            # if col != 0 and row != RateArray.shape[1]-1: # first col and last row
-            #     # axs[row,col].set_xticks([]) # turns off ticks and tick labels
-            #     # axs[row,col].set_yticks([])
-            #     axs[row,col].xaxis.set_tick_params(labelbottom=False)
-            #     axs[row,col].yaxis.set_tick_params(labelleft=False)
-                
+            # clear plots on RHS of hists, print stats instead
+            for i in range(RateArray.shape[1]):
+                if col == i and row > i:
+                    # axs[col,row].cla() # clears axis on each loop
+                    for Ln in [linregLn, scatterPl, hLn, vLn]:
+                        Ln.remove()
+                    axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+            
+                 
+    # align all yaxis labels in first column
+    fig.align_ylabels(axs[:,0])
     
     plt.tight_layout()
     # plt.subplots_adjust(wspace=0.6, hspace=0.5)
     
-    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis.png')
+    figpath = os.path.join(filepath,sitename+'_Multivariate_%s-%s_%s-%s.png' % 
+                           (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
+    plt.show()
+    
+    return
+
+
+def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, Loc1, Loc2):
+    """
+    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
+    Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
+    FM Aug 2023
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects intersected with veg edges.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of transects intersected with waterlines.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    Loc1 : list
+        Transect IDs to slice array up for north location
+    Loc2 : list
+        Transect IDs to slice array up for south location
+
+    """
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+        
+    ## Multivariate Plot
+    # Subset into south and north transects
+    RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+                           TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
+    RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+                           TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
+    
+    # summer (pale) eroding = #F9C784 
+    # summer (pale) accreting = #9DB4C0
+    
+    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    
+    # Extract desired columns to an array for plotting
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
+    
+    mpl.rcParams.update({'font.size':10})
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.2), dpi=300)
+    
+    # Plot matrix of relationships
+    lab = [r'$\Delta$veg (m/yr)',
+           r'$\Delta$water (m/yr)',
+           r'$TZwidth_{\eta}$ (m)',
+           r'$slope_{max}$ ($\circ$)']
+    
+    for row in range(RateArray.shape[1]):
+        for col in range(RateArray.shape[1]): 
+            for Arr, colour, strpos in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+                                           ['#2166AC', '#B2182B'],
+                                           [0.5,0.25]):
+                # if plot is same var on x and y, change plot to a histogram    
+                if row == col:
+                    binnum = round(np.sqrt(len(RateArray)))*2
+                    bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5)
+                    axs[col,row].set_yticks([]) # turns off ticks and tick labels
+    
+                # otherwise plot scatter of each variable against one another
+                else:
+                    scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
+                    
+                    # overall linear reg line
+                    z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                    poly = np.poly1d(z)
+                    order = np.argsort(RateArray[:,row])
+                    xlr = RateArray[:,row][order]
+                    ylr = poly(RateArray[:,row][order])
+                    linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
+                    r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                    statstr = 'r = %.2f' % (r)
+                    # label with stats [axes.text(x,y,str)]
+                    if r > 0: # +ve line slanting up
+                        va = 'top'
+                    else: # -ve line slanting down
+                        va = 'bottom'
+                    # rtxt = axs[col,row].text(xlr[0], ylr[0], statstr, c='k', fontsize=10, ha='left', va=va)#transform = axs[row,col].transAxes
+                    # rtxt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='w', alpha=0.8)])
+                    
+                    # clustered linear regression lines
+                    zArr = np.polyfit(list(Arr[:,row]), list(Arr[:,col]), 1)
+                    polyArr = np.poly1d(zArr)
+                    orderArr = np.argsort(Arr[:,row])
+                    # plot clustered linear reg line
+                    clustLn, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c=colour, ls='--', lw=1.5)
+                    rArr, pArr = scipy.stats.pearsonr(list(Arr[:,row]), list(Arr[:,col]))
+                    statstrArr = 'r = %.2f' % (rArr)
+                    
+                hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+                vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+                
+                if row == RateArray.shape[1]-1: # set x axis labels on last row
+                    axs[row,col].set_xlabel(lab[col])
+                if col == 0: # set y axis labels on first column
+                    axs[row,col].set_ylabel(lab[row])
+                
+                # set veg vs water plots to equal axes to highlight orders of difference
+                if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
+                    axs[row,col].axis('equal')
+                    
+                # clear plots on RHS of hists, print stats instead
+                for i in range(RateArray.shape[1]):
+                    if col == i and row > i:
+                        # axs[col,row].cla() # clears axis on each loop
+                        for Ln in [linregLn,clustLn, scatterPl, hLn, vLn]:
+                            Ln.remove()
+                        
+                        axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+                        axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+
+
+            
+    # align all yaxis labels in first column
+    fig.align_ylabels(axs[:,0])
+    
+    plt.tight_layout()
+    # plt.subplots_adjust(wspace=0.6, hspace=0.5)
+    
+    figpath = os.path.join(filepath,sitename+'_MultivariateClustered_%s-%s_%s-%s.png' % 
+                           (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
+    plt.show()
+    
+    return
+
+
+def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, Loc1, Loc2):
+    """
+    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
+    Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
+    FM Aug 2023
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects intersected with veg edges.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of transects intersected with waterlines.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    Loc1 : list
+        Transect IDs to slice array up for north location
+    Loc2 : list
+        Transect IDs to slice array up for south location
+
+    """
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+    
+    # Subset into south and north transects
+    RateGDF1 = pd.concat([ TransectInterGDF['dates'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDF['distances'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFWater['wldates'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFWater['wldists'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
+    RateGDF2 = pd.concat([ TransectInterGDF['dates'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDF['distances'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFWater['wldates'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFWater['wldists'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
+    
+    
+    # summer (pale) eroding = #F9C784 
+    # summer (pale) accreting = #9DB4C0
+    
+    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    
+    # Seasonal summaries
+    summerdist = []
+    winterdist = []
+    for Tr in range(len(RateGDF)): # for each transect
+        vegTrdates = RateGDF['dates'].iloc[Tr]
+        wlTrdates = RateGDF['wldates'].iloc[Tr]
+        vegTrdists = RateGDF['distances'].iloc[Tr]
+        wlTrdists = RateGDF['wldists'].iloc[Tr]
+        
+        # initialise yearly list of dates/dists
+        vegTrdatesYr = []
+        vegTrdistsYr = []
+        for Yr in range(min(vegTrdates)[:4], max(vegTrdates)[:4]): # for each year in series
+            for Date, Dist in zip(vegTrdates, vegTrdists): # for each date and dist in transect
+                if Date[:4] == Yr: # if date in list is in matching year
+                    # append dates and dists for that year
+                    vegTrdatesYr.append(Date) 
+                    vegTrdistsYr.append(Dist)
+            SvegTrdistsYr = []
+            WvegTrdistsYr = []
+            for vegTrdatesYri in vegTrdatesYr:
+                # summer list (March to August)
+                if int(vegTrdatesYri[5:7]) >= 3 and int(vegTrdatesYri[5:7]) <= 8:
+                    vegInd = vegTrdatesYr.index(vegTrdatesYri)
+                    SvegTrdistsYr.append(vegTrdistsYr[vegInd])
+                # winter list (Sept to Feb)
+                else:
+                    vegInd = vegTrdatesYr.index(vegTrdatesYri)
+                    WvegTrdistsYr.append(vegTrdistsYr[vegInd])
+            # change rate
+            # SvegTrdistsYr
+                
+                    
+                
+    
+    # RateGDF['summerdist'] = RateGDF['dates']
+    # RateGDF['winterdist'] = 
+    
+    # Extract desired columns to an array for plotting
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
+    
+    mpl.rcParams.update({'font.size':10})
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.2), dpi=300)
+    
+    # Plot matrix of relationships
+    lab = [r'$\Delta$veg (m/yr)',
+           r'$\Delta$water (m/yr)',
+           r'$TZwidth_{\eta}$ (m)',
+           r'$slope_{max}$ ($\circ$)']
+    
+    for row in range(RateArray.shape[1]):
+        for col in range(RateArray.shape[1]): 
+            for Arr, colour, strpos in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+                                           ['#FC7A1E','#485696'],
+                                           [0.5,0.25]):
+                # if plot is same var on x and y, change plot to a histogram    
+                if row == col:
+                    binnum = round(np.sqrt(len(RateArray)))*2
+                    bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5)
+                    axs[col,row].set_yticks([]) # turns off ticks and tick labels
+    
+                # otherwise plot scatter of each variable against one another
+                else:
+                    scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
+                    
+                    # overall linear reg line
+                    z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                    poly = np.poly1d(z)
+                    order = np.argsort(RateArray[:,row])
+                    xlr = RateArray[:,row][order]
+                    ylr = poly(RateArray[:,row][order])
+                    linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
+                    r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                    statstr = 'r = %.2f' % (r)
+                    # label with stats [axes.text(x,y,str)]
+                    if r > 0: # +ve line slanting up
+                        va = 'top'
+                    else: # -ve line slanting down
+                        va = 'bottom'
+                    # rtxt = axs[col,row].text(xlr[0], ylr[0], statstr, c='k', fontsize=10, ha='left', va=va)#transform = axs[row,col].transAxes
+                    # rtxt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='w', alpha=0.8)])
+                    
+                    # clustered linear regression lines
+                    zArr = np.polyfit(list(Arr[:,row]), list(Arr[:,col]), 1)
+                    polyArr = np.poly1d(zArr)
+                    orderArr = np.argsort(Arr[:,row])
+                    # plot clustered linear reg line
+                    clustLn, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c=colour, ls='--', lw=1.5)
+                    rArr, pArr = scipy.stats.pearsonr(list(Arr[:,row]), list(Arr[:,col]))
+                    statstrArr = 'r = %.2f' % (rArr)
+                    
+                hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+                vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+                
+                if row == RateArray.shape[1]-1: # set x axis labels on last row
+                    axs[row,col].set_xlabel(lab[col])
+                if col == 0: # set y axis labels on first column
+                    axs[row,col].set_ylabel(lab[row])
+                
+                # set veg vs water plots to equal axes to highlight orders of difference
+                if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
+                    axs[row,col].axis('equal')
+                    
+                # clear plots on RHS of hists, print stats instead
+                for i in range(RateArray.shape[1]):
+                    if col == i and row > i:
+                        # axs[col,row].cla() # clears axis on each loop
+                        for Ln in [linregLn,clustLn, scatterPl, hLn, vLn]:
+                            Ln.remove()
+                        
+                        axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+                        axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+
+
+            
+    # align all yaxis labels in first column
+    fig.align_ylabels(axs[:,0])
+    
+    plt.tight_layout()
+    # plt.subplots_adjust(wspace=0.6, hspace=0.5)
+    
+    figpath = os.path.join(filepath,sitename+'_MultivariateClustered_%s-%s_%s-%s.png' % 
+                           (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
     plt.savefig(figpath)
     print('figure saved under '+figpath)
     
@@ -1835,144 +2142,6 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
     
     return
 
-def ClusteredMultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Sloc, Nloc):
-    """
-    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
-    Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
-    Differs from MultivariateMatrix() in that points are clustered into south and north (eroding and accreting).
-    FM Aug 2023
-
-    Parameters
-    ----------
-    sitename : str
-        Name of site of interest.
-    TransectInterGDF : GeoDataFrame
-        GeoDataFrame of transects intersected with veg edges.
-    TransectInterGDFWater : GeoDataFrame
-        GeoDataFrame of transects intersected with waterlines.
-    TransectInterGDFTopo : GeoDataFrame
-        GeoDataFrame of transects intersected with topographic data.
-    TransectInterGDFWave : GeoDataFrame
-        GeoDataFrame of transects intersected with wave hindcasts.
-    Nloc : list
-        Transect IDs to slice array up for north location
-    Sloc : list
-        Transect IDs to slice array up for south location
-
-    """
-    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
-    if os.path.isdir(filepath) is False:
-        os.mkdir(filepath)
-        
-    ## Multivariate Plot
-    # Subset into south and north transects
-    RateArrayS = TransectInterGDF.iloc[Sloc[0]:Sloc[1]]
-    RateArrayS = pd.concat([RateArrayS, 
-                           TransectInterGDFWater.iloc[Sloc[0]:Sloc[1]],
-                           TransectInterGDFTopo.iloc[Sloc[0]:Sloc[1]],
-                           TransectInterGDFWave.iloc[Sloc[0]:Sloc[1]]])
-    # RateArrayS['LocLabel'] = 'blue'
-    RateArrayS['LocLabel'] = '#FC7A1E'
-
-    
-    RateArrayN = TransectInterGDF.iloc[Nloc[0]:Nloc[1]]
-    RateArrayN = pd.concat([RateArrayN, 
-                           TransectInterGDFWater.iloc[Nloc[0]:Nloc[1]],
-                           TransectInterGDFTopo.iloc[Nloc[0]:Nloc[1]],
-                           TransectInterGDFWave.iloc[Nloc[0]:Nloc[1]]])
-    # RateArrayN['LocLabel'] = 'red'
-    RateArrayN['LocLabel'] = '#485696'
-    
-    # summer (pale) eroding = #F9C784 
-    # summer (pale) accreting = #9DB4C0
-    
-    RateArray = pd.concat([RateArrayS, RateArrayN], axis=0)
-    # Extract desired columns to an array for plotting
-    RateArray = np.array(RateArray[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','LocLabel']])
-    for Col in ['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']:
-        RateArrayList = RateArray[Col]
-        RateArray[Col] = InterpNaN(RateArrayList)
-    
-    # 
-    # = np.array([[ID, vrate, wrate, tz] for ID, vrate, wrate, tz in zip(RateArray['TransectID'],RateArray['oldyoungRt'],RateArray['oldyungRtW'],RateArray['TZwidthmed'], 'LocLabel')])
-
-    fig, axs = plt.subplots(RateArray.shape[1]-1,RateArray.shape[1]-1, figsize=(6.55,6.55), dpi=300)
-    
-    # Plot matrix of relationships
-    lab = [r'$\Delta$veg (m/yr)',r'$\Delta$shore (m/yr)',r'$TZwidth_{\eta}$ (m)',r'$slope_{max}$ ($\circ$)']
-    for row in range(RateArray.shape[1]-1):
-        for col in range(RateArray.shape[1]-1):
-            # remove repeated plots on right hand side
-            # for i in range(RateArray.shape[1]-1):
-                # if row == i and col > i:
-                    # fig.delaxes(axs[row,col])
-            
-            # if plot is same var on x and y, change plot to a histogram    
-            if row == col:
-                binnum = round(np.sqrt(len(RateArray)))+4
-                axs[row,col].hist(RateArray[:int(len(RateArray)/2),row],binnum, color='blue', alpha=0.7,label='S')
-                axs[row,col].hist(RateArray[int(len(RateArray)/2):,row],binnum, color='red', alpha=0.7,label='N')
-                axs[row,col].legend(loc=2,fontsize=6)
-            # otherwise plot scatter of each variable against one another
-            else:
-                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
-                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.3, marker='.', c=RateArray[:,-1], edgecolors='none')
-                
-                # overall linear reg line
-                z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
-                poly = np.poly1d(z)
-                order = np.argsort(RateArray[:,row])
-                axs[row,col].plot(RateArray[:,row][order], poly(RateArray[:,row][order]), c='k', ls='--', lw=0.8)
-                r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
-                stats = 'r = %.2f' % (r)
-                # axs[row,col].text( RateArray[:,row][order][-1], poly(RateArray[:,row][order])[-1], stats, c='k', fontsize=5, ha='center')
-                axs[row,col].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
-
-                # linear regression lines
-                S, N = [RateArray[:len(RateArrayS),row], RateArray[:len(RateArrayS),col]], [RateArray[len(RateArrayN):,row], RateArray[len(RateArrayN):,col]]
-                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
-                    zArr = np.polyfit(list(Arr[0]), list(Arr[1]), 1)
-                    polyArr = np.poly1d(zArr)
-                    orderArr = np.argsort(Arr[0])
-                    # linear reg line
-                    axs[row,col].plot(Arr[0][orderArr], polyArr(Arr[0][orderArr]), c=regc, ls='--', lw=0.8)
-                    for i in range(RateArray.shape[1]-1):
-                        if row == i and col > i:
-                            # clear plots on RHS
-                            axs[row,col].cla() 
-                for pos, Arr, regc in zip([0.3,0.6], [S,N], ['blue','red']):
-                    for i in range(RateArray.shape[1]-1):
-                        if row == i and col > i:      
-                            rArr, pArr = scipy.stats.pearsonr(list(Arr[0]), list(Arr[1]))
-                            statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
-                            axs[row,col].text(0.5, pos, statsArr, c=regc, fontsize=6, ha='center')
-                    
-                        
-
-            axs[row,col].set_xlabel(lab[row])
-            axs[row,col].set_ylabel(lab[col])
-            axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
-            axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
-            
-            if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$shore (m/yr)' :
-                axs[row,col].axis('equal')
-            
-            # turn off axes to tighten up layout
-            # if col != 0 and row != RateArray.shape[1]-1: # first col and last row
-            #     axs[row,col].set_xlabel(None)
-            #     axs[row,col].set_ylabel(None)
-                
-    
-    plt.tight_layout()
-    plt.subplots_adjust(wspace=0.6, hspace=0.5)
-    
-    figpath = os.path.join(filepath,sitename+'_ClusteredMultivariateAnalysis.png')
-    plt.savefig(figpath)
-    print('figure saved under '+figpath)
-    
-    plt.show()
-    
-    return
     
 
 def WPErrors(filepath, sitename, WPErrorPath, WPPath):
@@ -2368,7 +2537,8 @@ def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(1, len(TransectIDs),figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
+        # fig, axs = plt.subplots(1, len(TransectIDs),figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
@@ -2422,7 +2592,7 @@ def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
         figID += '_'+str(TransectID)
         plt.tight_layout()
         
-        ax.legend()
+        # ax.legend()
         
     figname = os.path.join(outfilepath,sitename + '_SatWaveDir_Transect'+figID+'.png')
     
