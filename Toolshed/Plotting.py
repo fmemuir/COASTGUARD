@@ -170,7 +170,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
     None.
 
     """
-       
+    
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
@@ -182,18 +182,18 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page
-        mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,6), dpi=300, sharex=True)
+        mpl.rcParams.update({'font.size':12})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':12})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
-    lab = fig.add_subplot(111,frameon=False, sharex=True)
+    lab = fig.add_subplot(111,frameon=False)
     lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
     if type(TransectIDs) == list: 
         lab.set_xlabel('Date', labelpad=22)
@@ -275,7 +275,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
     
     plt.tight_layout()
             
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
@@ -326,14 +326,14 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        mpl.rcParams.update({'font.size':12})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':12})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -420,7 +420,7 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
     
     plt.tight_layout()
             
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
@@ -460,12 +460,12 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -489,9 +489,9 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         print('plotting transect',TransectID)
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
-        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wdates'].iloc[TransectID][daterange[0]:daterange[1]]]
+        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotsatdistFull = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
-        plotwldistFull = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotwldistFull = TransectInterGDF['wlcorrdist'].iloc[TransectID][daterange[0]:daterange[1]]
         # remove and interpolate outliers
         plotsatdist = InterpNaN(plotsatdistFull)
         plotwldist = InterpNaN(plotwldistFull)
@@ -577,7 +577,7 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     
     plt.tight_layout()
             
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
@@ -594,12 +594,12 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(3,1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(3,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
             
     for TransectID, col in zip(TransectIDs, range(axs.shape[1])):
@@ -609,13 +609,12 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
         ax_Season = axs[2,col]
         
         # Process plot data
-        daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
-        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
-        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
-        plotwldist = TransectInterGDF['wldists'].iloc[TransectID][daterange[0]:daterange[1]]
-        # plotsatdist = np.array(plotsatdist)[(np.array(plotsatdist) < np.mean(plotsatdist)+40) & (np.array(plotsatdist) > np.mean(plotsatdist)-40)]
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID]
+        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID]]
+        plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID]
     
-        plotdate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
+        plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         
         # Calculate period (observations per cycle) to use for seasonality
         # DateDiff = []
@@ -652,10 +651,11 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
             # ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
             # ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
                    
-        for twin_TS, twin_Trend, twin_Season, twin_lab, y, clr in zip([ax_TS, ax_TS_veg],
+        for twin_TS, twin_Trend, twin_Season, twin_lab, x, y, clr in zip([ax_TS, ax_TS_veg],
                                                             [ax_Trend, ax_Trend_veg],
                                                             [ax_Season, ax_Season_veg],
                                                             ['Sat Waterline', 'Sat Veg Edge'],
+                                                            [plotwldate, plotdate],
                                                             [plotwldist, plotsatdist],
                                                             ['#0A1DAE', '#81A739']):
             
@@ -668,12 +668,12 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
             Seasonality = seasonal_decompose(Timeseries, model='additive', period=365)
             
             # PLOT 1: timeseries scatter plot     
-            twin_TS.scatter(plotdate, y, marker='o', c=clr, s=4, alpha=0.7, edgecolors='none', label=twin_lab)
+            twin_TS.scatter(x, y, marker='o', c=clr, s=4, alpha=0.7, edgecolors='none', label=twin_lab)
             # linear regression lines
-            x = mpl.dates.date2num(plotdate)
-            m, c = np.polyfit(x,y,1)
+            numx = mpl.dates.date2num(x)
+            m, c = np.polyfit(numx,y,1)
             polysat = np.poly1d([m, c])
-            xx = np.linspace(x.min(), x.max(), 100)
+            xx = np.linspace(numx.min(), numx.max(), 100)
             dd = mpl.dates.num2date(xx)
             twin_TS.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
             twin_TS.set_ylim(np.nanmin(y)-1, np.nanmax(y)+1)
@@ -708,7 +708,7 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     
     plt.tight_layout()
             
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
@@ -745,14 +745,16 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        mpl.rcParams.update({'font.size':12})
+        plt.tight_layout()
+
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,6), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':12})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(11.6,6), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -842,7 +844,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
     
     plt.tight_layout()
             
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
@@ -1023,7 +1025,7 @@ def WidthTimeseries(sitename, TransectInterGDFWater, TransectIDs, Hemisphere = '
         plt.tight_layout()
     
     figname = os.path.join(outfilepath,sitename + '_SatBeachWidthTimeseries_Transect'+figID+'.png')
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
 
     plt.show()
@@ -1625,7 +1627,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
     
     mpl.rcParams.update({'font.size':10})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.2), dpi=300)
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
@@ -1747,7 +1749,7 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
     
     mpl.rcParams.update({'font.size':10})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.2), dpi=300)
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
@@ -1757,15 +1759,17 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     
     for row in range(RateArray.shape[1]):
         for col in range(RateArray.shape[1]): 
-            for Arr, colour, strpos in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+            for Arr, colour, strpos, leglabel in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
                                            ['#2166AC', '#B2182B'],
-                                           [0.5,0.25]):
+                                           [0.5,0.25],
+                                           ['Accreting','Eroding']):
                 # if plot is same var on x and y, change plot to a histogram    
                 if row == col:
                     binnum = round(np.sqrt(len(RateArray)))*2
                     bins = np.histogram(RateArray[:,row],bins=binnum)[1]
-                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5)
+                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5, label=leglabel)
                     axs[col,row].set_yticks([]) # turns off ticks and tick labels
+                    axs[col,row].legend()
     
                 # otherwise plot scatter of each variable against one another
                 else:
@@ -1867,12 +1871,12 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     RateGDF1 = pd.concat([ TransectInterGDF['dates'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDF['distances'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFWater['wldates'].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFWater['wldists'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFWater['wlcorrdist'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
     RateGDF2 = pd.concat([ TransectInterGDF['dates'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDF['distances'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFWater['wldates'].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFWater['wldists'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFWater['wlcorrdist'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
     
     
@@ -1882,48 +1886,83 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
     
     # Seasonal summaries
-    summerdist = []
-    winterdist = []
+    # For each transect, and each year in each transect's list of dates, compile summer and winter dists
+    # and then perform lin reg on that subset.
+    # After change rate calculated for each year, append to list and take mean of those rates.
     for Tr in range(len(RateGDF)): # for each transect
         vegTrdates = RateGDF['dates'].iloc[Tr]
         wlTrdates = RateGDF['wldates'].iloc[Tr]
         vegTrdists = RateGDF['distances'].iloc[Tr]
-        wlTrdists = RateGDF['wldists'].iloc[Tr]
+        wlTrdists = RateGDF['wlcorrdist'].iloc[Tr]
         
-        # initialise yearly list of dates/dists
-        vegTrdatesYr = []
-        vegTrdistsYr = []
-        for Yr in range(min(vegTrdates)[:4], max(vegTrdates)[:4]): # for each year in series
-            for Date, Dist in zip(vegTrdates, vegTrdists): # for each date and dist in transect
-                if Date[:4] == Yr: # if date in list is in matching year
-                    # append dates and dists for that year
-                    vegTrdatesYr.append(Date) 
-                    vegTrdistsYr.append(Dist)
-            SvegTrdistsYr = []
-            WvegTrdistsYr = []
-            for vegTrdatesYri in vegTrdatesYr:
-                # summer list (March to August)
-                if int(vegTrdatesYri[5:7]) >= 3 and int(vegTrdatesYri[5:7]) <= 8:
-                    vegInd = vegTrdatesYr.index(vegTrdatesYri)
-                    SvegTrdistsYr.append(vegTrdistsYr[vegInd])
-                # winter list (Sept to Feb)
-                else:
-                    vegInd = vegTrdatesYr.index(vegTrdatesYri)
-                    WvegTrdistsYr.append(vegTrdistsYr[vegInd])
-            # change rate
-            # SvegTrdistsYr
-                
-                    
-                
+        vegSummerRt = []
+        vegWinterRt = []
+        wlSummerRt = []
+        wlWinterRt = []
+        for Trdates, Trdists, SummerRt, WinterRt in zip([vegTrdates,wlTrdates],
+                                                        [vegTrdists,wlTrdists],
+                                                        [vegSummerRt,wlSummerRt],
+                                                        [vegWinterRt,wlWinterRt]):
+        
+            # initialise yearly list of dates/dists/slopes
+            TrdatesYr = []
+            TrdistsYr = []
+            SSlopes = []
+            WSlopes = []
+            summerTrRt = []
+            winterTrRt = []
+            for Yr in range(int(min(Trdates)[:4]), int(max(Trdates)[:4])): # for each year in series
+                # year search has to start from beginning of list each time (not ideal)
+                for Date, Dist in zip(Trdates, vegTrdists): # for each date and dist in transect
+                    if int(Date[:4]) == Yr: # if date in list is in matching year
+                        # append dates and dists for that year
+                        TrdatesYr.append(Date) 
+                        TrdistsYr.append(Dist)
+                STrdistsYr = []
+                WTrdistsYr = []
+                STrdatesYr = []
+                WTrdatesYr = []
+                for TrdatesYri in TrdatesYr:
+                    # summer list (March to August)
+                    if int(TrdatesYri[5:7]) >= 3 and int(TrdatesYri[5:7]) <= 8:
+                        Ind = TrdatesYr.index(TrdatesYri)
+                        STrdatesYr.append(TrdatesYr[Ind])
+                        STrdistsYr.append(TrdistsYr[Ind])
+                    # winter list (Sept to Feb)
+                    else:
+                        vegInd = TrdatesYr.index(TrdatesYri)
+                        WTrdatesYr.append(TrdatesYr[vegInd])
+                        WTrdistsYr.append(TrdistsYr[vegInd])  
+                        
+                for TrdatesYr, TrdistsYr, Slopes in zip([STrdatesYr,WTrdatesYr], 
+                                                        [STrdistsYr,WTrdistsYr], 
+                                                        [SSlopes, WSlopes]): 
+                    # convert dates to ordinals for linreg
+                    OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TrdatesYr]
+                    X = np.array(OrdDates[0:]).reshape((-1,1))
+                    y = np.array(TrdistsYr[0:])
+                    # change rate
+                    model = LinearRegression(fit_intercept=True).fit(X,y)
+                    Slope = round(model.coef_[0]*365.2425, 2) # convert to m/yr
+                    Slopes.append(Slope)
+                        
+            summerTrRt.append(np.nanmean(SSlopes))
+            winterTrRt.append(np.nanmean(WSlopes))
+            
+        SummerRt.append(summerTrRt)
+        WinterRt.append(winterTrRt)
     
-    # RateGDF['summerdist'] = RateGDF['dates']
-    # RateGDF['winterdist'] = 
+    RateGDF['SummerVegRt'] = vegSummerRt
+    RateGDF['WinterVegRt'] = vegWinterRt
+    RateGDF['SummerWLRt'] = wlSummerRt
+    RateGDF['WinterWLRt'] = wlWinterRt
     
+ 
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
+    RateArray = np.array(RateGDF[['SummerVegRt','SummerWLRt','TZwidthMn']])
     
     mpl.rcParams.update({'font.size':10})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.2), dpi=300)
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
@@ -2003,7 +2042,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     plt.tight_layout()
     # plt.subplots_adjust(wspace=0.6, hspace=0.5)
     
-    figpath = os.path.join(filepath,sitename+'_MultivariateClustered_%s-%s_%s-%s.png' % 
+    figpath = os.path.join(filepath,sitename+'_MultivariateClusteredSeason_%s-%s_%s-%s.png' % 
                            (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
     plt.savefig(figpath)
     print('figure saved under '+figpath)
@@ -2342,7 +2381,7 @@ def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
     plt.tight_layout()
     
     figname = os.path.join(figpath,sitename+'_VedgeSat_TideHeights_Errors.png')
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('figure saved under '+figname)
     
     plt.show()
@@ -2403,7 +2442,7 @@ def StormsTimeline(figpath, sitename, CSVpath):
     mpl.rcParams.update({'font.size':7})
     
     figname = os.path.join(figpath,sitename+'_VedgeSat_UKStorms.png')
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('figure saved under '+figname)
     
     plt.show()
@@ -2431,13 +2470,13 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     if type(TransectIDs) == list:
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':10})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -2520,7 +2559,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     
     plt.tight_layout()
             
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
@@ -2537,14 +2576,14 @@ def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
-        # fig, axs = plt.subplots(1, len(TransectIDs),figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, subplot_kw={'projection':'polar'})
+        # fig, axs = plt.subplots(1, len(TransectIDs),figsize=(11.6,5.9), dpi=300, subplot_kw={'projection':'polar'})
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':10})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.2), dpi=300, subplot_kw={'projection':'polar'})
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, subplot_kw={'projection':'polar'})
         axs = [axs] # to be able to loop through
         
     for TransectID, ax in zip(TransectIDs,axs):
@@ -2598,7 +2637,7 @@ def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
     
     plt.tight_layout()
 
-    plt.savefig(figname)
+    plt.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
