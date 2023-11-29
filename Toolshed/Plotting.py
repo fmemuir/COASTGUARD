@@ -215,7 +215,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
                 
-        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Sat. VegEdge')
         
         # xaxis ticks as year with interim Julys marked
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
@@ -244,7 +244,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
         if len(plotdate) >= 3:
-            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Moving Average VegEdge')
+            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Mov. Av. VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -305,7 +305,7 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
     def neonplot(x,y,colour,ax=None):
         if ax is None:
             ax = plt.gca()
-        line, = ax.plot(x, y, lw=1, color=colour, zorder=6, label='3pt Moving Average VegEdge',)
+        line, = ax.plot(x, y, lw=1, color=colour, zorder=6, label='3pt Mov. Av. VegEdge')
         for cont in range(6,1,-1):
             ax.plot(x, y, lw=cont, color=colour, zorder=5, alpha=0.05)
         return ax
@@ -359,7 +359,7 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         # ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
                 
-        # ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        # ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=6, alpha=0.8, edgecolors='none', label='Sat. VegEdge')
         
         # xaxis ticks as year with interim Julys marked
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
@@ -746,8 +746,6 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':12})
-        plt.tight_layout()
-
         fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,6), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
@@ -774,8 +772,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         plotsatdist = InterpNaN(plotsatdistFull)
         plotTZ = TransectInterGDFTopo['TZwidth'].iloc[TransectID][daterange[0]:daterange[1]]
         plotTZMn = TransectInterGDFTopo['TZwidthMn'].iloc[TransectID]
-        
-        
+                
         if len(plotdate) == 0:
             print('Transect %s is empty! No values to plot.' % (TransectID))
             return
@@ -783,7 +780,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
                 
-        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        satPl = ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Sat. VegEdge')
         
         # xaxis ticks as year with interim Julys marked
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
@@ -795,8 +792,10 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         for i in range(len(plotsatdist)):
             yplus.append(plotsatdist[i] + plotTZMn)
             yneg.append(plotsatdist[i] - plotTZMn)
-            ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.5, capsize=1, capthick=0.5)
-        ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.3, edgecolor=None, zorder=0)
+            ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.5, capsize=1, capthick=0.5, label='TZ Width (m)')
+        # single error bar plot for legend
+        TZbar = ax.errorbar(plotdate[0], plotsatdist[0], yerr=plotTZ[0], ecolor='#E7960D', elinewidth=0.5, capsize=1, capthick=0.5, label='TZ Width (m)')
+        TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.3, edgecolor=None, zorder=0, label=r'$TZwidth_{\eta}$ ('+str(round(plotTZMn))+' m)')
                    
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year):
@@ -813,7 +812,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
         if len(plotdate) >= 3:
-            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Moving Average VegEdge')
+            movavPl, = ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Mov. Av. VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
@@ -822,7 +821,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
             dd = mpl.dates.num2date(xx)
-            pltax.plot(dd, polysat(xx), '--', color=clr, lw=2, label=str(round(m*365.25,2))+' m/yr')
+            ltPl, = pltax.plot(dd, polysat(xx), '--', color=clr, lw=2, label=str(round(m*365.25,2))+' m/yr')
     
         ax.title.set_text('Transect '+str(TransectID))
             
@@ -833,7 +832,9 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         ax.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
         ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
         
-        leg1 = ax.legend(loc=2)
+        leg1 = ax.legend(handles=[satPl, movavPl, ltPl], loc=2)
+        ax.add_artist(leg1)
+        leg2 = ax.legend(handles=[TZfill, TZbar], loc=1)
         # weird zorder with twinned axes; remove first axis legend and plot on top of second
         # leg1.remove()
         
@@ -895,7 +896,7 @@ def ValidTimeseries(sitename, ValidInterGDF, TransectID):
     fig, ax = plt.subplots(1,1,figsize=(6.55,3), dpi=300)
     
     validlabels = ['Validation VegEdge','_nolegend_','_nolegend_','_nolegend_']
-    satlabels = ['Satellite VegEdge','_nolegend_','_nolegend_','_nolegend_',]
+    satlabels = ['Sat. VegEdge','_nolegend_','_nolegend_','_nolegend_',]
     
     for i,c in enumerate([0.95,0.7,0.6,0.2]):
         ax.plot(plotdate[i], plotvaliddist[i], 'X', color=magma(c), markersize=10,markeredgecolor='k', label=validlabels[i])
@@ -2501,7 +2502,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
                 
-        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Satellite VegEdge')
+        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Sat. VegEdge')
         
         # xaxis ticks as year with interim Julys marked
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
@@ -2530,7 +2531,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
         if len(plotdate) >= 3:
-            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Moving Average VegEdge')
+            ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Mov. Av. VegEdge')
     
         # linear regression lines
         x = mpl.dates.date2num(plotdate)
