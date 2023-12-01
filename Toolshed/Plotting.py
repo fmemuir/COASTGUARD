@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import matplotlib.patches as mpatches
 from matplotlib.patches import Patch, Rectangle
+import matplotlib.lines as mlines
 import matplotlib.dates as mdates
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patheffects as PathEffects
@@ -238,7 +239,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
                 rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
                 rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
             rectwidth = rectWinterEnd - rectWinterStart
-            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+            # rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
             # ax.add_patch(rect)
           
         # plot trendlines
@@ -271,7 +272,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowP
         figID += '_'+str(TransectID)
         plt.tight_layout()
         
-    figname = os.path.join(outfilepath,sitename + '_SatVegTimeseries_Transect'+figID+'.png')
+    figname = os.path.join(outfilepath,sitename + '_SatVegTimeseriesTrend_Transect'+figID+'.png')
     
     plt.tight_layout()
             
@@ -593,12 +594,12 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':12})
         fig, axs = plt.subplots(3,len(TransectIDs),figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':12})
         fig, axs = plt.subplots(3,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
             
@@ -691,6 +692,7 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
             twin_Trend.set_ylabel('Overall trend (m)', color=clr) 
             twin_Season.set_ylabel('Seasonal signal (m)', color=clr)
             
+            
         ax_TS.title.set_text('Transect '+str(TransectID))
         ax_TS.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
 
@@ -746,13 +748,13 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':12})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,6), dpi=300, sharex=True)
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':12})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(11.6,6), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
@@ -792,9 +794,9 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         for i in range(len(plotsatdist)):
             yplus.append(plotsatdist[i] + plotTZMn)
             yneg.append(plotsatdist[i] - plotTZMn)
-            ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.5, capsize=1, capthick=0.5, label='TZ Width (m)')
+            ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.7, capsize=1, capthick=0.5, label='TZwidth (m)')
         # single error bar plot for legend
-        TZbar = ax.errorbar(plotdate[0], plotsatdist[0], yerr=plotTZ[0], ecolor='#E7960D', elinewidth=0.5, capsize=1, capthick=0.5, label='TZ Width (m)')
+        TZbar = mlines.Line2D([],[],linestyle='None', marker='|', ms=10, mec='#E7960D', mew=0.7, label='TZwidth (m)')
         TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.3, edgecolor=None, zorder=0, label=r'$TZwidth_{\eta}$ ('+str(round(plotTZMn))+' m)')
                    
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
@@ -1627,7 +1629,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     # Extract desired columns to an array for plotting
     RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
     
-    mpl.rcParams.update({'font.size':10})
+    mpl.rcParams.update({'font.size':12})
     fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
@@ -1687,6 +1689,8 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
                     # axs[col,row].cla() # clears axis on each loop
                     for Ln in [linregLn, scatterPl, hLn, vLn]:
                         Ln.remove()
+                    axs[col,row].set_xticks([])
+                    axs[col,row].set_yticks([])
                     axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
             
                  
@@ -1749,7 +1753,7 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     # Extract desired columns to an array for plotting
     RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
     
-    mpl.rcParams.update({'font.size':10})
+    mpl.rcParams.update({'font.size':12})
     fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
@@ -1761,16 +1765,16 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     for row in range(RateArray.shape[1]):
         for col in range(RateArray.shape[1]): 
             for Arr, colour, strpos, leglabel in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
-                                           ['#2166AC', '#B2182B'],
+                                           ['#B2182B','#2166AC'],
                                            [0.5,0.25],
-                                           ['Accreting','Eroding']):
+                                           ['Eroding ','Accreting ']):
                 # if plot is same var on x and y, change plot to a histogram    
                 if row == col:
                     binnum = round(np.sqrt(len(RateArray)))*2
                     bins = np.histogram(RateArray[:,row],bins=binnum)[1]
                     axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5, label=leglabel)
                     axs[col,row].set_yticks([]) # turns off ticks and tick labels
-                    axs[col,row].legend()
+                    # axs[col,row].legend()
     
                 # otherwise plot scatter of each variable against one another
                 else:
@@ -1820,9 +1824,10 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
                         # axs[col,row].cla() # clears axis on each loop
                         for Ln in [linregLn,clustLn, scatterPl, hLn, vLn]:
                             Ln.remove()
-                        
+                        axs[col,row].set_xticks([])
+                        axs[col,row].set_yticks([])
                         axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
-                        axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+                        axs[col,row].text(0.5,strpos, leglabel+statstrArr, c=colour, fontsize=10, ha='center', transform = axs[col,row].transAxes)   
 
 
             
@@ -1873,12 +1878,12 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
                            TransectInterGDF['distances'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFWater['wldates'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFWater['wlcorrdist'].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
+                           TransectInterGDFTopo[['TZwidth']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
     RateGDF2 = pd.concat([ TransectInterGDF['dates'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDF['distances'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFWater['wldates'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFWater['wlcorrdist'].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
+                           TransectInterGDFTopo[['TZwidth']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
     
     
     # summer (pale) eroding = #F9C784 
@@ -1890,28 +1895,32 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     # For each transect, and each year in each transect's list of dates, compile summer and winter dists
     # and then perform lin reg on that subset.
     # After change rate calculated for each year, append to list and take mean of those rates.
+    vegSummerRt = []
+    vegWinterRt = []
+    wlSummerRt = []
+    wlWinterRt = []
+    TZsummer = []
+    TZwinter = []
     for Tr in range(len(RateGDF)): # for each transect
         vegTrdates = RateGDF['dates'].iloc[Tr]
         wlTrdates = RateGDF['wldates'].iloc[Tr]
         vegTrdists = RateGDF['distances'].iloc[Tr]
         wlTrdists = RateGDF['wlcorrdist'].iloc[Tr]
+        TZwidths = RateGDF['TZwidth'].iloc[Tr]
         
-        vegSummerRt = []
-        vegWinterRt = []
-        wlSummerRt = []
-        wlWinterRt = []
-        for Trdates, Trdists, SummerRt, WinterRt in zip([vegTrdates,wlTrdates],
-                                                        [vegTrdists,wlTrdists],
-                                                        [vegSummerRt,wlSummerRt],
-                                                        [vegWinterRt,wlWinterRt]):
+        
+        summerTrRt = []
+        winterTrRt = []
+        for Trdates, Trdists, SummerRt, WinterRt in zip([vegTrdates,wlTrdates,vegTrdates],
+                                                        [vegTrdists,wlTrdists, TZwidths],
+                                                        [vegSummerRt,wlSummerRt,TZsummer],
+                                                        [vegWinterRt,wlWinterRt,TZwinter]):
         
             # initialise yearly list of dates/dists/slopes
             TrdatesYr = []
             TrdistsYr = []
             SSlopes = []
             WSlopes = []
-            summerTrRt = []
-            winterTrRt = []
             for Yr in range(int(min(Trdates)[:4]), int(max(Trdates)[:4])): # for each year in series
                 # year search has to start from beginning of list each time (not ideal)
                 for Date, Dist in zip(Trdates, vegTrdists): # for each date and dist in transect
@@ -1937,7 +1946,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
                         
                 for TrdatesYr, TrdistsYr, Slopes in zip([STrdatesYr,WTrdatesYr], 
                                                         [STrdistsYr,WTrdistsYr], 
-                                                        [SSlopes, WSlopes]): 
+                                                        [SSlopes, WSlopes]):
                     # convert dates to ordinals for linreg
                     OrdDates = [datetime.strptime(i,'%Y-%m-%d').toordinal() for i in TrdatesYr]
                     X = np.array(OrdDates[0:]).reshape((-1,1))
@@ -1953,87 +1962,119 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
         SummerRt.append(summerTrRt)
         WinterRt.append(winterTrRt)
     
-    RateGDF['SummerVegRt'] = vegSummerRt
-    RateGDF['WinterVegRt'] = vegWinterRt
-    RateGDF['SummerWLRt'] = wlSummerRt
-    RateGDF['WinterWLRt'] = wlWinterRt
+    # for some reason, values stored as sets of two items in list for veg and water;
+    # take 1st element for veg and 2nd for water
+    RateGDF['SummerVegRt'] = [Rt[0] for Rt in SummerRt]
+    RateGDF['WinterVegRt'] = [Rt[0] for Rt in WinterRt]
+    RateGDF['SummerWLRt'] = [Rt[1] for Rt in SummerRt]
+    RateGDF['WinterWLRt'] = [Rt[1] for Rt in WinterRt]
+    RateGDF['SummerTZ'] = [Rt[2] for Rt in SummerRt]
+    RateGDF['WinterTZ'] = [Rt[2] for Rt in WinterRt]
     
  
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['SummerVegRt','SummerWLRt','TZwidthMn']])
+    # RateArray = np.array(RateGDF[['SummerVegRt','SummerWLRt','WinterVegRt','WinterWLRt','TZwidthMn']])
+    RateArray = np.array(RateGDF[['SummerVegRt','SummerWLRt','WinterVegRt','WinterWLRt']])
+    
+    # VegRateArray = RateArray[:,[0,2]]
+    # WLRateArray = RateArray[:,[1,3]]
+    # RateArray = 
     
     mpl.rcParams.update({'font.size':10})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
+    fig, axs = plt.subplots(2, 2, figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
            r'$\Delta$water (m/yr)',
-           r'$TZwidth_{\eta}$ (m)',
-           r'$slope_{max}$ ($\circ$)']
+           r'$TZwidth_{\eta}$ (m)']
     
-    for row in range(RateArray.shape[1]):
-        for col in range(RateArray.shape[1]): 
-            for Arr, colour, strpos in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
-                                           ['#FC7A1E','#485696'],
-                                           [0.5,0.25]):
-                # if plot is same var on x and y, change plot to a histogram    
-                if row == col:
-                    binnum = round(np.sqrt(len(RateArray)))*2
-                    bins = np.histogram(RateArray[:,row],bins=binnum)[1]
-                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5)
-                    axs[col,row].set_yticks([]) # turns off ticks and tick labels
+    for row in range(2):
+        for col in range(2): 
+            for Arr in [RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:]]:
+                if row == 0 or row == 2: # summer
+                    for i,colour in enumerate(['#F67E4B','#6EA6CD']):
+                        if row == col:
+                            binnum = round(np.sqrt(len(RateArray)))*2
+                            bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                            axs[col,row].hist(Arr[:,row+i], bins, color=colour, alpha=0.5)
+                        else:
+                            scatterPl = axs[col,row].scatter(Arr[:,row+i], Arr[:,col+i], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
+                else: # winter
+                    for i,colour in enumerate(['#A50026','#364B9A']):
+                        if row == col:
+                            binnum = round(np.sqrt(len(RateArray)))*2
+                            bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                            axs[col,row].hist(Arr[:,row+i], bins, color=colour, alpha=0.5)
+                        else:
+                            scatterPl = axs[col,row].scatter(Arr[:,row+i], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
     
-                # otherwise plot scatter of each variable against one another
-                else:
-                    scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
+    
+    
+    # for row in range(2):
+    #     for col in range(2): 
+    #         # for top and bottom half of array (eroding and accreting), 
+    #         for Arr, colour, strpos in zip([ VegRateArray[0:Loc1[1]-Loc1[0],0], VegRateArray[Loc2[1]-Loc2[0]:,1],
+    #                                          WLRateArray[0:Loc1[1]-Loc1[0],0], WLRateArray[Loc2[1]-Loc2[0]:,1] ], 
+    #                                        ['#F67E4B','#A50026','#6EA6CD','#364B9A'], # erode summer, erode winter, acc summer, acc winter
+    #                                        [0.6,0.5,0.4,0.3]):
+    #             # if plot is same var on x and y, change plot to a histogram    
+    #             if row == col:
+    #                 binnum = round(np.sqrt(len(RateArray)))*2
+    #                 bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+    #                 axs[col,row].hist(Arr,bins, color=colour, alpha=0.5)
+    #                 axs[col,row].set_yticks([]) # turns off ticks and tick labels
+    
+    #             # otherwise plot scatter of each variable against one another
+    #             else:
+    #                 scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
                     
-                    # overall linear reg line
-                    z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
-                    poly = np.poly1d(z)
-                    order = np.argsort(RateArray[:,row])
-                    xlr = RateArray[:,row][order]
-                    ylr = poly(RateArray[:,row][order])
-                    linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
-                    r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
-                    statstr = 'r = %.2f' % (r)
-                    # label with stats [axes.text(x,y,str)]
-                    if r > 0: # +ve line slanting up
-                        va = 'top'
-                    else: # -ve line slanting down
-                        va = 'bottom'
-                    # rtxt = axs[col,row].text(xlr[0], ylr[0], statstr, c='k', fontsize=10, ha='left', va=va)#transform = axs[row,col].transAxes
-                    # rtxt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='w', alpha=0.8)])
+    #                 # overall linear reg line
+    #                 z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+    #                 poly = np.poly1d(z)
+    #                 order = np.argsort(RateArray[:,row])
+    #                 xlr = RateArray[:,row][order]
+    #                 ylr = poly(RateArray[:,row][order])
+    #                 linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
+    #                 r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+    #                 statstr = 'r = %.2f' % (r)
+    #                 # label with stats [axes.text(x,y,str)]
+    #                 if r > 0: # +ve line slanting up
+    #                     va = 'top'
+    #                 else: # -ve line slanting down
+    #                     va = 'bottom'
+    #                 # rtxt = axs[col,row].text(xlr[0], ylr[0], statstr, c='k', fontsize=10, ha='left', va=va)#transform = axs[row,col].transAxes
+    #                 # rtxt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='w', alpha=0.8)])
                     
-                    # clustered linear regression lines
-                    zArr = np.polyfit(list(Arr[:,row]), list(Arr[:,col]), 1)
-                    polyArr = np.poly1d(zArr)
-                    orderArr = np.argsort(Arr[:,row])
-                    # plot clustered linear reg line
-                    clustLn, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c=colour, ls='--', lw=1.5)
-                    rArr, pArr = scipy.stats.pearsonr(list(Arr[:,row]), list(Arr[:,col]))
-                    statstrArr = 'r = %.2f' % (rArr)
+    #                 # clustered linear regression lines
+    #                 zArr = np.polyfit(list(Arr[:,row]), list(Arr[:,col]), 1)
+    #                 polyArr = np.poly1d(zArr)
+    #                 orderArr = np.argsort(Arr[:,row])
+    #                 # plot clustered linear reg line
+    #                 clustLn, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c=colour, ls='--', lw=1.5)
+    #                 rArr, pArr = scipy.stats.pearsonr(list(Arr[:,row]), list(Arr[:,col]))
+    #                 statstrArr = 'r = %.2f' % (rArr)
                     
-                hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
-                vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+    #             hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+    #             vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
                 
-                if row == RateArray.shape[1]-1: # set x axis labels on last row
-                    axs[row,col].set_xlabel(lab[col])
-                if col == 0: # set y axis labels on first column
-                    axs[row,col].set_ylabel(lab[row])
+    #             if row == RateArray.shape[1]-1: # set x axis labels on last row
+    #                 axs[row,col].set_xlabel(lab[col])
+    #             if col == 0: # set y axis labels on first column
+    #                 axs[row,col].set_ylabel(lab[row])
                 
-                # set veg vs water plots to equal axes to highlight orders of difference
-                if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
-                    axs[row,col].axis('equal')
+    #             # set veg vs water plots to equal axes to highlight orders of difference
+    #             if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
+    #                 axs[row,col].axis('equal')
                     
-                # clear plots on RHS of hists, print stats instead
-                for i in range(RateArray.shape[1]):
-                    if col == i and row > i:
-                        # axs[col,row].cla() # clears axis on each loop
-                        for Ln in [linregLn,clustLn, scatterPl, hLn, vLn]:
-                            Ln.remove()
+    #             # clear plots on RHS of hists, print stats instead
+    #             for i in range(RateArray.shape[1]):
+    #                 if col == i and row > i:
+    #                     # axs[col,row].cla() # clears axis on each loop
+    #                     for Ln in [linregLn,clustLn, scatterPl, hLn, vLn]:
+    #                         Ln.remove()
                         
-                        axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
-                        axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+    #                     axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+    #                     axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=10, ha='center', transform = axs[col,row].transAxes)   
 
 
             
@@ -2470,12 +2511,12 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':12})
         fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':12})
         # use 2 subplots with one empty to be able to loop through them
         fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
@@ -2484,9 +2525,9 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     lab = fig.add_subplot(111,frameon=False)
     lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
     if type(TransectIDs) == list: 
-        lab.set_xlabel('Date (yyyy-mm)', labelpad=22)
+        lab.set_xlabel('Date', labelpad=22)
     else:
-        lab.set_xlabel('Date (yyyy-mm)')
+        lab.set_xlabel('Date')
     lab.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
     
     for TransectID, ax in zip(TransectIDs,axs):
