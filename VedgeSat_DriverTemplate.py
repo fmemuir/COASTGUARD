@@ -201,9 +201,13 @@ beachslope = 0.02
 VegBasePath = 'Data/' + sitename + '/Veglines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
+VeglineGDF = VeglineGDF.sort_values(by='dates') # sort GDF by dates to ensure transect intersects occur in chronological order
+VeglineGDF = VeglineGDF.reset_index(drop=True) # reset GDF index after date sorting
 if settings['wetdry'] == True:
     WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
     WaterlineGDF = gpd.read_file(WaterlineShp[0])
+    WaterlineGDF = WaterlineGDF.sort_values(by='dates') # as above with VeglineGDF date sorting
+    WaterlineGDF = WaterlineGDF.reset_index(drop=True)
 # Produces Transects for the reference line
 TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
 
