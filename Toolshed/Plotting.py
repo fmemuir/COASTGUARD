@@ -584,7 +584,7 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     plt.show()
 
     
-def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', P=None):
+def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Normal=False, P=None):
     
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
@@ -595,12 +595,12 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':12})
-        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(11.6,5.9), dpi=300, sharex=True)
+        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(12.6,5.9), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':12})
-        fig, axs = plt.subplots(3,1,figsize=(11.6,5.9), dpi=300, sharex=True)
+        fig, axs = plt.subplots(3,1,figsize=(12.6,5.9), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
             
     for TransectID, col in zip(TransectIDs, range(axs.shape[1])):
@@ -651,11 +651,13 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
         # if len(plotdate) >= 3:
             # ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
             # ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
-                   
+        twin_TS_lim = []
+        twin_Trend_lim = []
+        twin_Season_lim = []        
         for twin_TS, twin_Trend, twin_Season, twin_lab, x, y, clr in zip([ax_TS, ax_TS_veg],
                                                             [ax_Trend, ax_Trend_veg],
                                                             [ax_Season, ax_Season_veg],
-                                                            ['Sat Waterline', 'Sat Veg Edge'],
+                                                            ['Waterline', 'VegEdge'],
                                                             [plotwldate, plotdate],
                                                             [plotwldist, plotsatdist],
                                                             ['#0A1DAE', '#81A739']):
@@ -678,39 +680,57 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
             dd = mpl.dates.num2date(xx)
             twin_TS.plot(dd, polysat(xx), '--', color=clr, lw=1, label=str(round(m*365.25,2))+' m/yr')
             twin_TS.set_ylim(np.nanmin(y)-1, np.nanmax(y)+1)
+            twin_TS_lim.append(twin_TS.get_ylim())
 
             # PLOT 2: Seasonal trend 
             twin_Trend.plot(Seasonality.trend, color=clr, lw=1)
             twin_Trend.set_ylim(np.nanmin(y)-10, np.nanmax(y)+30)
+            twin_Trend_lim.append(twin_Trend.get_ylim())
             
             # PLOT 3: Seasonality line (moving average) with residuals as error window
+            # twin_Season.plot(Seasonality.resid, color=clr, lw=0, marker='x', ms=4, alpha=0.3)
+            # plot residuals as vertical lines
+            twin_Season.vlines(Seasonality.resid.index,0,np.array(Seasonality.resid),color=clr,lw=0.4,alpha=0.1,label=twin_lab+' Resid.')
+            # plot seasonal signal over top of residuals 
             twin_Season.plot(Seasonality.seasonal, color=clr, lw=0.5)
-            twin_Season.plot(Seasonality.resid, color=clr, lw=1, alpha=0.3)
-            twin_Season.set_ylim(np.nanmin(Seasonality.resid)-1, np.nanmax(Seasonality.resid)+1)
+            twin_Season.set_ylim(-1*np.nanmax(Seasonality.resid), np.nanmax(Seasonality.resid))
+            # horizontal line marking 0
+            twin_Season.axhline(0,0,1,color=[0.7,0.7,0.7], lw=0.5, zorder=3, alpha=0.7)
+            twin_Season_lim.append(twin_Season.get_ylim())
             
             twin_TS.set_ylabel('Cross-shore dist (m)', color=clr)
             twin_Trend.set_ylabel('Overall trend (m)', color=clr) 
             twin_Season.set_ylabel('Seasonal signal (m)', color=clr)
             
+            if Normal:
+                twin_TS.set_ylim(np.min(twin_TS_lim),np.max(twin_TS_lim))
+                twin_Trend.set_ylim(np.min(twin_Trend_lim),np.max(twin_Trend_lim))
+                twin_Season.set_ylim(np.min(twin_Season_lim),np.max(twin_Season_lim))
+            
             
         ax_TS.title.set_text('Transect '+str(TransectID))
         ax_TS.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
 
-        leg1 = ax_TS.legend(loc=4)
-        leg2 = ax_TS_veg.legend(loc=3)
-        # weird zorder with twinned axes; remove first axis legend and plot on top of second
-        leg1.remove()
-        ax_TS_veg.add_artist(leg1)
+        for axleg in [[ax_TS, ax_TS_veg], [ax_Season,ax_Season_veg]]:
+            leg1 = axleg[0].legend(loc=3)
+            leg2 = axleg[1].legend(loc=4)
+            # weird zorder with twinned axes; remove first axis legend and plot on top of second
+            leg1.remove()
+            axleg[1].add_artist(leg1)
+        
         
                     
         figID += '_'+str(TransectID)
         plt.tight_layout()
-        
-    figname = os.path.join(outfilepath,sitename + '_SatVegWaterSeasonal_Transect'+figID+'.png')
+    if Normal:  
+        figname = os.path.join(outfilepath,sitename + '_SatVegWaterSeasonalNormal_Transect'+figID+'.png')
+    else:
+        figname = os.path.join(outfilepath,sitename + '_SatVegWaterSeasonal_Transect'+figID+'.png')
+
     
     plt.tight_layout()
             
-    plt.savefig(figname, bbox_inches='tight')
+    plt.savefig(figname, dpi=300, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
@@ -1318,6 +1338,14 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     plt.show()
     
     
+    # Print validation sample sizes for each date
+    print('date,valid N,sat N')
+    totalN = []
+    for i in range(len(valsrtclean)):
+        totalN.append(len(valsrtclean[i]))
+        print(satdateclean[i]+','+str(len(valsrtclean[i]))+','+str(len(satsrtclean[i])))
+    print('sum N: '+str(np.sum(totalN)))
+        
     # Print out unique dates and satnames    
     SatGDFNames = SatGDF.groupby(['dates']).max()
     SatNames = []
@@ -2542,13 +2570,16 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         
         plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
         ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
-                
-        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Sat. VegEdge')
-        
+                        
         # xaxis ticks as year with interim Julys marked
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
         ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
         
+        ax2 = ax.twinx()
+        
+        # scatter plot
+        ax.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=8, alpha=0.8, edgecolors='none', label='Sat. VegEdge')
+
         # create error bar lines to fill between
         for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], ['#81A739']):
             yerrorplus = [x + errorRMSE for x in plotdist]
@@ -2556,7 +2587,8 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
             # axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
        
         # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
-            
+        
+        
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year):
             if Hemisphere == 'N':
@@ -2566,8 +2598,10 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
                 rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
                 rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
             rectwidth = rectWinterEnd - rectWinterStart
-            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
-            ax.add_patch(rect)
+            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, 
+                                      fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+            ax2.add_patch(rect)
+        winter = mpatches.Patch(fc=[0.3,0.3,0.3], ec=None, alpha=0.2, label='UK Winter')
           
         # plot trendlines
         vegav = MovingAverage(plotsatdist, 3)
@@ -2585,7 +2619,8 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     
         # Vertical lines marking storm events
         for Storm in range(len(StormsDF)):
-            ax.axvspan(xmin = StormsDF['Start'].iloc[Storm], xmax = StormsDF['End'].iloc[Storm], facecolor='#5B618A', alpha=0.7)
+            storm = ax2.axvspan(xmin = StormsDF['Start'].iloc[Storm], xmax = StormsDF['End'].iloc[Storm], 
+                       facecolor='#5B618A', alpha=0.7, label='UK Storms')
     
         ax.title.set_text('Transect '+str(TransectID))
             
@@ -2593,6 +2628,16 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         ax.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
         
         leg1 = ax.legend(loc=2)
+        leg2 = ax2.legend(handles=[winter,storm],loc=1, labelspacing=0.3, handletextpad=0)
+        for patch, legwidth, legx in zip(leg2.get_patches(), [15,3], [0,6]):
+            patch.set_width(legwidth)
+            patch.set_x(legx)
+        # weird zorder with twin axes; remove legend and plot on second axis
+        leg1.remove()
+        ax2.add_artist(leg1)
+        
+        ax2.set_yticks([])
+            
         
         figID += '_'+str(TransectID)
         plt.tight_layout()
