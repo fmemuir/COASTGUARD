@@ -405,6 +405,21 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
     except:
         ax.set_xlim(-100, 100)
       
+    # land and sea labels on x axis
+    axland = ax.twiny()
+    axsea = ax.twiny()
+    for xax, xlab, xloc, xcol in zip([axland, axsea], ['land', 'sea'], ['left', 'right'], ['#236E95', '#C2B280']):
+        xax.xaxis.set_label_position('bottom')
+        xax.xaxis.set_ticks_position('bottom')
+        try:
+            axlim = math.ceil(np.max([abs(df.min().min()),abs(df.max().max())]) / 10) * 10
+            xax.set_xlim(-axlim, axlim)
+        except:
+            xax.set_xlim(-100, 100)
+            
+        xax.set_xlabel(xlab, loc=xloc)
+        xax.xaxis.label.set_color(xcol)
+    
     # create specific median lines for specific platforms
     medians = []
     labels = []
@@ -462,7 +477,7 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
     # set legend for median lines  
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
     medleg = ax.legend(medians,labels, loc='upper right',facecolor='w', framealpha=0.5)
-    plt.gca().add_artist(leg1)
+    ax.add_artist(leg1)
     
     
     # plt.draw()
@@ -782,7 +797,7 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
         yticklabels = [item.get_text() for item in ax.get_yticklabels()]
         yticklabels[yticklabels.index('PSScene4Band')] = 'PS'
         ax.set_yticklabels(yticklabels)
-
+    
     if PlotTitle != None:
         ax.set_title(PlotTitle)
     
@@ -798,7 +813,23 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
     ax.set_xticks(majort)  
     # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
-    # # create specific median lines for specific platforms
+    # land and sea labels on x axis
+    axland = ax.twiny()
+    axsea = ax.twiny()
+    for xax, xlab, xloc, xcol in zip([axland, axsea], ['land', 'sea'], ['left', 'right'], ['#236E95', '#C2B280']):
+        xax.xaxis.set_label_position('bottom')
+        xax.xaxis.set_ticks_position('bottom')
+        if axlim < 150:
+            xax.set_xlim(-axlim, axlim)
+        else:
+            xax.set_xlim(-150, 150)
+            
+        majort = np.arange(-150,200,50)
+        xax.set_xticks(majort) 
+        xax.set_xlabel(xlab, loc=xloc)
+        xax.xaxis.label.set_color(xcol)
+    
+    # create specific median lines for specific platforms
     legend_elements = []
     ilines = list(range(0,3*len(violinsatsrt))[1::3])
     for i, (satname, iline) in enumerate(zip(violinsatsrt, ilines)):
