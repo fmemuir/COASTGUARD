@@ -36,7 +36,7 @@ from pyproj import transform as Transf
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
-# Main function to preprocess a satellite image (L5,L7,L8 or S2)
+# Main function to preprocess a satellite image
 def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs):
     
     cloud_mask_issue = settings['cloud_mask_issue']
