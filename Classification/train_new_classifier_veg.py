@@ -94,6 +94,7 @@ filepath_models = os.path.join(os.getcwd(), 'models')
 # latmin, latmax = 56.70, 56.75
 
 # sitename = 'Aberdeen'
+# sitename = 'AberdeenFull'
 # lonmin, lonmax = -2.098,-2.052
 # latmin, latmax = 57.164,57.181 
 
@@ -101,13 +102,13 @@ filepath_models = os.path.join(os.getcwd(), 'models')
 # sitename = 'DornochPSScene'
 # lonmin, lonmax = -4.042080, -3.995315
 # latmin, latmax = 57.852570, 57.892015
-sitename = 'DornochL5'
+sitename = 'DornochFull'
 lonmin, lonmax = -4.036261,-3.995186
 latmin, latmax = 57.853515,57.889722 
 
 
 # sat_list = ['PSScene4Band']
-sat_list = ['L5']
+sat_list = ['L5', 'L8', 'S2']
 
 # directory where the data will be stored
 filepath = Toolbox.CreateFileStructure(sitename, sat_list)
@@ -128,10 +129,11 @@ polygon = Toolbox.smallest_rectangle(polygon)
 # In[49]:
 
 
-dates = ['2022-01-01', '2022-12-31'] # PSScene
+# dates = ['2022-01-01', '2022-12-31'] # PSScene
 # dates = ['2019-06-01', '2019-08-31']
 # dates = ['2019-01-01', '2020-01-01']
 # dates = ['2004-01-01', '2006-01-01']
+dates = ['2004-01-01', '2020-01-01']
 
 # put all the inputs into a dictionnary
 inputs = {
@@ -189,7 +191,7 @@ for site in train_sites:
     settings['inputs']['sitename'] = sitename
     settings['cloud_mask_issue'] = False
     # label images
-    Classifier.label_vegimages(metadata, polygon, Sat, settings)
+    Classifier.label_vegimages(metadata, polygon, settings)
 
 
 #%% 3. Train Classifier (Skip previous 2 and run this if already trained)
