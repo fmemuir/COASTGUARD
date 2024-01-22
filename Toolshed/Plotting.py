@@ -2297,9 +2297,9 @@ def WPErrors(filepath, sitename, WPErrorPath, WPPath):
     
     # set xticks using WP values
     axs[0].set_xticks(errorDF['veg'],minor=True)
-    axs[0].set_xticks(list(errorDF['veg'])[0::2], major=True)
+    axs[0].set_xticks(errorDF['veg'].iloc[0::2], minor=False)
     ax2.set_xticks(errorDF['nonveg'],minor=True)
-    ax2.set_xticks(list(errorDF['nonveg'])[0::2], major=True)
+    ax2.set_xticks(errorDF['nonveg'].iloc[0::2], minor=False)
     # ax2.invert_axis()
     axs[0].set_xlim(min(errorDF['veg'])-0.05, max(errorDF['veg'])+0.05)
     ax2.set_xlim(max(errorDF['nonveg'])+0.05, min(errorDF['nonveg'])-0.05)
@@ -2337,11 +2337,11 @@ def WPErrors(filepath, sitename, WPErrorPath, WPPath):
     nonvegc = cmap.colors[8]  # non-veg
     threshc = cmap.colors[7] # threshold
     TZc = cmap.colors[6] # TZ
-    vy, _, _ = axs[1].hist(int_veg, bins=bins, density=True, color=vegc)
-    nvy, _, _ = axs[1].hist(int_nonveg, bins=bins, density=True, color=nonvegc, alpha=0.75) 
+    vy, _, _ = axs[1].hist(int_veg, bins=bins, density=True, color=vegc, label='$I_{veg}$')
+    nvy, _, _ = axs[1].hist(int_nonveg, bins=bins, density=True, color=nonvegc, alpha=0.75, label='$I_{nonveg}$') 
     
     # plot WP threshold and peaks as dashed vertical lines on PDF
-    axs[1].plot([thresh,thresh], [0,max(nvy)+5], color=threshc, lw=1, ls='--', label='$I_{0}$')
+    axs[1].plot([thresh,thresh], [0,max(nvy)+5], color=threshc, lw=1, ls='--', label='$I_{O}$')
     axs[1].plot([peaks[0],peaks[0]], [0,max(nvy)], color=cmap.colors[3], lw=1, ls='--', label='$\zeta_{veg}$') # veg
     axs[1].plot([peaks[1],peaks[1]], [0,max(nvy)], color=cmap.colors[9], lw=1, ls='--', label='$\zeta_{nonveg}$') # nonveg
     # plot TZ as transparent rectangle (xy, width, height, *)
@@ -2354,8 +2354,10 @@ def WPErrors(filepath, sitename, WPErrorPath, WPPath):
     axs[1].set_xlabel('NDVI')
     axs[1].set_ylabel('Density')
     
-    axs[1].legend(loc='upper left',ncol=1)   
-    
+    # axs[1].legend(loc='upper left',ncol=1)   
+    ax1hand, ax1lab = axs[1].get_legend_handles_labels()
+    laborder = [0,3,1,4,2,5]
+    axs[1].legend([ax1hand[idx] for idx in laborder], [ax1lab[idx] for idx in laborder], loc='upper left',ncol=1)  
     
     # subplot labels
     axs[0].text(1-0.012,215-3,'A', ha='right', va='top', 
@@ -2367,7 +2369,7 @@ def WPErrors(filepath, sitename, WPErrorPath, WPPath):
     plt.tight_layout()
     plt.show()
     
-    figpath = os.path.join(filepath,sitename+'_VedgeSat_WP_Errors.png')
+    figpath = os.path.join(filepath,sitename+'_VedgeSat_WP_Errors_TZ.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
         
