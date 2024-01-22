@@ -191,7 +191,7 @@ for site in train_sites:
     settings['inputs']['sitename'] = sitename
     settings['cloud_mask_issue'] = False
     # label images
-    Classifier.label_vegimages(metadata, polygon, settings)
+    Classifier.label_vegimages(metadata, settings)
 
 
 #%% 3. Train Classifier (Skip previous 2 and run this if already trained)
@@ -201,7 +201,7 @@ for site in train_sites:
 # You can use the data that was labelled here and/or the original CoastSat training data.
 
 # load labelled images
-features,labelmaps = Classifier.load_labels(train_sites, settings)
+features,labelmaps = Classifier.load_labels(metadata, train_sites, settings)
 
 #%% 3.1 Combine Additional Classifier Data
 

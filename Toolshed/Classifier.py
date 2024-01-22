@@ -359,7 +359,7 @@ def label_images(metadata, polygon, Sat, settings):
     # close figure when finished
     plt.close(fig)
     
-def label_vegimages(metadata, polygon, settings):
+def label_vegimages(metadata, settings):
     """
     Load satellite images and interactively label different classes (hard-coded)
 
@@ -420,6 +420,7 @@ def label_vegimages(metadata, polygon, settings):
             else:
                 dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
             
+            polygon = settings['inputs']['polygon']
             # read and preprocess image
             im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
             
@@ -832,7 +833,7 @@ def label_WV_images(metadata, polygon, Sat, settings):
     plt.close(fig)
 
 
-def load_labels(train_sites, settings, CoastOnly=False):
+def load_labels(metadata, train_sites, settings, Recalc=False, CoastOnly=False):
     """
     Load the labelled data from the different training sites
 
@@ -894,6 +895,36 @@ def load_labels(train_sites, settings, CoastOnly=False):
                 #     for key in settings['labels'].keys():
                 #         im_bool = im_labels == settings['labels'][key]
                 #         newfeatures[key] = VegetationLine.calculate_vegfeatures(im_ms, cloud_mask, im_bool)
+            # if Recalc is True:
+            #     # loop through satellites
+            #     for satname in metadata.keys():
+            #         if satname == 'PSScene4Band':
+            #             filepath = os.path.dirname(metadata[satname]['filenames'][0])
+            #         else:
+            #             filepath = Toolbox.get_filepath(settings['inputs'],satname)
+            #         if len(metadata[satname]['filenames']) < 2: # for single images; for loop list needs to be nested
+            #             filenames = [metadata[satname]['filenames']]
+            #         else:
+            #             filenames = metadata[satname]['filenames']
+                        
+            #         # loop through images
+            #         for i in range(len(filenames)):
+            #             # image filename
+            #             fn = int(i)
+            #             if satname == 'PSScene4Band':
+            #                 dates = [metadata[satname]['dates'],metadata[satname]['dates']]
+            #             else:
+            #                 dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
+                        
+            #             polygon = settings['inputs']['polygon']
+            #             # read and preprocess image
+            #             im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
+                
+            #     newfeatures = dict([])
+            #     for key in settings['labels'].keys():
+            #         im_bool = im_labels == settings['labels'][key]
+            #         features[key] = VegetationLine.calculate_vegfeatures(im_ms, cloud_mask, im_bool)
+ 
             # else:    
             for key in labelled_data['features'].keys():
                 if len(labelled_data['features'][key])>0: # check that is not empty
