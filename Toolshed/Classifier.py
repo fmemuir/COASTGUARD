@@ -359,7 +359,7 @@ def label_images(metadata, polygon, Sat, settings):
     # close figure when finished
     plt.close(fig)
     
-def label_vegimages(metadata, polygon, Sat, settings):
+def label_vegimages(metadata, polygon, settings):
     """
     Load satellite images and interactively label different classes (hard-coded)
 
