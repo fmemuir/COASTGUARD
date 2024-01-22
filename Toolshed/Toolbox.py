@@ -1856,9 +1856,27 @@ def FindWPThresh(int_veg, int_nonveg):
         
         if i == 0: # class with weaker signal
             # take value of band index where probability is max
-            peaks.append(values[list(probabilities).index(np.nanmax(probabilities))])
+            peaks.append(float(values[list(probabilities).index(np.nanmax(probabilities))]))
         else:
-            # clip to > 0 to deal with sand peak only
+            prom, _ = scipy.signal.find_peaks(probabilities, prominence=0.5)
+            if len(prom) == 0: # for marshland where no peak above NDVI = 0 exists
+                print('no peak NDVI initially found, decreasing prominence to find peak...')
+                promlimit = 0.5
+                # decrease prominence til peak is found
+                while len(prom) == 0:
+                    prom, _ = scipy.signal.find_peaks(probabilities, prominence=promlimit)
+                    promlimit -= 0.05 
+            if len(prom) > 1:    
+                if (bins[prom] < 0).any(): 
+                    # always take peak closest to 0 (corresponds to bare land/sand in veg classification)
+                    peaks.append(min(bins[prom], key=abs))
+                else:
+                    peaks.append(bins[prom[0]])
+            else:
+                peaks.append(bins[prom[0]])
+                
+            # Below led to an infinite loop if both peaks lie below 0
+            """# clip to > 0 to deal with sand peak only
             clipbins = bins[bins>0]
             clipprobs = probabilities[bins>0]
             # find peaks of bimodal KDE using prominence
@@ -1872,7 +1890,8 @@ def FindWPThresh(int_veg, int_nonveg):
                 peaks.append(clipbins[prom[0]])
             else:    
                 # always take first peak over 0 (corresponds to bare land/sand in veg classification)
-                peaks.append(clipbins[prom[0]])
+                peaks.append(clipbins[prom[0]])"""
+            
             
     # Calculate index value using weighted peaks
     t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
