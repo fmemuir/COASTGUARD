@@ -67,7 +67,7 @@ sys.path.insert(0, os.pardir)
 ee.Initialize()
 
 
-os.chdir('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/CoastLearn-main/Classification')
+os.chdir('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/COASTGUARD/Classification')
 
 
 #%% read kml files for the training sites
@@ -97,10 +97,14 @@ filepath_models = os.path.join(os.getcwd(), 'models')
 # lonmin, lonmax = -2.098,-2.052
 # latmin, latmax = 57.164,57.181 
 
+# sitename = 'DornochPSSceneTOA'
 # sitename = 'DornochPSScene'
+# lonmin, lonmax = -4.042080, -3.995315
+# latmin, latmax = 57.852570, 57.892015
 sitename = 'DornochL5'
 lonmin, lonmax = -4.036261,-3.995186
 latmin, latmax = 57.853515,57.889722 
+
 
 # sat_list = ['PSScene4Band']
 sat_list = ['L5']
@@ -124,9 +128,9 @@ polygon = Toolbox.smallest_rectangle(polygon)
 # In[49]:
 
 
-# dates = ['2022-01-01', '2022-12-31']
+dates = ['2022-01-01', '2022-12-31'] # PSScene
 # dates = ['2019-06-01', '2019-08-31']
-dates = ['2019-01-01', '2020-01-01']
+# dates = ['2019-01-01', '2020-01-01']
 # dates = ['2004-01-01', '2006-01-01']
 
 # put all the inputs into a dictionnary
@@ -199,7 +203,7 @@ features,labelmaps = Classifier.load_labels(train_sites, settings)
 
 #%% 3.1 Combine Additional Classifier Data
 
-features2,labelmaps2 = Classifier.load_labels(['Aberdeen'], settings) # rerun settings to redefine
+features2,labelmaps2 = Classifier.load_labels(['DornochAberdeenFull'], settings) # rerun settings to redefine
 
 newnonveg = np.append(features['nonveg'], features2['nonveg'], axis=0)
 newveg = np.append(features['veg'], features2['veg'], axis=0)
@@ -359,7 +363,7 @@ start_time = timeit.default_timer()
 classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
 classifier.fit(X,y)
 # joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
-joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_L5L8S2.pkl'))
+joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_PSScene.pkl'))
 print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
 
 #%% Evaluate the classifier
