@@ -420,7 +420,7 @@ def calculate_features(im_ms, cloud_mask, im_bool):
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
     # Total feature sets should be 20 for V+NIR+SWIR (5 bands, 5 indices, stdev on each)
-    # and 14 for V+NIR (4 bands)
+
     return features
 
 def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
