@@ -107,6 +107,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef[0] = georef[0] + georef[1]/2 # xtrans = back by half of 15m
         georef[3] = georef[3] - georef[5]/2 # ytrans = up by half of 15m
         
+        # Additional coregistration for validation purposes
+        if 'StAndrews' in settings['inputs']['sitename']:
+            georef = Toolbox.ValCoreg(satname, georef)
+        
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
         for k in range(im_ms.shape[2]):
@@ -167,6 +171,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         outProj = Proj(init=Landsat7.getInfo().get('features')[0]['bands'][0]['crs'])
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+        
+        # Additional coregistration for validation purposes
+        if 'StAndrews' in settings['inputs']['sitename']:
+            georef = Toolbox.ValCoreg(satname, georef)    
         
         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
@@ -257,6 +265,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
+        # Additional coregistration for validation purposes
+        if 'StAndrews' in settings['inputs']['sitename']:
+            georef = Toolbox.ValCoreg(satname, georef)
+            
         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
         # size of pan image
@@ -345,6 +357,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
+        # Additional coregistration for validation purposes
+        if 'StAndrews' in settings['inputs']['sitename']:
+            georef = Toolbox.ValCoreg(satname, georef)
+            
         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
         # size of pan image
@@ -420,6 +436,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
+        # Additional coregistration for validation purposes
+        if 'StAndrews' in settings['inputs']['sitename']:
+            georef = Toolbox.ValCoreg(satname, georef)
+            
         im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
         if im10 is None:
             return None, None, None, None, None, None, None
@@ -542,13 +562,9 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         #georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         georef = [round(georef[2]),georef[0],georef[1],round(georef[5]),georef[3],georef[4]] # rearrange
         
-        
-        
-        # Additional coregistering based on georef to OS (EPSG 27700) imagery
-        if settings['inputs']['sitename'] == 'StAndrewsPlanetWest' or settings['inputs']['sitename'] == 'StAndrewsPlanetEast' or settings['inputs']['sitename'] == 'StAndrewsPlanetEastSAVI' or settings['inputs']['sitename'] == 'StAndrewsPlanetWestSAVI':
-            georef[0] = georef[0] + (3.8)
-            georef[3] = georef[3] + (6.5)
-        
+        # Additional coregistration for validation purposes
+        if 'StAndrews' in settings['inputs']['sitename']:
+            georef = Toolbox.ValCoreg(satname, georef)
         
         datepath = os.path.basename(filenames[fn])[0:8]
         auxpath = os.path.dirname(filenames[fn])+'/cloudmasks/'

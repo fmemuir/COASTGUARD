@@ -1795,6 +1795,47 @@ def ArrtoGS(refline,georef):
     return refGS
 
 
+def ValCoreg(satname, georef):
+    """
+    Apply platform-specific mean coregistration values to each image.
+    FM Jan 2024
+
+    Parameters
+    ----------
+    satname : str
+        Name of satellite platform.
+    georef : array
+        Georeferencing/affine transformation values.
+
+    Returns
+    -------
+    georef : array
+        Coregistered affine transformation values.
+
+    """
+    if satname == 'L5':
+        georef[0] = georef[0] + (-4.5)
+        georef[3] = georef[3] + (42.3)
+    if satname == 'L7':
+        georef[0] = georef[0] + (13.7)
+        georef[3] = georef[3] + (37.4)
+    if satname == 'L8':
+        georef[0] = georef[0] + (13.7)
+        georef[3] = georef[3] + (37.4)
+    if satname == 'L9':
+        georef[0] = georef[0] + (13.7)
+        georef[3] = georef[3] + (37.4)
+    if satname == 'S2':
+        georef[0] = georef[0] + (-7.5)
+        georef[3] = georef[3] + (15.5)
+    else: # Planet or local files
+        georef[0] = georef[0] + (3.8)
+        georef[3] = georef[3] + (6.5)
+
+    return georef
+
+
+
 def NearDate(target,items):
     """
     Find nearest date to target in list of datetimes. Returns matching date 
