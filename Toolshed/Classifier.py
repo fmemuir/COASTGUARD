@@ -833,7 +833,7 @@ def label_WV_images(metadata, polygon, Sat, settings):
     plt.close(fig)
 
 
-def load_labels(metadata, train_sites, settings, Recalc=False, CoastOnly=False):
+def load_labels(train_sites, settings, Recalc=False, CoastOnly=False):
     """
     Load the labelled data from the different training sites
 
@@ -861,10 +861,7 @@ def load_labels(metadata, train_sites, settings, Recalc=False, CoastOnly=False):
     filepath_train = './training_data'
     # initialize the features dict
     features = dict([])
-    n_features = 20 # number of features corresponds to different bands and indices; coastsat is 20
-    first_row = np.nan*np.ones((1,n_features))
-    for key in settings['labels'].keys():
-        features[key] = first_row
+
     labelledmaps = []
     imnames = []
     # loop through each site 
@@ -925,7 +922,16 @@ def load_labels(metadata, train_sites, settings, Recalc=False, CoastOnly=False):
             #         im_bool = im_labels == settings['labels'][key]
             #         features[key] = VegetationLine.calculate_vegfeatures(im_ms, cloud_mask, im_bool)
  
-            # else:    
+            # else:   
+            
+            # n_features = 20 # number of features corresponds to different bands and indices; coastsat is 20
+            # Get number of features from shape of first class
+            n_features = labelled_data[list(labelled_data.keys())[0]].shape[1]
+            print('Number of feature vectors: %i' %(n_features))
+            first_row = np.nan*np.ones((1,n_features))
+            for key in settings['labels'].keys():
+                features[key] = first_row
+                
             for key in labelled_data['features'].keys():
                 if len(labelled_data['features'][key])>0: # check that is not empty
                     # append rows
