@@ -926,7 +926,7 @@ def load_labels(train_sites, settings, Recalc=False, CoastOnly=False):
             
             # n_features = 20 # number of features corresponds to different bands and indices; coastsat is 20
             # Get number of features from shape of first class
-            n_features = labelled_data[list(labelled_data.keys())[0]].shape[1]
+            n_features = labelled_data['features'][list(labelled_data['features'].keys())[0]].shape[1]
             print('Number of feature vectors: %i' %(n_features))
             first_row = np.nan*np.ones((1,n_features))
             for key in settings['labels'].keys():
