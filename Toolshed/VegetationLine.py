@@ -115,14 +115,17 @@ def extract_veglines(metadata, settings, polygon, dates):
         # get pixel size from dimensions in first image
         if satname in ['L5','L7','L8','L9']:
             pixel_size = 15
+            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
             # ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0] / 2 # after downsampling
         elif satname == 'S2':
             pixel_size = 10
+            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
             # ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0]
-        else:
+        else: # Planet or local
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
-        
-        clf_model = settings['clf_model']
+            clf_model = 'MLPClassifier_Veg_PSScene.pkl' 
+            
+        # clf_model = settings['clf_model']
         # load in trained classifier pkl file
         clf = joblib.load(os.path.join(filepath_models, clf_model))
             
