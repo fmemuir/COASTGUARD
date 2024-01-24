@@ -1828,9 +1828,12 @@ def ValCoreg(satname, georef):
     if satname == 'S2':
         georef[0] = georef[0] + (-7.5)
         georef[3] = georef[3] + (15.5)
+    # else: # Planet or local files
+    #     georef[0] = georef[0] + (3.8)
+    #     georef[3] = georef[3] + (6.5)
     else: # Planet or local files
-        georef[0] = georef[0] + (3.8)
-        georef[3] = georef[3] + (6.5)
+        georef[0] = georef[0]
+        georef[3] = georef[3]
 
     return georef
 
