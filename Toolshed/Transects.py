@@ -174,9 +174,9 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
      
     print("performing intersections between transects...")
     
-    # checking fro mismatched coordinate systems
+    # checking for mismatched coordinate systems
     if TransectGDF.crs != ShorelineGDF.crs:
-        print("Your coordiate systems are mismatched; changing transect CRS to match shorelines CRS...")
+        print("Your coordinate systems are mismatched; changing transect CRS to match shorelines CRS...")
         TransectGDF.to_crs(ShorelineGDF.crs, inplace=True)
     # initialise where each intersection between lines and transects will be saved
     ColumnData = []
@@ -301,9 +301,9 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
      
     print("performing intersections between transects and waterlines...")
     
-    # checking fro mismatched coordinate systems
+    # checking for mismatched coordinate systems
     if TransectGDF.crs != WaterlineGDF.crs:
-        print("Your coordiate systems are mismatched; changing transect CRS to match shorelines CRS...")
+        print("Your coordinate systems are mismatched; changing transect CRS to match shorelines CRS...")
         TransectGDF.to_crs(WaterlineGDF.crs, inplace=True)
     # initialise where each intersection between lines and transects will be saved
     ColumnData = []
