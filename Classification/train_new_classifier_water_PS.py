@@ -204,22 +204,22 @@ print('full features:\nveg:', str(len(features['veg'])), '\nnonveg:',str(len(fea
 
 # subsample randomly the land and water classes
 # as the most important class is 'sand', the number of samples should be close to the number of sand pixels
-n_samples = 10000
-for key in ['veg', 'nonveg']:
+n_samples = 25000
+#for key in ['water', 'other land features']:
+for key in ['sand', 'water', 'other land features']:
     features[key] =  features[key][np.random.choice(features[key].shape[0], n_samples, replace=False),:]
 # print classes again
+print('Re-sampled classifier features:')
 for key in features.keys():
     print('%s : %d pixels'%(key,len(features[key])))
-
-
 
 
 #%% X Y formatting
 # When the labelled data is ready, format it into X, a matrix of features, and y, a vector of labels:
 
 # format into X (features) and y (labels) 
-classes = ['veg','nonveg']
-labels = [1,2]
+classes = ['sand','white-water','water','other land features']
+labels = [1,2,3,0]
 X,y = Classifier.format_training_data(features, classes, labels)
 
 
@@ -344,7 +344,7 @@ start_time = timeit.default_timer()
 classifier = MLPClassifier(hidden_layer_sizes=(16,8,4), solver='adam')
 classifier.fit(X,y)
 # joblib.dump(classifier, os.path.join(filepath_models, sitename+'_MLPClassifier_Veg_S2.pkl'))
-joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_PSScene.pkl'))
+joblib.dump(classifier, os.path.join(filepath_models, 'NN_4classes_PS_NARRA_new.pkl'))
 # joblib.dump(classifier, os.path.join(filepath_models, 'MLPClassifier_Veg_Full.pkl'))
 
 print(str(round(timeit.default_timer() - start_time, 5)) + ' seconds elapsed')
