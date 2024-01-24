@@ -184,7 +184,12 @@ def extract_veglines(metadata, settings, polygon, dates):
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area_pixels, clf)
             # if extracting shorelines alongside (using original CoastSat NN)
             if settings['wetdry'] == True:
-                sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_S2_new.pkl'))
+                if satname in ['L5','L7','L8','L9']:
+                    sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_Landsat_new.pkl'))
+                elif satname == 'S2':
+                    sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_S2_new.pkl'))
+                else: # Planet or local image with no SWIR
+                    sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_PS_NARRA.pkl'))
                 sh_classif, sh_labels = classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area_pixels, sh_clf)
             
             # if classified image comes back with almost no pixels in either class (<5%), skip
@@ -494,8 +499,8 @@ def calculate_vegfeatures(im_ms, cloud_mask, im_bool):
     im_std = Toolbox.image_std(im_RBNDVI, 1)
     features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
 
-    # Total feature num should be 16 (5 bands, 3 band indices, stdev on each)
     # Total feature num should be 20 (5 bands, 5 band indices, stdev on each)
+    # or 18 for Planet (4 bands, 5 band indices, stdev on each)
     return features
 
 def calculate_WV_features(im_ms, cloud_mask, im_bool):
