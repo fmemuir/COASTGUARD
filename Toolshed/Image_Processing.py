@@ -38,6 +38,45 @@ np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function to preprocess a satellite image
 def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs):
+    """
+    Main function to preprocess a satellite image
+
+
+    Parameters
+    ----------
+    fn : int
+        Iteration number.
+    filenames : list
+        Sat image filenames.
+    satname : str
+        Name of satellite platform.
+    settings : dict
+        Settings for running the model.
+    polygon : list
+        Earth Engine geom representing bounding box.
+    dates : list
+        Desired start date and end date in format 'YYYY-MM-DD'.
+    savetifs : bool
+        Flag for saving TIF versions of imagery.
+
+    Returns
+    -------
+    im_ms : array
+        Array of image with different bands in 3rd dimension.
+    georef : list
+        List of affine transformation values.
+    cloud_mask : array
+        Mask containing cloudy pixels to be removed/ignored.
+    im_extra : array
+        Extra image bands.
+    im_QA : array
+        Mask containing QA info for image (produced by platform).
+    im_nodata : array
+        Mask containing nodata info for image.
+    acqtime : str
+        Image acquisition date and time.
+
+    """
     
     cloud_mask_issue = settings['cloud_mask_issue']
     
