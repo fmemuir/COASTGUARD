@@ -548,8 +548,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         if im_ms.shape[0] < 10:
             im_ms = np.transpose(im_ms, (1,2,0))
             
-        if im_ms.shape[2] < 5: # if missing SWIR, copy NIR
-            im_ms = np.stack((im_ms[:,:,0], im_ms[:,:,1], im_ms[:,:,2], im_ms[:,:,3], im_ms[:,:,3]), axis=2)
+        # if im_ms.shape[2] < 5: # if missing SWIR, copy NIR
+        #     im_ms = np.stack((im_ms[:,:,0], im_ms[:,:,1], im_ms[:,:,2], im_ms[:,:,3], im_ms[:,:,3]), axis=2)
         
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
