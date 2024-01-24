@@ -109,11 +109,6 @@ BasePath = 'Data/' + sitename + '/Veglines'
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
 
-# Choose which ANN classifier to use (the default is already uncommented)
-# clf_model = 'MLPClassifier_Veg_L8S2.pkl'
-# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
-clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
-
 settings = {
     # general parameters:
     'cloud_thresh': cloud_thresh,        # threshold on maximum cloud cover
@@ -128,7 +123,6 @@ settings = {
     'buffer_size': 250,         # radius (in metres) for buffer around sandy pixels considered in the shoreline detection
     'min_length_sl': 500,       # minimum length (in metres) of shoreline perimeter to be valid
     'cloud_mask_issue': False,  # switch this parameter to True if sand pixels are masked (in black) on many images  
-    'clf_model': clf_model,
     # add the inputs defined previously
     'inputs': inputs,
     'projection_epsg': projection_epsg,
