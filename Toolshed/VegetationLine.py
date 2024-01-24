@@ -186,11 +186,14 @@ def extract_veglines(metadata, settings, polygon, dates):
             if settings['wetdry'] == True:
                 if satname in ['L5','L7','L8','L9']:
                     sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_Landsat_new.pkl'))
+                    PS = False
                 elif satname == 'S2':
                     sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_S2_new.pkl'))
+                    PS = False
                 else: # Planet or local image with no SWIR
-                    sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_PS_NARRA.pkl'))
-                sh_classif, sh_labels = classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area_pixels, sh_clf)
+                    sh_clf = joblib.load(os.path.join(filepath_models, 'NN_4classes_PS_NARRA_new.pkl'))
+                    PS = True
+                sh_classif, sh_labels = classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area_pixels, sh_clf, PS)
             
             # if classified image comes back with almost no pixels in either class (<5%), skip
             if (np.count_nonzero(im_labels[:,:,0])/(len(im_labels) * len(im_labels[0]))) < 0.05 or (np.count_nonzero(im_labels[:,:,1])/(len(im_labels) * len(im_labels[0]))) < 0.05:
@@ -587,6 +590,72 @@ def calculate_WV_features(im_ms, cloud_mask, im_bool):
     return features
 
 
+def calculate_features_PS(im_ms, cloud_mask, im_bool):
+    """
+    Calculates features on the image that are used for the supervised classification. 
+    The features include spectral normalized-difference indices and standard 
+    deviation of the image for all the bands and indices.
+
+    KV WRL 2018
+    
+    Modified for PS data by YD 2020
+
+    Arguments:
+    -----------
+    im_ms: np.array
+        RGB + downsampled NIR and SWIR
+    cloud_mask: np.array
+        2D cloud mask with True where cloud pixels are
+    im_bool: np.array
+        2D array of boolean indicating where on the image to calculate the features
+
+    Returns:    
+    -----------
+    features: np.array
+        matrix containing each feature (columns) calculated for all
+        the pixels (rows) indicated in im_bool
+        
+    """
+
+    # add all the multispectral bands
+    features = np.expand_dims(im_ms[im_bool,0],axis=1)
+    for k in range(1,im_ms.shape[2]):
+        feature = np.expand_dims(im_ms[im_bool,k],axis=1)
+        features = np.append(features, feature, axis=-1)
+        
+    # NIR-G
+    im_NIRG = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRG[im_bool],axis=1), axis=-1)
+    
+    # NIR-B
+    im_NIRB = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,0], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRB[im_bool],axis=1), axis=-1)
+    
+    # NIR-R
+    im_NIRR = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask)
+    features = np.append(features, np.expand_dims(im_NIRR[im_bool],axis=1), axis=-1)
+        
+    # B-R
+    im_BR = Toolbox.nd_index(im_ms[:,:,0], im_ms[:,:,2], cloud_mask)
+    features = np.append(features, np.expand_dims(im_BR[im_bool],axis=1), axis=-1)
+    
+    # calculate standard deviation of individual bands
+    for k in range(im_ms.shape[2]):
+        im_std =  Toolbox.image_std(im_ms[:,:,k], 2)
+        features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+        
+    # calculate standard deviation of the spectral indices
+    im_std = Toolbox.image_std(im_NIRG, 2)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    im_std = Toolbox.image_std(im_NIRB, 2)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    im_std = Toolbox.image_std(im_NIRR, 2)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+    im_std = Toolbox.image_std(im_BR, 2)
+    features = np.append(features, np.expand_dims(im_std[im_bool],axis=1), axis=-1)
+
+    return features
+
 
 def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
@@ -647,7 +716,7 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
 
     return im_classif, im_labels
 
-def classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area, clf):
+def classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area, clf, PS):
     """
     Classifies every pixel in the image in one of 4 classes:
         - sand                                          --> label = 1
@@ -656,6 +725,9 @@ def classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area, clf):
         - other (vegetation, buildings, rocks...)       --> label = 0
     The classifier is a Neural Network that is already trained.
     KV WRL 2018
+    
+    Adapted to include Planet classifier FM Jan 2024
+    
     Arguments:
     -----------
     im_ms: np.array
@@ -675,7 +747,10 @@ def classify_image_NN_shore(im_ms, im_extra, cloud_mask, min_beach_area, clf):
     """
 
     # calculate features
-    vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    if PS is True: # If PlanetScope, calculate features using 16-feature version (no SWIR)
+        vec_features = calculate_features_PS(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
+    else:
+        vec_features = calculate_features(im_ms, cloud_mask, np.ones(cloud_mask.shape).astype(bool))
     vec_features[np.isnan(vec_features)] = 1e-9 # NaN values are create when std is too close to 0
 
     # remove NaNs and cloudy pixels
