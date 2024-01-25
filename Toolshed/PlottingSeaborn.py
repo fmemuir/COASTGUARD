@@ -408,7 +408,7 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
     # land and sea labels on x axis
     axland = ax.twiny()
     axsea = ax.twiny()
-    for xax, xlab, xloc, xcol in zip([axland, axsea], ['land', 'sea'], ['left', 'right'], ['#236E95', '#C2B280']):
+    for xax, xlab, xloc, xcol in zip([axland, axsea], ['land', 'sea'], ['left', 'right'], ['#C2B280', '#236E95']):
         xax.xaxis.set_label_position('bottom')
         xax.xaxis.set_ticks_position('bottom')
         try:
@@ -419,6 +419,11 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
             
         xax.set_xlabel(xlab, loc=xloc)
         xax.xaxis.label.set_color(xcol)
+        
+        xax.xaxis.set_tick_params(width=0.5)
+        xax.grid(False)
+    ax.xaxis.set_tick_params(width=0.5)
+    ax.grid(False)
     
     # create specific median lines for specific platforms
     medians = []
@@ -483,6 +488,8 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
     # plt.draw()
     # # get bounding box loc of legend to plot text underneath it
     # p = medleg.get_window_extent()
+    sns.set(font_scale=0.6)
+
     ax.set_axisbelow(False)
     plt.tight_layout()
     
@@ -776,7 +783,10 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
     sns.set_style("ticks", {'axes.grid' : False, 'axes.linewidth':0.5})
     if len(violinsatsrt) > 1:
         # plot stacked violin plots
-        ax = sns.violinplot(data = df, linewidth=0, palette = colors, orient='h', cut=0, inner='quartile')
+        ax = sns.violinplot(data = df, linewidth=0, 
+                            palette = colors, orient='h', 
+                            cut=0, inner='quartile', width=0.6,
+                            density_norm='area')
         ax.add_collection(coll)        # set colour of inner quartiles to white dependent on colour ramp 
         for il, l in enumerate(ax.lines):
             l.set_linestyle('--')
@@ -810,13 +820,14 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
         ax.set_xlim(-150, 150)
         
     majort = np.arange(-150,200,50)
-    ax.set_xticks(majort)  
+    ax.set_xticks(majort) 
+    
     # ax.xaxis.grid(b=True, which='minor',linestyle='--', alpha=0.5)
     
     # land and sea labels on x axis
     axland = ax.twiny()
     axsea = ax.twiny()
-    for xax, xlab, xloc, xcol in zip([axland, axsea], ['land', 'sea'], ['left', 'right'], ['#236E95', '#C2B280']):
+    for xax, xlab, xloc, xcol in zip([axland, axsea], ['land', 'sea'], ['left', 'right'], ['#C2B280', '#236E95']):
         xax.xaxis.set_label_position('bottom')
         xax.xaxis.set_ticks_position('bottom')
         if axlim < 150:
@@ -842,11 +853,11 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
         LegPatch = Patch( facecolor=colors[i], label = leglabel)
         legend_elements.append(LegPatch)
         if axlim < 150:
-            ax.text(-axlim+1, i, leglabel, va='center')
+            ax.text(-axlim-10, i, leglabel, va='center')
         else:
-            ax.text(-145, i, leglabel, va='center')
+            ax.text(-148, i, leglabel, va='center')
         medianline = ax.lines[iline].get_data()[1][0]
-        ax.text(satmedian, medianline-0.05, medianlabel,ha='center')
+        ax.text(satmedian, medianline-0.05, medianlabel,ha='left', va='bottom')
     
     ax.axvline(0, c='k', ls='-', alpha=0.4, lw=0.5)
     
