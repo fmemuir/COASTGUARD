@@ -1319,7 +1319,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     # plot glowing background line for overall lin reg first
     plt.plot(valfit,satfit, c='w', linestyle='-', linewidth=1.6, alpha=0.7, zorder=3)
     plt.plot(valfit,satfit, c='#818C93', linestyle='--', linewidth=1.2, zorder=3)
-    plt.text(valfit[-1],satfit[-1]-9,'R$^2$ = '+str(round(r2,2)), c='#818C93', zorder=3, ha='right', va='top', rotation=41)
+    plt.text(valfit[-1]+7,satfit[-1]-1,'R$^2$ = '+str(round(r2,2)), c='#818C93', zorder=3, ha='right', va='top', rotation=41)
 
     plt.xlim(0,230)
     plt.ylim(0,230)
@@ -1346,35 +1346,35 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
         print(satdateclean[i]+','+str(len(valsrtclean[i]))+','+str(len(satsrtclean[i])))
     print('sum N: '+str(np.sum(totalN)))
         
-    # Print out unique dates and satnames    
-    SatGDFNames = SatGDF.groupby(['dates']).max()
-    SatNames = []
+    # # Print out unique dates and satnames    
+    # SatGDFNames = SatGDF.groupby(['dates']).first()
+    # SatNames = []
     
-    for d in satdateclean:
-        SatNames.append(SatGDFNames.loc[d]['satname'])
-    SatNameList = sorted(set(SatNames))
+    # for d in satdateclean:
+    #     SatNames.append(SatGDFNames.loc[d]['satname'])
+    # SatNameList = sorted(set(SatNames))
     
-    for SatN in SatNameList:
-        SatInd = []
-        for i, e in enumerate(SatNames):
-            if e == SatN:
-                SatInd.append(i)
+    # for SatN in SatNameList:
+    #     SatInd = []
+    #     for i, e in enumerate(SatNames):
+    #         if e == SatN:
+    #             SatInd.append(i)
         
-        valsrtN = []
-        satsrtN = []
-        for SatI in SatInd:
-            valsrtN.append(valsrtclean[SatI])
-            satsrtN.append(satsrtclean[SatI])
+    #     valsrtN = []
+    #     satsrtN = []
+    #     for SatI in SatInd:
+    #         valsrtN.append(valsrtclean[SatI])
+    #         satsrtN.append(satsrtclean[SatI])
 
-        valN = [item for sublist in valsrtN for item in sublist]
-        satN =[item for sublist in satsrtN for item in sublist]
-        X = np.array(valN).reshape((-1,1))
-        y = np.array(satN)
-        model = LinearRegression(fit_intercept=True).fit(X,y)
-        r2 = model.score(X,y)
+    #     valN = [item for sublist in valsrtN for item in sublist]
+    #     satN =[item for sublist in satsrtN for item in sublist]
+    #     X = np.array(valN).reshape((-1,1))
+    #     y = np.array(satN)
+    #     model = LinearRegression(fit_intercept=True).fit(X,y)
+    #     r2 = model.score(X,y)
         
-        print('Sat name: R^2')
-        print(SatN, r2)
+    #     print('Sat name: R^2')
+    #     print(SatN, r2)
     
     
     
