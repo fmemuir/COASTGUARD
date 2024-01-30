@@ -2404,7 +2404,7 @@ def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
     ErrorDF.drop(ErrorDF[ErrorDF['Date'] == 'Total'].index, axis=0, inplace=True)
     
     # Take unique dates from veg edge shapefile
-    VegLines = VegGDF.groupby(['dates']).max()
+    VegLines = VegGDF[['dates','tideelev','satname']].groupby(['dates']).max()
     
     # Extract tide levels and sat names for each matching date in error CSV
     Tides = []
