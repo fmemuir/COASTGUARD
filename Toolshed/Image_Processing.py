@@ -147,8 +147,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef[3] = georef[3] - georef[5]/2 # ytrans = up by half of 15m
         
         # Additional coregistration for validation purposes
-        if 'StAndrews' in settings['inputs']['sitename']:
-            georef = Toolbox.ValCoreg(satname, georef)
+        # if 'StAndrews' in settings['inputs']['sitename']:
+        #     georef = Toolbox.ValCoreg(satname, georef)
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -212,8 +212,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistration for validation purposes
-        if 'StAndrews' in settings['inputs']['sitename']:
-            georef = Toolbox.ValCoreg(satname, georef)    
+        # if 'StAndrews' in settings['inputs']['sitename']:
+        #     georef = Toolbox.ValCoreg(satname, georef)    
         
         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
@@ -305,8 +305,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistration for validation purposes
-        if 'StAndrews' in settings['inputs']['sitename']:
-            georef = Toolbox.ValCoreg(satname, georef)
+        # if 'StAndrews' in settings['inputs']['sitename']:
+        #     georef = Toolbox.ValCoreg(satname, georef)
             
         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
@@ -397,8 +397,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistration for validation purposes
-        if 'StAndrews' in settings['inputs']['sitename']:
-            georef = Toolbox.ValCoreg(satname, georef)
+        # if 'StAndrews' in settings['inputs']['sitename']:
+        #     georef = Toolbox.ValCoreg(satname, georef)
             
         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
@@ -476,8 +476,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         # Additional coregistration for validation purposes
-        if 'StAndrews' in settings['inputs']['sitename']:
-            georef = Toolbox.ValCoreg(satname, georef)
+        # if 'StAndrews' in settings['inputs']['sitename']:
+        #     georef = Toolbox.ValCoreg(satname, georef)
             
         im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
         if im10 is None:
@@ -602,8 +602,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         georef = [round(georef[2]),georef[0],georef[1],round(georef[5]),georef[3],georef[4]] # rearrange
         
         # Additional coregistration for validation purposes
-        if 'StAndrews' in settings['inputs']['sitename']:
-            georef = Toolbox.ValCoreg(satname, georef)
+        # if 'StAndrews' in settings['inputs']['sitename']:
+        #     georef = Toolbox.ValCoreg(satname, georef)
         
         datepath = os.path.basename(filenames[fn])[0:8]
         auxpath = os.path.dirname(filenames[fn])+'/cloudmasks/'
