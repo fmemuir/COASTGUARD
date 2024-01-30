@@ -1100,17 +1100,21 @@ def ThresholdViolin(sitename,filepath,sites):
     violindict = {}
     for site in sites:
         with open(os.path.join(filepath,site ,site+ '_output.pkl'), 'rb') as f:
-            outputdict = pickle.load(f)
+            # outputdict = pickle.load(f)
+            outputdict = pd.read_pickle(f)
         violindict[site] = outputdict['vthreshold']
     
+    # Add Planet results to violin data
     violindictPl = {}
-    for site in ['StAndrewsPlanetEast', 'StAndrewsPlanetWest']:
+    for site in ['StAndrewsPlanetEastTOA', 'StAndrewsPlanetWestTOA']:
         with open(os.path.join(filepath,site ,site+ '_output.pkl'), 'rb') as f:
-            outputdict = pickle.load(f)
+            # outputdict = pickle.load(f)
+            outputdict = pd.read_pickle(f)
+
         violindictPl[site] = outputdict['vthreshold']
     
-    violindict['StAndrewsEast'].extend(violindictPl['StAndrewsPlanetEast'])
-    violindict['StAndrewsWest'].extend(violindictPl['StAndrewsPlanetWest'])
+    violindict['StAndrewsEast'].extend(violindictPl['StAndrewsPlanetEastTOA'])
+    violindict['StAndrewsWest'].extend(violindictPl['StAndrewsPlanetWestTOA'])
     
     # concat together threshold columns (even if different sizes; fills with nans)
     violinDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in violindict.items()]))
@@ -1142,7 +1146,7 @@ def ThresholdViolin(sitename,filepath,sites):
     
     ax.set_xticklabels(['Inner Estuarine','Open Coast'])
     plt.ylabel('NDVI threshold value')
-    plt.ylim(0.05,0.55)
+    plt.ylim(-0.1,0.55)
     
     # create legend with medians and data labels for each violin
     legend_elements = []
