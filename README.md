@@ -71,7 +71,7 @@ conda install pyfes -c fbriol
 ```
 You can then continue with installing the other packages (a list of which can be found in [coastguard_environment.yml](https://github.com/fmemuir/COASTGUARD/blob/master/coastguard_environment.yml) in the repo):
 ```
-conda install -c conda-forge earthengine-api geopandas spyder geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook motuclient netcdf4
+conda install -c conda-forge earthengine-api pandas=2.0.3 geopandas spyder=5.5.0 geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook motuclient netcdf4
 ```
 
 
