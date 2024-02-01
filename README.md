@@ -104,7 +104,7 @@ earthengine authenticate
 
 A web browser will open; log in with the GMail account you used to sign up to GEE. The authenticator should then redirect back to your terminal window. If it doesn't, copy+paste the authorization code into the terminal.
 
-** January 2024: You may be prompted to create an Earth Engine cloud project before you can generate a token for using Earth Engine within notebook environments. Just call it something memorable like ee-coastguard. **
+**January 2024: You may be prompted to create an Earth Engine cloud project before you can generate a token for using Earth Engine within notebook environments. Just call it something memorable like ee-coastguard.**
  
 
 
