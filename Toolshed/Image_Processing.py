@@ -16,6 +16,8 @@ import skimage.morphology as morphology
 import sklearn.decomposition as decomposition
 import skimage.exposure as exposure
 import rasterio
+from geoarray import GeoArray
+from arosics import COREG
 
 # other modules
 from osgeo import gdal
@@ -33,6 +35,7 @@ from Toolshed import Toolbox
 
 from pyproj import Proj
 from pyproj import transform as Transf
+
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
@@ -846,6 +849,52 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
         transform=transform,
     ) as tif:
         tif.write(im_TZ_cl_fill,1)
+
+
+def Coreg(im_ref, im_trg):
+    """
+    Coregister each satellite image to the first one in a list of images. Uses
+    the AROSICS package for calculating phase shifts in images.
+    FM Jan 2024
+
+    Parameters
+    ----------
+    im_ref : array 
+        Reference image for coregistering to (first in list).
+    im_trg : array
+        Target image to be coregistered (current im_ms in list).
+
+    Returns
+    -------
+    newgeoref : list
+        Updated/shifted georeference information for affine transforms.
+
+    """
+    
+    # im_ref is reference image for coregistering to (first in list)
+    refArr = im_ref
+    refGT = im_ref.geotransform
+    refPRJ = im_ref.projection
+    
+    # im_trg is target image to be coregistered (current im_ms in list)
+    trgArr = im_trg
+    trgGT = im_trg.geotransform
+    trgPRJ = im_trg.projection
+    
+    refGeoArr = GeoArray(refArr,refGT,refPRJ)
+    trgGeoArr = GeoArray(trgArr,trgGT,trgPRJ)
+    
+    # wp = custom matching window position in (X,Y) in same CRS as reference image
+    # ws = custom matching window size in pixels as (X,Y)
+    CR = COREG(refGeoArr, trgGeoArr)#, wp=(,), ws=(,))
+    CR.calculate_spatial_shifts()
+    CR.correct_shifts()
+    
+    newgeoref = CR['updated geotransform']
+    
+    return newgeoref
+
+
 
 def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """
