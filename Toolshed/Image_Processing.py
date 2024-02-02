@@ -487,6 +487,22 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
             return None, None, None, None, None, None, None
         
         im10 = im10/10000 # TOA scaled to 10000
+        
+        # Only run coregistration if first image in list has been generated
+        # Look for first valid filename
+        i = 0
+        while os.path.isfile(os.path.join(settings['inputs']['filepath'],
+                                          settings['inputs']['sitename'],'jpg_files',
+                                          os.path.basename(filenames[i])+'_RGB.tif')) == False:
+            i += 1
+            
+            refArr = GeoArray(os.path.join(settings['inputs']['filepath'],
+                                              settings['inputs']['sitename'],'jpg_files',
+                                              os.path.basename(filenames[i])+'_RGB.tif'))
+            # GeoArray(array, geotransform, projection)
+            trgArr = GeoArray(im10, georef, img.getInfo()['bands'][3]['crs'])
+            georef = Coreg(refArr,trgArr) 
+
 
         # if image contains only zeros (can happen with S2), skip the image
         if sum(sum(sum(im10))) < 1:
@@ -851,7 +867,7 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
         tif.write(im_TZ_cl_fill,1)
 
 
-def Coreg(im_ref, im_trg):
+def Coreg(refArr, trgArr):
     """
     Coregister each satellite image to the first one in a list of images. Uses
     the AROSICS package for calculating phase shifts in images.
@@ -870,27 +886,14 @@ def Coreg(im_ref, im_trg):
         Updated/shifted georeference information for affine transforms.
 
     """
-    
-    # im_ref is reference image for coregistering to (first in list)
-    refArr = im_ref
-    refGT = im_ref.geotransform
-    refPRJ = im_ref.projection
-    
-    # im_trg is target image to be coregistered (current im_ms in list)
-    trgArr = im_trg
-    trgGT = im_trg.geotransform
-    trgPRJ = im_trg.projection
-    
-    refGeoArr = GeoArray(refArr,refGT,refPRJ)
-    trgGeoArr = GeoArray(trgArr,trgGT,trgPRJ)
-    
+        
     # wp = custom matching window position in (X,Y) in same CRS as reference image
     # ws = custom matching window size in pixels as (X,Y)
-    CR = COREG(refGeoArr, trgGeoArr)#, wp=(,), ws=(,))
+    CR = COREG(refArr, trgArr)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
     CR.calculate_spatial_shifts()
-    CR.correct_shifts()
+    corrCR = CR.correct_shifts()
     
-    newgeoref = CR['updated geotransform']
+    newgeoref = list(corrCR['updated geotransform'])
     
     return newgeoref
 
