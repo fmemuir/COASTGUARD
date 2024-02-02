@@ -71,7 +71,7 @@ conda install pyfes -c fbriol
 ```
 You can then continue with installing the other packages (a list of which can be found in [coastguard_environment.yml](https://github.com/fmemuir/COASTGUARD/blob/master/coastguard_environment.yml) in the repo):
 ```
-conda install -c conda-forge earthengine-api geopandas spyder geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook motuclient netcdf4
+conda install -c conda-forge earthengine-api pandas=2.0.3 geopandas spyder=5.5.0 geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook motuclient netcdf4
 ```
 
 
@@ -103,6 +103,8 @@ earthengine authenticate
 ```
 
 A web browser will open; log in with the GMail account you used to sign up to GEE. The authenticator should then redirect back to your terminal window. If it doesn't, copy+paste the authorization code into the terminal.
+
+**January 2024: You may be prompted to create an Earth Engine cloud project before you can generate a token for using Earth Engine within notebook environments. Just call it something memorable like ee-coastguard.**
  
 
 
