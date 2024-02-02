@@ -490,18 +490,18 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         # Only run coregistration if first image in list has been generated
         # Look for first valid filename
-        i = 0
-        while os.path.isfile(os.path.join(settings['inputs']['filepath'],
-                                          settings['inputs']['sitename'],'jpg_files',
-                                          os.path.basename(filenames[i])+'_RGB.tif')) == False:
-            i += 1
-            
-            refArr = GeoArray(os.path.join(settings['inputs']['filepath'],
-                                              settings['inputs']['sitename'],'jpg_files',
-                                              os.path.basename(filenames[i])+'_RGB.tif'))
-            # GeoArray(array, geotransform, projection)
-            trgArr = GeoArray(im10, georef, img.getInfo()['bands'][3]['crs'])
-            georef = Coreg(refArr,trgArr) 
+        # i = 0
+        # while os.path.isfile(os.path.join(settings['inputs']['filepath'],
+        #                                   settings['inputs']['sitename'],'jpg_files',
+        #                                   os.path.basename(filenames[i])+'_RGB.tif')) == False:
+        #     i += 1
+        #     # Once valid image is found, 
+        #     refArr = GeoArray(os.path.join(settings['inputs']['filepath'],
+        #                                       settings['inputs']['sitename'],'jpg_files',
+        #                                       os.path.basename(filenames[i])+'_RGB.tif'))
+        #     # GeoArray(array, geotransform, projection)
+        #     trgArr = GeoArray(im10, georef, img.getInfo()['bands'][3]['crs'])
+        #     georef = Coreg(refArr,trgArr) 
 
 
         # if image contains only zeros (can happen with S2), skip the image
