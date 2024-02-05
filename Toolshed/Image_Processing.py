@@ -16,8 +16,6 @@ import skimage.morphology as morphology
 import sklearn.decomposition as decomposition
 import skimage.exposure as exposure
 import rasterio
-from geoarray import GeoArray
-from arosics import COREG
 
 # other modules
 from osgeo import gdal
@@ -35,7 +33,6 @@ from Toolshed import Toolbox
 
 from pyproj import Proj
 from pyproj import transform as Transf
-
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
@@ -487,22 +484,6 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
             return None, None, None, None, None, None, None
         
         im10 = im10/10000 # TOA scaled to 10000
-        
-        # Only run coregistration if first image in list has been generated
-        # Look for first valid filename
-        # i = 0
-        # while os.path.isfile(os.path.join(settings['inputs']['filepath'],
-        #                                   settings['inputs']['sitename'],'jpg_files',
-        #                                   os.path.basename(filenames[i])+'_RGB.tif')) == False:
-        #     i += 1
-        #     # Once valid image is found, 
-        #     refArr = GeoArray(os.path.join(settings['inputs']['filepath'],
-        #                                       settings['inputs']['sitename'],'jpg_files',
-        #                                       os.path.basename(filenames[i])+'_RGB.tif'))
-        #     # GeoArray(array, geotransform, projection)
-        #     trgArr = GeoArray(im10, georef, img.getInfo()['bands'][3]['crs'])
-        #     georef = Coreg(refArr,trgArr) 
-
 
         # if image contains only zeros (can happen with S2), skip the image
         if sum(sum(sum(im10))) < 1:
@@ -865,39 +846,6 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
         transform=transform,
     ) as tif:
         tif.write(im_TZ_cl_fill,1)
-
-
-def Coreg(refArr, trgArr):
-    """
-    Coregister each satellite image to the first one in a list of images. Uses
-    the AROSICS package for calculating phase shifts in images.
-    FM Jan 2024
-
-    Parameters
-    ----------
-    im_ref : array 
-        Reference image for coregistering to (first in list).
-    im_trg : array
-        Target image to be coregistered (current im_ms in list).
-
-    Returns
-    -------
-    newgeoref : list
-        Updated/shifted georeference information for affine transforms.
-
-    """
-        
-    # wp = custom matching window position in (X,Y) in same CRS as reference image
-    # ws = custom matching window size in pixels as (X,Y)
-    CR = COREG(refArr, trgArr)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
-    CR.calculate_spatial_shifts()
-    corrCR = CR.correct_shifts()
-    
-    newgeoref = list(corrCR['updated geotransform'])
-    
-    return newgeoref
-
-
 
 def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """
