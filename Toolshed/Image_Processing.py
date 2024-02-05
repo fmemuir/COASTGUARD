@@ -107,7 +107,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         img = ee.Image(Landsat5.getInfo().get('features')[fn]['id'])
         cloud_scoree = Landsat5.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         acqtime = datetime.utcfromtimestamp(Landsat5.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
-        im_ms = geemap.ee_to_numpy(img, bands = ['B1','B2','B3','B4','B5','BQA'], region=ee.Geometry.Polygon(polygon))
+        im_ms = geemap.ee_to_numpy(img, 
+                                   bands = ['B1','B2','B3','B4','B5','BQA'], 
+                                   region=ee.Geometry.Polygon(polygon),
+                                   scale=30)
         
         if im_ms is None:
             return None, None, None, None, None, None, None
@@ -180,7 +183,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         Landsat7 = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','B8','QA_PIXEL'])
         
         img = ee.Image(Landsat7.getInfo().get('features')[fn]['id'])
-        im_ms = geemap.ee_to_numpy(img, bands = ['B1','B2','B3','B4','B5', 'B8','QA_PIXEL'], region=ee.Geometry.Polygon(polygon))
+        im_ms = geemap.ee_to_numpy(img, 
+                                   bands = ['B1','B2','B3','B4','B5', 'B8','QA_PIXEL'], 
+                                   region=ee.Geometry.Polygon(polygon),
+                                   scale=30)
         acqtime = datetime.utcfromtimestamp(Landsat7.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
@@ -215,7 +221,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # if 'StAndrews' in settings['inputs']['sitename']:
         #     georef = Toolbox.ValCoreg(satname, georef)    
         
-        im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
+        im_pan = geemap.ee_to_numpy(img, 
+                                    bands = ['B8'], 
+                                    region=ee.Geometry.Polygon(polygon),
+                                    scale=15)
         
         # size of pan image
         nrows = im_pan.shape[0]
@@ -273,7 +282,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         Landsat8 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'])
         
         img = ee.Image(Landsat8.getInfo().get('features')[fn]['id'])
-        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
+        im_ms = geemap.ee_to_numpy(img, 
+                                   bands = ['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'], 
+                                   region=ee.Geometry.Polygon(polygon),
+                                   scale=30)
         acqtime = datetime.utcfromtimestamp(Landsat8.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
@@ -308,7 +320,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # if 'StAndrews' in settings['inputs']['sitename']:
         #     georef = Toolbox.ValCoreg(satname, georef)
             
-        im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
+        im_pan = geemap.ee_to_numpy(img, 
+                                    bands = ['B8'], 
+                                    region=ee.Geometry.Polygon(polygon),
+                                    scale=15)
         
         # size of pan image
         nrows = im_pan.shape[0]
@@ -366,7 +381,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         Landsat9 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'])
         
         img = ee.Image(Landsat9.getInfo().get('features')[fn]['id'])
-        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'], region=ee.Geometry.Polygon(polygon))
+        im_ms = geemap.ee_to_numpy(img, 
+                                   bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','BQA'], 
+                                   region=ee.Geometry.Polygon(polygon),
+                                   scale=30)
         acqtime = datetime.utcfromtimestamp(Landsat9.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
@@ -400,7 +418,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # if 'StAndrews' in settings['inputs']['sitename']:
         #     georef = Toolbox.ValCoreg(satname, georef)
             
-        im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
+        im_pan = geemap.ee_to_numpy(img, 
+                                    bands = ['B8'], 
+                                    region=ee.Geometry.Polygon(polygon),
+                                    scale=15)
         
         # size of pan image
         nrows = im_pan.shape[0]
@@ -479,7 +500,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # if 'StAndrews' in settings['inputs']['sitename']:
         #     georef = Toolbox.ValCoreg(satname, georef)
             
-        im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
+        im10 = geemap.ee_to_numpy(img, 
+                                  bands = ['B2','B3','B4','B8'], 
+                                  region=ee.Geometry.Polygon(polygon),
+                                  scale=10)
         if im10 is None:
             return None, None, None, None, None, None, None
         
@@ -498,7 +522,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         ncols = im10.shape[1]
 
         # read 20m band (SWIR1)
-        im20 = geemap.ee_to_numpy(img, bands = ['B11'], region=ee.Geometry.Polygon(polygon))
+        im20 = geemap.ee_to_numpy(img, 
+                                  bands = ['B11'], 
+                                  region=ee.Geometry.Polygon(polygon),
+                                  scale=20)
         
         if im20 is None:
             return None, None, None, None, None, None, None
@@ -515,7 +542,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         im_ms = np.append(im10, im_swir, axis=2)
         
         # create cloud mask using 60m QA band (not as good as Landsat cloud cover)
-        im60 = geemap.ee_to_numpy(img, bands = ['QA60'], region=ee.Geometry.Polygon(polygon))
+        im60 = geemap.ee_to_numpy(img, 
+                                  bands = ['QA60'], 
+                                  region=ee.Geometry.Polygon(polygon),
+                                  scale=60)
         
         if im60 is None:
             return None, None, None, None, None, None, None
