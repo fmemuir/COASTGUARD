@@ -16,6 +16,7 @@ import pandas as pd
 import geopandas as gpd
 import rasterio
 from rasterio import features
+from geoarray import GeoArray 
 
 # machine learning modules
 import sklearn
@@ -183,6 +184,18 @@ def extract_veglines(metadata, settings, polygon, dates):
             #     im_ref_buffer = BufferShoreline(settings,output_shorelineArr,georef,pixel_size,cloud_mask)
             # # im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
             
+            
+            # Coregistration of satellite images based on AROSICS phase shifts
+            # Uses GeoArray(array, geotransform, projection)
+            # Read in provided reference image (if it has been provided)
+            if settings['reference_coreg_im'] in locals():
+                # reference image to coregister to (given as filepath)
+                refArr = GeoArray(settings['reference_coreg_im'])
+                # target sat image to register (current image in loop)
+                trgArr = GeoArray(im_ms, georef, image_epsg)
+                georef = Image_Processing.Coreg(refArr,trgArr)
+            
+             
             # classify image with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area_pixels, clf)
             # if extracting shorelines alongside (using original CoastSat NN)

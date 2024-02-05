@@ -16,6 +16,7 @@ import skimage.morphology as morphology
 import sklearn.decomposition as decomposition
 import skimage.exposure as exposure
 import rasterio
+from arosics import COREG
 
 # other modules
 from osgeo import gdal
@@ -682,6 +683,34 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
 ###################################################################################################
 # AUXILIARY FUNCTIONS
 ###################################################################################################
+
+def Coreg(refArr, trgArr):
+    """
+    Coregister each satellite image to the first one in a list of images. Uses
+    the AROSICS package for calculating phase shifts in images.
+    FM Jan 2024
+    Parameters
+    ----------
+    im_ref : array 
+        Reference image for coregistering to (first in list).
+    im_trg : array
+        Target image to be coregistered (current im_ms in list).
+    Returns
+    -------
+    newgeoref : list
+        Updated/shifted georeference information for affine transforms.
+    """
+
+    # wp = custom matching window position in (X,Y) in same CRS as reference image
+    # ws = custom matching window size in pixels as (X,Y)
+    CR = COREG(refArr, trgArr)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
+    CR.calculate_spatial_shifts()
+    corrCR = CR.correct_shifts()
+
+    newgeoref = list(corrCR['updated geotransform'])
+
+    return newgeoref
+
 
 def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
     """
