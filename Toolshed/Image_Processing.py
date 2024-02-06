@@ -718,7 +718,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
 # AUXILIARY FUNCTIONS
 ###################################################################################################
 
-def Coreg(refArr, trgArr):
+def Coreg(refArr, trgArr, georef):
     """
     Coregister each satellite image to the first one in a list of images. Uses
     the AROSICS package for calculating phase shifts in images.
@@ -729,6 +729,8 @@ def Coreg(refArr, trgArr):
         Reference image for coregistering to (first in list).
     im_trg : array
         Target image to be coregistered (current im_ms in list).
+    georef : list
+        Affine geotransformation matrix.
     Returns
     -------
     newgeoref : list
@@ -737,10 +739,17 @@ def Coreg(refArr, trgArr):
 
     # wp = custom matching window position in (X,Y) in same CRS as reference image
     # ws = custom matching window size in pixels as (X,Y)
-    CR = COREG(refArr, trgArr, ws=(100,100))#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
-    CR.calculate_spatial_shifts()
+    CR = COREG(refArr, trgArr, ws=(100,100), q=True)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
+    try:
+        CR.calculate_spatial_shifts()
+    except: # RuntimeError for caculated shifts being abnormally large
+        print('Coreg: calculated shift is too large to be valid. georef has not changed.')
+        return georef
+    # Correct georeferencing info based on calculated shifts
     corrCR = CR.correct_shifts()
-
+    print('Coreg: X shift = %0.3fm | Y shift = %0.3fm | Reliability = %0.1f%%' % (CR.x_shift_map, CR.y_shift_map, CR.shift_reliability))
+    
+    # Reset georef info to newly shifted georef
     newgeoref = list(corrCR['updated geotransform'])
 
     return newgeoref

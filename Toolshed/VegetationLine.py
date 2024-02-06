@@ -193,7 +193,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
                 refArr.mask_baddata = im_ref_buffer
                 trgArr.mask_baddata = cloud_mask + im_ref_buffer
                 
-                georef = Image_Processing.Coreg(refArr,trgArr)
+                georef = Image_Processing.Coreg(refArr,trgArr,georef)
             
             if savetifs == True:
                 Image_Processing.save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
