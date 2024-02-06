@@ -185,11 +185,15 @@ def extract_veglines(metadata, settings, polygon, dates):
             # Coregistration of satellite images based on AROSICS phase shifts
             # Uses GeoArray(array, geotransform, projection)
             # Read in provided reference image (if it has been provided)
-            if settings['reference_coreg_im'] in locals():
+            if settings['reference_coreg_im'] is not None:
                 # reference image to coregister to (given as filepath)
                 refArr = GeoArray(settings['reference_coreg_im'])
                 # target sat image to register (current image in loop)
-                trgArr = GeoArray(im_ms, georef, image_epsg)
+                trgArr = GeoArray(im_ms[:,:,0:3], georef, image_epsg)
+                # add reference shoreline buffer (and cloud mask) to region for avoiding tie point creation
+                refArr.mask_baddata = np.invert(im_ref_buffer)
+                trgArr.mask_baddata = np.invert(cloud_mask)+np.invert(im_ref_buffer)
+                
                 georef = Image_Processing.Coreg(refArr,trgArr)
             
              
