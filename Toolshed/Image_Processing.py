@@ -114,9 +114,11 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
                                    scale=30)
         
         if im_ms is None:
+            print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
         if cloud_scoree > settings['cloud_thresh']:
+            print(' - Skipped: cloud threshold exceeded')
             return None, None, None, None, None, None, None
         
         # down-sample to 15 m (half of the original pixel size)
@@ -134,6 +136,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # resize the image using nearest neighbour interpolation (order 0)
         cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
                                       mode='constant').astype('bool_')
+        
+        if cloud_mask is None:
+            print(" - Skipped: no cloud mask available")
+            return None, None, None, None, None, None, None
 
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
@@ -191,11 +197,13 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         acqtime = datetime.utcfromtimestamp(Landsat7.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
+            print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
         cloud_scoree = Landsat7.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
+            print(' - Skipped: cloud threshold exceeded')
             return None, None, None, None, None, None, None
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
@@ -242,6 +250,11 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # resize the image using nearest neighbour interpolation (order 0)
         cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
                                       mode='constant').astype('bool_')
+        
+        if cloud_mask is None:
+            print(" - Skipped: no cloud mask available")
+            return None, None, None, None, None, None, None
+        
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
         for k in range(im_ms.shape[2]):
@@ -290,11 +303,13 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         acqtime = datetime.utcfromtimestamp(Landsat8.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
+            print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
         cloud_scoree = Landsat8.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
+            print(' - Skipped: cloud threshold exceeded')
             return None, None, None, None, None, None, None
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
@@ -341,6 +356,11 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # resize the image using nearest neighbour interpolation (order 0)
         cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
                                       mode='constant').astype('bool_')
+        
+        if cloud_mask is None:
+            print(" - Skipped: no cloud mask available")
+            return None, None, None, None, None, None, None
+        
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
         for k in range(im_ms.shape[2]):
@@ -389,11 +409,13 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         acqtime = datetime.utcfromtimestamp(Landsat9.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if im_ms is None:
+            print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
         cloud_scoree = Landsat9.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
+            print(' - Skipped: cloud threshold exceeded')
             return None, None, None, None, None, None, None
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
@@ -439,6 +461,11 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         # resize the image using nearest neighbour interpolation (order 0)
         cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
                                       mode='constant').astype('bool_')
+        
+        if cloud_mask is None:
+            print(" - Skipped: no cloud mask available")
+            return None, None, None, None, None, None, None
+        
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
         for k in range(im_ms.shape[2]):
@@ -482,6 +509,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         acqtime = datetime.utcfromtimestamp(Sentinel2.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         if cloud_scoree > settings['cloud_thresh']:
+            print(' - Skipped: cloud threshold exceeded')
             return None, None, None, None, None, None, None
         
         # read 10m bands (R,G,B,NIR)        
@@ -506,6 +534,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
                                   region=ee.Geometry.Polygon(polygon),
                                   scale=10)
         if im10 is None:
+            print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
         im10 = im10/10000 # TOA scaled to 10000
@@ -529,6 +558,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
                                   scale=20)
         
         if im20 is None:
+            print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
         im20 = im20[:,:,0]
@@ -549,6 +579,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
                                   scale=60)
         
         if im60 is None:
+            print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
         im_QA = im60[:,:,0]
@@ -558,6 +589,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
                                       mode='constant')
         
         if cloud_mask is None:
+            print(" - Skipped: no cloud mask available")
             return None, None, None, None, None, None, None
         
         # check if -inf or nan values on any band and create nodata image
