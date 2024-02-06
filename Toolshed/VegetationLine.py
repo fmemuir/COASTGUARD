@@ -42,7 +42,7 @@ from Toolshed import Toolbox, Image_Processing
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function for batch vegline detection
-def extract_veglines(metadata, settings, polygon, dates):
+def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     """
     Main function to extract vegetation edges from satellite imagery (Landsat 5-9, Sentinel-2 or local images (e.g. Planet)).
     
@@ -142,7 +142,7 @@ def extract_veglines(metadata, settings, polygon, dates):
 
             # preprocess image (cloud mask + pansharpening/downsampling)
             fn = int(i)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=True)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
 
             if im_ms is None:
                 continue
@@ -180,8 +180,7 @@ def extract_veglines(metadata, settings, polygon, dates):
             #     output_shorelineArr = Toolbox.GStoArr(output_shoreline[-1])
             #     im_ref_buffer = BufferShoreline(settings,output_shorelineArr,georef,pixel_size,cloud_mask)
             # # im_ref_buffer = BufferShoreline(settings,georef,pixel_size,cloud_mask)
-            
-            
+        
             # Coregistration of satellite images based on AROSICS phase shifts
             # Uses GeoArray(array, geotransform, projection)
             # Read in provided reference image (if it has been provided)
@@ -189,13 +188,15 @@ def extract_veglines(metadata, settings, polygon, dates):
                 # reference image to coregister to (given as filepath)
                 refArr = GeoArray(settings['reference_coreg_im'])
                 # target sat image to register (current image in loop)
-                trgArr = GeoArray(im_ms[:,:,0:3], georef, image_epsg)
+                trgArr = GeoArray(im_ms[:,:,0:3], georef, 'EPSG:'+str(image_epsg))
                 # add reference shoreline buffer (and cloud mask) to region for avoiding tie point creation
-                refArr.mask_baddata = np.invert(im_ref_buffer)
-                trgArr.mask_baddata = np.invert(cloud_mask)+np.invert(im_ref_buffer)
+                refArr.mask_baddata = im_ref_buffer
+                trgArr.mask_baddata = cloud_mask + im_ref_buffer
                 
                 georef = Image_Processing.Coreg(refArr,trgArr)
             
+            if savetifs == True:
+                Image_Processing.save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
              
             # classify image with NN classifier
             im_classif, im_labels = classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area_pixels, clf)

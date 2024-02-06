@@ -38,7 +38,7 @@ from pyproj import transform as Transf
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function to preprocess a satellite image
-def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs):
+def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     """
     Main function to preprocess a satellite image
 
@@ -710,9 +710,6 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs
         
         # no extra local image
         im_extra = []
-        
-    if savetifs == True:
-        save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
     
     return im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime
 
@@ -740,7 +737,7 @@ def Coreg(refArr, trgArr):
 
     # wp = custom matching window position in (X,Y) in same CRS as reference image
     # ws = custom matching window size in pixels as (X,Y)
-    CR = COREG(refArr, trgArr)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
+    CR = COREG(refArr, trgArr, ws=(100,100))#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
     CR.calculate_spatial_shifts()
     corrCR = CR.correct_shifts()
 
