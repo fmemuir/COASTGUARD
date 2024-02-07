@@ -739,11 +739,15 @@ def Coreg(refArr, trgArr, georef):
 
     # wp = custom matching window position in (X,Y) in same CRS as reference image
     # ws = custom matching window size in pixels as (X,Y)
-    CR = COREG(refArr, trgArr, ws=(100,100), q=True)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
+    CR = COREG(refArr, trgArr, q=True)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
     try:
         CR.calculate_spatial_shifts()
     except: # RuntimeError for caculated shifts being abnormally large
         print('Coreg: calculated shift is too large to be valid. georef has not changed.')
+        return georef
+    # DOn't perform shift if calculation reliability is lower than 50%
+    if CR.shift_reliability < 50:
+        print('Coreg: calculated shift reliability is too low (%0.1f%%). georef has not changed.' % CR.shift_reliability)
         return georef
     # Correct georeferencing info based on calculated shifts
     corrCR = CR.correct_shifts()
