@@ -1890,6 +1890,8 @@ def FindWPThresh(int_veg, int_nonveg):
     for i, intdata in enumerate([int_veg, int_nonveg]):
         model = sklearn.neighbors.KernelDensity(bandwidth=0.01, kernel='gaussian')
         sample = intdata.reshape((len(intdata), 1))
+        # fill nan values using pandas interpolation
+        sample = np.array(pd.DataFrame(sample).interpolate(limit_direction='both'))
         model.fit(sample)
         # sample probabilities for a range of outcomes
         values = np.asarray([value for value in bins])
@@ -1919,23 +1921,6 @@ def FindWPThresh(int_veg, int_nonveg):
             else:
                 peaks.append(bins[prom[0]])
                 
-            # Below led to an infinite loop if both peaks lie below 0
-            """# clip to > 0 to deal with sand peak only
-            clipbins = bins[bins>0]
-            clipprobs = probabilities[bins>0]
-            # find peaks of bimodal KDE using prominence
-            prom, _ = scipy.signal.find_peaks(clipprobs, prominence=0.5)
-            if len(prom) == 0: # for marshland where no peak above NDVI = 0 exists
-                promlimit = 0.5
-                # decrease prominence til peak is found
-                while len(prom) == 0:
-                    prom, _ = scipy.signal.find_peaks(clipprobs, prominence=promlimit)
-                    promlimit -= 0.05 
-                peaks.append(clipbins[prom[0]])
-            else:    
-                # always take first peak over 0 (corresponds to bare land/sand in veg classification)
-                peaks.append(clipbins[prom[0]])"""
-            
             
     # Calculate index value using weighted peaks
     t_ndi = float((0.2*peaks[0]) + (0.8*peaks[1]))
