@@ -739,7 +739,8 @@ def Coreg(refArr, trgArr, georef):
 
     # wp = custom matching window position in (X,Y) in same CRS as reference image
     # ws = custom matching window size in pixels as (X,Y)
-    CR = COREG(refArr, trgArr, q=True)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
+    # max_shift = maximum shift allowed in X or Y direction in pixels (set to 10m S2 or 15m Landsat)
+    CR = COREG(refArr, trgArr, max_shift=1, q=True)#, wp=(,), ws=(,)) # add align_grids=True for resampling/stretching
     try:
         CR.calculate_spatial_shifts()
     except: # RuntimeError for caculated shifts being abnormally large
