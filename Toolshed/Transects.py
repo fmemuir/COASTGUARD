@@ -957,13 +957,16 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     WaveFilePath = os.path.join(WavePath, WaveOutFile)
     
     # Sample waves from CEFAS hindcast
-    WaveHs, WaveDir, NormWaveHs, NormWaveDir, StDevWaveHs, StDevWaveDir = SampleWaves(settings, TransectInterGDF, WaveFilePath)
+    WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp = SampleWaves(settings, TransectInterGDF, WaveFilePath)
     
     # Transform offshore wave values to nearshore using Airy wave transformations
-    NSWaveHs, NSWaveDir = TransformWaves(TransectInterGDF, WaveHs, WaveDir)
+    # Should return as list with n = 
+    NSWaveHs, NSWaveDir, NSWaveTp = Toolbox.TransformWaves(TransectInterGDF, WaveHs, WaveDir)
     
-    TransectInterGDF['WaveHs'] = WaveHs
-    TransectInterGDF['WaveDir'] = WaveDir
+    # Add lists of wave properties for eacch timestamp to full transect GDF
+    TransectInterGDF['WaveHs'] = NSWaveHs
+    TransectInterGDF['WaveDir'] = NSWaveDir
+    TransectInterGDF['WaveTp'] = NSWaveTp
     TransectInterGDF['MnWaveHs'] = NormWaveHs
     TransectInterGDF['MnWaveDir'] = NormWaveDir
     TransectInterGDF['StDWaveHs'] = StDevWaveHs
@@ -1013,8 +1016,9 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         WaveX  = WaveData.variables['longitude'][:]
         WaveY  = WaveData.variables['latitude'][:]
 
-        SigWaveHeight = WaveData.variables['VHM0'][:,:,:]  #total sea Hs
-        MeanWaveDir = WaveData.variables['VMDR'][:,:,:] #Total sea mean dir
+        SigWaveHeight = WaveData.variables['VHM0'][:,:,:]  # Spectral significant wave height (Hs)
+        MeanWaveDir = WaveData.variables['VMDR'][:,:,:] # Mean wave direction from (Dir)
+        PeakWavePer = WaveData.variables['VTPK'][:,:,:] # Wave period at spectral peak (Tp)
         WaveSeconds = WaveData.variables['time'][:]
         
         WaveTime = []
@@ -1026,10 +1030,13 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         
         WaveHs = []
         WaveDir = []
+        WaveTp = []
         NormWaveHs = []
         NormWaveDir = []
+        NormWaveTp = []
         StDevWaveHs = []
         StDevWaveDir = []
+        StDevWaveTp = []
         
         def find(item, lst):
             start = 0
@@ -1043,7 +1050,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
             InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # midpoints of each transect
             
             if InterPnts == []: # if transect intersect is empty i.e. no veg lines intersected
-                TrWaveHs, TrWaveDir, TrNormWaveHs, TrNormWaveDir, TrStDevWaveHs, TrStDevWaveDir = (np.nan for i in range(6))
+                TrWaveHs, TrWaveDir, TrWaveTp, TrNormWaveHs, TrNormWaveDir,TrNormWaveTp, TrStDevWaveHs, TrStDevWaveDir, TrStDevWaveTp = (np.nan for i in range(9))
             
             else:
                 # get index of closest matching grid square of wave data
@@ -1053,17 +1060,20 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                 # per-transect wave data
                 TrWaveHs = []
                 TrWaveDir = []
+                TrWaveTp = []
                 TrNormWaveHs = []
                 TrNormWaveDir = []
+                TrNormWaveTp = []
                 TrStDevWaveHs = []
                 TrStDevWaveDir = []
+                TrStDevWaveTp = []
                 
                 for i in range(len(TransectInterGDF['dates'].iloc[Tr])): # for each date on each Transect
                     DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
     
                     # Interpolate wave data using number of minutes through the hour the satellite image was captured
-                    for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
-                                                 [TrWaveHs, TrWaveDir]):
+                    for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
+                                                 [TrWaveHs, TrWaveDir, TrWaveTp]):
                         # if sat image date falls outside wave data window, assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
@@ -1084,8 +1094,8 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                             WaveDiff = (Wave_2 - Wave_1)
                             WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
     
-                    for WaveProp, WaveSat, Step in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
-                                                       [TrNormWaveHs, TrNormWaveDir], ['Hs','Dir']):
+                    for WaveProp, WaveSat, WaveType in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
+                                                       [TrNormWaveHs, TrNormWaveDir, TrNormWaveTp], ['Hs','Dir','Tp']):
                         # if sat image date falls outside wave data window, assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
@@ -1100,36 +1110,40 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                             elif Time_1-timedelta(days=90,hours=-1) in WaveTime:
                                 Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=-1))
                             
-                            if Step == 'Dir':
+                            if WaveType == 'Dir':
                                 # if dealing with wave dir, use circular mean (to avoid problems with dirs around N i.e. 0deg)
                                 SmoothWaveProp = Toolbox.CircMean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
                             else:
                                 SmoothWaveProp = np.mean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
                             WaveSat.append(SmoothWaveProp)
                         
-                    for WaveProp, WaveSat, Step in zip([SigWaveHeight[:,IDLat, IDLong], MeanWaveDir[:,IDLat, IDLong]], 
-                                                       [TrStDevWaveHs, TrStDevWaveDir], ['Hs','Dir']):
+                    for WaveProp, WaveSat, WaveType in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
+                                                       [TrStDevWaveHs, TrStDevWaveDir, TrStDevWaveTp], ['Hs','Dir', 'Tp']):
                         # if sat image date falls outside wave data window (only updated every 3 months or so), assign nan
                         if WaveTime[-1] < DateTimeSat:
                             WaveSat.append(np.nan)
                         else:
                             # Smooth over previous 3 month time period and get stdev from this range
-                            if Step == 'Dir':
+                            if WaveType == 'Dir':
                                 # if dealing with wave dir, use circular std (to avoid problems with dirs around N i.e. 0deg)
                                 StDevWaveProp = Toolbox.CircStd(WaveProp[Prev3Month:WaveTime.index(Time_1)])
                             else:
                                 StDevWaveProp = np.std(WaveProp[Prev3Month:WaveTime.index(Time_1)])
                             WaveSat.append(StDevWaveProp)
     
-            # append per-transects 
+            # append per-transect lists
             WaveHs.append(TrWaveHs)
             WaveDir.append(TrWaveDir)
+            WaveTp.append(TrWaveTp)
             NormWaveHs.append(TrNormWaveHs)
             NormWaveDir.append(TrNormWaveDir)
+            NormWaveTp.append(TrNormWaveTp)
             StDevWaveHs.append(TrStDevWaveHs)
             StDevWaveDir.append(TrStDevWaveDir)
+            StDevWaveTp.append(TrStDevWaveTp)
 
-    return WaveHs, WaveDir, NormWaveHs, NormWaveDir, StDevWaveHs, StDevWaveDir
+    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp
+
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
     """
