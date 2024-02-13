@@ -961,16 +961,16 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     
     # Transform offshore wave values to nearshore using Airy wave transformations
     # Should return as list with n = 
-    NSWaveHs, NSWaveDir, NSWaveTp = Toolbox.TransformWaves(TransectInterGDF, WaveHs, WaveDir)
+    #NSWaveHs, NSWaveDir, NSWaveTp = Toolbox.TransformWaves(TransectInterGDF, WaveHs, WaveDir)
     
     # Add lists of wave properties for eacch timestamp to full transect GDF
     TransectInterGDF['WaveHs'] = NSWaveHs
     TransectInterGDF['WaveDir'] = NSWaveDir
     TransectInterGDF['WaveTp'] = NSWaveTp
-    TransectInterGDF['MnWaveHs'] = NormWaveHs
-    TransectInterGDF['MnWaveDir'] = NormWaveDir
-    TransectInterGDF['StDWaveHs'] = StDevWaveHs
-    TransectInterGDF['StDWaveDir'] = StDevWaveDir
+    # TransectInterGDF['MnWaveHs'] = NormWaveHs
+    # TransectInterGDF['MnWaveDir'] = NormWaveDir
+    # TransectInterGDF['StDWaveHs'] = StDevWaveHs
+    # TransectInterGDF['StDWaveDir'] = StDevWaveDir
     
     TransectInterShp = TransectInterGDF.copy()
     
