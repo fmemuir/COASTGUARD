@@ -151,6 +151,7 @@ As this tool is built from the original CoastSat toolkit, it is possible to extr
     - northward_velocity.tar.xz
     - ocean_tide.tar.xz
     - ocean_tide_extrapolated.tar.xz
+You'll find these in the AVISO Altimetry database under */auxiliary/tide_model/fes2014_elevations_and_load/*
 4. Decompress the archives (using 7zip or alternatives) and move them into the relevant folders in your local */aviso-fes/data/fes2014* directory (that you cloned in Step 1).
 
 When loading in the tidal data in the driver file, you should **change the tidal files path to wherever you have cloned the FES2014 repo to on your machine.**
