@@ -2467,7 +2467,7 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
         dY = TransectInterGDF['geometry'].iloc[Tr].bounds[3] - TransectInterGDF['geometry'].iloc[Tr].bounds[1]
         shoreAngle = 90 - np.rad2deg(math.atan2(dY, dX))
         
-        for W in range(len(Dir)):    
+        for W in range(len(Dir)): # for each wave condition recorded on each transect intersection
             if Dir[W] > shoreAngle and Dir[W] < shoreAngle+180:
                     Dir_mask[W] = np.nan
     
@@ -2491,7 +2491,7 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
         Nloop = 0    # breaking wave loop counter updates
         
         # Re-initialise shadow zone logic table for each transect
-        for W in range(len(Hs)):    # for each daily wave condition
+        for W in range(len(Hs)):    # for each wave condition recorded on each transect intersection
 
             Hs_maskSh = Hs_mask[W]
             Tp_maskSh = Tp_mask[W]
@@ -2549,9 +2549,9 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
                 # Test if the wave meets breaking conditions
                 if Hs_near > h*0.78:
                     BREAK_WAV = 1
-                    Hs_break[W,Tr] = Hs_near # to record per timeseries AND transect
-                    Dir_break[W,Tr] = Dir_near #  offshore cond.
-                    Tp_break[W,Tr] = Tp_maskSh[W,1] 
+                    Hs_break = Hs_near # to record per timeseries AND transect
+                    Dir_break = Dir_near #  offshore cond.
+                    Tp_break = Tp_maskSh[W,1] 
                     Nloop = Nloop + 1    # breaking wave loop counter updates
                 
                 
@@ -2562,23 +2562,23 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
                 # wave height and transport angle to 0)
                 if h<0:
                     Hs_break[W,Tr] = 0
-                    if (alpha_shore[Tr] > 0) and (alpha_shore[Tr] < 90): # for shoreline angles <90 (perpendicular transformation of -90 leads to -ve values) 
+                    if shoreAngle > 0 and shoreAngle < 90: # for shoreline angles <90 (perpendicular transformation of -90 leads to -ve values) 
                         # need conditionals for Dir orientations too
-                        if Dir_near > alpha_shore[Tr]+270:    # 0-90 + 270 = for waves 270-360
-                            Dir_break[W,Tr] = alpha_shore[Tr] # transport rate = 0 when alpha = +90
-                        elif isnan(Dir_near):  # to catch offshore (NaN) wave directions
+                        if Dir_near > shoreAngle+270:    # 0-90 + 270 = for waves 270-360
+                            Dir_break[W,Tr] = shoreAngle # transport rate = 0 when alpha = +90
+                        elif np.isnan(Dir_near):  # to catch offshore (NaN) wave directions
                             Dir_break[W,Tr] = np.nan
                         else:
-                            Dir_break[W,Tr] = alpha_shore[Tr]+180 # transport rate = 0 when alpha = -90
+                            Dir_break[W,Tr] = shoreAngle+180 # transport rate = 0 when alpha = -90
                         
                     else: # for shoreline angles 90-360
                         # need conditionals for Dir orientations too
-                        if Dir_near > alpha_shore[Tr]-90:     # 90-360 - 90 = for waves 0-270
-                            Dir_break[W,Tr] = alpha_shore[Tr] # transport rate = 0 when alpha = +90
+                        if Dir_near > shoreAngle-90:     # 90-360 - 90 = for waves 0-270
+                            Dir_break[W,Tr] = shoreAngle # transport rate = 0 when alpha = +90
                         elif np.isnan(Dir_near):  # to catch offshore (NaN) wave directions
                             Dir_break[W,Tr] = np.nan
                         else:    # for Dir_near less than alpha_shore-90                      
-                            Dir_break[W,Tr] = alpha_shore[Tr]-180 # transport rate = 0 when alpha = -90
+                            Dir_break[W,Tr] = shoreAngle-180 # transport rate = 0 when alpha = -90
                             if Dir_break[W,Tr] < 0: #added condition for when alpha_shore-90 becomes negative (alpha<135)
                                 Dir_break[W,Tr] = 360 + Dir_break[W,Tr]
  
@@ -2588,8 +2588,8 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
                      
                 # use loop vars to write transformed wave data to structure
                 waves['ID'][Tr] = TransectInterGDF['TransectID'].iloc[Tr]
-                waves['t'][Tr][W,1] = t(W)
-                waves['alpha_shore'] = alpha_shore[Tr]
+                waves['t'][Tr][W,1] = str(TransectInterGDF['dates'].iloc[Tr][W]+' '+TransectInterGDF['times'].iloc[Tr][W])
+                waves['alpha_shore'] = shoreAngle
                 waves['Dir_near'][Tr][W,1] = Dir_near    
                     
             # condition to store both types of waves (near/breaking)
