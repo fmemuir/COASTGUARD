@@ -12,7 +12,7 @@ https://github.com/fmemuir/COASTGUARD/assets/22475417/cb27e704-f361-4f34-b999-dc
 
 
 ## Enhancements
-Various improvements have been made to the toolkit to address more accurate approaches recently reported on, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the methods paper (), but include:
+Various improvements have been made to the toolkit to address more accurate approaches recently reported on, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the methods paper (coming soon), but include:
 
 * The use of geemap to download and process satellite imagery from Google Earth Engine entirely from within the cloud server;
 * Improved transect creation based on the Dynamic Coast project's Coastal Mapping Tools;
@@ -121,7 +121,7 @@ Alternatively, you can customise and run the standard python script [`VedgeSat_D
 ```
 https://github.com/fmemuir/COASTGUARD/assets/22475417/1bd4722b-ece9-4ed9-a9ac-104f71c241d7
 
-There are 7 main steps to setting up the vegetation extraction tool. You can see [this paper]() for a flowchart and more info on the methodology. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
+There are 7 main steps to setting up the vegetation extraction tool. These steps are run from a driver file which takes care of all the user-driven params when setting up a new site. The main steps found in a driver file are:
 
 1. Import relevant packages (including initialising the `earthengine` tools);
 2. Define an area of interest. For the time being, this must be **smaller than 262144 (512 x 512) pixels**, equivalent to 5.12 x 5.12 km for Sentinel and 7.68 x 7.68 km for Landsat;
