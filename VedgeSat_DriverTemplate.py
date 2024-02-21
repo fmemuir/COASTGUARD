@@ -145,6 +145,10 @@ settings['ref_epsg'] = ref_epsg
 # Distance to buffer reference line by (this is in metres)
 settings['max_dist_ref'] = max_dist_ref
 
+#%% Reference Image for Coregistration
+# You can now coregister your satellite images using AROSICS. 
+# If you want to try coregistering your images to improve timeseries accuracy, provide a filepath to a reference RGB image
+settings['reference_coreg_im'] = None # leave as None if no coregistration is to be performed
 
 #%% Vegetation Line Extraction
 """
