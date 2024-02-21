@@ -130,7 +130,8 @@ settings = {
 }
 
 
-#%% Compute Tides from FES2014
+#%% Compute Tides from FES2014 
+# (ONLY RUN IF YOU HAVE pyFES INSTALLED AND WANT TIDAL INFO SAVED)
 tidepath = "/path/to/your/FES2014/files/aviso-fes/data/fes2014"
 daterange = dates
 tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N

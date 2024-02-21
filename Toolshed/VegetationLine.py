@@ -340,7 +340,12 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         
         # Water elevations for each image are grabbed from FES2014 to be able to 
         # filter veg lines by tidal stage (e.g. disregard low tide veg edges)
-        output_waterelev = Toolbox.GetWaterElevs(settings, dates_sat)
+        if os.path.isfile(os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')):
+            output_waterelev = Toolbox.GetWaterElevs(settings, dates_sat)
+        else:
+            print('No tide data exists - skipping GetWaterElevs.\n')
+            output_waterelev = list(np.empty(len(dates_sat)) * np.nan)
+        
         output[satname]['tideelev'] = output_waterelev
         output_latlon[satname]['tideelev'] = output_waterelev
         output_proj[satname]['tideelev'] = output_waterelev
