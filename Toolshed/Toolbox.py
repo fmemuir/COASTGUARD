@@ -17,6 +17,7 @@ import glob
 from osgeo import gdal, osr
 import pandas as pd
 import geopandas as gpd
+import utm
 from shapely import geometry
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
 from shapely.ops import linemerge
@@ -1609,7 +1610,7 @@ def spaced_vertices(referenceLine):
     return newreferenceLine
 
 
-def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
+def AOI(lonmin, lonmax, latmin, latmax, sitename):
     '''
     Creates area of interest bounding box from provided latitudes and longitudes, and
     checks to see if order is correct and size isn't too large for GEE requests.
@@ -1653,10 +1654,9 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
                     [lonmax,latmax],
                     [lonmin, latmax]])
     BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs = {'init':'epsg:4326'})
-    # UK conversion only
-    #BBoxGDF = BBoxGDF.to_crs('epsg:27700')
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
-    BBoxGDF = BBoxGDF.to_crs('epsg:'+str(image_epsg))
+    projstr = FindUTM(latmin, lonmin)
+    BBoxGDF = BBoxGDF.to_crs(crs=projstr)
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
         print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
@@ -1687,7 +1687,7 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename, image_epsg):
     return polygon, point
 
 
-def AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg):
+def AOIfromLine(referenceLinePath, max_dist_ref, sitename):
     """
     Creates area of interest bounding box from provided reference shoreline, and
     checks to see if order is correct and size isn't too large for GEE requests.
@@ -1699,8 +1699,6 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg):
         DESCRIPTION.
     sitename : TYPE
         DESCRIPTION.
-    image_epsg : TYPE
-        DESCRIPTION.
 
     Returns
     -------
@@ -1711,7 +1709,8 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg):
     # Create bounding box from refline (with small buffer) and convert it to a geodataframe
     referenceLineDF = gpd.read_file(referenceLinePath)
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
-    referenceLineDF.to_crs(epsg=image_epsg, inplace=True)
+    projstr = FindUTM(float(referenceLineDF.bounds.miny), float(referenceLineDF.bounds.minx))
+    referenceLineDF.to_crs(crs=projstr, inplace=True)
     
     xmin, xmax, ymin, ymax = [float(referenceLineDF.bounds.minx-max_dist_ref),
                                       float(referenceLineDF.bounds.maxx+max_dist_ref),
@@ -1755,8 +1754,39 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg):
     return polygon, point, lonmin, lonmax, latmin, latmax
 
 
+def FindUTM(lat, lon):
+    """
+    Find UTM zone that a provided lat long pair sit in.
+    FM Feb 2024
+
+    Parameters
+    ----------
+    lat : float
+        Latitude.
+    lon : float
+        Longitude.
+
+    Returns
+    -------
+    projstr : str
+        proj.4 string of UTM zone to be used in coordinate transformations (pyproj).
+
+    """
+    utmNum = utm.from_latlon(lat, lon)[2]
+    if lat < 0:
+        hemi = ' +south '
+    else:
+        hemi = ''
+    projstr = '+proj=utm +zone='+str(utmNum)+hemi+'+ellps=WGS84 +datum=WGS84 +units=m +no_defs'
+    
+    return projstr
+
+
 def GStoArr(shoreline):
     """
+    Shoreline coords to array.
+    FM Aug 2022
+    
     Parameters
     ----------
     shoreline : TYPE
@@ -1764,9 +1794,9 @@ def GStoArr(shoreline):
 
     Returns
     -------
-    None.
+    Array.
     
-    FM Aug 2022
+    
     """
 
     shorelineList = [np.array(line.coords) for line in shoreline.geometry]
@@ -1776,7 +1806,7 @@ def GStoArr(shoreline):
 
 def ArrtoGS(refline,georef):
     """
-    
+    Shoreline array to coords
     FM Sept 2022
 
 
@@ -2052,7 +2082,6 @@ def TZValues(int_veg, int_nonveg):
     
     minval = np.percentile(int_veg,0.5)
     maxval = np.percentile(int_veg,10)
-    # maxval = np.percentile(int_nonveg,98)
     
     return [minval,maxval]
 
