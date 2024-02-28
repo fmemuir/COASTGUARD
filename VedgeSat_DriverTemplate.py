@@ -112,6 +112,8 @@ BasePath = 'Data/' + sitename + '/Veglines'
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
 
+image_epsg = Toolbox.GetImageEPSG(inputs,metadata)
+
 settings = {
     # general parameters:
     'cloud_thresh': cloud_thresh,        # threshold on maximum cloud cover
