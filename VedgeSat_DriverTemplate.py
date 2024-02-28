@@ -25,7 +25,10 @@ ee.Initialize()
 
 #%% EDIT ME: Requirements
 
-# Define desired coordinate projections
+# Define desired coordinate projections. 
+# NOTE: image_epsg should always be in the NORTHERN UTM zone, regardless of whether your location is 
+# in the northern or southern hemisphere. E.g. if your location is New South Wales (UTM Zone 56S), 
+# the image_epsg should be 32656 (which is UTM Zone 56N).
 projection_epsg = 27700 # OSGB 1936
 image_epsg = 32630 # UTM Zone 30N
 
