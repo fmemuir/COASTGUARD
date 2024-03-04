@@ -1525,279 +1525,279 @@ def get_reference_sl(metadata, settings, polygon, dates):
 
     return pts_coords
 
-def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
-    """
-    In development
-    FM Nov 2022
+# def preprocess_cloudfreeyearcomposite(fn, satname, settings, polygon):
+#     """
+#     In development
+#     FM Nov 2022
 
-    Parameters
-    ----------
-    fn : TYPE
-        DESCRIPTION.
-    satname : TYPE
-        DESCRIPTION.
-    settings : TYPE
-        DESCRIPTION.
-    polygon : TYPE
-        DESCRIPTION.
+#     Parameters
+#     ----------
+#     fn : TYPE
+#         DESCRIPTION.
+#     satname : TYPE
+#         DESCRIPTION.
+#     settings : TYPE
+#         DESCRIPTION.
+#     polygon : TYPE
+#         DESCRIPTION.
 
-    Returns
-    -------
-    TYPE
-        DESCRIPTION.
+#     Returns
+#     -------
+#     TYPE
+#         DESCRIPTION.
 
-    """
+#     """
     
-    cloud_mask_issue = settings['cloud_mask_issue']
+#     cloud_mask_issue = settings['cloud_mask_issue']
     
-    point = ee.Geometry.Point(polygon[0][0]) 
+#     point = ee.Geometry.Point(polygon[0][0]) 
     
-    years = settings['year_list']
-    dates = [str(years[fn])+'-01-01',str(years[fn])+'-12-30']
-    #=============================================================================================#
-    # L5 images
-    #=============================================================================================#
-    if satname == 'L5':
+#     years = settings['year_list']
+#     dates = [str(years[fn])+'-01-01',str(years[fn])+'-12-30']
+#     #=============================================================================================#
+#     # L5 images
+#     #=============================================================================================#
+#     if satname == 'L5':
         
-        collection = ee.ImageCollection("LANDSAT/LT05/C01/T1_TOA").filterDate(dates[0], dates[-1]).filterBounds(point).select(['B1','B2','B3','B4','B5','BQA'])
+#         collection = ee.ImageCollection("LANDSAT/LT05/C01/T1_TOA").filterDate(dates[0], dates[-1]).filterBounds(point).select(['B1','B2','B3','B4','B5','BQA'])
     
-        #img =  ee.Algorithms.Landsat.simpleComposite(collection)
-        img = collection.mosaic()
+#         #img =  ee.Algorithms.Landsat.simpleComposite(collection)
+#         img = collection.mosaic()
 
-        #cloud_scoree = img.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
-        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5','BQA'], region=ee.Geometry.Polygon(polygon))
+#         #cloud_scoree = img.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+#         im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5','BQA'], region=ee.Geometry.Polygon(polygon))
         
-        # down-sample to 15 m (half of the original pixel size)
-        nrows = im_ms.shape[0]*2
-        ncols = im_ms.shape[1]*2
+#         # down-sample to 15 m (half of the original pixel size)
+#         nrows = im_ms.shape[0]*2
+#         ncols = im_ms.shape[1]*2
 
-        # create cloud mask
-        im_QA = im_ms[:,:,5]
-        im_ms = im_ms[:,:,:-1]
-        cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
+#         # create cloud mask
+#         im_QA = im_ms[:,:,5]
+#         im_ms = im_ms[:,:,:-1]
+#         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
 
-        # resize the image using bilinear interpolation (order 1)
-        im_ms = transform.resize(im_ms,(nrows, ncols), order=1, preserve_range=True,
-                                 mode='constant')
-        # resize the image using nearest neighbour interpolation (order 0)
-        cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
-                                      mode='constant').astype('bool_')
+#         # resize the image using bilinear interpolation (order 1)
+#         im_ms = transform.resize(im_ms,(nrows, ncols), order=1, preserve_range=True,
+#                                  mode='constant')
+#         # resize the image using nearest neighbour interpolation (order 0)
+#         cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
+#                                       mode='constant').astype('bool_')
 
-        # adjust georeferencing vector to the new image size
-        # scale becomes 15m and the origin is adjusted to the center of new top left pixel
+#         # adjust georeferencing vector to the new image size
+#         # scale becomes 15m and the origin is adjusted to the center of new top left pixel
         
-        x, y = polygon[0][3]
-        epsg = int(Landsat5.getInfo().get('features')[0]['bands'][0]['crs'].lstrip('EPSG:'))
-        inProj = Proj(init='epsg:4326')
-        string= 'epsg:'+str(epsg)
-        outProj = Proj(init=string)
-        eastings,northings = Transf(inProj,outProj,x,y)
+#         x, y = polygon[0][3]
+#         epsg = int(Landsat5.getInfo().get('features')[0]['bands'][0]['crs'].lstrip('EPSG:'))
+#         inProj = Proj(init='epsg:4326')
+#         string= 'epsg:'+str(epsg)
+#         outProj = Proj(init=string)
+#         eastings,northings = Transf(inProj,outProj,x,y)
         
-        georef = [eastings, 22.1, 0, northings, 0, -22.1]
+#         georef = [eastings, 22.1, 0, northings, 0, -22.1]
         
         
-        # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
-        im_nodata = np.zeros(cloud_mask.shape).astype(bool)
-        for k in range(im_ms.shape[2]):
-            im_inf = np.isin(im_ms[:,:,k], -np.inf)
-            im_nan = np.isnan(im_ms[:,:,k])
-            im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
-        # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
-        # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
-        im_zeros = np.ones(cloud_mask.shape).astype(bool)
-        for k in [1,3,4]: # loop through the Green, NIR and SWIR bands
-            im_zeros = np.logical_and(np.isin(im_ms[:,:,k],0), im_zeros)
-        # add zeros to im nodata
-        im_nodata = np.logical_or(im_zeros, im_nodata)   
-        # update cloud mask with all the nodata pixels
-        cloud_mask = np.logical_or(cloud_mask, im_nodata)
+#         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
+#         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
+#         for k in range(im_ms.shape[2]):
+#             im_inf = np.isin(im_ms[:,:,k], -np.inf)
+#             im_nan = np.isnan(im_ms[:,:,k])
+#             im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
+#         # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
+#         # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
+#         im_zeros = np.ones(cloud_mask.shape).astype(bool)
+#         for k in [1,3,4]: # loop through the Green, NIR and SWIR bands
+#             im_zeros = np.logical_and(np.isin(im_ms[:,:,k],0), im_zeros)
+#         # add zeros to im nodata
+#         im_nodata = np.logical_or(im_zeros, im_nodata)   
+#         # update cloud mask with all the nodata pixels
+#         cloud_mask = np.logical_or(cloud_mask, im_nodata)
         
-        # no extra image for Landsat 5 (they are all 30 m bands)
-        im_extra = []
+#         # no extra image for Landsat 5 (they are all 30 m bands)
+#         im_extra = []
 
-    #=============================================================================================#
-    # L8 images
-    #=============================================================================================#
-    elif satname == 'L8':
+#     #=============================================================================================#
+#     # L8 images
+#     #=============================================================================================#
+#     elif satname == 'L8':
 
-        collection = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').filterDate(dates[0], dates[-1]).filterBounds(point).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'])
+#         collection = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').filterDate(dates[0], dates[-1]).filterBounds(point).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','BQA'])
     
-        #img =  ee.Algorithms.Landsat.simpleComposite(collection)
-        img = collection.mosaic()
+#         #img =  ee.Algorithms.Landsat.simpleComposite(collection)
+#         img = collection.mosaic()
         
-        im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5','BQA'], region=ee.Geometry.Polygon(polygon))
+#         im_ms = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B5','BQA'], region=ee.Geometry.Polygon(polygon))
         
         
-        if im_ms is None:
-            return None, None, None, None, None, None, None
+#         if im_ms is None:
+#             return None, None, None, None, None, None, None
         
-        cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
+#         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
-        #Create a mask from the cloud score and combine it with the image mask.
-        mask = cloud_scored.select(['cloud']).lte(20);
+#         #Create a mask from the cloud score and combine it with the image mask.
+#         mask = cloud_scored.select(['cloud']).lte(20);
 
-        #Apply the mask to the image and display the result.
-        masked = img.updateMask(mask);
+#         #Apply the mask to the image and display the result.
+#         masked = img.updateMask(mask);
         
         
-        x, y = polygon[0][3]
-        epsg = int(Landsat8.getInfo().get('features')[0]['bands'][0]['crs'].lstrip('EPSG:'))
-        inProj = Proj(init='epsg:4326')
-        string= 'epsg:'+str(epsg)
-        outProj = Proj(init=string)
-        eastings,northings = Transf(inProj,outProj,x,y)
+#         x, y = polygon[0][3]
+#         epsg = int(Landsat8.getInfo().get('features')[0]['bands'][0]['crs'].lstrip('EPSG:'))
+#         inProj = Proj(init='epsg:4326')
+#         string= 'epsg:'+str(epsg)
+#         outProj = Proj(init=string)
+#         eastings,northings = Transf(inProj,outProj,x,y)
         
-        georef = [eastings, 22.1, 0, northings, 0, -22.1]
+#         georef = [eastings, 22.1, 0, northings, 0, -22.1]
               
-        im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
+#         im_pan = geemap.ee_to_numpy(img, bands = ['B8'], region=ee.Geometry.Polygon(polygon))
         
-        # size of pan image
-        nrows = im_pan.shape[0]
-        ncols = im_pan.shape[1]
+#         # size of pan image
+#         nrows = im_pan.shape[0]
+#         ncols = im_pan.shape[1]
 
-        # create cloud mask
-        im_QA = im_ms[:,:,5]
-        cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
+#         # create cloud mask
+#         im_QA = im_ms[:,:,5]
+#         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
 
-        # resize the image using bilinear interpolation (order 1)
-        im_ms = im_ms[:,:,:5]
-        im_ms = transform.resize(im_ms,(nrows, ncols), order=1, preserve_range=True,
-                                 mode='constant')
-        # resize the image using nearest neighbour interpolation (order 0)
-        cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
-                                      mode='constant').astype('bool_')
-        # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
-        im_nodata = np.zeros(cloud_mask.shape).astype(bool)
-        for k in range(im_ms.shape[2]):
-            im_inf = np.isin(im_ms[:,:,k], -np.inf)
-            im_nan = np.isnan(im_ms[:,:,k])
-            im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
-        # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
-        # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
-        im_zeros = np.ones(cloud_mask.shape).astype(bool)
-        for k in [1,3,4]: # loop through the Green, NIR and SWIR bands
-            im_zeros = np.logical_and(np.isin(im_ms[:,:,k],0), im_zeros)
-        # add zeros to im nodata
-        im_nodata = np.logical_or(im_zeros, im_nodata)   
-        # update cloud mask with all the nodata pixels
-        cloud_mask = np.logical_or(cloud_mask, im_nodata)
+#         # resize the image using bilinear interpolation (order 1)
+#         im_ms = im_ms[:,:,:5]
+#         im_ms = transform.resize(im_ms,(nrows, ncols), order=1, preserve_range=True,
+#                                  mode='constant')
+#         # resize the image using nearest neighbour interpolation (order 0)
+#         cloud_mask = transform.resize(cloud_mask, (nrows, ncols), order=0, preserve_range=True,
+#                                       mode='constant').astype('bool_')
+#         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
+#         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
+#         for k in range(im_ms.shape[2]):
+#             im_inf = np.isin(im_ms[:,:,k], -np.inf)
+#             im_nan = np.isnan(im_ms[:,:,k])
+#             im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
+#         # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
+#         # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
+#         im_zeros = np.ones(cloud_mask.shape).astype(bool)
+#         for k in [1,3,4]: # loop through the Green, NIR and SWIR bands
+#             im_zeros = np.logical_and(np.isin(im_ms[:,:,k],0), im_zeros)
+#         # add zeros to im nodata
+#         im_nodata = np.logical_or(im_zeros, im_nodata)   
+#         # update cloud mask with all the nodata pixels
+#         cloud_mask = np.logical_or(cloud_mask, im_nodata)
         
-        # pansharpen Blue, Green, Red (where there is overlapping with pan band in L8)
-        try:
-            im_ms_ps = pansharpen(im_ms[:,:,[0,1,2]], im_pan, cloud_mask)
-        except: # if pansharpening fails, keep downsampled bands (for long runs)
-            im_ms_ps = im_ms[:,:,[0,1,2]]
-        # add downsampled NIR and SWIR1 bands
-        im_ms_ps = np.append(im_ms_ps, im_ms[:,:,[3,4]], axis=2)
+#         # pansharpen Blue, Green, Red (where there is overlapping with pan band in L8)
+#         try:
+#             im_ms_ps = pansharpen(im_ms[:,:,[0,1,2]], im_pan, cloud_mask)
+#         except: # if pansharpening fails, keep downsampled bands (for long runs)
+#             im_ms_ps = im_ms[:,:,[0,1,2]]
+#         # add downsampled NIR and SWIR1 bands
+#         im_ms_ps = np.append(im_ms_ps, im_ms[:,:,[3,4]], axis=2)
 
-        im_ms = im_ms_ps.copy()
-        # the extra image is the 15m panchromatic band
-        im_extra = im_pan
+#         im_ms = im_ms_ps.copy()
+#         # the extra image is the 15m panchromatic band
+#         im_extra = im_pan
 
-    #=============================================================================================#
-    # S2 images
-    #=============================================================================================#
-    if satname == 'S2':
+#     #=============================================================================================#
+#     # S2 images
+#     #=============================================================================================#
+#     if satname == 'S2':
         
-        collection = ee.ImageCollection("COPERNICUS/S2").filterDate(dates[0], dates[-1]).filterBounds(point)
+#         collection = ee.ImageCollection("COPERNICUS/S2").filterDate(dates[0], dates[-1]).filterBounds(point)
     
-        img =  collection.mosaic()
+#         img =  collection.mosaic()
         
-        georef = Sentinel2.getInfo().get('features')[fn]['bands'][0]['crs_transform']
+#         georef = Sentinel2.getInfo().get('features')[fn]['bands'][0]['crs_transform']
         
-        x, y = polygon[0][3]
-        epsg = int(Sentinel2.getInfo().get('features')[0]['bands'][0]['crs'].lstrip('EPSG:'))
-        inProj = Proj(init='epsg:4326')
-        string= 'epsg:'+str(epsg)
-        outProj = Proj(init=string)
-        eastings,northings = Transf(inProj,outProj,x,y)
+#         x, y = polygon[0][3]
+#         epsg = int(Sentinel2.getInfo().get('features')[0]['bands'][0]['crs'].lstrip('EPSG:'))
+#         inProj = Proj(init='epsg:4326')
+#         string= 'epsg:'+str(epsg)
+#         outProj = Proj(init=string)
+#         eastings,northings = Transf(inProj,outProj,x,y)
         
-        georef = [eastings, 15, 0, northings, 0, -15]
+#         georef = [eastings, 15, 0, northings, 0, -15]
         
-        img = ee.Image(Sentinel2.getInfo().get('features')[fn]['id'])
-        im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
+#         img = ee.Image(Sentinel2.getInfo().get('features')[fn]['id'])
+#         im10 = geemap.ee_to_numpy(img, bands = ['B2','B3','B4','B8'], region=ee.Geometry.Polygon(polygon))
         
-        if im10 is None:
-            return None, None, None, None, None, None, None
+#         if im10 is None:
+#             return None, None, None, None, None, None, None
         
-        # read 10m bands (R,G,B,NIR)
-        """
-        fn10 = fn[0]
-        data = gdal.Open(fn10, gdal.GA_ReadOnly)
-        georef = np.array(data.GetGeoTransform())
-        bands = [data.GetRasterBand(k + 1).ReadAsArray() for k in range(data.RasterCount)]
-        im10 = np.stack(bands, 2)
-        """
-        im10 = im10/10000 # TOA scaled to 10000
+#         # read 10m bands (R,G,B,NIR)
+#         """
+#         fn10 = fn[0]
+#         data = gdal.Open(fn10, gdal.GA_ReadOnly)
+#         georef = np.array(data.GetGeoTransform())
+#         bands = [data.GetRasterBand(k + 1).ReadAsArray() for k in range(data.RasterCount)]
+#         im10 = np.stack(bands, 2)
+#         """
+#         im10 = im10/10000 # TOA scaled to 10000
 
-        # if image contains only zeros (can happen with S2), skip the image
-        if sum(sum(sum(im10))) < 1:
-            im_ms = []
-            georef = []
-            # skip the image by giving it a full cloud_mask
-            cloud_mask = np.ones((im10.shape[0],im10.shape[1])).astype('bool')
-            return im_ms, georef, cloud_mask, [], [], []
+#         # if image contains only zeros (can happen with S2), skip the image
+#         if sum(sum(sum(im10))) < 1:
+#             im_ms = []
+#             georef = []
+#             # skip the image by giving it a full cloud_mask
+#             cloud_mask = np.ones((im10.shape[0],im10.shape[1])).astype('bool')
+#             return im_ms, georef, cloud_mask, [], [], []
         
-        # size of 10m bands
-        nrows = im10.shape[0]
-        ncols = im10.shape[1]
+#         # size of 10m bands
+#         nrows = im10.shape[0]
+#         ncols = im10.shape[1]
 
-        # read 20m band (SWIR1)
-        im20 = geemap.ee_to_numpy(img, bands = ['B11'], region=ee.Geometry.Polygon(polygon))
+#         # read 20m band (SWIR1)
+#         im20 = geemap.ee_to_numpy(img, bands = ['B11'], region=ee.Geometry.Polygon(polygon))
         
-        if im20 is None:
-            return None, None, None, None, None, None, None
+#         if im20 is None:
+#             return None, None, None, None, None, None, None
         
-        im20 = im20[:,:,0]
-        im20 = im20/10000 # TOA scaled to 10000
+#         im20 = im20[:,:,0]
+#         im20 = im20/10000 # TOA scaled to 10000
 
-        # resize the image using bilinear interpolation (order 1)
-        im_swir = transform.resize(im20, (nrows, ncols), order=1, preserve_range=True,
-                                   mode='constant')
-        im_swir = np.expand_dims(im_swir, axis=2)
+#         # resize the image using bilinear interpolation (order 1)
+#         im_swir = transform.resize(im20, (nrows, ncols), order=1, preserve_range=True,
+#                                    mode='constant')
+#         im_swir = np.expand_dims(im_swir, axis=2)
         
-        # append down-sampled SWIR1 band to the other 10m bands
-        im_ms = np.append(im10, im_swir, axis=2)
+#         # append down-sampled SWIR1 band to the other 10m bands
+#         im_ms = np.append(im10, im_swir, axis=2)
         
-        # create cloud mask using 60m QA band (not as good as Landsat cloud cover)
-        im60 = geemap.ee_to_numpy(img, bands = ['QA60'], region=ee.Geometry.Polygon(polygon))
+#         # create cloud mask using 60m QA band (not as good as Landsat cloud cover)
+#         im60 = geemap.ee_to_numpy(img, bands = ['QA60'], region=ee.Geometry.Polygon(polygon))
         
-        if im60 is None:
-            return None, None, None, None, None, None, None
+#         if im60 is None:
+#             return None, None, None, None, None, None, None
         
-        im_QA = im60[:,:,0]
-        cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
-        # resize the cloud mask using nearest neighbour interpolation (order 0)
-        cloud_mask = transform.resize(cloud_mask,(nrows, ncols), order=0, preserve_range=True,
-                                      mode='constant')
+#         im_QA = im60[:,:,0]
+#         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
+#         # resize the cloud mask using nearest neighbour interpolation (order 0)
+#         cloud_mask = transform.resize(cloud_mask,(nrows, ncols), order=0, preserve_range=True,
+#                                       mode='constant')
         
-        if cloud_mask is None:
-            return None, None, None, None, None, None, None
+#         if cloud_mask is None:
+#             return None, None, None, None, None, None, None
         
-        # check if -inf or nan values on any band and create nodata image
-        im_nodata = np.zeros(cloud_mask.shape).astype(bool)
-        for k in range(im_ms.shape[2]):
-            im_inf = np.isin(im_ms[:,:,k], -np.inf)
-            im_nan = np.isnan(im_ms[:,:,k])
-            im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
-        # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
-        # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
-        im_zeros = np.ones(im_nodata.shape).astype(bool)
-        im_zeros = np.logical_and(np.isin(im_ms[:,:,1],0), im_zeros) # Green
-        im_zeros = np.logical_and(np.isin(im_ms[:,:,3],0), im_zeros) # NIR
-        im_20_zeros = transform.resize(np.isin(im20,0),(nrows, ncols), order=0,
-                                       preserve_range=True, mode='constant').astype(bool)
-        im_zeros = np.logical_and(im_20_zeros, im_zeros) # SWIR1
-        # add to im_nodata
-        im_nodata = np.logical_or(im_zeros, im_nodata)
-        # dilate if image was merged as there could be issues at the edges
-        ##if 'merged' in fn10:
-        ##    im_nodata = morphology.dilation(im_nodata,morphology.square(5))
+#         # check if -inf or nan values on any band and create nodata image
+#         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
+#         for k in range(im_ms.shape[2]):
+#             im_inf = np.isin(im_ms[:,:,k], -np.inf)
+#             im_nan = np.isnan(im_ms[:,:,k])
+#             im_nodata = np.logical_or(np.logical_or(im_nodata, im_inf), im_nan)
+#         # check if there are pixels with 0 intensity in the Green, NIR and SWIR bands and add those
+#         # to the cloud mask as otherwise they will cause errors when calculating the NDWI and MNDWI
+#         im_zeros = np.ones(im_nodata.shape).astype(bool)
+#         im_zeros = np.logical_and(np.isin(im_ms[:,:,1],0), im_zeros) # Green
+#         im_zeros = np.logical_and(np.isin(im_ms[:,:,3],0), im_zeros) # NIR
+#         im_20_zeros = transform.resize(np.isin(im20,0),(nrows, ncols), order=0,
+#                                        preserve_range=True, mode='constant').astype(bool)
+#         im_zeros = np.logical_and(im_20_zeros, im_zeros) # SWIR1
+#         # add to im_nodata
+#         im_nodata = np.logical_or(im_zeros, im_nodata)
+#         # dilate if image was merged as there could be issues at the edges
+#         ##if 'merged' in fn10:
+#         ##    im_nodata = morphology.dilation(im_nodata,morphology.square(5))
             
-        # update cloud mask with all the nodata pixels
-        cloud_mask = np.logical_or(cloud_mask, im_nodata)
+#         # update cloud mask with all the nodata pixels
+#         cloud_mask = np.logical_or(cloud_mask, im_nodata)
 
-        # the extra image is the 20m SWIR band
-        im_extra = im20
+#         # the extra image is the 20m SWIR band
+#         im_extra = im20
 
-    return im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata
+#     return im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata
