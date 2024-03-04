@@ -130,61 +130,6 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
 
 
 
-
-def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax, latmin, latmax):
-    
-    # Convert bbox coords back to WGS84
-    BBox = gpd.GeoDataFrame(crs=4326,geometry=[Polygon([[lonmin, latmin],
-                    [lonmax,latmin],
-                    [lonmax,latmax],
-                    [lonmin, latmax]])])
-    BBox.to_crs(epsg=4326, inplace=True)
-    # lonmin, lonmax, latmin, latmax = 
-    
-    # Download wave hindcast for given time frame and location
-    WaveOutFile = GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
-    
-    WavePath = os.path.join(settings['inputs']['filepath'],'tides') 
-    WaveFilePath = os.path.join(WavePath, WaveOutFile)
-    
-    # Sample waves from CMEMS hindcast
-    WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp = SampleWaves(settings, TransectInterGDF, WaveFilePath)
-    
-    TransectInterGDF['WaveHs'] = WaveHs
-    TransectInterGDF['WaveDir'] = WaveDir
-    TransectInterGDF['WaveTp'] = WaveTp
-    
-    # Calculate wave climate indicators per transect over timeframe of provided date range
-    WaveDiffusivity, WaveInstability = WaveClimate(TransectInterGDF)
-    
-    TransectInterShp = TransectInterGDF.copy()
-    
-    # reformat fields with lists to strings
-    KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
-    for Key in KeyName:
-        # round any floating points numbers before export
-        realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
-            
-        if type(TransectInterShp[Key][realInd]) == list: # for lists of intersected values
-            if type(TransectInterShp[Key][realInd][0]) == np.float64:  
-                for Tr in range(len(TransectInterShp[Key])):
-                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
-        else: # for singular values
-            if type(TransectInterShp[Key][realInd]) == np.float64: 
-                for Tr in range(len(TransectInterShp[Key])):
-                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
-        
-        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
-                    
-    # Save as shapefile of intersected transects
-    TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected_Waves.shp'))
-        
-    
-    return TransectInterGDF
-
-
-
-
 def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     """
     Function to extract wave information from Copernicus NWS data

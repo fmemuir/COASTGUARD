@@ -23,8 +23,10 @@ from sklearn.linear_model import LinearRegression
 from pylab import ginput
 import rasterio as rio
 from rasterio.features import shapes
+from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
 
-from Toolshed import Toolbox
+
+from Toolshed import Toolbox, Waves
 from Toolshed.Coast import *
 
 
@@ -725,7 +727,27 @@ def CalculateChanges(TransectInterGDF):
 
 
 def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
-    
+    """
+    Intersections between coastal indicator lines and veg Transition Zone rasters.
+    FM June 2023
+
+    Parameters
+    ----------
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge extraction.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    VeglinesGDF : GeoDataFrame
+        GoeDataFrame representing shapefile of vegetation edge lines.
+    BasePath : str
+        Filepath to where veg edge and transect shapefiles sit.
+
+    Returns
+    -------
+    TransectInterGDF : GeoDataFrame
+        Updated GeoDataFrame with new info attached to each transect.
+
+    """
     
     print('Intersecting transects with transition zones... ')
     # Initialise empty field that matches dimensions of each intersection
@@ -840,6 +862,29 @@ def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
 
 
 def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=None):
+    """
+    Intersections between coastal indicator lines and topographic slope raster.
+    FM June 2023
+
+    Parameters
+    ----------
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge extraction.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    VeglinesGDF : GeoDataFrame
+        GoeDataFrame representing shapefile of vegetation edge lines.
+     BasePath : str
+         Filepath to where veg edge and transect shapefiles sit.
+    DTMfile : str, optional
+        Filepath to slope raster of choice. The default is None.
+
+    Returns
+    -------
+    TransectInterGDF : GeoDataFrame
+        Updated GeoDataFrame with new info attached to each transect.
+
+    """
     
     if DTMfile is None:
         print('No DTM file provided.')
@@ -936,6 +981,83 @@ def SlopeIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath, DTMfile=Non
             
         return TransectInterGDF    
             
+
+
+def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax, latmin, latmax):
+    """
+    Intersections between coastal indicator lines and wave hindcast data from 
+    Copernicus Marine Service.
+    FM June 2023
+
+    Parameters
+    ----------
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge extraction.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    BasePath : str
+        Filepath to where veg edge and transect shapefiles sit.
+    output : dict
+        Dictionary of extracted veg edges and associated info with each.
+    lonmin, lonmax, latmin, latmax : float
+        Longitudes and latitudes of area of interest bounding box
+
+    Returns
+    -------
+    TransectInterGDF : GeoDataFrame
+        Updated GeoDataFrame with new info attached to each transect.
+
+    """
+    
+    # Convert bbox coords back to WGS84
+    BBox = gpd.GeoDataFrame(crs=4326,geometry=[Polygon([[lonmin, latmin],
+                    [lonmax,latmin],
+                    [lonmax,latmax],
+                    [lonmin, latmax]])])
+    BBox.to_crs(epsg=4326, inplace=True)
+    # lonmin, lonmax, latmin, latmax = 
+    
+    # Download wave hindcast for given time frame and location
+    WaveOutFile = Waves.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
+    
+    WavePath = os.path.join(settings['inputs']['filepath'],'tides') 
+    WaveFilePath = os.path.join(WavePath, WaveOutFile)
+    
+    # Sample waves from CMEMS hindcast
+    WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp = Waves.SampleWaves(settings, TransectInterGDF, WaveFilePath)
+    
+    TransectInterGDF['WaveHs'] = WaveHs
+    TransectInterGDF['WaveDir'] = WaveDir
+    TransectInterGDF['WaveTp'] = WaveTp
+    
+    # Calculate wave climate indicators per transect over timeframe of provided date range
+    WaveDiffusivity, WaveInstability = Waves.WaveClimate(TransectInterGDF)
+    
+    TransectInterShp = TransectInterGDF.copy()
+    
+    # reformat fields with lists to strings
+    KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
+    for Key in KeyName:
+        # round any floating points numbers before export
+        realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
+            
+        if type(TransectInterShp[Key][realInd]) == list: # for lists of intersected values
+            if type(TransectInterShp[Key][realInd][0]) == np.float64:  
+                for Tr in range(len(TransectInterShp[Key])):
+                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
+        else: # for singular values
+            if type(TransectInterShp[Key][realInd]) == np.float64: 
+                for Tr in range(len(TransectInterShp[Key])):
+                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
+        
+        TransectInterShp[Key] = TransectInterShp[Key].astype(str)
+                    
+    # Save as shapefile of intersected transects
+    TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected_Waves.shp'))
+        
+    
+    return TransectInterGDF
+
 
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):
