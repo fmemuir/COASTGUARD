@@ -319,8 +319,12 @@ def WaveClimate(TransectInterGDF):
             Alpha = TransectInterGDF.iloc[Tr]['WaveDir'][i] - ShoreAngle
         
         Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (math.cos(Alpha)**(1/5) * ((6/5) * math.sin(Alpha)**2 - math.cos(Alpha)**2)))
-        
-    WaveDiffusivity = np.sum(Mu)
+    
+    # Net diffusivity (Mu_net)
+    WaveDiffusivity = np.sum(Mu * dt) / np.sum(dt)
+    
+    # Dimensionless instability index (Gamma)
+    WaveInstability = np.sum(Mu * dt) / np.sum(abs(Mu) * dt)
     
     return WaveDiffusivity, WaveInstability
 
