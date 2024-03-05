@@ -303,20 +303,28 @@ def WaveClimate(TransectInterGDF):
     
     # for each transect in run
     for Tr in range(len(TransectInterGDF)):
+        # Set constant value for sig wave heights at 10m closure depth
+        K2 = 0.15
+        D = 10
+        
         # Get angle of shore from perpendicular transect angle
         # water on right hand side (coords[0] = onshore, coords[1] = offshore)
         x_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][0]
         y_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][1]
         x_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][0]
         y_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][1]
-
-        ShoreAngle = 90 - np.rad2deg(math.atan2(y_off - y_on, x_off - x_on))
+        # Translated to measure clockwise from N (same as waves)
+        ShoreAngle = 360 - np.rad2deg(math.atan2(y_off - y_on, x_off - x_on))
+        if ShoreAngle > 360:
+            ShoreAngle = ShoreAngle - 360
         
         # Initialise per-wave diffusivity
         Mu = []
         # for each wave data point
         for i in range(len(TransectInterGDF.iloc[Tr]['WaveDir'])):
             Alpha = TransectInterGDF.iloc[Tr]['WaveDir'][i] - ShoreAngle
+            T = TransectInterGDF.iloc[Tr]['WaveTp'][i]
+            H0 = TransectInterGDF.iloc[Tr]['WaveHs'][i]
         
         Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (math.cos(Alpha)**(1/5) * ((6/5) * math.sin(Alpha)**2 - math.cos(Alpha)**2)))
     
