@@ -315,7 +315,8 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     K2 = 0.15
     D = 10
     
-
+    TimeStep = np.mean(np.diff(WaveTime)).seconds    
+    
     # Initialise per-wave diffusivity
     Mu = []
     # for each wave data point
@@ -333,10 +334,10 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (abs(math.cos(Alpha))**(1/5) * ((6/5) * abs(math.sin(Alpha))**2 - abs(math.cos(Alpha))**2)))
 
     # Net diffusivity (Mu_net)
-    WaveDiffusivity = np.sum(Mu * dt) / np.sum(dt)
+    WaveDiffusivity = np.sum(Mu * TimeStep) / np.sum(TimeStep)
     
     # Dimensionless instability index (Gamma)
-    WaveInstability = np.sum(Mu * dt) / np.sum(abs(Mu) * dt)
+    WaveInstability = np.sum(Mu * TimeStep) / np.sum(abs(Mu) * TimeStep)
     
     return WaveDiffusivity, WaveInstability
 
