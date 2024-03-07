@@ -322,11 +322,17 @@ def WaveClimate(TransectInterGDF):
         Mu = []
         # for each wave data point
         for i in range(len(TransectInterGDF.iloc[Tr]['WaveDir'])):
-            Alpha = TransectInterGDF.iloc[Tr]['WaveDir'][i] - ShoreAngle
+            # Get smallest angle measured from clockwise and ignore shadowed waves
+            Alpha = ((ShoreAngle - TransectInterGDF.iloc[Tr]['WaveDir'][i]) + 180) % 360-180
+            if Alpha > 0:
+                # Wave shadowed = no wave energy = no diffusion effects
+                H0 = 0
+            else:
+                H0 = TransectInterGDF.iloc[Tr]['WaveHs'][i]
             T = TransectInterGDF.iloc[Tr]['WaveTp'][i]
-            H0 = TransectInterGDF.iloc[Tr]['WaveHs'][i]
-        
-        Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (math.cos(Alpha)**(1/5) * ((6/5) * math.sin(Alpha)**2 - math.cos(Alpha)**2)))
+            
+        # Wave diffusivity (+ve = smoothing, -ve = growth)
+        Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (abs(math.cos(Alpha))**(1/5) * ((6/5) * abs(math.sin(Alpha))**2 - abs(math.cos(Alpha))**2)))
     
     # Net diffusivity (Mu_net)
     WaveDiffusivity = np.sum(Mu * dt) / np.sum(dt)
