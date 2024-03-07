@@ -156,7 +156,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
             WaveTime.append(datetime.strptime(datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'),'%Y-%m-%d %H:%M:%S'))
         
         # Calculate time step used for interpolating data between
-        TimeStep = (WaveTime[1]-WaveTime[0]).total_seconds()/(60*60)
+        TimeStep = (WaveTime[1]-WaveTime[0]).total_seconds()/(60*60)    
         
         WaveHs = []
         WaveDir = []
@@ -177,16 +177,23 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         for Tr in range(len(TransectInterGDF)):
             print('\r %0.3f %% transects processed' % ( (Tr/len(TransectInterGDF))*100 ), end='')
 
-            InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # midpoints of each transect
+            MidPnt = TransectInterGDF.centroid.iloc[Tr].coords[0] # midpoint of each transect
             
-            if InterPnts == []: # if transect intersect is empty i.e. no veg lines intersected
+            # get index of closest matching grid square of wave data
+            IDLat = (np.abs(WaveY - MidPnt[1])).argmin() 
+            IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
+            
+            ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
+            
+            # Calculate wave climate indicators per transect over timeframe of provided date range
+            WaveDiffusivity, WaveInstability = WaveClimate(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
+            
+            InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # line intersections on each transect
+            # if transect intersect is empty i.e. no veg lines intersected, can't grab matching waves per sat image
+            if InterPnts == []: 
                 TrWaveHs, TrWaveDir, TrWaveTp, TrNormWaveHs, TrNormWaveDir,TrNormWaveTp, TrStDevWaveHs, TrStDevWaveDir, TrStDevWaveTp = (np.nan for i in range(9))
             
-            else:
-                # get index of closest matching grid square of wave data
-                IDLat = (np.abs(WaveY - InterPnts[0].y)).argmin() 
-                IDLong = (np.abs(WaveX - InterPnts[0].x)).argmin()
-                        
+            else:                       
                 # per-transect wave data
                 TrWaveHs = []
                 TrWaveDir = []
@@ -197,7 +204,8 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                 TrStDevWaveHs = []
                 TrStDevWaveDir = []
                 TrStDevWaveTp = []
-                
+                        
+
                 for i in range(len(TransectInterGDF['dates'].iloc[Tr])): # for each date on each Transect
                     DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
     
@@ -275,7 +283,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp
 
 
-def WaveClimate(TransectInterGDF):
+def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     """
     Calculate indicators of wave climate per transect, following equations of
     Ashton & Murray (2006). 
@@ -302,38 +310,28 @@ def WaveClimate(TransectInterGDF):
     """
     
     # for each transect in run
-    for Tr in range(len(TransectInterGDF)):
-        # Set constant value for sig wave heights at 10m closure depth
-        K2 = 0.15
-        D = 10
-        
-        # Get angle of shore from perpendicular transect angle
-        # water on right hand side (coords[0] = onshore, coords[1] = offshore)
-        x_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][0]
-        y_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][1]
-        x_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][0]
-        y_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][1]
-        # Translated to measure clockwise from N (same as waves)
-        ShoreAngle = 360 - np.rad2deg(math.atan2(y_off - y_on, x_off - x_on))
-        if ShoreAngle > 360:
-            ShoreAngle = ShoreAngle - 360
-        
-        # Initialise per-wave diffusivity
-        Mu = []
-        # for each wave data point
-        for i in range(len(TransectInterGDF.iloc[Tr]['WaveDir'])):
-            # Get smallest angle measured from clockwise and ignore shadowed waves
-            Alpha = ((ShoreAngle - TransectInterGDF.iloc[Tr]['WaveDir'][i]) + 180) % 360-180
-            if Alpha > 0:
-                # Wave shadowed = no wave energy = no diffusion effects
-                H0 = 0
-            else:
-                H0 = TransectInterGDF.iloc[Tr]['WaveHs'][i]
-            T = TransectInterGDF.iloc[Tr]['WaveTp'][i]
-            
-        # Wave diffusivity (+ve = smoothing, -ve = growth)
-        Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (abs(math.cos(Alpha))**(1/5) * ((6/5) * abs(math.sin(Alpha))**2 - abs(math.cos(Alpha))**2)))
+    # for Tr in range(len(TransectInterGDF)):
+    # Set constant value for sig wave heights at 10m closure depth
+    K2 = 0.15
+    D = 10
     
+
+    # Initialise per-wave diffusivity
+    Mu = []
+    # for each wave data point
+    for i in range(len(WaveDir)):
+        # Get smallest angle measured from clockwise and ignore shadowed waves
+        Alpha = ((ShoreAngle - WaveDir[i]) + 180) % 360-180
+        if Alpha > 0:
+            # Wave shadowed = no wave energy = no diffusion effects
+            H0 = 0
+        else:
+            H0 = WaveHs[i]
+        T = WaveTp[i]
+        
+    # Wave diffusivity (+ve = smoothing, -ve = growth)
+    Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (abs(math.cos(Alpha))**(1/5) * ((6/5) * abs(math.sin(Alpha))**2 - abs(math.cos(Alpha))**2)))
+
     # Net diffusivity (Mu_net)
     WaveDiffusivity = np.sum(Mu * dt) / np.sum(dt)
     
@@ -342,6 +340,20 @@ def WaveClimate(TransectInterGDF):
     
     return WaveDiffusivity, WaveInstability
 
+
+def CalcShoreAngle(TransectInterGDF, Tr):
+    
+    x_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][0]
+    y_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][1]
+    x_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][0]
+    y_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][1]
+    
+    # Translated to measure clockwise from N (same as waves)
+    ShoreAngle = 360 - np.rad2deg(math.atan2(y_off - y_on, x_off - x_on))
+    if ShoreAngle > 360:
+        ShoreAngle = ShoreAngle - 360
+
+    return ShoreAngle
 
 
 def TransformWaves(TransectInterGDF, Hs, Dir, Tp):

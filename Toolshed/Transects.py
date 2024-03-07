@@ -1030,8 +1030,6 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     TransectInterGDF['WaveDir'] = WaveDir
     TransectInterGDF['WaveTp'] = WaveTp
     
-    # Calculate wave climate indicators per transect over timeframe of provided date range
-    WaveDiffusivity, WaveInstability = Waves.WaveClimate(TransectInterGDF)
     
     TransectInterShp = TransectInterGDF.copy()
     
