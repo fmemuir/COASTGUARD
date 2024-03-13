@@ -331,7 +331,13 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
         T = WaveTp[i]
         
     # Wave diffusivity (+ve = smoothing, -ve = growth)
-    Mu.append((K2/D) * T**(1/5) * H0**(12/5) * (abs(math.cos(Alpha))**(1/5) * ((6/5) * abs(math.sin(Alpha))**2 - abs(math.cos(Alpha))**2)))
+    Term1 = (K2/D)# K2/D
+    Term2 = T**(1/5) # T^1.5
+    Term3 = H0**(12/5) # H0^12/5
+    Term4 = abs(math.cos(Alpha))**(1/5)*(math.cos(Alpha)/abs(math.cos(Alpha))) # cos^1/5(Alpha) [need to maintain sign]
+    Term5 = (6/5) * math.sin(Alpha)**2 # (6/5)sin^2(Alpha)
+    Term6 = math.cos(Alpha)**2 # cos^2(Alpha)
+    Mu.append( Term1 * Term2 * Term3 * (Term4 * (Term5 - Term6)) )
 
     # Net diffusivity (Mu_net)
     WaveDiffusivity = np.sum(Mu * TimeStep) / np.sum(TimeStep)
