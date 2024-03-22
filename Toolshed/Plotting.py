@@ -6,6 +6,7 @@ Created on Thu Apr 20 16:51:37 2023
 @author: fmuir
 """
 import os
+import glob
 import numpy as np
 import warnings
 from datetime import datetime, timedelta
@@ -2731,3 +2732,26 @@ def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
     
     plt.show()
     
+    
+def FullWaveHsTimeseries(sitename, PlotDates=None):
+    
+    # Path to Copernicus wave file 
+    WavePath = os.path.join(os.getcwd(), 'Data', 'tides')
+    WaveFile = glob.glob(WavePath+'/*'+sitename+'*.nc')
+    
+    if PlotDates is None:
+        # If no plot start and end dates provided, plot whole timeseries from .nc file
+        PlotDates = [WaveFile[0][-30:-20], WaveFile[0][-19:-9]] 
+
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    
+    figname = os.path.join(outfilepath,sitename + '_SatWaveDir_'+PlotDates+'.png')
+    
+    plt.tight_layout()
+
+    plt.savefig(figname, bbox_inches='tight')
+    print('Plot saved under '+figname)
+    
+    plt.show()
