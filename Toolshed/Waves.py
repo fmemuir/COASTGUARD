@@ -280,7 +280,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
             StDevWaveDir.append(TrStDevWaveDir)
             StDevWaveTp.append(TrStDevWaveTp)
 
-    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp
+    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveInstability
 
 
 def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):

@@ -355,6 +355,10 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     output_latlon = Toolbox.merge_output(output_latlon)
     output_proj = Toolbox.merge_output(output_proj)
     
+    
+    # print statistics of run
+    
+    
     # save outputput structure as output.pkl
     print('saving output pickle files ...')
     filepath = os.path.join(filepath_data, sitename)

@@ -1024,7 +1024,7 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     WaveFilePath = os.path.join(WavePath, WaveOutFile)
     
     # Sample waves from CMEMS hindcast
-    WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp = Waves.SampleWaves(settings, TransectInterGDF, WaveFilePath)
+    WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveInstability = Waves.SampleWaves(settings, TransectInterGDF, WaveFilePath)
     
     TransectInterGDF['WaveHs'] = WaveHs
     TransectInterGDF['WaveDir'] = WaveDir
