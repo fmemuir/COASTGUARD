@@ -38,7 +38,7 @@ from statsmodels.tsa.seasonal import seasonal_decompose
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
 
-from Toolshed import Toolbox
+from Toolshed import Toolbox, Waves
 
 # SCALING:
 # Journal 2-column width: 224pt or 3.11in
@@ -2737,11 +2737,15 @@ def FullWaveHsTimeseries(sitename, PlotDates=None):
     
     # Path to Copernicus wave file 
     WavePath = os.path.join(os.getcwd(), 'Data', 'tides')
-    WaveFile = glob.glob(WavePath+'/*'+sitename+'*.nc')
+    WaveFilePath = glob.glob(WavePath+'/*'+sitename+'*.nc')
     
     if PlotDates is None:
         # If no plot start and end dates provided, plot whole timeseries from .nc file
-        PlotDates = [WaveFile[0][-30:-20], WaveFile[0][-19:-9]] 
+        PlotDates = [WaveFilePath[0][-30:-20], WaveFilePath[0][-19:-9]] 
+    
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = Waves.ReadWaveFile(WaveFilePath)
+
+
 
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
