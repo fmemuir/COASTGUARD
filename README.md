@@ -1,12 +1,31 @@
 # COASTGUARD
 
-COASTGUARD ($\textcolor{#00B0B7}{\textsf{C}}$ oastal $\textcolor{#00B0B7}{\textsf{O}}$ bservation + $\textcolor{#00B0B7}{\textsf{A}}$ nalysis using $\textcolor{#00B0B7}{\textsf{S}}$ atellite-derived $\textcolor{#00B0B7}{\textsf{T}}$ imeseries, $\textcolor{#00B0B7}{\textsf{G}}$ enerated $\textcolor{#00B0B7}{\textsf{U}}$ sing $\textcolor{#00B0B7}{\textsf{A}}$ I + $\textcolor{#00B0B7}{\textsf{R}}$ eal-time $\textcolor{#00B0B7}{\textsf{D}}$ ata) is a Python toolkit for coastal monitoring and modelling using machine learning approaches. 
+COASTGUARD ($\textcolor{#00B0B7}{\textsf{C}}$ oastal $\textcolor{#00B0B7}{\textsf{O}}$ bservation + $\textcolor{#00B0B7}{\textsf{A}}$ nalysis using $\textcolor{#00B0B7}{\textsf{S}}$ atellite-derived $\textcolor{#00B0B7}{\textsf{T}}$ imeseries, $\textcolor{#00B0B7}{\textsf{G}}$ enerated $\textcolor{#00B0B7}{\textsf{U}}$ sing $\textcolor{#00B0B7}{\textsf{A}}$ I + $\textcolor{#00B0B7}{\textsf{R}}$ eal-time $\textcolor{#00B0B7}{\textsf{D}}$ ata) is a Python toolkit for coastal monitoring and modelling using machine learning approaches. Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
+
+
+## :warning: PATCH NOTES :wrench:
+- **January 2024**: Google have recently updated their authentication proces for using Earth Engine. You may be prompted to create an Earth Engine cloud project before you can generate a token for using Earth Engine within notebook environments. **Just call it something related like ee-coastguard.**
+- **21 February 2024**: Recent updates have been made to incorporate the AROSICS package into the COASTGUARD toolkit, to coregister satellite images after obtaining their metadata (and georeferencing info) from GEE. Implementing this led to knock-on changes that were made (namely a big update to `geemap`). See [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/10) for more info. **This requires the `arosics` package and an update to the `geemap` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
+```
+conda activate coastguard
+conda update geemap
+conda install arosics
+```
+- **28 February 2024**: Second update to the code in response to the same issue; location mismatches were found in the coastal buffer vs. satellite images, but only for Landsat imagery (see [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/10) for more info). The reason is Landsat images are always stored in projection system UTM North (even if in the southern hemisphere), to avoid issues with images falling across the equator. A function to find correct UTM codes for a user's AOI has been included in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/Toolbox.py). **This requires the `utm` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
+```
+conda activate coastguard
+conda install utm
+```
+- **25 March 2024**: In response to the Copernicus Marine Service November 2023 updates, the wave data download functions have been overhauled ([more info here](https://marine.copernicus.eu/news/unveiling-exciting-updates-copernicus-marine-service-november-2023-release)). Use of Motu for downloading data has been discontinued, the in-house Copernicus client is now being used instead (which is only working via `pip` right now). **This requires the `copernicusmarine` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
+```
+conda activate coastguard
+pip install copernicusmarine
+```
 
 
 ## Description and Scope
-The goal of this toolkit is to have a fully operational framework for predicting coastal change, using machine learning techniques that are trained with satellite observations. We have a plethora of satellite imagery being generated every day to be used freely in a number of automated, API-based ways. These datasets are therefore well-suited to machine learning approaches which require a lot of data to train sufficiently. With just one satellite image, multiple indicators of coastal change can be automatically extracted such as wave breaking zones, wet-dry boundaries, high water marks and vegetation edges. These automatically extracted indicators can then be fed into a machine learning network which makes future predictions based on the past changes and relationships between these indicators. The result is an automated, early warning system for coastal erosion at a potentially global scale.
+The goal of this toolkit is to have a fully operational framework for predicting coastal change, using machine learning techniques that are trained with satellite observations. With just one satellite image, multiple indicators of coastal change can be automatically extracted such as wave breaking zones, wet-dry boundaries, high water marks and vegetation edges. These automatically extracted indicators can then be fed into a machine learning network which makes future predictions based on the past changes and relationships between these indicators. The result is an automated, early warning system for coastal erosion at a potentially global scale.
 
-Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
 
 https://github.com/fmemuir/COASTGUARD/assets/22475417/cb27e704-f361-4f34-b999-dcd5c990816c
 
@@ -26,7 +45,7 @@ Various improvements have been made to the toolkit to address more accurate appr
 
 ### **INSTALL QUICK VERSION**
 1. Download repo: `$ git clone https://github.com/fmemuir/COASTGUARD.git`
-2. Create conda environment: `conda env create -f coastguard_environment.yml`
+2. Create conda environment: `conda env create -f coastguard_env.yml`
 3. Activate env: `conda activate coastguard`
 4. Authenticate GEE: `earthengine authenticate`
 
@@ -40,6 +59,8 @@ git clone https://github.com/fmemuir/COASTGUARD.git
 ```
 from a command line (if you have git command line tools installed).
 
+If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!
+
 ### 1.2 Create a conda enviroment
 
 To run the toolbox you first need to install the required Python packages in an environment. If you don't already have it, **Anaconda** can be downloaded freely [here](https://www.anaconda.com/download/).
@@ -48,34 +69,24 @@ Once you have Anaconda installed on your PC:
 - Windows: open the Anaconda Prompt (not Powershell)
 - Mac and Linux: open a terminal window
 
-and navigate to the folder with the repository files. If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!
+and navigate to the folder with the repository files using `cd`. 
 
-Navigate to the COASTGUARD repository folder and then create a new `conda` environment named `coastguard` with all the required packages by entering this command (make sure you're in the repo folder!):
+Navigate to the COASTGUARD repository folder (`cd COASTGUARD`) and then create a new `conda` environment named `coastguard` with all the required packages by entering this command (make sure you're in the repo folder!):
 ```
-cd COASTGUARD
+
 
 conda update -n base conda
 
-conda create --name coastguard python=3.10
+conda env create --file coastguard_env.yml 
 ```
-Note: the Python version is currently dependent on `pyfes`, see these issues [here](https://github.com/CNES/aviso-fes/issues/19) for details.
+Note: the Python version listed in the .yml file is a dependent of the `pyfes` package (which is needed for tidal corrections of waterlines), see these issues [here](https://github.com/CNES/aviso-fes/issues/19) for details.
 
-#### OPTIONAL: Install pyFES for FES2014 tidal corrections
-If you would like to call the original CoastSat functions to get cross-shore shoreline timeseries, there are some tidal correction shortcuts you can now run using the [FES2014] tide model. The [tidal corrections](https://www.sciencedirect.com/science/article/pii/S1364815219300490#sectitle0065) are performed using a calculation based on shoreface slope, to correct cross-shore waterline positions (that will be biased by the tidal height at the time an image was captured) to a standard elevation. You don't need this for the VedgeSat vegetation routines, ONLY the waterline extraction routines. But if you do want them, you must run these steps **FIRST** before installing the other packages:
+Then run this command to install the remaining packages:
 ```
-conda activate coastguard
-
-conda update --all -c conda-forge
-
-conda install pyfes -c fbriol
-```
-You can then continue with installing the other packages (a list of which can be found in [coastguard_environment.yml](https://github.com/fmemuir/COASTGUARD/blob/master/coastguard_environment.yml) in the repo):
-```
-conda install -c conda-forge earthengine-api pandas=2.0.3 geopandas spyder=5.5.0 geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook motuclient netcdf4
+conda install -c conda-forge earthengine-api pandas=2.0.3 geopandas spyder=5.5.0 geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook netcdf4 arosics utm
 ```
 
-
-Please note that solving and building the environment can take some time (minutes to hours depending on the the nature of your base environment). If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
+Please note that solving and building the environment can take some time (minutes to hours *depending on the the nature of your base environment*). If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
 ```
 conda update -n base conda
 
@@ -103,9 +114,6 @@ earthengine authenticate
 ```
 
 A web browser will open; log in with the GMail account you used to sign up to GEE. The authenticator should then redirect back to your terminal window. If it doesn't, copy+paste the authorization code into the terminal.
-
-**January 2024: You may be prompted to create an Earth Engine cloud project before you can generate a token for using Earth Engine within notebook environments. Just call it something memorable like ee-coastguard.**
- 
 
 
 ## Getting Started
