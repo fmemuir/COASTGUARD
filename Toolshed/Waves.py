@@ -6,7 +6,6 @@ Freya Muir  - University of Glasgow
 """
 
 import os
-import subprocess
 import math
 from datetime import datetime, timedelta
 
@@ -48,16 +47,13 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     print('Downloading wave data from CMEMS ...')   
     WavePath = os.path.join(settings['inputs']['filepath'],'tides')   
     
-    # DateMin = settings['inputs']['dates'][0]
-    # DateMax = settings['inputs']['dates'][1]
-    
     # Buffer dates from output by 3 months
     DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=90), '%Y-%m-%d %H:%M:%S')
     DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d'), '%Y-%m-%d %H:%M:%S')
     
     # NetCDF file will be a set of rasters at different times with different wave params
     # params get pulled out further down after downloading
-    WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
+    WaveOutFile = settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
     # if file already exists, just return filepath to existing file
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
@@ -65,19 +61,10 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
         return WaveOutFile
     
     else:
-
-        
-        # User =  input('CMEMS username: ')
-        # Pwd = input('CMEMS password: ')
-        
-        # # previously '--service-id NWSHELF_REANALYSIS_WAV_004_015-TDS --product-id MetO-NWS-WAV-RAN'
-        # motuCommand = ('motuclient --motu http://my.cmems-du.eu/motu-web/Motu --service-id GLOBAL_MULTIYEAR_WAV_001_032 --product-id MetO-NWS-WAV-RAN '
-        #                '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
-        #                '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
-        #                '--variable VHM0  --variable VMDR --variable VTPK '
-        #                '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
-        
-        # Toolbox.MotuDownload(motuCommand)        
+        CMScmd = {'DataID':'GLOBAL_MULTIYEAR_WAV_001_032',
+                  'lonmin':lonmin, 'lonmax':lonmax, 'latmin':latmin, 'latmax':latmax, 
+                  'WavePath':WavePath,'WaveOutFile':WaveOutFile}
+        Toolbox.CMSDownload(CMScmd)        
         
         return WaveOutFile    
 
@@ -122,16 +109,8 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
         return WaveOutFile
     
     else:
-        User =  input('CMEMS username: ')
-        Pwd = input('CMEMS password: ')
         
-        motuCommand = ('motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
-                       '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
-                       '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
-                       '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
-                       '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
-        
-        Toolbox.MotuDownload(motuCommand)
+        Toolbox.CMSDownload()
         
         return WaveOutFile
 

@@ -33,6 +33,7 @@ from astropy.convolution import convolve
 from datetime import datetime, timedelta
 from IPython.display import clear_output
 import ee
+import copernicusmarine as cms
 
 import pickle
 import math
@@ -2455,6 +2456,26 @@ def CircStd(Array):
     MeanDeg = np.rad2deg(MeanRad)
     
     return MeanDeg
+
+
+def CMSDownload(CMScmd):
+   
+    
+    # Log in to Copernicus Marine Service data store using your provided username and password
+    cms.login(skip_if_user_logged_in=True)
+    
+    cms.subset(
+        dataset_id = CMScmd['DataID'], 
+        variables = ['VHM0', 'VMDR','VTPK'],
+        minimum_longitude = CMScmd['lonmin'], 
+        maximum_longitude = CMScmd['lonmax'], 
+        minimum_latitude = CMScmd['latmin'],
+        maximum_latitude = CMScmd['latmax'], 
+        start_datetime = CMScmd['DateMin'], 
+        end_datetime = CMScmd['DateMax'],  
+        output_filename = str(CMScmd['WaveOutFile']),  
+        output_directory = str(CMScmd['WavePath'])
+        )
 
 
 def MotuDownload(motuCommand):
