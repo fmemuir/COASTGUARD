@@ -6,6 +6,7 @@ Freya Muir  - University of Glasgow
 """
 
 import os
+import subprocess
 import math
 from datetime import datetime, timedelta
 
@@ -64,17 +65,21 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
         return WaveOutFile
     
     else:
+        
+        
         User =  input('CMEMS username: ')
         Pwd = input('CMEMS password: ')
         
-        motuCommand = ('python -m motuclient --motu http://my.cmems-du.eu/motu-web/Motu --service-id NWSHELF_REANALYSIS_WAV_004_015-TDS --product-id MetO-NWS-WAV-RAN '
+        motuCommand = ('motuclient --motu http://my.cmems-du.eu/motu-web/Motu --service-id NWSHELF_REANALYSIS_WAV_004_015-TDS --product-id MetO-NWS-WAV-RAN '
                        '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
                        '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
                        '--variable VHM0  --variable VMDR --variable VTPK '
                        '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
-        os.system(motuCommand)
         
-        return WaveOutFile
+        Toolbox.MotuDownload(motuCommand)        
+        
+        return WaveOutFile    
+
 
 
 def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
@@ -119,12 +124,13 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
         User =  input('CMEMS username: ')
         Pwd = input('CMEMS password: ')
         
-        motuCommand = ('python -m motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
+        motuCommand = ('motuclient --motu http://nrt.cmems-du.eu/motu-web/Motu --service-id NORTHWESTSHELF_ANALYSIS_FORECAST_WAV_004_014-TDS --product-id MetO-NWS-WAV-hi '
                        '--longitude-min '+ str(lonmin) +' --longitude-max '+ str(lonmax) +' --latitude-min '+ str(latmin) +' --latitude-max '+ str(latmax) +' '
                        '--date-min "'+ DateMin +'" --date-max "'+ DateMax +'" '
                        '--variable VHM0  --variable VMDR --variable VTPK --variable crs --variable forecast_period '
                        '--out-dir '+ str(WavePath) +' --out-name "'+ str(WaveOutFile) +'" --user "'+ User +'" --pwd "'+ Pwd +'"')
-        os.system(motuCommand)
+        
+        Toolbox.MotuDownload(motuCommand)
         
         return WaveOutFile
 

@@ -8,6 +8,7 @@ Enhanced by: Freya Muir, University of Glasgow
 
 # load modules
 import os
+import subprocess
 import numpy as np
 import matplotlib.pyplot as plt
 import pdb
@@ -2454,3 +2455,22 @@ def CircStd(Array):
     MeanDeg = np.rad2deg(MeanRad)
     
     return MeanDeg
+
+
+def MotuDownload(motuCommand):
+    dlprocess = subprocess.Popen(motuCommand, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+    # Read and print interim status updates
+    while True:
+        output = dlprocess.stdout.readline().decode().strip()
+        if output == '' and dlprocess.poll() is not None:
+            break
+        if output:
+            print(output)
+
+    # Check for any errors
+    _, stderr = dlprocess.communicate()
+    if stderr:
+        print("Error:", stderr.decode())
+
+    # Wait for the process to finish
+    dlprocess.wait()
