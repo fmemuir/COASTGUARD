@@ -15,5 +15,5 @@ dependencies:
   - astropy
   - geopy
   - notebook
-  - motuclient
+  - copernicusmarine
   - netcdf4
