@@ -1018,9 +1018,7 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     # lonmin, lonmax, latmin, latmax = 
     
     # Download wave hindcast for given time frame and location
-    WaveOutFile = Waves.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
-    
-    WavePath = os.path.join(settings['inputs']['filepath'],'tides') 
+    WavePath, WaveOutFile = Waves.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     WaveFilePath = os.path.join(WavePath, WaveOutFile)
     
     # Sample waves from CMEMS hindcast

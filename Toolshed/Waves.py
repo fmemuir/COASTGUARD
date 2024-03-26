@@ -58,15 +58,14 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     # if file already exists, just return filepath to existing file
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
         print('Wave data file already exists.')
-        return WaveOutFile
-    
     else:
-        CMScmd = {'DataID':'GLOBAL_MULTIYEAR_WAV_001_032',
+        CMScmd = {'hind_fore':'hind',
                   'lonmin':lonmin, 'lonmax':lonmax, 'latmin':latmin, 'latmax':latmax, 
+                  'DateMin':DateMin, 'DateMax':DateMax,
                   'WavePath':WavePath,'WaveOutFile':WaveOutFile}
-        Toolbox.CMSDownload(CMScmd)        
+        Toolbox.CMSDownload(CMScmd)
         
-        return WaveOutFile    
+    return WavePath, WaveOutFile    
 
 
 
@@ -106,13 +105,15 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
     if os.path.isfile(os.path.join(WavePath, WaveOutFile)):
-        return WaveOutFile
-    
+        print('Wave data file already exists.')
     else:
+        CMScmd = {'hind_fore':'fore',
+                  'lonmin':lonmin, 'lonmax':lonmax, 'latmin':latmin, 'latmax':latmax,
+                  'DateMin':DateMin, 'DateMax':DateMax,
+                  'WavePath':WavePath,'WaveOutFile':WaveOutFile}
+        Toolbox.CMSDownload(CMScmd)
         
-        Toolbox.CMSDownload()
-        
-        return WaveOutFile
+    return WavePath, WaveOutFile
 
 
 def ReadWaveFile(WaveFilePath):
