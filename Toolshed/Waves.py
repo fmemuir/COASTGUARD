@@ -141,8 +141,14 @@ def ReadWaveFile(WaveFilePath):
         
         WaveTime = []
         for i in range(0,len(WaveSeconds)):
-            WaveTime.append(datetime.strptime(datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'),'%Y-%m-%d %H:%M:%S'))
-        
+            if 'UK' in WaveData.institution:
+                # European NW Shelf stored as 'seconds since 1970-01-01 00:00:00'
+                WaveTime.append(datetime(1970,1,1,0,0,0)+timedelta(seconds=int(WaveSeconds[i])))
+                # OLD # WaveTime.append(datetime.strptime(datetime.fromtimestamp(WaveSeconds.astype(int)[i]).strftime('%Y-%m-%d %H:%M:%S'),'%Y-%m-%d %H:%M:%S'))
+            else:
+                # Global Wave Reanalysis is stored as 'number of hours since 1950-01-01 00:00:00'
+                WaveTime.append(datetime(1950,1,1,0,0,0)+timedelta(hours=int(WaveSeconds[i])))
+            
     return WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime
 
 
