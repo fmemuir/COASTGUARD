@@ -1593,14 +1593,16 @@ def Separate_TimeSeries_month(cross_distance, output, key):
 
 def ProcessRefline(referenceLineShp,settings):
     """
-    
+    Read in reference shapefile marking shoreline and reformat for VedgeSat 
+    (equally space out vertices and extract coords).
+    FM 2022
 
     Parameters
     ----------
     referenceLineShp : str
         Filepath to refline shapefile.
     settings : dict
-        settings dictionary.
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
 
     Returns
     -------
@@ -1653,7 +1655,10 @@ def NearestDates(surveys,metadata,sat_list):
     """
     
     Print image dates from full sat metadata that fall nearest to validation dates.
+    FM Sept 2022
     
+    Parameters
+    ----------
     surveys : GeoDataFrame
         Shapefile of validation lines read in using geopandas
     metadata : dict
@@ -1661,8 +1666,13 @@ def NearestDates(surveys,metadata,sat_list):
     sat_list : list
         List of desired satellite platforms as strings
     
+    Returns
+    -------
+    nearestdates : dict
+        Dictionary of nearest image dates to requested dates
+    nearestIDs : dict
+        Dictionary of indexes of nearest image dates to requested dates
         
-    FM Sept 2022
     """
     
     veridates = sorted(list(surveys.Date.unique()))
@@ -1730,21 +1740,21 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename):
 
     Parameters
     ----------
-    lonmin : TYPE
-        DESCRIPTION.
-    lonmax : TYPE
-        DESCRIPTION.
-    latmin : TYPE
-        DESCRIPTION.
-    latmax : TYPE
-        DESCRIPTION.
+    lonmin : float
+        Minimum longitude of bounding box.
+    lonmax : float
+        Maximum longitude of bounding box.
+    latmin : float
+        Minimum latitude of bounding box.
+    latmax : float
+        Maximum latitude of bounding box.
 
     Returns
     -------
-    polygon : TYPE
-        DESCRIPTION.
-    point : TYPE
-        DESCRIPTION.
+    polygon : list of lists
+        List of pairs of coordinates [x,y] representing vertices of bounding box.
+    point : ee.Geometry.Point
+        Corner point of bounding box.
 
     '''
     # Check if lat and long min and max are around the right way
@@ -1807,10 +1817,12 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename):
 
     Parameters
     ----------
-    referenceLineShp : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
+    referenceLinePath : str
+        Path to reference shoreline stored as shapefile.
+    max_dist_ref : int
+        Maximum distance in metres to buffer reference shoreline by (needed to add buffer to AOI).
+    sitename : str
+        Name of site.
 
     Returns
     -------
@@ -1901,12 +1913,13 @@ def GStoArr(shoreline):
     
     Parameters
     ----------
-    shoreline : TYPE
-        DESCRIPTION.
+    shoreline : GeoSeries
+        Output line extracted from satellite image (as pandas GeoSeries).
 
     Returns
     -------
-    Array.
+    shorelineArr : array
+        Output line extracted from satellite image (as numpy array).
     
     
     """
@@ -1921,8 +1934,20 @@ def ArrtoGS(refline,georef):
     Shoreline array to coords
     FM Sept 2022
 
+    Parameters
+    ----------
+    refline : array
+        Output line extracted from satellite image (as numpy array).
+    georef : list
+        Georeferencing info [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale].
+
+    Returns
+    -------
+    refGS : GeoSeries
+        Output line extracted from satellite image (as pandas GeoSeries).
 
     """
+    
     coords = []
     ref_sl = refline[:,:2]
     ref_sl_pix = convert_world2pix(ref_sl, georef)
@@ -2198,7 +2223,29 @@ def TZValues(int_veg, int_nonveg):
     return [minval,maxval]
 
 def QuantifyErrors(sitename, SatGDF, DatesCol,ValidInterGDF,TransectIDs):
-    
+    """
+    Quantify positional uncertainty (Root Mean Squared Error, Mean Absolute Error)
+    between satellite-derived lines and validation lines in cross-shore direction.
+    FM 2022
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site.
+    SatGDF : GeoDataFrame
+        Shapefile of satellite-derived veg lines, read in as pandas GeoDataFrame.
+    DatesCol : str
+        Name of field in shapefile to read dates from.
+    ValidInterGDF : GeoDataFrame
+        Cross-shore transects with intersection info from satellite-derived and validation lines.
+    TransectIDs : list
+        List of bounding transect IDs across which to calculate errors.
+
+    Returns
+    -------
+    None.
+
+    """
     
     filepath = os.path.join(os.getcwd(), 'Data', sitename, 'validation')
     if os.path.isdir(filepath) is False:
@@ -2300,6 +2347,7 @@ def QuantifyErrors(sitename, SatGDF, DatesCol,ValidInterGDF,TransectIDs):
     print("Error stats saved to "+savepath)
     errordf.to_csv(savepath, index=False)
     
+    
 def CalcDistance(Geom1,Geom2):
     """
     Calculate distance between two shapely geoms, either using a point and line
@@ -2337,12 +2385,14 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
 
     Parameters
     ----------
-    tidepath : TYPE
-        DESCRIPTION.
-    daterange : TYPE
-        DESCRIPTION.
-    tidelatlon : TYPE
-        DESCRIPTION.
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
+    tidepath : str
+        Path to where user has stored AVISO tide data and fns.
+    daterange : list
+        [start date, end date] to be computed.
+    tidelatlon : list
+        [longitude, latitude] of bounding box along seaward edge, halfway between S and N.
 
     Returns
     -------
@@ -2393,14 +2443,14 @@ def GetWaterElevs(settings, Dates_Sat):
     Parameters
     ----------
     settings : dict
-        .
-    dates_sat : TYPE
-        DESCRIPTION.
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
+    Dates_Sat : list
+        List of dates and times of images used to extract veg/water lines from.
 
     Returns
     -------
-    tides_sat : TYPE
-        DESCRIPTION.
+    tides_sat : list
+        List of tidal elevations at time of image capture (with n = n(dates_sat)).
 
     '''
 
@@ -2454,7 +2504,7 @@ def BeachTideLoc(settings, TideSeries=None):
     Parameters
     ----------
     settings : dict
-        Tool settings stored here
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
 
     Returns
     -------
@@ -2487,14 +2537,15 @@ def ExtendLine(LineGeom, dist):
     
     Parameters
     ----------
-    LineGeom : shapely LINESTRING
+    LineGeom : LineString
         Line to be extended.
     dist : int
         distance to extend line by.
 
     Returns
     -------
-    new extended shapely LINESTRING.
+    NewLineGeom : LineString
+        new extended shapely LINESTRING.
 
     '''
     # extract coords
