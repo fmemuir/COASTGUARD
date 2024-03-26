@@ -818,7 +818,7 @@ def FindShoreContours_Trad(im_ndi, cloud_mask, im_ref_buffer):
     and applying the Marching Squares Algorithm to contour the iso-value 
     corresponding to the threshold.
     FM Oct 2022, adapted from KV WRL 2018
-    Arguments:
+    Parameters
     -----------
     im_ndi: np.ndarray
         Image (2D) with the normalised difference index
@@ -826,7 +826,7 @@ def FindShoreContours_Trad(im_ndi, cloud_mask, im_ref_buffer):
         2D cloud mask with True where cloud pixels are
     im_ref_buffer: np.array
         Binary image containing a buffer around the reference shoreline
-    Returns:    
+    Returns    
     -----------
     contours: list of np.arrays
         contains the coordinates of the contour lines
@@ -997,6 +997,7 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     component to make the threshold specific to the inter-class interface. Uses 
     Weighted Peaks method rather than Otsu. 
     FM Oct 2022, adapted from KV WRL 2018
+    
     Arguments:
     -----------
     im_ms: np.array
@@ -1236,7 +1237,7 @@ def BufferShoreline(settings,refline,georef,cloud_mask):
     settings : dict
         Process settings.
     georef : list
-        Affine transformation matrix of satellite image.
+        Affine transformation matrix of satellite image [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale].
     cloud_mask : array
         Boolean array masking out where clouds have been identified in satellite image.
 
@@ -1321,8 +1322,11 @@ def ProcessShoreline(contours, cloud_mask, georef, image_epsg, settings):
     Returns:
     -----------
     shoreline: np.array
-        array of points with the X and Y coordinates of the shoreline
-
+        Array of points with the X and Y coordinates of the shoreline.
+    shoreline_latlon :
+        Array of points with the X and Y coordinates of the shoreline (in lat-long).
+    shoreline_proj :
+        Array of points with the X and Y coordinates of the shoreline (in chosen projection system).
     """
     
     # convert pixel coordinates to world coordinates
@@ -1489,12 +1493,68 @@ def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
                     contours_ndvi, t_ndvi, cloud_mask, georef, image_epsg,
                     sh_classif, sh_labels, contours_ndwi, t_ndwi):
     """
-    
     Set up full plot window for showing/adjusting veg edge detection.
     FM Oct 2023
 
+    Parameters
+    ----------
+    sitename : str
+        Name of site.
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge extraction.
+    im_ms : np.array
+        3D array representing multispectral satellite image.
+    im_RGB : np.array
+        3D array representing red-green-blue satellite image.
+    im_class : np.array
+        Boolean 2D array representing classified satellite image.
+    im_labels: np.array
+        3D array containing a boolean 2D image for each class (im_classif == label)
+    im_ref_buffer : np.array
+        Boolean 2D array matching image dimensions, with ref shoreline buffer zone = 1.
+    date : str
+        Satellite image capture date.
+    satname : str
+        Satellite image platform name.
+    fig : matplotlib.figure.Figure object
+        Figure window.
+    ax1, ax2, ax3, ax4 : matplotlib.axes.Axes object
+        Subplot axes within fig.
+    contours_ndi : list of np.arrays
+        Contains the coordinates of the contour lines extracted from the
+        Normalized Difference Index image.
+    t_ndi : float
+        Threshold used to define the contours along.
+    cloud_mask : array
+        Mask containing cloudy pixels to be removed/ignored.
+    georef : list
+        Affine transformation matrix of satellite image [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale].
+    image_epsg : int
+        Coordinate projection code of image.
+    sh_classif : np.array
+        Boolean 2D array representing classified satellite image (CoastSat classes).
+    sh_labels: np.array
+        3D array containing a boolean 2D image for each class (CoastSat classes).
+    contours_ndwi : list of np.arrays
+        Contains the coordinates of the contour lines extracted from the
+        Normalized Difference Water Index image.
+    t_ndwi : float
+        Threshold used to define the waterline contours along.
+
+    Returns
+    -------
+    fig : matplotlib.figure.Figure object
+        Updated figure window.
+    ax1, ax2, ax3, ax4 : TYPE
+        Updated subplot axes within fig.
+    t_line : matplotlib.lines.Line2D
+        Line object representing optimum threshold value in prob. dens. func. of NDVI/NDWI.
+    im_ndvi_buffer : np.array
+        2D array representing NDVI with reference shoreline buffer applied as mask.
+    vlplots : list
+        List of scatter plot objects of veg lines for each subplot.
+
     """
-    
     
     cmap = cm.get_cmap('tab20c')
     colorpalette = cmap(np.arange(0,17,1))
@@ -1649,7 +1709,56 @@ def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
 def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, georef,
                    settings, date, satname, contours_ndvi, t_ndvi,
                    sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
+    """
+    
 
+    Parameters
+    ----------
+    im_ms : np.array
+        3D array representing multispectral satellite image.
+    cloud_mask : array
+        Mask containing cloudy pixels to be removed/ignored.
+    im_labels: np.array
+        3D array containing a boolean 2D image for each class (im_classif == label)
+    im_ref_buffer : np.array
+        Boolean 2D array matching image dimensions, with ref shoreline buffer zone = 1.
+    image_epsg : int
+        Coordinate projection code of image.
+    georef : list
+        Affine transformation matrix of satellite image [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale].
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge extraction.
+    date : str
+        Satellite image capture date.
+    satname : str
+        Satellite image platform name.
+    contours_ndvi : list of np.arrays
+        Contains the coordinates of the contour lines extracted from the
+        Normalized Difference Index image.
+    t_ndvi : float
+        Threshold used to define the contours along.
+    sh_classif : np.array
+        Boolean 2D array representing classified satellite image (CoastSat classes). The default is None.
+    sh_labels: np.array
+        3D array containing a boolean 2D image for each class (CoastSat classes). The default is None.
+    contours_ndwi : list of np.arrays
+        Contains the coordinates of the contour lines extracted from the
+        Normalized Difference Water Index image. The default is None.
+    t_ndwi : float
+        Threshold used to define the waterline contours along. The default is None.
+
+    Raises
+    ------
+    StopIteration
+        If escape key is pressed, end the shoreline detection checking process.
+
+    Returns
+    -------
+    skip_image : bool
+        Depending on whether left or right direction key is clicked, continue with
+        plotting the image or skip it in the edge detection process.
+
+    """
     sitename = settings['inputs']['sitename']
     filepath_data = settings['inputs']['filepath']
     # format date
@@ -1761,6 +1870,66 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, geor
 def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, image_epsg, georef,
                    settings, date, satname, contours_ndvi, t_ndvi,
                    sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
+    """
+    
+
+    Parameters
+    ----------
+    im_ms : np.array
+        3D array representing multispectral satellite image.
+    cloud_mask : array
+        Mask containing cloudy pixels to be removed/ignored.
+    im_labels: np.array
+        3D array containing a boolean 2D image for each class (im_classif == label)
+    im_ref_buffer : np.array
+        Boolean 2D array matching image dimensions, with ref shoreline buffer zone = 1.
+    vegline : TYPE
+        DESCRIPTION.
+    image_epsg : int
+        Coordinate projection code of image.
+    georef : list
+        Affine transformation matrix of satellite image [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale].
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge extraction.
+    date : str
+        Satellite image capture date.
+    satname : str
+        Satellite image platform name.
+    contours_ndvi : list of np.arrays
+        Contains the coordinates of the contour lines extracted from the
+        Normalized Difference Vegetation Index image.
+    t_ndi : float
+        Threshold used to define the contours along.
+    sh_classif : np.array
+        Boolean 2D array representing classified satellite image (CoastSat classes). The default is None.
+    sh_labels: np.array
+        3D array containing a boolean 2D image for each class (CoastSat classes). The default is None.
+    contours_ndwi : list of np.arrays
+        Contains the coordinates of the contour lines extracted from the
+        Normalized Difference Water Index image. The default is None.
+    t_ndwi : float
+        Threshold used to define the waterline contours along. The default is None.
+
+    Raises
+    ------
+    StopIteration
+        If escape key is pressed, end the shoreline detection checking process.
+
+    Returns
+    -------
+    skip_image : bool
+        Depending on whether left or right direction key is clicked, continue with
+        plotting the image or skip it in the edge detection process.
+    vegline: np.array
+        Updated array of points with the X and Y coordinates of the shoreline.
+    vegline_latlon :
+        Updated array of points with the X and Y coordinates of the shoreline (in lat-long).
+    vegline_proj :
+        Updated array of points with the X and Y coordinates of the shoreline (in chosen projection system).
+    t_ndi : float
+        Updated threshold used to define the contours along.
+
+    """
 
     sitename = settings['inputs']['sitename']
     filepath_data = settings['inputs']['filepath']
