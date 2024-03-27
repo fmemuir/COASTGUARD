@@ -59,7 +59,7 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
         print('Wave data file already exists.')
     else:
-        CMScmd = {'hind_fore':'hind',
+        CMScmd = {'hind_fore':'other',
                   'lonmin':lonmin, 'lonmax':lonmax, 'latmin':latmin, 'latmax':latmax, 
                   'DateMin':DateMin, 'DateMax':DateMax,
                   'WavePath':WavePath,'WaveOutFile':WaveOutFile}
@@ -175,6 +175,8 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     StDevWaveHs = []
     StDevWaveDir = []
     StDevWaveTp = []
+    WaveDiffusivity = []
+    WaveStability = []
     
     def find(item, lst):
         start = 0
@@ -183,9 +185,9 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
 
     # loop through transects and sample
     for Tr in range(len(TransectInterGDF)):
-        print('\r %0.3f %% transects processed' % ( (Tr/len(TransectInterGDF))*100 ), end='')
+        print('\r %i / %i transects processed' % ( Tr, len(TransectInterGDF) ), end='')
 
-        MidPnt = TransectInterGDF.centroid.iloc[Tr].coords[0] # midpoint of each transect
+        MidPnt = TransectInterGDF.to_crs('4326').centroid.iloc[Tr].coords[0] # midpoint of each transect
         
         # get index of closest matching grid square of wave data
         IDLat = (np.abs(WaveY - MidPnt[1])).argmin() 
@@ -194,7 +196,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
         
         # Calculate wave climate indicators per transect over timeframe of provided date range
-        WaveDiffusivity, WaveInstability = WaveClimate(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
+        TrWaveDiffusivity, TrWaveStability = WaveClimate(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
         
         InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # line intersections on each transect
         # if transect intersect is empty i.e. no veg lines intersected, can't grab matching waves per sat image
@@ -287,8 +289,10 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         StDevWaveHs.append(TrStDevWaveHs)
         StDevWaveDir.append(TrStDevWaveDir)
         StDevWaveTp.append(TrStDevWaveTp)
+        WaveDiffusivity.append(TrWaveDiffusivity)
+        WaveStability.append(TrWaveStability)
 
-    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveInstability
+    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability
 
 
 def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
@@ -297,8 +301,8 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     Ashton & Murray (2006). 
     - Diffusivity (mu) varies with wave angle and represents the wave climate 
       that leads to either shoreline smoothing (+ve diffusivity, stability) or
-      or growth of shoreline perturbations (-ve diffusivity, instability)
-    - Instability index (Gamma) represents wave angle with respect to shoreline
+      or growth of shoreline perturbations (-ve diffusivity, Stability)
+    - Stability index (Gamma) represents wave angle with respect to shoreline
       orientation, with 1 = low-angle climate and -1 = high-angle climate
       
     FM March 2024
@@ -312,7 +316,7 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     -------
     WaveDiffusivity : float
         Wave climate indicating perturbation growth or smoothing.
-    WaveInstability : float
+    WaveStability : float
         Dimensionless measure of stability in offshore wave vs shore angles.
 
     """
@@ -333,27 +337,28 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
         Alpha = ((ShoreAngle - WaveDir[i]) + 180) % 360-180
         if Alpha > 0:
             # Wave shadowed = no wave energy = no diffusion effects
-            H0 = 0
+            # H0 = 0
+            Mu.append(0.0)
         else:
             H0 = WaveHs[i]
-        T = WaveTp[i]
-        
-    # Wave diffusivity (+ve = smoothing, -ve = growth)
-    Term1 = (K2/D)# K2/D
-    Term2 = T**(1/5) # T^1.5
-    Term3 = H0**(12/5) # H0^12/5
-    Term4 = abs(math.cos(Alpha))**(1/5)*(math.cos(Alpha)/abs(math.cos(Alpha))) # cos^1/5(Alpha) [need to maintain sign]
-    Term5 = (6/5) * math.sin(Alpha)**2 # (6/5)sin^2(Alpha)
-    Term6 = math.cos(Alpha)**2 # cos^2(Alpha)
-    Mu.append( Term1 * Term2 * Term3 * (Term4 * (Term5 - Term6)) )
+            T = WaveTp[i]
+            
+            # Wave diffusivity (+ve = smoothing, -ve = growth)
+            Term1 = (K2/D)# K2/D
+            Term2 = T**(1/5) # T^1.5
+            Term3 = H0**(12/5) # H0^12/5
+            Term4 = abs(math.cos(Alpha))**(1/5)*(math.cos(Alpha)/abs(math.cos(Alpha))) # cos^1/5(Alpha) [need to maintain sign]
+            Term5 = (6/5) * math.sin(Alpha)**2 # (6/5)sin^2(Alpha)
+            Term6 = math.cos(Alpha)**2 # cos^2(Alpha)
+            Mu.append( Term1 * Term2 * Term3 * (Term4 * (Term5 - Term6)) )
 
-    # Net diffusivity (Mu_net)
-    WaveDiffusivity = np.sum(Mu * TimeStep) / np.sum(TimeStep)
+    # Net diffusivity (Mu_net) (m/s-2)
+    WaveDiffusivity = np.sum([Mu_i * TimeStep for Mu_i in Mu]) / (len(Mu) * TimeStep)
     
-    # Dimensionless instability index (Gamma)
-    WaveInstability = np.sum(Mu * TimeStep) / np.sum(abs(Mu) * TimeStep)
+    # Dimensionless Stability index (Gamma)
+    WaveStability = np.sum([Mu_i * TimeStep for Mu_i in Mu]) / np.sum([abs(Mu_i) * TimeStep for Mu_i in Mu])
     
-    return WaveDiffusivity, WaveInstability
+    return WaveDiffusivity, WaveStability
 
 
 def CalcShoreAngle(TransectInterGDF, Tr):
