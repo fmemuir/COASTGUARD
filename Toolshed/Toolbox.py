@@ -2689,7 +2689,8 @@ def CMSDownload(CMScmd):
         # Clean up folder by deleting multiyear and interim files
         for f in [MYrWavePath,IntWavePath]:
             os.remove(f)
-    # If using specific region data
+    
+    # If using specific region data (NW Atlantic Shelf)
     else:
         cms.subset(
             dataset_id = 'MetO-NWS-WAV-RAN', 
@@ -2707,6 +2708,7 @@ def CMSDownload(CMScmd):
 
     # Grab next cells when downloaded grid cell is empty (fully masked next to coast)
     WaveData = netCDF4.Dataset(os.path.join(CMScmd['WavePath'],CMScmd['WaveOutFile']))
+    
     SigWaveHeight = WaveData.variables['VHM0'][:,:,:]  # Spectral significant wave height (Hs)
     # for each grid cell in downloaded data
     emptyID = {'x':[], 'y':[]}
@@ -2780,7 +2782,7 @@ def CMSDownload(CMScmd):
             for f in [MYrWavePath,IntWavePath]:
                 os.remove(f)
             
-    
+
 
 def MotuDownload(motuCommand):
     """
