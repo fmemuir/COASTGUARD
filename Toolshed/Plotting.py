@@ -1875,6 +1875,156 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     
     return
 
+def MultivariateMatrixClusteredWaves(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Loc1, Loc2):
+    """
+    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
+    Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
+    Scatter points are separated into clustered regions (N vs S, eroding vs accreting).
+    FM March 2024
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects intersected with veg edges.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of transects intersected with waterlines.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    Loc1 : list
+        Transect IDs to slice array up for north location
+    Loc2 : list
+        Transect IDs to slice array up for south location
+
+    """
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+        
+    ## Multivariate Plot
+    # Subset into south and north transects
+    RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+                           TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
+
+    RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+                           TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+
+    # summer (pale) eroding = #F9C784 
+    # summer (pale) accreting = #9DB4C0
+    
+    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    # Scale up diffusivity (mu) for nicer labelling
+    RateGDF['WaveDiffus'] = RateGDF['WaveDiffus']*1000
+    
+    # Extract desired columns to an array for plotting
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus', 'WaveStabil']])
+    
+    mpl.rcParams.update({'font.size':7})
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,8.33), dpi=300)
+    
+    # Plot matrix of relationships
+    lab = [r'$\Delta$veg (m/yr)',
+           r'$\Delta$water (m/yr)',
+           r'TZwidth$_{\eta}$ (m)',
+           r'slope$_{max}$ ($\circ$)',
+           r'$\mu_{net}$ (mm/s$^{2}$)',
+           r'$\Gamma$ (1)']
+    
+    for row in range(RateArray.shape[1]):
+        for col in range(RateArray.shape[1]): 
+            for Arr, colour, strpos, leglabel in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+                                           ['#B2182B','#2166AC'],
+                                           [0.5,0.25],
+                                           ['Eroding ','Accreting ']):
+                # if plot is same var on x and y, change plot to a histogram    
+                if row == col:
+                    binnum = round(np.sqrt(len(RateArray)))*2
+                    bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5, label=leglabel)
+                    axs[col,row].set_yticks([]) # turns off ticks and tick labels
+                    # axs[col,row].legend()
+    
+                # otherwise plot scatter of each variable against one another
+                else:
+                    scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
+                    
+                    # overall linear reg line
+                    z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                    poly = np.poly1d(z)
+                    order = np.argsort(RateArray[:,row])
+                    xlr = RateArray[:,row][order]
+                    ylr = poly(RateArray[:,row][order])
+                    linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5, zorder=3)
+                    r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                    statstr = 'r = %.2f' % (r)
+                    # label with stats [axes.text(x,y,str)]
+                    if r > 0: # +ve line slanting up
+                        va = 'top'
+                    else: # -ve line slanting down
+                        va = 'bottom'
+                    # rtxt = axs[col,row].text(xlr[0], ylr[0], statstr, c='k', fontsize=10, ha='left', va=va)#transform = axs[row,col].transAxes
+                    # rtxt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='w', alpha=0.8)])
+                    
+                    # clustered linear regression lines
+                    zArr = np.polyfit(list(Arr[:,row]), list(Arr[:,col]), 1)
+                    polyArr = np.poly1d(zArr)
+                    orderArr = np.argsort(Arr[:,row])
+                    # plot clustered linear reg line
+                    clustBuff, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c='w', ls='-', lw=1.9, alpha=0.7, zorder=1)
+                    clustLn, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c=colour, ls='--', lw=1.5, zorder=2)
+                    rArr, pArr = scipy.stats.pearsonr(list(Arr[:,row]), list(Arr[:,col]))
+                    statstrArr = 'r = %.2f' % (rArr)
+                    
+                hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+                vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+                
+                if row == RateArray.shape[1]-1: # set x axis labels on last row
+                    axs[row,col].set_xlabel(lab[col])
+                else:
+                    axs[row,col].tick_params(labelbottom=False)
+                if col == 0: # set y axis labels on first column
+                    axs[row,col].set_ylabel(lab[row])
+                else:
+                    axs[row,col].tick_params(labelleft=False)
+                    
+                
+                # set veg vs water plots to equal axes to highlight orders of difference
+                if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
+                    axs[row,col].axis('equal')
+                    
+                # clear plots on RHS of hists, print stats instead
+                for i in range(RateArray.shape[1]):
+                    if col == i and row > i:
+                        # axs[col,row].cla() # clears axis on each loop
+                        for Ln in [linregLn,clustBuff, clustLn, scatterPl, hLn, vLn]:
+                            Ln.remove()
+                        axs[col,row].set_xticks([])
+                        axs[col,row].set_yticks([])
+                        axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=8, ha='center', transform = axs[col,row].transAxes)   
+                        axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=8, ha='center', transform = axs[col,row].transAxes)   
+
+
+            
+    # align all yaxis labels in first column
+    fig.align_ylabels(axs[:,0])
+    
+    plt.tight_layout()
+    # plt.subplots_adjust(wspace=0.6, hspace=0.5)
+    
+    figpath = os.path.join(filepath,sitename+'_MultivariateClustered_VegWaterTopoWaves_%s-%s_%s-%s.png' % 
+                           (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
+    plt.show()
+    
+    return
+
 
 def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, Loc1, Loc2):
     """
@@ -2125,7 +2275,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
 
 def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Loc1, Loc2):
     """
-    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
+    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave climate data.
     Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
     FM Aug 2023
 
@@ -2156,12 +2306,12 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
     RateGDF1 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc1[0]:Loc1[1]]], axis=1)
+                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
     
     RateGDF2 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFWave[['MnWaveHs', 'MnWaveDir', 'StDWaveHs', 'StDWaveDir']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
 
     
     # summer (pale) eroding = #F9C784 
@@ -2170,13 +2320,13 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
     RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
     
     # Take overall mean values of wave height and direction
-    RateGDF['LongMnWaveHs'] = [np.nanmean(r) for r in RateGDF['MnWaveHs']]
-    RateGDF['LongMnWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['MnWaveDir']]
-    RateGDF['LongStDWaveHs'] = [np.nanmean(r) for r in RateGDF['StDWaveHs']]
-    RateGDF['LongStDWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['StDWaveDir']]
+    # RateGDF['LongMnWaveHs'] = [np.nanmean(r) for r in RateGDF['MnWaveHs']]
+    # RateGDF['LongMnWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['MnWaveDir']]
+    # RateGDF['LongStDWaveHs'] = [np.nanmean(r) for r in RateGDF['StDWaveHs']]
+    # RateGDF['LongStDWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['StDWaveDir']]
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','LongMnWaveHs','LongMnWaveDir']])
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus', 'WaveStabil']])
     
     fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,8), dpi=300)
     
@@ -2185,8 +2335,8 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
            r'$\Delta$water (m/yr)',
            r'$TZwidth_{\eta}$ (m)',
            r'$slope_{max}$ ($\circ$)',
-           r'$Hs_{\eta}$ (m)',
-           r'$Dir_{\eta}$ (m)']
+           r'$\mu_{net}$ (m)',
+           r'$\Gamma$ (m)']
     
     for row in range(RateArray.shape[1]):
         for col in range(RateArray.shape[1]):
@@ -2244,7 +2394,7 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
     plt.tight_layout()
     plt.subplots_adjust(wspace=0.6, hspace=0.5)
     
-    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis.png')
+    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis_VegWaterTopoWaves.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
     
@@ -2655,7 +2805,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     plt.show()
     
     
-def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
+def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
     
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
@@ -2731,6 +2881,87 @@ def WaveRose(sitename, TransectInterGDFWave, TransectIDs):
     print('Plot saved under '+figname)
     
     plt.show()
+    
+
+def FullWaveRose(sitename, px, py, PlotDates=None):
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+        
+    # Path to Copernicus wave file 
+    WavePath = os.path.join(os.getcwd(), 'Data', 'tides')
+    WaveFilePath = glob.glob(WavePath+'/*'+sitename+'*.nc')
+    
+    if PlotDates is None:
+        # If no plot start and end dates provided, plot whole timeseries from .nc file
+        PlotDates = [WaveFilePath[0][-30:-20], WaveFilePath[0][-19:-9]] 
+    
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = Waves.ReadWaveFile(WaveFilePath)
+
+    
+
+    plotwavedir = np.deg2rad(MeanWaveDir[:,py,px])
+    plotwavehs = np.array(SigWaveHeight[:,py,px])
+    
+    # create stages for wave height breaks
+    cmp = cm.get_cmap('YlGnBu')
+    # HsStages = [[0.00,0.25],
+    #             [0.25,0.50],
+    #             [0.50,0.75],
+    #             [0.75,1.00],
+    #             [1.00,100]]
+    HsStages = [[0.0,0.5],
+                [0.5,1.0],
+                [1.0,1.5],
+                [1.5,2.0],
+                [2.0,2.5]]
+    
+    # initialise dict for dataframe
+    plotL = {}
+    colours = []
+    for step in HsStages:
+        lab = str(step[0]) + '-' + str(step[1]) + ' m/s'
+        # mask each set of wave directions by the range of wave heights
+        mask = [val > step[0] and val <= step[1] for val in plotwavehs]
+        plotL[lab] = plotwavedir[mask]
+        colours.append(cmp(step[0]))
+    # to dataframe for plotting
+    plotDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v, in plotL.items() ]))   
+    
+    # scaling for single column A4 page: (6.55,6)
+    mpl.rcParams.update({'font.size':10})
+    # use 2 subplots with one empty to be able to loop through them
+    fig, ax = plt.subplots(1,1,figsize=(1.22,1.22), dpi=300, subplot_kw={'projection':'polar'})
+    
+    # For each wave height break, plot wave direction rose with 5deg bins
+    # for i, c in zip(range(len(plotDF.columns)), np.arange(0,1,0.25)):
+        # if i == 0: # first stage starts from 0 
+    binsize = np.deg2rad(10)
+    binset = np.arange(0,np.deg2rad(360)+binsize,binsize)
+    ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns, edgecolor='0.5', linewidth=0.5)
+        # else: # start each row with previous stage
+            # ax.bar(plotDF[plotDF.columns[i]], color=cmp(c), label=lab, bottom=plotDF[plotDF.columns[i-1]])
+        
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+    ax.set_yticklabels([])
+    ax.grid(linestyle=':')
+    
+    # ax.title.set_text('Transect '+str(TransectID)+' Wave Direction\n'+
+    #                   TransectInterGDFWave['dates'].iloc[TransectID][0]+' to '+
+    #                   TransectInterGDFWave['dates'].iloc[TransectID][-1])
+    # ax.legend()
+        
+    figname = os.path.join(outfilepath, sitename + '_CMEMSWaveDir_'+WaveY[py]+'_'+WaveX[px]+'.png')
+    
+    plt.tight_layout()
+
+    plt.savefig(figname, bbox_inches='tight')
+    print('Plot saved under '+figname)
+    
+    plt.show()
+    
     
     
 def FullWaveHsTimeseries(sitename, PlotDates=None):
