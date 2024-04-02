@@ -3095,6 +3095,84 @@ def FullWaveHsTimeseries(sitename, PlotDates=None):
     plt.show()
     
     
+def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
+    """
+    Plot tidal elevations timeseries for requested site, with sat-derived 
+    timings of tides on top.
+    FM April 2024
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    output : dict
+        Dictionary of sat-derived veg edges and waterlines.
+    dates : TYPE
+        DESCRIPTION.
+    TidePath : TYPE
+        DESCRIPTION.
+    OutFilePath : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    mpl.rcParams.update({'font.size':7})
+    
+    fig, ax = plt.subplots(1,1, figsize=(2.75,1.72), dpi=300)
+    
+    TideData = pd.read_csv(TidePath)
+    # date columns from string to datetime
+    TideData['date'] = pd.to_datetime(TideData['date'])
+    TideData['year'] = TideData['date'].dt.year
+    
+    cmp = cm.get_cmap('YlGnBu')
+    colours = []
+    Yrs = TideData['year'].unique()
+    for i in range(len(Yrs)):
+        colours.append(cmp(i/len(Yrs)))
+    
+    # For each year in list of unique years
+    for iyr, yr in enumerate(Yrs):
+        # plot with different colours in ramp
+        ax.plot(TideData['date'][TideData['year'] == yr], TideData['tide'][TideData['year'] == yr],
+                c=colours[iyr], lw=0.5, label=yr, zorder=1)
+ 
+    SatDates = [datetime.strptime(output['dates'][isat]+' '+output['times'][isat],'%Y-%m-%d %H:%M:%S.%f')
+                for isat in range(len(output['dates']))]
+    SatData = pd.DataFrame({'dates':SatDates, 'tides':output['tideelev']})
+    SatData['dates'] = pd.to_datetime(SatData['dates'])
+    
+    # Plot tide elevs coinciding with satellite images
+    ax.scatter(SatData['dates'], SatData['tides'], s=1.5, c='k', zorder=2)
+    
+    # Upper annd lower limits of sat tides
+    ax.axhline(SatData['tides'].min(), 0,1, c='k',ls='--',lw=1)
+    ax.axhline(SatData['tides'].max(), 0,1, c='k',ls='--',lw=1)
+    # Set ticks to yearly (and minor every half year)
+    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    ax.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=(1,7)))
+    ax.set_yticks(np.arange(-3,3.5,1))
+    ax.set_yticks(np.arange(-3,3.5,0.5), minor=True)
+    ax.set(ylabel='Tidal elevation (m)')
+    ax.set_xlim(TideData['date'].min(),TideData['date'].max())
+    ax.set_facecolor('#CDCDCD')
+    
+    figname = os.path.join(OutFilePath, sitename + '_TidesSatTimeseries_'+dates[0]+'_'+dates[1]+'.png')
+    
+    plt.tight_layout()
+
+    plt.savefig(figname, bbox_inches='tight')
+    print('Plot saved under '+figname)
+    
+    plt.tight_layout()
+    plt.show()
+    
+    
 def TidesPlotAnnual(sitename, dates, TidePath, OutFilePath):
     """
     Plot tidal elevations timeseries for requested site, separating years out
@@ -3130,10 +3208,8 @@ def TidesPlotAnnual(sitename, dates, TidePath, OutFilePath):
     TideData['time'] = TideData['date'].dt.time
     TideData['day'] = TideData['date'].dt.day
     TideData['month'] = TideData['date'].dt.month
-    # TideData['MDT'] = [str(TideData['month'].iloc[i])+'-'+
-    #                    str(TideData['day'].iloc[i]) + ' ' +
-    #                    str(TideData['time'].iloc[i]) for i in range(len(TideData))]
-    TideData['MDT'] = [datetime(2000,
+    # New dates column with arbitrary year
+    TideData['MDT'] = [datetime(1,
                                 TideData['month'][itide], 
                                 TideData['day'][itide], 
                                 TideData['time'][itide].hour,
@@ -3166,7 +3242,7 @@ def TidesPlotAnnual(sitename, dates, TidePath, OutFilePath):
     # Plotting incomplete years means legend order needs reset
     handles, labels = plt.gca().get_legend_handles_labels()
     legord = sorted(range(len(labels)), key=lambda k: labels[k])
-    # Need to sed zorder of actual legend as well (bring to front)
+    # Need to set zorder of actual legend as well (bring to front)
     plt.legend([handles[o] for o in legord], [labels[o] for o in legord]).set_zorder(len(Yrs)+1)
     
     figname = os.path.join(OutFilePath, sitename + '_TidesTimeseries_'+dates[0]+'_'+dates[1]+'.png')
