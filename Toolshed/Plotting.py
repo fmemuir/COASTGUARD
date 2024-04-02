@@ -1090,25 +1090,25 @@ def WidthTimeseries(sitename, TransectInterGDFWater, TransectIDs, Hemisphere = '
 #     plt.show()
     
     
-def ValidPDF(sitename, ValidGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):    
+def ValidPDF(sitename, VeglineGDF, DatesCol, ValidDF, TransectIDs, PlotTitle):    
     """
-    Generate probability density function of validation vs sat lines
-    FM 2023
+    Generate probability density function of validation vs sat lines.
+    FM Jul 2023
 
     Parameters
     ----------
-    sitename : TYPE
-        DESCRIPTION.
-    ValidationShp : TYPE
-        DESCRIPTION.
-    DatesCol : TYPE
-        DESCRIPTION.
-    ValidDF : TYPE
-        DESCRIPTION.
-    TransectIDs : TYPE
-        DESCRIPTION.
-    PlotTitle : TYPE
-        DESCRIPTION.
+    sitename : str
+        Name of site of interest.
+    ValidGDF : GeoDataFrame
+        DataFrame of sat derived veg edges read in from shapefile.
+    DatesCol : str
+        Name of field containing dates in validation shapefile.
+    ValidDF : GeoDataFrame
+        DataFrame of transects intersected with validation lines.
+    TransectIDs : list
+        Index of requested transect IDs for plotting (min and max bounds).
+    PlotTitle : str
+        Plot title for placename locations.
 
     Returns
     -------
@@ -1124,7 +1124,7 @@ def ValidPDF(sitename, ValidGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
 
     violin = []
     violindates = []
-    Vdates = ValidGDF[DatesCol].unique()
+    Vdates = VeglineGDF[DatesCol].unique()
     for Vdate in Vdates:
         valsatdist = []
         for Tr in range(TransectIDs[0],TransectIDs[1]): 
@@ -2613,7 +2613,23 @@ def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
     
 
 def StormsTimeline(figpath, sitename, CSVpath):
-    
+    """
+    FM Sept 2023
+
+    Parameters
+    ----------
+    figpath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    CSVpath : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     
     # Read in errors CSV
     StormsDF = pd.read_csv(CSVpath)
@@ -2674,7 +2690,31 @@ def StormsTimeline(figpath, sitename, CSVpath):
 
 
 def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectIDs, Hemisphere='N', ShowPlot=True):
-    
+    """
+    FM Oct 2023
+
+    Parameters
+    ----------
+    figpath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    CSVpath : TYPE
+        DESCRIPTION.
+    TransectInterGDF : TYPE
+        DESCRIPTION.
+    TransectIDs : TYPE
+        DESCRIPTION.
+    Hemisphere : TYPE, optional
+        DESCRIPTION. The default is 'N'.
+    ShowPlot : TYPE, optional
+        DESCRIPTION. The default is True.
+
+    Returns
+    -------
+    None.
+
+    """
     # Read in errors CSV
     StormsDF = pd.read_csv(CSVpath)
     StormsDF = StormsDF.iloc[::-1]
@@ -2806,7 +2846,23 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     
     
 def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
-    
+    """
+    FM March 2024
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    TransectInterGDFWave : TYPE
+        DESCRIPTION.
+    TransectIDs : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
@@ -2883,15 +2939,35 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
     plt.show()
     
 
-def FullWaveRose(sitename, px, py, PlotDates=None):
-    
-    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
-    if os.path.isdir(outfilepath) is False:
-        os.mkdir(outfilepath)
-        
+def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
+    """
+    FM March 2024
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    outfilepath : TYPE
+        DESCRIPTION.
+    WaveFilePath : TYPE, optional
+        DESCRIPTION. The default is None.
+    PlotDates : TYPE, optional
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    None.
+
+    """
+    # outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    # if os.path.isdir(outfilepath) is False:
+    #     os.mkdir(outfilepath)
+    mpl.rcParams.update({'font.size':7})
+   
     # Path to Copernicus wave file 
-    WavePath = os.path.join(os.getcwd(), 'Data', 'tides')
-    WaveFilePath = glob.glob(WavePath+'/*'+sitename+'*.nc')
+    if WaveFilePath is None:
+        WavePath = os.path.join(os.getcwd(), 'Data', 'tides')
+        WaveFilePath = glob.glob(WavePath+'/*'+sitename+'*.nc')
     
     if PlotDates is None:
         # If no plot start and end dates provided, plot whole timeseries from .nc file
@@ -2900,64 +2976,77 @@ def FullWaveRose(sitename, px, py, PlotDates=None):
     WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = Waves.ReadWaveFile(WaveFilePath)
 
     
-
-    plotwavedir = np.deg2rad(MeanWaveDir[:,py,px])
-    plotwavehs = np.array(SigWaveHeight[:,py,px])
-    
     # create stages for wave height breaks
     cmp = cm.get_cmap('YlGnBu')
-    # HsStages = [[0.00,0.25],
-    #             [0.25,0.50],
-    #             [0.50,0.75],
-    #             [0.75,1.00],
-    #             [1.00,100]]
-    HsStages = [[0.0,0.5],
-                [0.5,1.0],
-                [1.0,1.5],
-                [1.5,2.0],
-                [2.0,2.5]]
-    
-    # initialise dict for dataframe
-    plotL = {}
-    colours = []
-    for step in HsStages:
-        lab = str(step[0]) + '-' + str(step[1]) + ' m/s'
-        # mask each set of wave directions by the range of wave heights
-        mask = [val > step[0] and val <= step[1] for val in plotwavehs]
-        plotL[lab] = plotwavedir[mask]
-        colours.append(cmp(step[0]))
-    # to dataframe for plotting
-    plotDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v, in plotL.items() ]))   
+    HsStages = [[0.00,0.25],
+                [0.25,0.50],
+                [0.50,0.75],
+                [0.75,1.00],
+                [1.00,2.00],
+                [2.00,4.00]]
+    # HsStages = [[0.0,0.5],
+    #             [0.5,1.0],
+    #             [1.0,1.5],
+    #             [1.5,2.0],
+    #             [2.0,2.5]]
     
     # scaling for single column A4 page: (6.55,6)
-    mpl.rcParams.update({'font.size':10})
     # use 2 subplots with one empty to be able to loop through them
-    fig, ax = plt.subplots(1,1,figsize=(1.22,1.22), dpi=300, subplot_kw={'projection':'polar'})
+    fig, axs = plt.subplots(len(WaveY)-1,len(WaveX),figsize=(1.6,4.9), dpi=300, subplot_kw={'projection':'polar'})
     
-    # For each wave height break, plot wave direction rose with 5deg bins
-    # for i, c in zip(range(len(plotDF.columns)), np.arange(0,1,0.25)):
-        # if i == 0: # first stage starts from 0 
-    binsize = np.deg2rad(10)
-    binset = np.arange(0,np.deg2rad(360)+binsize,binsize)
-    ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns, edgecolor='0.5', linewidth=0.5)
-        # else: # start each row with previous stage
-            # ax.bar(plotDF[plotDF.columns[i]], color=cmp(c), label=lab, bottom=plotDF[plotDF.columns[i-1]])
+    for px in range(len(WaveX)):
+        for ax, py in zip(axs, range(len(WaveY))):
+            plotwavedir = np.deg2rad(MeanWaveDir[:,py,px])
+            plotwavehs = np.array(SigWaveHeight[:,py,px])
         
-    ax.set_theta_zero_location('N')
-    ax.set_theta_direction(-1)
-    ax.set_yticklabels([])
-    ax.grid(linestyle=':')
+            # initialise dict for dataframe
+            plotL = {}
+            colours = []
+            for i, step in enumerate(HsStages):
+                lab = "{:.2f}".format(step[0]) + '-' + "{:.2f}".format(step[1]) + ' m'
+                # mask each set of wave directions by the range of wave heights
+                mask = [val > step[0] and val <= step[1] for val in plotwavehs]
+                plotL[lab] = plotwavedir[mask]
+                colours.append(cmp(i/(len(HsStages)-1)))
+            # to dataframe for plotting
+            plotDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v, in plotL.items() ]))   
+            
+            # For each wave height break, plot wave direction rose with 5deg bins
+            # for i, c in zip(range(len(plotDF.columns)), np.arange(0,1,0.25)):
+                # if i == 0: # first stage starts from 0 
+            binsize = np.deg2rad(10)
+            binset = np.arange(0,np.deg2rad(360)+binsize,binsize)
+            ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns)
+                # else: # start each row with previous stage
+                    # ax.bar(plotDF[plotDF.columns[i]], color=cmp(c), label=lab, bottom=plotDF[plotDF.columns[i-1]])
+                
+            ax.set_theta_zero_location('N')
+            ax.set_theta_direction(-1)
+            # ax.set_facecolor('#666666')
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            for spine in ax.spines.values():
+                spine.set_edgecolor('w')
+            ax.grid(linestyle='-', lw=0.5, color='w')
+            ax.set_axisbelow(True)
+
+            
+            # ax.title.set_text('Transect '+str(TransectID)+' Wave Direction\n'+
+            #                   TransectInterGDFWave['dates'].iloc[TransectID][0]+' to '+
+            #                   TransectInterGDFWave['dates'].iloc[TransectID][-1])
+            # ax.legend()
     
-    # ax.title.set_text('Transect '+str(TransectID)+' Wave Direction\n'+
-    #                   TransectInterGDFWave['dates'].iloc[TransectID][0]+' to '+
-    #                   TransectInterGDFWave['dates'].iloc[TransectID][-1])
-    # ax.legend()
-        
-    figname = os.path.join(outfilepath, sitename + '_CMEMSWaveDir_'+WaveY[py]+'_'+WaveX[px]+'.png')
+    handles, labels = ax.get_legend_handles_labels()
+    
+    fig.legend(handles, labels, loc='center left')
+    
+    mpl.rcParams.update({'font.size':7})
+    
+    figname = os.path.join(outfilepath, sitename + '_CMEMSWaveDir_'+str(round(WaveY[0],3))+'_'+str(round(WaveX[0],3))+'.png')
     
     plt.tight_layout()
 
-    plt.savefig(figname, bbox_inches='tight')
+    plt.savefig(figname, bbox_inches='tight', transparent=True)
     print('Plot saved under '+figname)
     
     plt.show()
@@ -2965,7 +3054,21 @@ def FullWaveRose(sitename, px, py, PlotDates=None):
     
     
 def FullWaveHsTimeseries(sitename, PlotDates=None):
-    
+    """
+    FM March 2024
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    PlotDates : TYPE, optional
+        DESCRIPTION. The default is None.
+
+    Returns
+    -------
+    None.
+
+    """
     # Path to Copernicus wave file 
     WavePath = os.path.join(os.getcwd(), 'Data', 'tides')
     WaveFilePath = glob.glob(WavePath+'/*'+sitename+'*.nc')
@@ -2990,3 +3093,89 @@ def FullWaveHsTimeseries(sitename, PlotDates=None):
     print('Plot saved under '+figname)
     
     plt.show()
+    
+    
+def TidesPlotAnnual(sitename, dates, TidePath, OutFilePath):
+    """
+    Plot tidal elevations timeseries for requested site, separating years out
+    so they plot on top of one another.
+    FM March 2024
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    dates : TYPE
+        DESCRIPTION.
+    TidePath : TYPE
+        DESCRIPTION.
+    OutFilePath : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    mpl.rcParams.update({'font.size':7})
+    
+    fig, ax = plt.subplots(1,1, figsize=(2.75,1.72), dpi=300)
+    
+    TideData = pd.read_csv(TidePath)
+    # date column from string to datetime
+    TideData['date'] = pd.to_datetime(TideData['date'])
+    # # Plot individual years on top of one another
+    # Parse out date and time into new column (year removed)
+    TideData['time'] = TideData['date'].dt.time
+    TideData['day'] = TideData['date'].dt.day
+    TideData['month'] = TideData['date'].dt.month
+    # TideData['MDT'] = [str(TideData['month'].iloc[i])+'-'+
+    #                    str(TideData['day'].iloc[i]) + ' ' +
+    #                    str(TideData['time'].iloc[i]) for i in range(len(TideData))]
+    TideData['MDT'] = [datetime(2000,
+                                TideData['month'][itide], 
+                                TideData['day'][itide], 
+                                TideData['time'][itide].hour,
+                                TideData['time'][itide].minute) for itide in range(len(TideData))]
+    TideData['year'] = TideData['date'].dt.year
+    
+    cmp = cm.get_cmap('YlGnBu')
+    colours = []
+    Yrs = TideData['year'].unique()
+    for i in range(len(Yrs)):
+        colours.append(cmp(i/len(Yrs)))
+    
+    # For each year in list of unique years
+    for iyr, yr in enumerate(Yrs):
+        # Plot full years first (ignore first and last incomplete years)
+        if len(TideData['MDT'][TideData['year'] == yr]) >= (24*365):
+            ax.plot(TideData['MDT'][TideData['year'] == yr], TideData['tide'][TideData['year'] == yr], c=colours[iyr], lw=0.5, alpha=0.3, label=yr, zorder=iyr)
+    # Then plot incomplete years
+    for iyr, yr in enumerate(Yrs):
+        if len(TideData['MDT'][TideData['year'] == yr]) < (24*365):
+            ax.plot(TideData['MDT'][TideData['year'] == yr], TideData['tide'][TideData['year'] == yr], c=colours[iyr], lw=0.5, alpha=0.3, label=yr, zorder=iyr)
+    
+    # x axis ticks as months of one year
+    # plt.xticks(ticks=range(0,(24*366),round((24*366)/12)),
+    #            labels=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'])
+    ax.xaxis.set_major_locator(mdates.MonthLocator())
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
+    ax.set(ylabel='Water elevation (m)')
+    
+    # Plotting incomplete years means legend order needs reset
+    handles, labels = plt.gca().get_legend_handles_labels()
+    legord = sorted(range(len(labels)), key=lambda k: labels[k])
+    # Need to sed zorder of actual legend as well (bring to front)
+    plt.legend([handles[o] for o in legord], [labels[o] for o in legord]).set_zorder(len(Yrs)+1)
+    
+    figname = os.path.join(OutFilePath, sitename + '_TidesTimeseries_'+dates[0]+'_'+dates[1]+'.png')
+    
+    plt.tight_layout()
+
+    plt.savefig(figname, bbox_inches='tight')
+    print('Plot saved under '+figname)
+    
+    plt.show()
+    
+    
