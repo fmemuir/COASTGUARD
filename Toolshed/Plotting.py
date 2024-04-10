@@ -24,6 +24,7 @@ import matplotlib.lines as mlines
 import matplotlib.dates as mdates
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patheffects as PathEffects
+import matplotlib.font_manager as mplfm
 
 plt.ion()
 
@@ -507,8 +508,8 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         
         ax2 = ax.twinx()
         
-        ax.scatter(plotwldate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite Waterline')
-        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite Veg Edge')
+        ax.scatter(plotwldate, plotwldist, marker='o', c='#4056F4', s=4, alpha=0.8, edgecolors='none', label='Satellite waterline')
+        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=4, alpha=0.8, edgecolors='none', label='Satellite veg edge')
         
         # xaxis ticks as year with interim Julys marked
         ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
@@ -543,8 +544,8 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         if len(plotdate) != len(vegav):
             print('inconsistent number of plot dates to vegetation edge moving average (3pts), Transect', TransectID)
             return
-        ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
-        ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
+        ax.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average waterline')
+        ax2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average veg edge')
     
         # linear regression lines
         for xaxis, y, pltax, clr in zip([plotwldate,plotdate], [plotwldist,plotsatdist], [ax,ax2], ['#0A1DAE' ,'#3A4C1A']):
@@ -650,8 +651,8 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Hemisphere='N',
         # vegav = MovingAverage(plotsatdist, 3)
         # wlav = MovingAverage(plotwldist, 3)
         # if len(plotdate) >= 3:
-            # ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average Waterline')
-            # ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average Veg Edge')
+            # ax_TS.plot(plotdate, wlav, color='#4056F4', lw=1, label='3pt Moving Average waterline')
+            # ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average veg edge')
         twin_TS_lim = []
         twin_Trend_lim = []
         twin_Season_lim = []        
@@ -1325,8 +1326,8 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     plt.xlim(0,230)
     plt.ylim(0,230)
     
-    plt.xlabel('Validation Veg Edge cross-shore distance (m)')
-    plt.ylabel('Satellite Veg Edge cross-shore distance (m)')
+    plt.xlabel('Validation veg edge cross-shore distance (m)')
+    plt.ylabel('Satellite veg edge cross-shore distance (m)')
     
     ax.set_aspect('equal')
     ax.set_anchor('N')
@@ -1938,7 +1939,7 @@ def MultivariateMatrixClusteredWaves(sitename, TransectInterGDF,  TransectInterG
     for row in range(RateArray.shape[1]):
         for col in range(RateArray.shape[1]): 
             for Arr, colour, strpos, leglabel in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
-                                           ['#B2182B','#2166AC'],
+                                           ['#C51B2F','#5499DE'],
                                            [0.5,0.25],
                                            ['Eroding ','Accreting ']):
                 # if plot is same var on x and y, change plot to a histogram    
@@ -2614,16 +2615,18 @@ def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
 
 def StormsTimeline(figpath, sitename, CSVpath):
     """
+    Plot named storms as colour-coded bars in timeline (needs two plots if long).
     FM Sept 2023
 
     Parameters
     ----------
-    figpath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    CSVpath : TYPE
-        DESCRIPTION.
+    figpath : str
+        Path to folder to save figure in.
+    sitename : str
+        Name of site of interest.
+    CSVpath : str
+        Path (and filename) of CSV holding data to be plotted (laid out as 
+        name, start date, end date, max wind gust).
 
     Returns
     -------
@@ -2688,6 +2691,85 @@ def StormsTimeline(figpath, sitename, CSVpath):
     
     return
 
+
+def StormsTimelineSimple(figpath, sitename, CSVpath):
+    """
+    Plot named storms as simple bars in timeline (needs two plots if long).
+    FM Sept 2023
+
+    Parameters
+    ----------
+    figpath : str
+        Path to folder to save figure in.
+    sitename : str
+        Name of site of interest.
+    CSVpath : str
+        Path (and filename) of CSV holding data to be plotted (laid out as 
+        name, start date, end date, max wind gust).
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    # Read in errors CSV
+    StormsDF = pd.read_csv(CSVpath)
+    StormsDF = StormsDF.iloc[::-1]
+    
+    
+    mpl.rcParams.update({'font.size':7})
+    
+    # Set up plot
+    fig, ax = plt.subplots(1,1, figsize=(3.,1.72), dpi=300)
+    
+    # format date fields and calculate length of storms
+    StormsDF['StartDate'] = [datetime.strptime(i, '%d/%m/%Y') for i in StormsDF['Start']]
+    StormsDF['EndDate'] = [datetime.strptime(i, '%d/%m/%Y') for i in StormsDF['End']]
+    StormsDF['Duration'] = StormsDF['EndDate']-StormsDF['StartDate']
+
+    for Season in StormsDF['Season'].unique():
+        print(StormsDF['WindGust'][StormsDF['Season']==Season].max())
+
+    
+    # Plot gantt style timeline of storms where length of bar = duration of storm
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+    ax.xaxis.set_major_locator(mdates.YearLocator())
+    ax.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=(1,7)))
+    # Approach for colormap is to plot a scatter, then access the colors from those objects for plotting Rectangles
+    scatter = ax.scatter(x=StormsDF['StartDate'], y=StormsDF['Name'], c=StormsDF['WindGust'], cmap="plasma", s=0.1, marker='.')
+    
+    # Plot Rectangle symbols where width = duration of storm and color = intensity
+    for i in range(len(StormsDF['Name'])):
+        ax.add_patch(Rectangle(
+        xy=(StormsDF['StartDate'].iloc[i], -100), width=StormsDF['Duration'].iloc[i], height=200, color=scatter.to_rgba(StormsDF['WindGust'])[i]))
+        
+    # Label most intense storms
+    # for i in range(len(ax.get_yticklabels())):
+    #     if StormsDF['WindGust'].iloc[i] > 179:
+    #         ax.get_yticklabels()[i].set_color('red')
+    #         ax.text(StormsDF['EndDate'].iloc[i], i-0.2, str(StormsDF['WindGust'].iloc[i]), color='red', va='center')
+
+
+    ax.set_yticklabels([]) 
+    
+    cbax = inset_axes(ax, width='30%', height='5%', loc=3)
+    plt.colorbar(scatter, cax=cbax, ticks=range(80,max(StormsDF['WindGust'])+40,40), orientation='horizontal') 
+    cbax.xaxis.set_ticks_position('top')
+    cbax.text(max(StormsDF['WindGust'])-min(StormsDF['WindGust']),5,'Max. wind gust (km/h)', ha='center')
+    # plt.gcf().autofmt_xdate()
+    ax.set_ylim(0,len(StormsDF['Name']))
+
+    mpl.rcParams.update({'font.size':7})
+    plt.tight_layout()
+
+    figname = os.path.join(figpath,sitename+'_VedgeSat_UKStorms_Simple.png')
+    plt.savefig(figname, bbox_inches='tight')
+    print('figure saved under '+figname)
+    
+    plt.show()
+    
+    return
 
 def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectIDs, Hemisphere='N', ShowPlot=True):
     """
@@ -2996,6 +3078,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
     
     for px in range(len(WaveX)):
         for ax, py in zip(axs, range(len(WaveY))):
+            # Convert wave dirs to radians
             plotwavedir = np.deg2rad(MeanWaveDir[:,py,px])
             plotwavehs = np.array(SigWaveHeight[:,py,px])
         
@@ -3003,7 +3086,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
             plotL = {}
             colours = []
             for i, step in enumerate(HsStages):
-                lab = "{:.2f}".format(step[0]) + '-' + "{:.2f}".format(step[1]) + ' m'
+                lab = "{:.2f}".format(step[0]) + '-' + "{:.2f}".format(step[1])
                 # mask each set of wave directions by the range of wave heights
                 mask = [val > step[0] and val <= step[1] for val in plotwavehs]
                 plotL[lab] = plotwavedir[mask]
@@ -3023,22 +3106,21 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
             ax.set_theta_zero_location('N')
             ax.set_theta_direction(-1)
             # ax.set_facecolor('#666666')
+            ax.tick_params(axis='x',which='major', colors='w')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
             for spine in ax.spines.values():
                 spine.set_edgecolor('w')
             ax.grid(linestyle='-', lw=0.5, color='w')
             ax.set_axisbelow(True)
-
-            
-            # ax.title.set_text('Transect '+str(TransectID)+' Wave Direction\n'+
-            #                   TransectInterGDFWave['dates'].iloc[TransectID][0]+' to '+
-            #                   TransectInterGDFWave['dates'].iloc[TransectID][-1])
-            # ax.legend()
-    
+            # Padding on tick labels is too big, N label plotted as text instead
+            # Use max radius value as y loc, and then add 3% buffer on that
+            ax.text(0, ax.get_ylim()[1]+(ax.get_ylim()[1]*0.03), 'N', c='w', ha='center')    
+                
     handles, labels = ax.get_legend_handles_labels()
-    
-    fig.legend(handles, labels, loc='center left')
+
+    TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
+    fig.legend(handles, labels, loc='center left', title='Wave H$_s$ (m)', title_fontproperties=TitleFont, prop=TitleFont)
     
     mpl.rcParams.update({'font.size':7})
     
@@ -3122,7 +3204,7 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     
     mpl.rcParams.update({'font.size':7})
     
-    fig, ax = plt.subplots(1,1, figsize=(2.75,1.72), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(3.,1.72), dpi=300)
     
     TideData = pd.read_csv(TidePath)
     # date columns from string to datetime
@@ -3135,19 +3217,47 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     for i in range(len(Yrs)):
         colours.append(cmp(i/len(Yrs)))
     
-    # For each year in list of unique years
-    for iyr, yr in enumerate(Yrs):
-        # plot with different colours in ramp
-        ax.plot(TideData['date'][TideData['year'] == yr], TideData['tide'][TideData['year'] == yr],
-                c=colours[iyr], lw=0.5, label=yr, zorder=1)
+    # # For each year in list of unique years
+    # for iyr, yr in enumerate(Yrs):
+    #     # plot with different colours in ramp
+    #     ax.plot(TideData['date'][TideData['year'] == yr], TideData['tide'][TideData['year'] == yr],
+    #             c=colours[iyr], lw=0.5, label=None, zorder=1)
  
+    # For each entry in tide DataFrame
+    def GetSznID(Date, SznCount):
+        Year = Date.year
+        # if date is after Sept, set season start to that year e.g. 01-09-2024 = 2024
+        if Date.month >= 9:
+            SznStart = Year
+        # otherwise set season start to year before e.g. 31-08-2024 = 2023
+        else:
+            SznStart = Year - 1
+        # Create season start year-to-ID dict
+        SznID = SznCount.get(SznStart, None)
+        if SznID is None:
+            # Populate dict with season IDs matching each year
+            SznCount[SznStart] = len(SznCount) + 1
+            SznID = SznCount[SznStart]
+        # Return the ID calculated for each tide date
+        return SznID
+    
+    # Initialise season year-to-ID dict
+    SznCount = {}
+    # apply season ID calculator to DataFrame
+    TideData['season'] = TideData['date'].apply(GetSznID, args=(SznCount,))
+    
+    for SznID in TideData['season'].unique():
+        # plot with different colours in ramp
+        ax.plot(TideData['date'][TideData['season'] == SznID], TideData['tide'][TideData['season'] == SznID],
+                c=colours[SznID], lw=0.5, label=None, zorder=1)
+        
     SatDates = [datetime.strptime(output['dates'][isat]+' '+output['times'][isat],'%Y-%m-%d %H:%M:%S.%f')
                 for isat in range(len(output['dates']))]
     SatData = pd.DataFrame({'dates':SatDates, 'tides':output['tideelev']})
     SatData['dates'] = pd.to_datetime(SatData['dates'])
     
     # Plot tide elevs coinciding with satellite images
-    ax.scatter(SatData['dates'], SatData['tides'], s=1.5, c='k', zorder=2)
+    ax.scatter(SatData['dates'], SatData['tides'], s=1.5, c='k', zorder=2, label='Sat. image')
     
     # Upper annd lower limits of sat tides
     ax.axhline(SatData['tides'].min(), 0,1, c='k',ls='--',lw=1)
@@ -3160,7 +3270,10 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     ax.set_yticks(np.arange(-3,3.5,0.5), minor=True)
     ax.set(ylabel='Tidal elevation (m)')
     ax.set_xlim(TideData['date'].min(),TideData['date'].max())
+    ax.set_ylim(-3.5,3.5)
     ax.set_facecolor('#CDCDCD')
+    
+    ax.legend(handletextpad=0)
     
     figname = os.path.join(OutFilePath, sitename + '_TidesSatTimeseries_'+dates[0]+'_'+dates[1]+'.png')
     
