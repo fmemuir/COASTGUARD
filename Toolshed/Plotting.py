@@ -2717,7 +2717,6 @@ def StormsTimelineSimple(figpath, sitename, CSVpath):
     StormsDF = pd.read_csv(CSVpath)
     StormsDF = StormsDF.iloc[::-1]
     
-    
     mpl.rcParams.update({'font.size':7})
     
     # Set up plot
@@ -2727,38 +2726,70 @@ def StormsTimelineSimple(figpath, sitename, CSVpath):
     StormsDF['StartDate'] = [datetime.strptime(i, '%d/%m/%Y') for i in StormsDF['Start']]
     StormsDF['EndDate'] = [datetime.strptime(i, '%d/%m/%Y') for i in StormsDF['End']]
     StormsDF['Duration'] = StormsDF['EndDate']-StormsDF['StartDate']
-
-    for Season in StormsDF['Season'].unique():
-        print(StormsDF['WindGust'][StormsDF['Season']==Season].max())
-
     
-    # Plot gantt style timeline of storms where length of bar = duration of storm
+    # Calculate storm season IDs
+    SznCount = {}
+    StormsDF['Season'] = StormsDF['StartDate'].apply(GetSznID, args=(SznCount,))
+    
+    def aggfn(x):
+        d = {}
+        d['StartDate_min'] = x['StartDate'].min()
+        d['EndDate_max'] = x['EndDate'].max()
+        d['WindGust_max'] = x['WindGust'].max()
+        d['WindGust_min'] = x['WindGust'].min()
+        d['WindGust_mn'] = x['WindGust'].mean()
+        d['WindGust_md'] = x['WindGust'].median()
+        return pd.Series(d, index=['StartDate_min',
+                                   'EndDate_max',
+                                   'WindGust_max',
+                                   'WindGust_min',
+                                   'WindGust_mn',
+                                   'WindGust_md'])
+        
+    StormsGrp = StormsDF.groupby('Season').apply(aggfn)
+    StormsGrp['Duration_szn'] = StormsGrp['EndDate_max'] - StormsGrp['StartDate_min']
+    
+    # Format date columns for x axis
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_minor_locator(mdates.MonthLocator(bymonth=(1,7)))
-    # Approach for colormap is to plot a scatter, then access the colors from those objects for plotting Rectangles
-    scatter = ax.scatter(x=StormsDF['StartDate'], y=StormsDF['Name'], c=StormsDF['WindGust'], cmap="plasma", s=0.1, marker='.')
     
-    # Plot Rectangle symbols where width = duration of storm and color = intensity
+    scatter = ax.scatter(x=StormsDF['StartDate'], y=StormsDF['WindGust'], 
+                           c='#CDCDCD', s=0, marker='.')
+    # Plot tall rectangle symbols where width = duration of storm event
+    # color = intensity: color=scatter.to_rgba(StormsDF['WindGust'])[i])
     for i in range(len(StormsDF['Name'])):
         ax.add_patch(Rectangle(
-        xy=(StormsDF['StartDate'].iloc[i], -100), width=StormsDF['Duration'].iloc[i], height=200, color=scatter.to_rgba(StormsDF['WindGust'])[i]))
-        
-    # Label most intense storms
-    # for i in range(len(ax.get_yticklabels())):
-    #     if StormsDF['WindGust'].iloc[i] > 179:
-    #         ax.get_yticklabels()[i].set_color('red')
-    #         ax.text(StormsDF['EndDate'].iloc[i], i-0.2, str(StormsDF['WindGust'].iloc[i]), color='red', va='center')
-
-
-    ax.set_yticklabels([]) 
+        xy=(StormsDF['StartDate'].iloc[i], 0), 
+        width=StormsDF['Duration'].iloc[i], 
+        height=StormsDF['WindGust'].max()+20, 
+        color='#CDCDCD', alpha=0.5))
     
-    cbax = inset_axes(ax, width='30%', height='5%', loc=3)
-    plt.colorbar(scatter, cax=cbax, ticks=range(80,max(StormsDF['WindGust'])+40,40), orientation='horizontal') 
-    cbax.xaxis.set_ticks_position('top')
-    cbax.text(max(StormsDF['WindGust'])-min(StormsDF['WindGust']),5,'Max. wind gust (km/h)', ha='center')
+    # Plot boxplot style rectangles over top of storm events, where:
+    # width = duration of storm season (start of first storm to end of last storm)
+    # and colormap = mean/median wind gust.
+    # Approach for colormap is to plot a scatter, then access the colors from those objects for plotting Rectangles.
+    scatter = ax.scatter(x=StormsGrp['StartDate_min'], y=StormsGrp['WindGust_max'], 
+                           c='k', cmap='Spectral', s=0, marker='.') 
+    for i in range(len(StormsGrp)):
+        ax.add_patch(Rectangle(
+        xy=(StormsGrp['StartDate_min'].iloc[i], StormsGrp['WindGust_min'].iloc[i]), 
+        width=StormsGrp['Duration_szn'].iloc[i], 
+        height=StormsGrp['WindGust_max'].iloc[i]-StormsGrp['WindGust_min'].iloc[i],
+        edgecolor='k', facecolor='w'))
+        
+    #
+
+    ax.set_ylim(StormsDF['WindGust'].min()-10,StormsDF['WindGust'].max()+10)
+    ax.set_yticks(np.arange(StormsDF['WindGust'].min(), StormsDF['WindGust'].max()+20,20))
+    ax.set_yticks(np.arange(StormsDF['WindGust'].min(), StormsDF['WindGust'].max(),10), minor=True)
+    ax.set(ylabel='Wind gust (km/h)')
+    
+    # cbax = inset_axes(ax, width='30%', height='5%', loc=3)
+    # plt.colorbar(scatter, cax=cbax, ticks=range(80,max(StormsDF['WindGust'])+40,40), orientation='horizontal') 
+    # cbax.xaxis.set_ticks_position('top')
+    # cbax.text(max(StormsDF['WindGust'])-min(StormsDF['WindGust']),5,'Wind gust (km/h)', ha='center')
     # plt.gcf().autofmt_xdate()
-    ax.set_ylim(0,len(StormsDF['Name']))
 
     mpl.rcParams.update({'font.size':7})
     plt.tight_layout()
@@ -3211,41 +3242,22 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     TideData['date'] = pd.to_datetime(TideData['date'])
     TideData['year'] = TideData['date'].dt.year
     
-    cmp = cm.get_cmap('YlGnBu')
-    colours = []
-    Yrs = TideData['year'].unique()
-    for i in range(len(Yrs)):
-        colours.append(cmp(i/len(Yrs)))
-    
     # # For each year in list of unique years
     # for iyr, yr in enumerate(Yrs):
     #     # plot with different colours in ramp
     #     ax.plot(TideData['date'][TideData['year'] == yr], TideData['tide'][TideData['year'] == yr],
     #             c=colours[iyr], lw=0.5, label=None, zorder=1)
- 
-    # For each entry in tide DataFrame
-    def GetSznID(Date, SznCount):
-        Year = Date.year
-        # if date is after Sept, set season start to that year e.g. 01-09-2024 = 2024
-        if Date.month >= 9:
-            SznStart = Year
-        # otherwise set season start to year before e.g. 31-08-2024 = 2023
-        else:
-            SznStart = Year - 1
-        # Create season start year-to-ID dict
-        SznID = SznCount.get(SznStart, None)
-        if SznID is None:
-            # Populate dict with season IDs matching each year
-            SznCount[SznStart] = len(SznCount) + 1
-            SznID = SznCount[SznStart]
-        # Return the ID calculated for each tide date
-        return SznID
     
     # Initialise season year-to-ID dict
     SznCount = {}
     # apply season ID calculator to DataFrame
     TideData['season'] = TideData['date'].apply(GetSznID, args=(SznCount,))
-    
+        
+    cmp = cm.get_cmap('Blues')
+    colours = []
+    for i in range(len(TideData['season'].unique())):
+        colours.append(cmp(i/len(TideData['season'].unique())))
+        
     for SznID in TideData['season'].unique():
         # plot with different colours in ramp
         ax.plot(TideData['date'][TideData['season'] == SznID], TideData['tide'][TideData['season'] == SznID],
@@ -3271,7 +3283,7 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     ax.set(ylabel='Tidal elevation (m)')
     ax.set_xlim(TideData['date'].min(),TideData['date'].max())
     ax.set_ylim(-3.5,3.5)
-    ax.set_facecolor('#CDCDCD')
+    ax.set_facecolor('#B3B3B3')
     
     ax.legend(handletextpad=0)
     
@@ -3368,3 +3380,40 @@ def TidesPlotAnnual(sitename, dates, TidePath, OutFilePath):
     plt.show()
     
     
+def GetSznID(Date, SznCount):
+    """
+    Calculate storm year and unique ID from list of dates, where storm year 
+    runs from 01/09 to 31/08 the following year. Run using:
+        SznCount = {}
+        data_DF['date_column'].apply(GetSznID, args=(SznCount,))
+    where SznCount is initialised outside of fn.
+    FM Apr 2024
+
+    Parameters
+    ----------
+    Date : Timestamp
+        Pandas row in DataFrame representing date and time.
+    SznCount : dict
+        Empty dictitonary to be populated with storm year and matching season ID.
+
+    Returns
+    -------
+    SznID : int
+        Unique ID to be assigned to each row of DF depending on storm year date.
+
+    """
+    Year = Date.year
+    # if date is after Sept, set season start to that year e.g. 01-09-2024 = 2024
+    if Date.month >= 9:
+        SznStart = Year
+    # otherwise set season start to year before e.g. 31-08-2024 = 2023
+    else:
+        SznStart = Year - 1
+    # Create season start year-to-ID dict
+    SznID = SznCount.get(SznStart, None)
+    if SznID is None:
+        # Populate dict with season IDs matching each year
+        SznCount[SznStart] = len(SznCount)
+        SznID = SznCount[SznStart]
+    # Return the ID calculated for each tide date
+    return SznID
