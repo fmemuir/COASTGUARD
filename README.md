@@ -1,6 +1,10 @@
 # COASTGUARD
 
-COASTGUARD ($\textcolor{#00B0B7}{\textsf{C}}$ oastal $\textcolor{#00B0B7}{\textsf{O}}$ bservation + $\textcolor{#00B0B7}{\textsf{A}}$ nalysis using $\textcolor{#00B0B7}{\textsf{S}}$ atellite-derived $\textcolor{#00B0B7}{\textsf{T}}$ imeseries, $\textcolor{#00B0B7}{\textsf{G}}$ enerated $\textcolor{#00B0B7}{\textsf{U}}$ sing $\textcolor{#00B0B7}{\textsf{A}}$ I + $\textcolor{#00B0B7}{\textsf{R}}$ eal-time $\textcolor{#00B0B7}{\textsf{D}}$ ata) is a Python toolkit for coastal monitoring and modelling using machine learning approaches. Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
+$\textcolor{#00B0B7}{\textsf{C}}$ oastal $\textcolor{#00B0B7}{\textsf{O}}$ bservation + $\textcolor{#00B0B7}{\textsf{A}}$ nalysis using $\textcolor{#00B0B7}{\textsf{S}}$ atellite-derived $\textcolor{#00B0B7}{\textsf{T}}$ imeseries, 
+
+$\textcolor{#00B0B7}{\textsf{G}}$ enerated $\textcolor{#00B0B7}{\textsf{U}}$ sing $\textcolor{#00B0B7}{\textsf{A}}$ I + $\textcolor{#00B0B7}{\textsf{R}}$ eal-time $\textcolor{#00B0B7}{\textsf{D}}$ ata
+
+is a Python toolkit for coastal monitoring and modelling using machine learning approaches. Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
 
 
 ## :warning: PATCH NOTES :wrench:
@@ -31,7 +35,7 @@ https://github.com/fmemuir/COASTGUARD/assets/22475417/cb27e704-f361-4f34-b999-dc
 
 
 ## Enhancements
-Various improvements have been made to the toolkit to address more accurate approaches recently reported on, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the methods paper (coming soon), but include:
+Various improvements have been made to the toolkit to address more accurate approaches recently reported on, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the [methods paper](https://doi.org/10.1002/esp.5835), but include:
 
 * The use of geemap to download and process satellite imagery from Google Earth Engine entirely from within the cloud server;
 * Improved transect creation based on the Dynamic Coast project's Coastal Mapping Tools;
