@@ -178,7 +178,7 @@ We are in testing phase and not currently taking contributions, but [reach out t
 This tool is based on work by Kilian Vos ([github: kvos](https://github.com/kvos)) at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir, Luke Richardson-Foulger and Martin Hurst, and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger.
 
 If you would like to share your use of this toolkit, please cite it as appropriate:
-- Muir, F. M. E., Hurst, M. D., Richardson-Foulger, L., Naylor, L. A., Rennie, A. F. (2024). VedgeSat: An automated, opensource toolkit for coastal change monitoring using satellite-derived vegetation edges. *Earth Surface Processes and Landforms, in press.* [https://doi.org/10.1002/esp.5835](https://doi.org/10.1002/esp.5835)
+- Muir, F. M. E., Hurst, M. D., Richardson-Foulger, L., Naylor, L. A., Rennie, A. F. (2024). VedgeSat: An automated, open-source toolkit for coastal change monitoring using satellite-derived vegetation edges. *Earth Surface Processes and Landforms, in press.* [https://doi.org/10.1002/esp.5835](https://doi.org/10.1002/esp.5835)
 - Muir, F. M. E. (2023). COASTGUARD. GitHub. [https://github.com/fmemuir/COASTGUARD](https://github.com/fmemuir/COASTGUARD)
 Please let us know if you do, we'd love to see COASTGUARD and COASTGUARD.VedgeSat in use across the world!
 
