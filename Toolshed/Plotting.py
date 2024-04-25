@@ -1926,7 +1926,9 @@ def MultivariateMatrixClusteredWaves(sitename, TransectInterGDF,  TransectInterG
     RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus', 'WaveStabil']])
     
     mpl.rcParams.update({'font.size':7})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,8.33), dpi=300)
+    # fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,8.33), dpi=300)
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6,12.68), dpi=300) # PPT dimensions
+
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
@@ -2684,7 +2686,7 @@ def StormsTimeline(figpath, sitename, CSVpath):
     mpl.rcParams.update({'font.size':7})
     
     figname = os.path.join(figpath,sitename+'_VedgeSat_UKStorms.png')
-    plt.savefig(figname, bbox_inches='tight')
+    plt.savefig(figname, bbox_inches='tight',dpi=300)
     print('figure saved under '+figname)
     
     plt.show()
@@ -2692,7 +2694,7 @@ def StormsTimeline(figpath, sitename, CSVpath):
     return
 
 
-def StormsTimelineSimple(figpath, sitename, CSVpath):
+def StormsTimelineSimple(figpath, sitename, CSVpath, StormsLim=None):
     """
     Plot named storms as simple bars in timeline (needs two plots if long).
     FM Sept 2023
@@ -2706,6 +2708,8 @@ def StormsTimelineSimple(figpath, sitename, CSVpath):
     CSVpath : str
         Path (and filename) of CSV holding data to be plotted (laid out as 
         name, start date, end date, max wind gust).
+    StormsLim : list
+        Lower and upper limit of x axis (should match tide data timeframe limit)
 
     Returns
     -------
@@ -2715,12 +2719,12 @@ def StormsTimelineSimple(figpath, sitename, CSVpath):
     
     # Read in errors CSV
     StormsDF = pd.read_csv(CSVpath)
-    StormsDF = StormsDF.iloc[::-1]
+    # StormsDF = StormsDF.iloc[::-1]
     
     mpl.rcParams.update({'font.size':7})
     
     # Set up plot
-    fig, ax = plt.subplots(1,1, figsize=(3.,1.72), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(3.05,1.72), dpi=300)
     
     # format date fields and calculate length of storms
     StormsDF['StartDate'] = [datetime.strptime(i, '%d/%m/%Y') for i in StormsDF['Start']]
@@ -2763,8 +2767,21 @@ def StormsTimelineSimple(figpath, sitename, CSVpath):
         xy=(StormsDF['StartDate'].iloc[i], 0), 
         width=StormsDF['Duration'].iloc[i], 
         height=StormsDF['WindGust'].max()+20, 
-        color='#CDCDCD', alpha=0.5))
+        color='#929292', lw=0.5, alpha=0.5))
     
+    # Create colour ramp for storm years
+    cmp = cm.get_cmap('Blues')
+    colours = []
+    # for i in range(len(StormsDF['Season'].unique())):
+        # colours.append(cmp(i/len(StormsDF['Season'].unique())))
+    # StormDiff = datetime.strptime(StormsLim[1],'%Y-%m-%d %H:%M:%S')-datetime.strptime(StormsLim[0],'%Y-%m-%d %H:%M:%S')
+    # StormYears = round(StormDiff.total_seconds()/(365.2425*24*60*60))
+    # for i in range(StormYears):
+    #     colours.append(cmp(i/StormYears))
+    for i in range(10):
+        colours.append(cmp(i/10))
+    colours = colours[1:]
+        
     # Plot boxplot style rectangles over top of storm events, where:
     # width = duration of storm season (start of first storm to end of last storm)
     # and colormap = mean/median wind gust.
@@ -2776,26 +2793,41 @@ def StormsTimelineSimple(figpath, sitename, CSVpath):
         xy=(StormsGrp['StartDate_min'].iloc[i], StormsGrp['WindGust_min'].iloc[i]), 
         width=StormsGrp['Duration_szn'].iloc[i], 
         height=StormsGrp['WindGust_max'].iloc[i]-StormsGrp['WindGust_min'].iloc[i],
-        edgecolor='k', facecolor='w'))
-        
-    #
-
-    ax.set_ylim(StormsDF['WindGust'].min()-10,StormsDF['WindGust'].max()+10)
-    ax.set_yticks(np.arange(StormsDF['WindGust'].min(), StormsDF['WindGust'].max()+20,20))
-    ax.set_yticks(np.arange(StormsDF['WindGust'].min(), StormsDF['WindGust'].max(),10), minor=True)
+        edgecolor='k', facecolor=colours[i], lw=0.75))
+        # Add median lines across pseudo boxplots
+        ax.plot([StormsGrp['StartDate_min'].iloc[i],StormsGrp['EndDate_max'].iloc[i]], 
+                [StormsGrp['WindGust_md'].iloc[i], StormsGrp['WindGust_md'].iloc[i]], 
+                c='k', ls=':', lw=0.75)
+    
+    ax.set_yticks(np.arange(0, StormsDF['WindGust'].max()+20,20))
+    ax.set_yticks(np.arange(0, StormsDF['WindGust'].max(),10), minor=True)
+    ax.set_ylim(StormsDF['WindGust'].min()-40, StormsDF['WindGust'].max()+5)
     ax.set(ylabel='Wind gust (km/h)')
+    ax.set_xlim(datetime.strptime(StormsLim[0],'%Y-%m-%d %H:%M:%S'),datetime.strptime(StormsLim[1],'%Y-%m-%d %H:%M:%S'))
     
     # cbax = inset_axes(ax, width='30%', height='5%', loc=3)
     # plt.colorbar(scatter, cax=cbax, ticks=range(80,max(StormsDF['WindGust'])+40,40), orientation='horizontal') 
     # cbax.xaxis.set_ticks_position('top')
     # cbax.text(max(StormsDF['WindGust'])-min(StormsDF['WindGust']),5,'Wind gust (km/h)', ha='center')
     # plt.gcf().autofmt_xdate()
+    
+    # Add single instances of each object in hidden corner for legend
+    sznpl = ax.add_patch(Rectangle(xy=(0,0),width=0,height=0,edgecolor='k',facecolor='w',lw=0.75,label='Storm season'))    
+    evtpl = ax.add_patch(Rectangle(xy=(0,0),width=0,height=0,facecolor='#929292',lw=0.75,label='Storm event'))   
+    medpl, = ax.plot([StormsGrp['StartDate_min'].iloc[i],StormsGrp['EndDate_max'].iloc[i]], [0,1], 
+            c='k', ls='--', dashes=(1,1), lw=0.75, label='Median wind gust')
 
+    leg1 = ax.legend(handles=[sznpl,evtpl], loc='lower left', handlelength=0.5, handleheight=0.5, handletextpad=0.5)
+    ax.add_artist(leg1)
+    ax.legend(handles=[medpl], loc='lower right')
+    # for legob in leg.legendHandles:
+    #     legob.handle.setmarkersize(5)
+    
     mpl.rcParams.update({'font.size':7})
     plt.tight_layout()
 
     figname = os.path.join(figpath,sitename+'_VedgeSat_UKStorms_Simple.png')
-    plt.savefig(figname, bbox_inches='tight')
+    plt.savefig(figname, bbox_inches='tight',dpi=300, transparent=True)
     print('figure saved under '+figname)
     
     plt.show()
@@ -3253,6 +3285,7 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     # apply season ID calculator to DataFrame
     TideData['season'] = TideData['date'].apply(GetSznID, args=(SznCount,))
         
+    # Create colour map for storm years 
     cmp = cm.get_cmap('Blues')
     colours = []
     for i in range(len(TideData['season'].unique())):
@@ -3291,7 +3324,7 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     
     plt.tight_layout()
 
-    plt.savefig(figname, bbox_inches='tight')
+    plt.savefig(figname, bbox_inches='tight',dpi=300,transparent=True)
     print('Plot saved under '+figname)
     
     plt.tight_layout()
