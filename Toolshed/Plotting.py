@@ -1908,12 +1908,14 @@ def MultivariateMatrixClusteredWaves(sitename, TransectInterGDF,  TransectInterG
     RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
+                           TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]],
+                           TransectInterGDFWave[['WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
 
     RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+                           TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]],
+                           TransectInterGDFWave[['WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
 
     # summer (pale) eroding = #F9C784 
     # summer (pale) accreting = #9DB4C0
@@ -1925,9 +1927,12 @@ def MultivariateMatrixClusteredWaves(sitename, TransectInterGDF,  TransectInterG
     # Extract desired columns to an array for plotting
     RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus', 'WaveStabil']])
     
-    mpl.rcParams.update({'font.size':7})
-    # fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,8.33), dpi=300)
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6,12.68), dpi=300) # PPT dimensions
+    fs = 7
+    # fs = 10 # PPT dimensions
+    mpl.rcParams.update({'font.size':fs})
+
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,8.33), dpi=300)
+    # fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
 
     
     # Plot matrix of relationships
@@ -2008,8 +2013,12 @@ def MultivariateMatrixClusteredWaves(sitename, TransectInterGDF,  TransectInterG
                             Ln.remove()
                         axs[col,row].set_xticks([])
                         axs[col,row].set_yticks([])
-                        axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=8, ha='center', transform = axs[col,row].transAxes)   
-                        axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=8, ha='center', transform = axs[col,row].transAxes)   
+                        # fontsize 7 for paper, 10 for PPT
+                        axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=fs, ha='center', transform = axs[col,row].transAxes)   
+                        axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=fs, ha='center', transform = axs[col,row].transAxes)   
+                # Turn of top and right frame edges for tidiness
+                axs[col,row].spines['right'].set_visible(False)
+                axs[col,row].spines['top'].set_visible(False)
 
 
             
@@ -2306,105 +2315,121 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
         
     ## Multivariate Plot
     # Subset into south and north transects
-    RateGDF1 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+    RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
-    
-    RateGDF2 = pd.concat([TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+                           TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]]], axis=1)#, 'WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
+
+    RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFWave[['WaveDiffus', 'WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+                           TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]]], axis=1)#, 'WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
 
-    
     # summer (pale) eroding = #F9C784 
     # summer (pale) accreting = #9DB4C0
     
     RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
-    
-    # Take overall mean values of wave height and direction
-    # RateGDF['LongMnWaveHs'] = [np.nanmean(r) for r in RateGDF['MnWaveHs']]
-    # RateGDF['LongMnWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['MnWaveDir']]
-    # RateGDF['LongStDWaveHs'] = [np.nanmean(r) for r in RateGDF['StDWaveHs']]
-    # RateGDF['LongStDWaveDir'] = [Toolbox.CircMean(r) for r in RateGDF['StDWaveDir']]
+    # Scale up diffusivity (mu) for nicer labelling
+    RateGDF['WaveDiffus'] = RateGDF['WaveDiffus']*1000
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus', 'WaveStabil']])
+    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus']])#, 'WaveStabil']])
     
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,8), dpi=300)
+    mpl.rcParams.update({'font.size':10})
+    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,8.33), dpi=300)
+    # fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
+
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
            r'$\Delta$water (m/yr)',
-           r'$TZwidth_{\eta}$ (m)',
-           r'$slope_{max}$ ($\circ$)',
-           r'$\mu_{net}$ (m)',
-           r'$\Gamma$ (m)']
+           r'TZwidth$_{\eta}$ (m)',
+           r'slope$_{max}$ ($\circ$)',
+           r'$\mu_{net}$ (mm/s$^{2}$)']
+           #r'$\Gamma$ (1)']
     
     for row in range(RateArray.shape[1]):
-        for col in range(RateArray.shape[1]):
-            
+        for col in range(RateArray.shape[1]): 
+            # for Arr, colour, strpos, leglabel in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+            #                                ['#C51B2F','#5499DE'],
+            #                                [0.5,0.25],
+            #                                ['Eroding ','Accreting ']):
             # if plot is same var on x and y, change plot to a histogram    
             if row == col:
-                binnum = round(np.sqrt(len(RateArray)))+4
-                axs[row,col].hist(RateArray[:,row],binnum, color='k', alpha=0.7)
+                binnum = round(np.sqrt(len(RateArray)))*2
+                bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                axs[col,row].hist(RateArray[:,row],bins, color='k', alpha=0.5)
+                axs[col,row].set_yticks([]) # turns off ticks and tick labels
+                # axs[col,row].legend()
+
             # otherwise plot scatter of each variable against one another
             else:
-                axs[row,col].scatter(RateArray[:,row], RateArray[:,col], s=12, alpha=0.4, marker='.', c='k', edgecolors='none')
+                scatterPl = axs[col,row].scatter(RateArray[:,row], RateArray[:,col], s=20, alpha=0.3, marker='.', c='k', edgecolors='none')
                 
                 # overall linear reg line
                 z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
                 poly = np.poly1d(z)
                 order = np.argsort(RateArray[:,row])
-                axs[row,col].plot(RateArray[:,row][order], poly(RateArray[:,row][order]), c='k', ls='--', lw=0.8)
+                xlr = RateArray[:,row][order]
+                ylr = poly(RateArray[:,row][order])
+                linregBuff, = axs[col,row].plot(xlr, ylr, c='w', ls='-', lw=1.9, alpha=0.7, zorder=1)
+                linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5, zorder=3)
+                
                 r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
-                stats = 'r = %.2f' % (r)
-                axs[row,col].text(0.2, 0.05, stats, c='k', fontsize=6, ha='center', transform = axs[row,col].transAxes)
-
-                # # linear regression lines
-                # zArr = np.polyfit(list(RateArray), list(RateArray), 1)
-                # polyArr = np.poly1d(RateArray)
-                # orderArr = np.argsort(RateArray)
-                # # linear reg line
-                # axs[row,col].plot(RateArray[orderArr], polyArr(RateArray[orderArr]), c='r', ls='--', lw=0.8)
-                
-                # for i in range(RateArray.shape[1]-1):
-                #     if row == i and col > i:
-                #         # clear plots on RHS
-                #         axs[row,col].cla() 
-                # for i in range(RateArray.shape[1]-1):
-                #     if row == i and col > i:      
-                #         rArr, pArr = scipy.stats.pearsonr(list(RateArray))
-                #         statsArr = 'r = %.2f , p = %.2f' % (rArr,pArr)
-                #         axs[row,col].text(0.5, 0.6, statsArr, c='r', fontsize=6, ha='center')
-                    
-                        
-
-            axs[row,col].set_xlabel(lab[row])
-            axs[row,col].set_ylabel(lab[col])
-            axs[row,col].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
-            axs[row,col].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+                statstr = 'r = %.2f' % (r)
+                # label with stats [axes.text(x,y,str)]
+                if r > 0: # +ve line slanting up
+                    va = 'top'
+                else: # -ve line slanting down
+                    va = 'bottom'
+                # rtxt = axs[col,row].text(xlr[0], ylr[0], statstr, c='k', fontsize=10, ha='left', va=va)#transform = axs[row,col].transAxes
+                # rtxt.set_path_effects([PathEffects.withStroke(linewidth=2, foreground='w', alpha=0.8)])
+              
+            hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+            vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
             
+            if row == RateArray.shape[1]-1: # set x axis labels on last row
+                axs[row,col].set_xlabel(lab[col])
+            else:
+                axs[row,col].tick_params(labelbottom=False)
+            if col == 0: # set y axis labels on first column
+                axs[row,col].set_ylabel(lab[row])
+            else:
+                axs[row,col].tick_params(labelleft=False)
+                
+            
+            # set veg vs water plots to equal axes to highlight orders of difference
             # if lab[col] == r'$\Delta$veg (m/yr)' and lab[row] == r'$\Delta$water (m/yr)' :
-                # axs[row,col].axis('equal')
-            
-            # turn off axes to tighten up layout
-            # if col != 0 and row != RateArray.shape[1]-1: # first col and last row
-            #     axs[row,col].set_xlabel(None)
-            #     axs[row,col].set_ylabel(None)
+            #     axs[row,col].axis('equal')
                 
+            # clear plots on RHS of hists, print stats instead
+            for i in range(RateArray.shape[1]):
+                if col == i and row > i:
+                    # axs[col,row].cla() # clears axis on each loop
+                    for Ln in [linregLn,scatterPl, hLn, vLn]:
+                        Ln.remove()
+                    axs[col,row].set_xticks([])
+                    axs[col,row].set_yticks([])
+                    axs[col,row].text(0.5,0.75, statstr, c='k', fontsize=10, ha='center', transform = axs[col,row].transAxes)   
+                    # axs[col,row].text(0.5,strpos, statstrArr, c=colour, fontsize=8, ha='center', transform = axs[col,row].transAxes)   
+            # Turn of top and right frame edges for tidiness
+            axs[col,row].spines['right'].set_visible(False)
+            axs[col,row].spines['top'].set_visible(False)
+
+            
+    # align all yaxis labels in first column
+    fig.align_ylabels(axs[:,0])
     
     plt.tight_layout()
-    plt.subplots_adjust(wspace=0.6, hspace=0.5)
+    # plt.subplots_adjust(wspace=0.6, hspace=0.5)
     
-    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis_VegWaterTopoWaves.png')
+    figpath = os.path.join(filepath,sitename+'_MultivariateAnalysis_VegWaterTopoWaves.png' )
     plt.savefig(figpath)
     print('figure saved under '+figpath)
     
     plt.show()
     
     return
-
     
 
 def WPErrors(filepath, sitename, WPErrorPath, WPPath):
