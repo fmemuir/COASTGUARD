@@ -4,7 +4,11 @@ $\textcolor{#00B0B7}{\textsf{C}}$ oastal $\textcolor{#00B0B7}{\textsf{O}}$ bserv
 
 $\textcolor{#00B0B7}{\textsf{G}}$ enerated $\textcolor{#00B0B7}{\textsf{U}}$ sing $\textcolor{#00B0B7}{\textsf{A}}$ I + $\textcolor{#00B0B7}{\textsf{R}}$ eal-time $\textcolor{#00B0B7}{\textsf{D}}$ ata
 
-is a Python toolkit for coastal monitoring and modelling using machine learning approaches. Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, built from the CoastSat toolbox (https://github.com/kvos/CoastSat).
+is a Python toolkit for coastal monitoring and modelling using machine learning approaches. 
+
+https://github.com/fmemuir/COASTGUARD/assets/22475417/0ffaeea4-adeb-41c7-9936-937d9899df6c
+
+Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, which is partially built on the CoastSat toolbox (https://github.com/kvos/CoastSat).
 
 
 ## :warning: PATCH NOTES :wrench:
