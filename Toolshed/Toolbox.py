@@ -19,7 +19,7 @@ from osgeo import gdal, osr
 import pandas as pd
 import geopandas as gpd
 import utm
-from shapely import geometry
+from shapely import geometry, affinity
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
 from shapely.ops import linemerge
 import folium
@@ -1782,7 +1782,7 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename):
     BBoxGDF = BBoxGDF.to_crs(crs=projstr)
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
-        print('Warning: your bounding box is too big for Sentinel2 (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
+        print('Warning: your bounding box is too big for GEE requests (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
     
     BBoxGDF['Area'] = BBoxGDF.area/(10*10)
     mapcentrelon = lonmin + ((lonmax - lonmin)/2)
@@ -1808,6 +1808,94 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename):
     point = ee.Geometry.Point(polygon[0][0]) 
     
     return polygon, point
+
+
+def AOIfromLeaflet(polygon, point, sitename):
+    '''
+    Creates area of interest bounding box from provided Leaflet AOI, and
+    checks to see if order is correct and size isn't too large for GEE requests.
+    Based on LR-F July 2021
+    FM Jun 2022
+
+    Parameters
+    ----------
+    lonmin : float
+        Minimum longitude of bounding box.
+    lonmax : float
+        Maximum longitude of bounding box.
+    latmin : float
+        Minimum latitude of bounding box.
+    latmax : float
+        Maximum latitude of bounding box.
+
+    Returns
+    -------
+    polygon : list of lists
+        List of pairs of coordinates [x,y] representing vertices of bounding box.
+    point : ee.Geometry.Point
+        Corner point of bounding box.
+
+    '''
+    lonmin = polygon[0][0][0]
+    lonmax = polygon[0][1][0]
+    latmin = polygon[0][0][1]
+    latmax = polygon[0][2][1]
+    BBox = Polygon([[lonmin, latmin],[lonmax,latmin],[lonmax,latmax],[lonmin, latmax]])
+    # Convert bounding box to a geodataframe
+    BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs = {'init':'epsg:4326'})
+    # convert crs of geodataframe to UTM to get metre measurements (not degrees)
+    projstr = FindUTM(latmin, lonmin)
+    BBoxGDF = BBoxGDF.to_crs(crs=projstr)
+    # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
+    if (int(BBoxGDF.area)/(10*10))>262144:
+        print('Warning: your bounding box is too big for GEE requests (%s pixels too big)' % int((BBoxGDF.area/(10*10))-262144))
+        response = input('Do you want us to try shrinking your bounding box? Type "yes" to run shrinking, or "no" to redraw the box yourself.')
+    
+        if response == 'no':
+            return
+        else:
+            # Shrink edges until AOI fits in BBox limit    
+            def ShrinkRect(rectangle, scale_factor=0.9):
+                # Get the current center of the rectangle
+                center = rectangle.centroid
+                # Scale the rectangle about its center
+                shrunken_rectangle = affinity.scale(rectangle, xfact=scale_factor, yfact=scale_factor, origin=center)
+                return shrunken_rectangle
+        
+            scale_factor = 0.9
+            tolerance = 1e-9
+            area_limit = 2000
+            
+            while True:
+                current_area = BBoxGDF.geometry.area.iloc[0]
+                if current_area <= area_limit or current_area <= tolerance:
+                    break
+            
+                # Shrink the geometry
+                shrunken_rectangle = ShrinkRect(BBoxGDF.geometry.iloc[0], scale_factor=scale_factor)
+            
+                # Check if the new geometry is valid and non-degenerate
+                if shrunken_rectangle.is_empty or not shrunken_rectangle.is_valid:
+                    print("Warning: Geometry became invalid. Stopping the loop.")
+                    break
+            
+                BBoxGDF['geometry'] = gpd.GeoSeries([shrunken_rectangle])
+            
+                # Reduce the scale_factor for finer control over the shrinking process
+                scale_factor *= 0.95
+            
+            # Output the final area
+            print(f"Final area: {round(BBoxGDF.geometry.area.iloc[0],2)} m")
+            lonmin = float(BBoxGDF.bounds.minx)
+            lonmax = float(BBoxGDF.bounds.maxx)
+            latmin = float(BBoxGDF.bounds.miny)
+            latmax = float(BBoxGDF.bounds.maxy)
+    
+    # Export as polygon and ee point for use in clipping satellite image requests
+    polygon = [[[lonmin, latmin],[lonmax, latmin],[lonmin, latmax],[lonmax, latmax]]]
+    point = ee.Geometry.Point(polygon[0][0]) 
+    
+    return polygon, point, BBoxGDF
 
 
 def AOIfromLine(referenceLinePath, max_dist_ref, sitename):
