@@ -55,6 +55,11 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     # params get pulled out further down after downloading
     WaveOutFile = settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
+    # Add 1-cell buffer to bounding box
+    latmin = latmin - 0.025
+    lonmin = lonmin - 0.025
+    latmax = latmax + 0.025
+    lonmax = lonmax + 0.025
     # if file already exists, just return filepath to existing file
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
         print('Wave data file already exists.')
@@ -325,7 +330,7 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     # for Tr in range(len(TransectInterGDF)):
     # Set constant value for sig wave heights at 10m closure depth
     K2 = 0.15
-    D = 10
+    D = 10.
     
     TimeStep = np.mean(np.diff(WaveTime)).seconds    
     
@@ -345,10 +350,10 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
             
             # Wave diffusivity (+ve = smoothing, -ve = growth)
             Term1 = (K2/D)# K2/D
-            Term2 = T**(1/5) # T^1.5
-            Term3 = H0**(12/5) # H0^12/5
-            Term4 = abs(math.cos(Alpha))**(1/5)*(math.cos(Alpha)/abs(math.cos(Alpha))) # cos^1/5(Alpha) [need to maintain sign]
-            Term5 = (6/5) * math.sin(Alpha)**2 # (6/5)sin^2(Alpha)
+            Term2 = T**(1./5.) # T^1.5
+            Term3 = H0**(12./5.) # H0^12/5
+            Term4 = abs(math.cos(Alpha))**(1./5.)*(math.cos(Alpha)/abs(math.cos(Alpha))) # cos^1/5(Alpha) [need to maintain sign]
+            Term5 = (6./5.) * math.sin(Alpha)**2. # (6/5)sin^2(Alpha)
             Term6 = math.cos(Alpha)**2 # cos^2(Alpha)
             Mu.append( Term1 * Term2 * Term3 * (Term4 * (Term5 - Term6)) )
 
