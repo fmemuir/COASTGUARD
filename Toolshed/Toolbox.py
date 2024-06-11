@@ -29,6 +29,7 @@ import sklearn
 import scipy
 from scipy.stats import circmean
 from scipy.stats import circstd
+from statsmodels.tsa.seasonal import seasonal_decompose
 from astropy.convolution import convolve
 from datetime import datetime, timedelta
 from IPython.display import clear_output
@@ -2904,3 +2905,41 @@ def MotuDownload(motuCommand):
 
     # Wait for the process to finish
     dlprocess.wait()
+    
+    
+def GetSeasonalityIndex(x,y, P=365):
+    """
+    Calculate Seasonal Strength Index from a timeseries.
+    FM May 2024
+
+    Parameters
+    ----------
+    x : list or array
+        Array of timestamps in datetime format.
+    y : list or array
+        Array of timeseries values (e.g. cross-shore distance of veg edge, wave conditions).
+    P : int, optional
+        Number of timesteps (days) to decompose seasonality over. The default is 365.
+
+    Returns
+    -------
+    SSI : float
+        Seasonal Strength Index (variance of seasonal signal / (variance of seasonal signal + variance of residuals)).
+
+    """
+
+    # Extend series and interpolate to create daily observations
+    Timeseries = pd.Series(y, index=x)
+    # if any duplicates exist, take the mean of those duplicates
+    Timeseries = Timeseries.groupby(Timeseries.index).mean()
+    Timeseries = Timeseries.resample('1D')
+    Timeseries = Timeseries.interpolate(method='time')
+    
+    # Calculate seasonal .trend, .seasonal and .resid, using a year as the detrending period
+    Seasonality = seasonal_decompose(Timeseries, model='additive', period=P)
+    Season = Seasonality.seasonal
+    Resid = Seasonality.resid
+    # Calculate Seasonal Strength Index
+    SSI = np.var(Season) / (np.var(Season) + np.var(Resid))
+    
+    return SSI
