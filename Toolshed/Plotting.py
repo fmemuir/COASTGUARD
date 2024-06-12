@@ -11,6 +11,7 @@ import numpy as np
 import string
 import warnings
 from datetime import datetime, timedelta
+import calendar
 warnings.filterwarnings("ignore")
 import pdb
 
@@ -3534,3 +3535,41 @@ def GetSznID(Date, SznCount):
         SznID = SznCount[SznStart]
     # Return the ID calculated for each tide date
     return SznID
+
+
+def ImageDateHist(OutFilePath, sitename, output):
+    
+    
+    DatesDF = pd.DataFrame(output['dates'], columns=['dates'])
+    DatesDF['dates_dt'] = [datetime.strptime(x, '%Y-%m-%d') for x in DatesDF['dates']]
+    DatesDF['month'] = DatesDF['dates_dt'].dt.month
+    
+    counts = DatesDF['month'].value_counts().sort_index()
+    
+    f = plt.figure(figsize=(3.31, 3.31), dpi=300)
+    mpl.rcParams.update({'font.size':7})
+    ax = f.add_subplot(1,1,1)
+    # ax.set_facecolor('#ECEAEC')
+    
+    ax.bar(counts.index,counts.values, width=1, color='#E8EFFC', edgecolor='#6C8EBF')
+    
+    # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
+    rect1 = mpatches.Rectangle((10.5,0), 2, 100, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1)
+    rect2 = mpatches.Rectangle((0.5,0), 2, 100, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1)
+    ax.add_patch(rect1)
+    ax.add_patch(rect2)
+    
+    ax.set_xticks(range(1,13))
+    ax.set_xticklabels([calendar.month_abbr[i] for i in np.arange(1,13)])
+    ax.set_xlim(0,13)
+    ax.set_ylim(0,32)
+    ax.set_ylabel('Number of satellite images')
+
+    plt.tight_layout()
+    
+    figpath = os.path.join(OutFilePath,sitename+'_SatImageMonth_Histogram.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+
+    plt.show()
+    
