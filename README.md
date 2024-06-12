@@ -174,9 +174,10 @@ When loading in the tidal data in the driver file, you should **change the tidal
 
 ## Roadmap
 This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!
+**June 2024:** New functionality is coming to run timeseries predictions based on the vegetation edge and waterline timeseries that are generated from this tool!
 
 ## Contributions
-We are in testing phase and not currently taking contributions, but [reach out to Freya](mailto:f.muir.1@research.gla.ac.uk) with suggestions.
+We welcome any enhancements! Please [open an issue](https://github.com/fmemuir/COASTGUARD/issues/new) if you have any contributions or questions.
 
 ## Authors and acknowledgements
 This tool is based on work by Kilian Vos ([github: kvos](https://github.com/kvos)) at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir, Luke Richardson-Foulger and Martin Hurst, and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger.
@@ -184,5 +185,5 @@ This tool is based on work by Kilian Vos ([github: kvos](https://github.com/kvos
 If you would like to share your use of this toolkit, please cite it as appropriate:
 - Muir, F. M. E., Hurst, M. D., Richardson-Foulger, L., Naylor, L. A., Rennie, A. F. (2024). VedgeSat: An automated, open-source toolkit for coastal change monitoring using satellite-derived vegetation edges. *Earth Surface Processes and Landforms, in press.* [https://doi.org/10.1002/esp.5835](https://doi.org/10.1002/esp.5835)
 - Muir, F. M. E. (2023). COASTGUARD. GitHub. [https://github.com/fmemuir/COASTGUARD](https://github.com/fmemuir/COASTGUARD)
-Please let us know if you do, we'd love to see COASTGUARD and COASTGUARD.VedgeSat in use across the world!
+Please let us know if you do, we'd love to see COASTGUARD and the VedgeSat tool in use across the world!
 
