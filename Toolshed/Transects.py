@@ -20,6 +20,7 @@ from pyproj import Proj
 
 # other modules
 from sklearn.linear_model import LinearRegression
+from scipy import stats
 from pylab import ginput
 import rasterio as rio
 from rasterio.features import shapes
@@ -541,6 +542,8 @@ def SaveIntersections(TransectInterGDF, LinesGDF, BasePath, sitename):
                 X = np.array(OrdDates[idate:]).reshape((-1,1))
                 y = np.array(TransectInterGDF['distances'][Tr][idate:])
                 model = LinearRegression(fit_intercept=True).fit(X,y)
+                
+                
                 Slope = round(model.coef_[0]*365.2425, 2) # ordinal dates means slope is in m/day, converts to m/yr
                 Slopes.append(Slope)
 
@@ -617,12 +620,13 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename, 
     
     print('saving new transect shapefile ...')
     
-    olddate, youngdate, oldyoungT, oldyoungRt, recentT, recentRt = ([] for i in range(6))
+    olddate, youngdate, oldyoungT, oldyoungRt, oldyoungME, recentT, recentRt, recentME = ([] for i in range(8))
     for Tr in range(len(TransectInterGDFWater)):
         FullDateTime = []
         RecentDateTime = []
         DateRange = []
         Slopes = []
+        MoEs = []
         if len(TransectInterGDFWater['wldates'].iloc[Tr]) > 0:
             DateRange.append(TransectInterGDFWater['wldates'].iloc[Tr][0]) # oldest date
             if len(TransectInterGDFWater['wldates'].iloc[Tr]) > 1:
@@ -642,15 +646,34 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename, 
                 X = np.array(OrdDates[idate:]).reshape((-1,1))
                 y = np.array(TransectInterGDFWater['wlcorrdist'][Tr][idate:])
                 model = LinearRegression(fit_intercept=True).fit(X,y)
-                Slope = round(model.coef_[0]*365.2425, 2)
+                Slope_mday = model.coef_[0]
+                Intercept_mday = model.intercept_
+                
+                n = len(X)
+                meanX = np.mean(X)
+                sumsqX = np.sum((X - meanX) ** 2)
+                resids = y - (Slope_mday * X + Intercept_mday)
+                s = np.sqrt(np.sum(resids ** 2) / (n - 2))
+                SE_slope = s / np.sqrt(sumsqX)
+                
+                CL = 0.95
+                t_value = stats.t.ppf((1 + CL) / 2, df=(n-2))
+                MoE_mday = t_value * SE_slope
+                
+                # Convert to metres per year
+                MoE = round(MoE_mday*365.2425, 2)
+                Slope = round(Slope_mday*365.2425, 2)
                 Slopes.append(Slope)
+                MoEs.append(MoE)
         
             olddate.append(DateRange[0]) # oldest date in timeseries
             youngdate.append(DateRange[-1]) # youngest date in timeseries
             oldyoungT.append(FullDateTime) # time difference in years between oldest and youngest date
             oldyoungRt.append(Slopes[0]) # rate of change from oldest to youngest veg edge in m/yr
+            oldyoungME.append(MoEs[0]) # margin or error (plus or minus) on old to young rate in m/yr
             recentT.append(RecentDateTime) # time difference in years between second youngest and youngest date
             recentRt.append(Slopes[1]) # rate of change from second youngest to youngest veg edge in m/yr
+            recentME.append(MoEs[1]) # margin or error (plus or minus) on second youngest to youngest rate in m/yr
 
         else: # if empty (< 2 intersections), just write empty values to Tr (to keep same no. of entries vs no. of Tr)
             olddate.append(np.nan) # oldest date in timeseries
@@ -664,8 +687,10 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename, 
     TransectInterGDFWater['youngdateW'] = youngdate # youngest date in timeseries
     TransectInterGDFWater['oldyoungTW'] = oldyoungT # time difference in years between oldest and youngest date
     TransectInterGDFWater['oldyungRtW'] = oldyoungRt # rate of change from oldest to youngest veg edge in m/yr
+    TransectInterGDFWater['oldyungMEW'] = oldyoungME # margin or error (plus or minus) on old to young rate in m/yr
     TransectInterGDFWater['recentTW'] = recentT # time difference in years between second youngest and youngest date
     TransectInterGDFWater['recentRtW'] = recentRt # rate of change from second youngest to youngest veg edge in m/yr
+    TransectInterGDFWater['recentMEW'] = recentME # margin or error (plus or minus) on second youngest to youngest rate in m/yr
     
     TransectInterShp = TransectInterGDFWater.copy()
 
