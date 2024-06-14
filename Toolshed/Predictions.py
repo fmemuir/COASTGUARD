@@ -70,8 +70,10 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
     return CoastalDF
 
 
-def PreprocessTraining():
+def PreprocessTraining(CoastalDF):
     
+    X = CoastalDF.drop(columns=['TransectID', 'labels'])
+    y = CoastalDF['labels']
     # Normalize the features
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
