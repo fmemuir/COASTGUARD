@@ -961,15 +961,15 @@ def CreateFileStructure(sitename, sat_list):
 
     Parameters
     ----------
-    sitename : TYPE
-        DESCRIPTION.
-    sat_list : TYPE
-        DESCRIPTION.
+    sitename : str
+        Name of site for analysis.
+    sat_list : list
+        List of strings corresponding to satellite platforms to use.
 
     Returns
     -------
-    filepath : TYPE
-        DESCRIPTION.
+    filepath : str
+        Filepath to project folder for desired sitename.
 
     """
     filepath = os.path.join(os.getcwd(), 'Data')
