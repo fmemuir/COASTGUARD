@@ -563,3 +563,41 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
 
         print('number of breaking wave conditions: '+str(Nloop))
 
+
+def CalcRunup(WaveHs):
+    """
+    Calculate wave runup using Senechal et al., 2011 and Castelle et al., 2021
+    formula (assuming runup scales directly with offshore wave height).
+    FM June 2024
+
+    Parameters
+    ----------
+    WaveHs : list
+        Offshore wave heights (from Copernicus hindcast) at each transect in a site.
+
+    Returns
+    -------
+    Runups : list
+        Calculated wave runups list (with same dimensions as input wave heights).
+
+    """
+    Runups = []
+    # For each transect in list
+    for Tr in range(len(WaveHs)):
+        # If empty, add NaN
+        if isinstance(WaveHs[Tr], list) == False:
+            RunupTr = np.nan
+        else:
+            RunupTr = []
+            # For each wave condition at time of each sat image (at single transect)
+            for Hs in WaveHs[Tr]:
+                # Senechal 2011, Castelle 2021 runup calculation for macrotidal beach
+                runup = 2.14 * np.tanh(0.4*Hs)
+                RunupTr.append(runup)
+        
+        # Add per-transect runup lists (or nan) to full list
+        Runups.append(RunupTr)
+        # Simplified versions
+        # RunupsMean.append(np.nanmean(RunupTr))
+        # RunupsMedian.append(np.nanmedian(RunupTr))
+    return Runups

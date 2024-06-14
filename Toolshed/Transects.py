@@ -1055,6 +1055,10 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     TransectInterGDF['WaveDiffus'] = WaveDiffusivity
     TransectInterGDF['WaveStabil'] = WaveStability
     
+    # Calculate wave runup from extracted wave conditions
+    Runups = Waves.CalcRunup(WaveHs)
+    TransectInterGDF['Runups'] = Runups
+    
     
     TransectInterShp = TransectInterGDF.copy()
     
