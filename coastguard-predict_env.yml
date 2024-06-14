@@ -1,0 +1,18 @@
+name: coastguard-predict
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - cudatoolkit==11.8.0
+  - cudnn==8.9.7.29
+  - spyder
+  - numpy
+  - pandas
+  - matplotlib
+  - scikit-learn
+  - openpyxl
+  - imbalanced-learn
+  - copernicusmarine
+  - jupyter
+  - notebook
+prefix: /media/14TB_RAID_Array/User_Homes/Freya_Muir/anaconda3/envs/coastguard_predict
