@@ -34,6 +34,7 @@ from astropy.convolution import convolve
 from datetime import datetime, timedelta
 from IPython.display import clear_output
 import ee
+import geemap
 import copernicusmarine as cms
 
 import pickle
@@ -47,6 +48,8 @@ import time
 import pyfes
 import xarray as xr
 import netCDF4
+
+from Toolshed import Image_Processing
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
@@ -2943,3 +2946,97 @@ def GetSeasonalityIndex(x,y, P=365):
     SSI = np.var(Season) / (np.var(Season) + np.var(Resid))
     
     return SSI
+
+
+def PercentageCloudy(metadata, settings):
+    """
+    Generate boolean lists for how many satellite images should be 
+    skipped vs. succeed; can be used for filtering metadata before a full run,
+    or generating a post-process success rate.
+    FM June 2024
+
+    Parameters
+    ----------
+    metadata : dict
+        Dictionary of satellite image metadata.
+    settings : dict
+        Dictionary of settings to be used for the veg edge extraction.
+
+    Returns
+    -------
+    cloud_exceeded : list
+        Populated list with n = n_filenames. Images where cloud threshold was exceeded = 1.
+    cloud_score : list
+        Populated list of recalculated cloud score, with n = n_filenames.
+    empty_file : list
+        Populated list. Empty images with no pixel values = 1.
+
+    """
+    
+    cloud_exceeded = []
+    cloud_score = []
+    empty_file = []
+    filenames = metadata['S2']['filenames']
+    for i in range(len(filenames)):
+        print(f"Image {i}")
+        fn = int(i)
+        cloud_mask_issue = settings['cloud_mask_issue']
+
+        imgs = []
+        for i in range(len(filenames)):
+            imgs.append(ee.Image(filenames[i]))
+        Sentinel2 = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
+        
+        cloud_scoree = Sentinel2.getInfo().get('features')[fn]['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
+        cloud_score.append(cloud_scoree)
+        
+        if cloud_scoree > settings['cloud_thresh']:
+            print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
+            cloud_exceeded.append(1)
+            continue
+        else:
+            cloud_exceeded.append(0)
+        
+        img = ee.Image(Sentinel2.getInfo().get('features')[fn]['id'])
+        # read 10m bands (R,G,B,NIR)        
+        im10 = geemap.ee_to_numpy(img, 
+                                  bands = ['B2','B3','B4','B8'], 
+                                  region=ee.Geometry.Polygon(settings['inputs']['polygon']),
+                                  scale=10)
+        
+        im20 = geemap.ee_to_numpy(img, 
+                                  bands = ['B11'], 
+                                  region=ee.Geometry.Polygon(settings['inputs']['polygon']),
+                                  scale=20)
+        
+        im60 = geemap.ee_to_numpy(img, 
+                                  bands = ['QA60'], 
+                                  region=ee.Geometry.Polygon(settings['inputs']['polygon']),
+                                  scale=60)
+        
+        if im10 is None or im20 is None or im60 is None:
+            print(' - Skipped: empty raster')
+            empty_file.append(1)
+            continue
+        else:
+            empty_file.append(0)
+        
+        if sum(sum(sum(im10))) < 1:
+            print(' - Skipped: empty raster (zeros)')
+            empty_file.append(1)
+            continue
+        else:
+            empty_file.append(0)
+            
+        im_QA = im60[:,:,0]
+        
+        cloud_mask = Image_Processing.create_cloud_mask(im_QA, 'S2', cloud_mask_issue)
+        
+        if cloud_mask is None:
+            print(" - Skipped: no cloud mask available") 
+            empty_file.append(1)
+            continue
+        else:
+            empty_file.append(0)
+            
+    return cloud_exceeded, cloud_score, empty_file
