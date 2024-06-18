@@ -3537,33 +3537,63 @@ def GetSznID(Date, SznCount):
     return SznID
 
 
-def ImageDateHist(OutFilePath, sitename, output):
+def ImageDateHist(OutFilePath, sitename, output, metadata, satname='S2'):
     
-    
+    # Compile output dates into months
     DatesDF = pd.DataFrame(output['dates'], columns=['dates'])
     DatesDF['dates_dt'] = [datetime.strptime(x, '%Y-%m-%d') for x in DatesDF['dates']]
     DatesDF['month'] = DatesDF['dates_dt'].dt.month
     
+    # Compile full image list of dates into months
+    FullDatesDF = pd.DataFrame(metadata[satname]['dates'], columns=['dates'])
+    FullDatesDF['dates_dt'] = [datetime.strptime(x, '%Y-%m-%d') for x in FullDatesDF['dates']]
+    FullDatesDF['month'] = FullDatesDF['dates_dt'].dt.month
+    
+    # Counts of unsuccessful images due to cloud
+    CloudDF = pd.DataFrame({'dates':metadata[satname]['dates'], 'cloud_exceed':metadata[satname]['cloud_exceed']})
+    ExceedDF = CloudDF[CloudDF['cloud_exceed']==1]
+    ExceedDF['dates_dt'] = [datetime.strptime(x, '%Y-%m-%d') for x in ExceedDF['dates']]
+    ExceedDF['month'] = ExceedDF['dates_dt'].dt.month
+    
+    # Calculate image numbers per month
     counts = DatesDF['month'].value_counts().sort_index()
+    fullcounts = FullDatesDF['month'].value_counts().sort_index()
+    cloudcounts = ExceedDF['month'].value_counts().sort_index()
+    # exceedcounts = cloudcounts + counts # add to successful images to stack bars
     
     f = plt.figure(figsize=(3.31, 3.31), dpi=300)
     mpl.rcParams.update({'font.size':7})
     ax = f.add_subplot(1,1,1)
     # ax.set_facecolor('#ECEAEC')
     
-    ax.bar(counts.index,counts.values, width=1, color='#E8EFFC', edgecolor='#6C8EBF')
+    ax.bar(fullcounts.index, fullcounts.values, 
+           width=1, color='#FFFFFF', edgecolor='#6C8EBF', zorder=8, 
+           label='Full S2 catalogue')
+    cloudbar = ax.bar(cloudcounts.index, cloudcounts.values, 
+           width=1, color=[0.75,0.75,0.8], edgecolor='#6C8EBF', zorder=9, 
+           bottom=counts.values, label='Cloudy images')
+    ax.bar(counts.index, counts.values, 
+           width=1, color='#c4d8ff', edgecolor='#6C8EBF', zorder=10, #E8EFFC
+           label='Suitable images')
+    
+    # label cloudy image bars
+    cloudpcts = (cloudcounts.values / fullcounts.values)*100
+    cloudlabels = [f"{cloudpct:.0f}%" for cloudpct in cloudpcts]
+    ax.bar_label(cloudbar, labels=cloudlabels, label_type='center', color=[0.4,0.4,0.45], zorder=10)
     
     # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
     rect1 = mpatches.Rectangle((10.5,0), 2, 100, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1)
-    rect2 = mpatches.Rectangle((0.5,0), 2, 100, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1)
+    rect2 = mpatches.Rectangle((0.5,0), 2, 100, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1, label='UK Winter')
     ax.add_patch(rect1)
     ax.add_patch(rect2)
     
     ax.set_xticks(range(1,13))
     ax.set_xticklabels([calendar.month_abbr[i] for i in np.arange(1,13)])
     ax.set_xlim(0,13)
-    ax.set_ylim(0,32)
+    ax.set_ylim(0,95)
     ax.set_ylabel('Number of satellite images')
+    
+    ax.legend()
 
     plt.tight_layout()
     
