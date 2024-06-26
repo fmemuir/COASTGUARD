@@ -3177,12 +3177,12 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
     ----------
     sitename : str
         Name of site of interest.
-    outfilepath : TYPE
-        DESCRIPTION.
-    WaveFilePath : TYPE, optional
-        DESCRIPTION. The default is None.
-    PlotDates : TYPE, optional
-        DESCRIPTION. The default is None.
+    outfilepath : str
+        Filepath to save fig to.
+    WaveFilePath : str, optional
+        Filepath to load specific wave file from. The default is None.
+    PlotDates : list, optional
+        List of start and end dates for constraining plot. The default is None.
 
     Returns
     -------
@@ -3337,12 +3337,12 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
         Name of site of interest.
     output : dict
         Dictionary of sat-derived veg edges and waterlines.
-    dates : TYPE
-        DESCRIPTION.
-    TidePath : TYPE
-        DESCRIPTION.
-    OutFilePath : TYPE
-        DESCRIPTION.
+    dates : list
+        Start and end dates of study.
+    TidePath : str
+        Filepath to tide CSV file.
+    OutFilePath : str
+        Filepath to save fig to.
 
     Returns
     -------
@@ -3603,3 +3603,63 @@ def ImageDateHist(OutFilePath, sitename, output, metadata, satname='S2'):
 
     plt.show()
     
+    
+def AnnualStackTimeseries(sitename, TransectInterGDF, TransectIDs, Titles):
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+        
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':7})
+        fig, ax = plt.subplots(1,len(TransectIDs),figsize=(6.55,4), dpi=300, sharex=True)
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':7})
+        fig, ax = plt.subplots(1,1,figsize=(6.55,4), dpi=300, sharex=True)
+        # axs = [axs] # to be able to loop through
+            
+    for TransectID, Title in zip(TransectIDs, Titles):
+        # Define variables for each subplot per column/Transect
+        ax_WL = ax
+        ax_VE = ax_WL.twinx()
+        
+        # Process plot data
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID]
+        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID]]
+        plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID]
+        
+        plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
+
+        
+        for ax, plotT, plotD, in zip([ax_WL, ax_VE], 
+                                     [plotwldate, plotdate], 
+                                     [plotwldist,plotsatdist]):
+            
+            plotDF = pd.DataFrame({'date':plotT, 'dist':plotD})
+            
+            plotDF.set_index('date', inplace=True)
+            
+            plotDF['year'] = plotDF.index.year
+            plotDF['day_of_year'] = plotDF.index.dayofyear
+            
+            years = plotDF['year'].unique()
+            Nyears = len(years)
+            
+            grouped = plotDF.groupby('year')
+            
+            cmap = plt.get_cmap('Greens')
+            colours = [cmap(i/Nyears) for i in range(Nyears)]
+            
+            for (year, group), colour in zip(grouped, colours):
+                ax.plot(group['day_of_year'], group['value'], label=str(year), color=colour)
+        
+        plt.grid(True)
+        plt.show()
+        
+        

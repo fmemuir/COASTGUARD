@@ -581,6 +581,17 @@ def CalcRunup(WaveHs):
         Calculated wave runups list (with same dimensions as input wave heights).
 
     """
+    # Way of calculating outside of Waves.py environment
+    # for Tr in range(len(TransectInterGDFWave)):
+    #     if isinstance(TransectInterGDFWave['WaveHs'].iloc[Tr], list) == False:
+    #         runup_tr = np.nan
+    #     else:
+    #         runup_tr = []
+    #         for Hs in TransectInterGDFWave['WaveHs'].iloc[Tr]:
+    #             # Senechal 2011, Castelle 2021 runup calculation for macrotidal beach
+    #             runup = 2.14 * np.tanh(0.4*Hs)
+    #             runup_tr.append(runup)
+    
     Runups = []
     # For each transect in list
     for Tr in range(len(WaveHs)):
