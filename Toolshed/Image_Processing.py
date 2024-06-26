@@ -578,10 +578,17 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         im_ms = np.append(im10, im_swir, axis=2)
         
         # create cloud mask using 60m QA band (not as good as Landsat cloud cover)
-        im60 = geemap.ee_to_numpy(img, 
-                                  bands = ['QA60'], 
-                                  region=ee.Geometry.Polygon(polygon),
-                                  scale=60)
+        # 2024 rename of QA bands to MSK_CLASSI; implemented additional option
+        try:
+            im60 = geemap.ee_to_numpy(img, 
+                                      bands = ['QA60'], 
+                                      region=ee.Geometry.Polygon(polygon),
+                                      scale=60)
+        except:
+            im60 = geemap.ee_to_numpy(img, 
+                                      bands = ['MSK_CLASSI_OPAQUE'], 
+                                      region=ee.Geometry.Polygon(polygon),
+                                      scale=60)
         
         if im60 is None:
             print(' - Skipped: empty raster')
