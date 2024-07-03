@@ -936,8 +936,12 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
     int_veg_clip, int_nonveg_clip = ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
     
     # calculate TZ min and max values with which to classify the NDVI into a binary raster
-    TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
-    im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
+    try: # 2024-07-03: for error when setting TZValues (index [-1] with axis of length 0)
+        TZbuffer = Toolbox.TZValues(int_veg_clip, int_nonveg_clip)
+        im_TZ = Toolbox.TZimage(im_ndvi,TZbuffer)
+    except: # just set im_TZ to empty raster
+        im_TZ = np.empty(im_ndvi.shape)
+        im_TZ[:] = np.nan
     
     # use im_ref_buffer and dilate it by 5 pixels
     se = morphology.disk(5)
