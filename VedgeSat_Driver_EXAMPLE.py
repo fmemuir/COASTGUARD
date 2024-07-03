@@ -94,7 +94,7 @@ metadata = Toolbox.metadata_collection(inputs, Sat)
 #%% Vegetation Edge Settings
 # ONLY EDIT IF ADJUSTMENTS ARE NEEDED
 
-BasePath = 'Data/' + sitename + '/Veglines'
+BasePath = 'Data/' + sitename + '/lines'
 
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
@@ -191,7 +191,7 @@ beachslope = 0.24
 
 #%% Create Cross-shore Transects
 
-VegBasePath = 'Data/' + sitename + '/Veglines'
+VegBasePath = 'Data/' + sitename + '/lines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
 WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')

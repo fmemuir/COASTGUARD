@@ -107,7 +107,7 @@ metadata = Toolbox.LocalImageMetadata(inputs, Sat)
 #%% Vegetation Edge Settings
 # ONLY EDIT IF ADJUSTMENTS ARE NEEDED
 
-BasePath = 'Data/' + sitename + '/veglines'
+BasePath = 'Data/' + sitename + '/lines'
 
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
@@ -202,7 +202,7 @@ beachslope = 0.02
 
 #%% Create Cross-shore Transects
 
-VegBasePath = 'Data/' + sitename + '/veglines'
+VegBasePath = 'Data/' + sitename + '/lines'
 VeglineShp = glob.glob(BasePath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
 VeglineGDF = VeglineGDF.sort_values(by='dates') # sort GDF by dates to ensure transect intersects occur in chronological order
