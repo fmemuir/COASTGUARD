@@ -156,7 +156,7 @@ def SatGIF(metadata,settings,output):
 
 
 
-def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Titles, Hemisphere='N', ShowPlot=True):
+def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Titles=None, ShowPlot=True):
     
     """
     Plot timeseries of cross-shore veg edge change for selected transect(s).
@@ -209,6 +209,9 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Titles, Hemisphere='N
         lab.set_xlabel('Date')
     lab.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
     
+    if Titles==None:
+        Titles = ['Transect '+str(TransectID) for TransectID in TransectIDs]
+        
     for TransectID, ax, Title in zip(TransectIDs,axs, Titles):
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
@@ -262,12 +265,9 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Titles, Hemisphere='N
             xx = np.linspace(x.min(), x.max(), 100)
             dd = mpl.dates.num2date(xx)
             pltax.plot(dd, polysat(xx), '--', color=clr, lw=1.5, label=str(round(m*365.25,2))+' m/yr')
-    
-        if Title==None:
-            ax.title.set_text('Transect '+str(TransectID))
-        else:
-            ax.title.set_text('Transect '+str(TransectID)+' - '+Title)
             
+        ax.title.set_text(Title)
+        
         # ax.set_xlabel('Date (yyyy-mm)')
         # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
         # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
