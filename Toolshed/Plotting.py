@@ -471,12 +471,12 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, sharex=True)
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(6.55,4), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(6.55,4), dpi=300, sharex=True)
         axs = [axs] # to be able to loop through
         
     # common plot labels
