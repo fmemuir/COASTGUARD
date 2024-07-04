@@ -242,12 +242,12 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             if settings['adjust_detection']:
                 date = metadata[satname]['dates'][i]
                 if settings['wetdry'] == True:
-                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, image_epsg, georef,
-                                                                                                  settings, date, satname, contours_ndvi, t_ndvi,
+                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, vegline_latlon, vegline_proj,
+                                                                                                 image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
                                                                                                   sh_classif, sh_labels, contours_ndwi, t_ndwi)
                 else:
-                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, image_epsg, georef,
-                                                                                                  settings, date, satname, contours_ndvi, t_ndvi)
+                    skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, vegline_latlon, vegline_proj,
+                                                                                                 image_epsg, georef,settings, date, satname, contours_ndvi, t_ndvi)
                 # if the user decides to skip the image, continue and do not save the mapped vegline
                 if skip_image:
                     continue
@@ -1867,9 +1867,9 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, geor
     return skip_image
 
 
-def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, image_epsg, georef,
-                   settings, date, satname, contours_ndvi, t_ndvi,
-                   sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
+def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, vegline_latlon, vegline_proj,
+                     image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
+                     sh_classif=None, sh_labels=None, contours_ndwi=None, t_ndwi=None):
     """
     
 
