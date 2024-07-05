@@ -1690,13 +1690,13 @@ def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
     vl_plot1 = ax1.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
     vl_plot2 = ax2.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
     vl_plot3 = ax3.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
-    t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='threshold')
+    t_line = ax4.axvline(x=t_ndvi,ls='--', c='k', lw=1.5, label='Threshold')
     if settings['wetdry'] == True:
         sl_plot1 = ax1.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
         sl_plot2 = ax2.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
         sl_plot3 = ax3.scatter(sl_pix[:,0], sl_pix[:,1], c='#0000A8', marker='.', s=5)
     # FM: plot vert lines where edges of overlapping classes reach (transition zone)
-    TZmin = ax4.axvspan(TZbuffer[0],TZbuffer[1], color='C1',alpha=0.4,label='transition zone')
+    TZmin = ax4.axvspan(TZbuffer[0],TZbuffer[1], color='C1',alpha=0.4,label='Transition Zone')
 
     vlplots = [vl_plot1, vl_plot2, vl_plot3]
     
