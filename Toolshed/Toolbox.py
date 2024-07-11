@@ -27,8 +27,7 @@ import folium
 import skimage.transform as transform
 import sklearn
 import scipy
-from scipy.stats import circmean
-from scipy.stats import circstd
+from scipy.stats import circmean, circstd, skew, kurtosis
 from statsmodels.tsa.seasonal import seasonal_decompose
 from astropy.convolution import convolve
 from datetime import datetime, timedelta
@@ -3040,3 +3039,33 @@ def PercentageCloudy(metadata, settings):
             empty_file.append(0)
             
     return cloud_exceeded, cloud_score, empty_file
+
+
+def Moments(Arr):
+    '''
+    Calculate statistical moments from dataset.
+    FM Jul 2024
+
+    Parameters
+    ----------
+    Arr : array, list
+        1D array of data over which to calculate distribution.
+
+    Returns
+    -------
+    mean : float
+        Mean of dataset.
+    variance : float
+        Variance of dataset.
+    skew : float
+        Skewness of the dataset.
+    kurtosis : float
+        Kurtosis of the dataset.
+
+    '''
+    mean_1 = np.mean(Arr)
+    variance_2 = np.var(Arr)
+    skew_3 = skew(Arr)
+    kurtosis_4 = kurtosis(Arr)
+    
+    return mean_1, variance_2, skew_3, kurtosis_4
