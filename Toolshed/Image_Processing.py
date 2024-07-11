@@ -22,6 +22,7 @@ from arosics import COREG
 from osgeo import gdal
 from pylab import ginput
 import pickle
+import pandas as pd
 import geopandas as gpd
 from shapely import geometry
 import ee
@@ -934,6 +935,10 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
 
     # clip down classified band index values to coastal buffer
     int_veg_clip, int_nonveg_clip = ClipIndexVec(cloud_mask, im_ndvi, im_labels, im_ref_buffer)
+    # NDVI_PDF = pd.DataFrame(data={'veg_ndvi':int_veg_clip, 'nonveg_ndvi':int_nonveg_clip})
+    #NDVI_PDF.to_csv(os.path.join(settings['inputs']['filepath'], 
+    #                             settings['inputs']['sitename'],
+    #                             'Veglines',tifname+'_NDVIvalues.csv'))
     
     # calculate TZ min and max values with which to classify the NDVI into a binary raster
     try: # 2024-07-03: for error when setting TZValues (index [-1] with axis of length 0)
