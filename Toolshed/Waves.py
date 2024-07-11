@@ -188,15 +188,32 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         start = lst.index(item, start)
         return start
 
+    # more efficient to define centroids outside loop
+    Centroids = TransectInterGDF.to_crs('4326').centroid
     # loop through transects and sample
     for Tr in range(len(TransectInterGDF)):
         print('\r %i / %i transects processed' % ( Tr, len(TransectInterGDF) ), end='')
 
-        MidPnt = TransectInterGDF.to_crs('4326').centroid.iloc[Tr].coords[0] # midpoint of each transect
+        MidPnt = Centroids.iloc[Tr].coords[0] # midpoint of each transect
         
         # get index of closest matching grid square of wave data
         IDLat = (np.abs(WaveY - MidPnt[1])).argmin() 
         IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
+        
+        # NEEDS WORK TO IMPLEMENT IDW (11/07/24)
+        # Is grid cell empty? Look for closest grid cell with data
+        if np.ma.count_masked(SigWaveHeight[:,IDLat,IDLong]) > 0:
+            try: # catch if goes outside of lat long bounds
+                # if grid square successfully found, save as new grid cell to use
+                if np.ma.count_masked(SigWaveHeight[:,IDLat,IDLong+1]) == 0:
+                    IDLong = IDLong+1 
+                elif np.ma.count_masked(SigWaveHeight[:,IDLat+1,IDLong]) == 0:
+                    IDLat = IDLat+1
+                elif np.ma.count_masked(SigWaveHeight[:,IDLat+1,IDLong+1]) == 0:
+                    IDLat = IDLat+1
+                    IDLong = IDLong+1
+            except:
+                pass
         
         ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
         
