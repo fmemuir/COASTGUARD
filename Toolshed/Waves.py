@@ -55,11 +55,11 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     # params get pulled out further down after downloading
     WaveOutFile = settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
-    # Add 1-cell buffer to bounding box
-    latmin = latmin - 0.025
-    lonmin = lonmin - 0.025
-    latmax = latmax + 0.025
-    lonmax = lonmax + 0.025
+    # Add 2-cell buffer to bounding box
+    latmin = latmin - 0.05
+    lonmin = lonmin - 0.05
+    latmax = latmax + 0.05
+    lonmax = lonmax + 0.05
     # if file already exists, just return filepath to existing file
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
         print('Wave data file already exists.')
@@ -123,7 +123,7 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
 
 def ReadWaveFile(WaveFilePath):
     """
-    Read wave data stored in NetCDF file.
+    Read wave data stored in NetCDF file (and fill any empty cells).
     FM March 2024
 
     Returns
@@ -144,6 +144,10 @@ def ReadWaveFile(WaveFilePath):
         PeakWavePer = WaveData.variables['VTPK'][:,:,:] # Wave period at spectral peak (Tp)
         WaveSeconds = WaveData.variables['time'][:]
         
+        #  Fill empty cells using interpolation
+        Image
+            
+    
         WaveTime = []
         for i in range(0,len(WaveSeconds)):
             if 'UK' in WaveData.institution:
@@ -153,7 +157,7 @@ def ReadWaveFile(WaveFilePath):
             else:
                 # Global Wave Reanalysis is stored as 'number of hours since 1950-01-01 00:00:00'
                 WaveTime.append(datetime(1950,1,1,0,0,0)+timedelta(hours=int(WaveSeconds[i])))
-            
+        
     return WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime
 
 
@@ -200,7 +204,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         IDLat = (np.abs(WaveY - MidPnt[1])).argmin() 
         IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
         
-        # NEEDS WORK TO IMPLEMENT IDW (11/07/24)
+        # NEEDS WORK TO IMPLEMENT PROPERLY (11/07/24)
         # Is grid cell empty? Look for closest grid cell with data
         if np.ma.count_masked(SigWaveHeight[:,IDLat,IDLong]) > 0:
             try: # catch if goes outside of lat long bounds
