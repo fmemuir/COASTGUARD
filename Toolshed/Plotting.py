@@ -1930,22 +1930,49 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     return
 
 
-def SplitGDF(TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Loc1, Loc2):
-    # Subset into south and north transects
-    RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
-                           TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
-                           TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]]], axis=1)
-                           # TransectInterGDFWave[['WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
-
-    RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
-                           TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
-                           TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]]], axis=1)
-                           # TransectInterGDFWave[['WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+def SplitGDF(TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Loc1=None, Loc2=None):
+        
+    if Loc1 is None:
+        # If no transect subset locations are provided, slice based on eroding/accreting VE
+        # Accreting VE
+        RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] > 0]],
+                               TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] > 0]],
+                               TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] > 0]],
+                               TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]] ], axis=1)
+        # Eroding VE
+        RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] < 0]],
+                               TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] < 0]],
+                               TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] < 0]],
+                               TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]] ], axis=1)
+    else:
+        # Subset into south and north transects
+        RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+                               TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
+                               TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
+                               TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]]], axis=1)
+                               # TransectInterGDFWave[['WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
+    
+        RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+                               TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
+                               TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
+                               TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+                               # TransectInterGDFWave[['WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+    
+    # Remove rows with NaNs
+    RateGDF1.dropna(axis=0, inplace=True)
+    RateGDF2.dropna(axis=0, inplace=True)
+    
+    # Make sure RateArray is split into equal halves by randomly sampling n entries
+    # where n = len(smaller GDF)
+    if len(RateGDF1) > len(RateGDF2):
+        RateGDF1 = RateGDF1.sample(n=len(RateGDF2), random_state=1) # seed saved and reused
+    elif len(RateGDF1) < len(RateGDF2):
+        RateGDF2 = RateGDF2.sample(n=len(RateGDF1), random_state=1) # seed saved and reused
+    
     RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
-                           
+
     return RateGDF
+
 
 
 def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
@@ -1991,7 +2018,13 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
     fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,6.55), dpi=300)
     # fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
 
-    
+    # if no location of transects is specified, split array by eroding and accreting
+    if Loc1 is None:
+        Arr1 = RateArray[0:int(len(RateArray)/2), :]
+        Arr2 = RateArray[int(len(RateArray)/2):, :]
+    else:   
+        Arr1 = RateArray[0:Loc1[1]-Loc1[0], :]
+        Arr2 = RateArray[Loc2[1]-Loc2[0]:, :]
     # Plot matrix of relationships
     lab = [r'$\Delta$VE (m/yr)',
            r'$\Delta$WL (m/yr)',
@@ -2003,7 +2036,7 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
     for row in range(RateArray.shape[1]):
         for col in range(RateArray.shape[1]): 
             for Arr, colour, strpos, leglabel in zip(
-                                                    [ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+                                                    [Arr1, Arr2], 
                                                     ['#C51B2F','#5499DE'],
                                                     [0.4, 0.2],
                                                     ['Eroding ','Accreting ']):
