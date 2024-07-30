@@ -27,6 +27,7 @@ import folium
 import skimage.transform as transform
 import sklearn
 import scipy
+from scipy import interpolate
 from scipy.stats import circmean, circstd, skew, kurtosis
 from statsmodels.tsa.seasonal import seasonal_decompose
 from astropy.convolution import convolve
@@ -3069,3 +3070,35 @@ def Moments(Arr):
     kurtosis_4 = kurtosis(Arr)
     
     return mean_1, variance_2, skew_3, kurtosis_4
+
+
+def InterpolateRaster(raster, method='nearest'):
+    """
+    Interpolate over empty values in a raster.
+    FM July 2024
+
+    Parameters
+    ----------
+    raster : array
+        2D array of raster values.
+    method : str, optional
+        Interpolation method to be used ['linear','nearest','cubic']. Nearest
+        is the only method to fill all cells in a raster.
+
+    Returns
+    -------
+    interp_raster : array
+        Interpolated raster.
+
+    """
+    mask = raster.mask
+    validcoords = np.array(np.nonzero(~mask)).T
+    invalidcoords = np.array(np.nonzero(mask)).T
+    
+    validvals = raster[~mask]
+    interp_vals = interpolate.griddata(validcoords, validvals,
+                                      invalidcoords, method=method)
+    interp_raster = raster.data.copy()
+    interp_raster[mask] = interp_vals
+    
+    return interp_raster
