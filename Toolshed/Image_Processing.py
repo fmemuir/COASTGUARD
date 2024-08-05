@@ -1,7 +1,8 @@
 """
 This module contains functions needed to preprocess satellite images before processing through line extraction.
-Freya Muir, Nov 2022.
-Adapted from CoastSat: 
+Nov 2022.
+COASTGUARD edits and updates: Freya Muir, University of Glasgow
+
 """
 
 # load modules

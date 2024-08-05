@@ -1,3 +1,6 @@
+"""This file contains the main functions for COASTGUARD coastal vegetation edge extraction (VedgeSat).
+Freya Muir, University of Glasgow
+"""
 # load modules
 import os
 import numpy as np
