@@ -3,6 +3,8 @@ This module contains all the functions needed to download the satellite images
 from the Google Earth Engine server
 
 Author: Kilian Vos, Water Research Laboratory, University of New South Wales
+
+COASTGUARD edits and updates: Freya Muir, University of Glasgow
 """
 
 # load basic modules
@@ -20,6 +22,9 @@ import zipfile
 import copy
 import shutil
 from osgeo import gdal
+from requests.auth import HTTPBasicAuth
+import requests
+import time
 
 # additional modules
 from datetime import datetime, timedelta
@@ -988,3 +993,145 @@ def merge_overlapping_images(metadata,inputs):
     metadata_updated = get_metadata(inputs)
 
     return metadata_updated
+
+
+
+def PlanetImageRetrieval(inputs):
+    '''
+    Finds Planet imagery using a valid API key and parameters to constrain the dataset.
+    FM Apr 2022
+
+    Returns
+    -------
+    testdata.
+
+    '''
+    AOI = {
+        "type": "Polygon",
+        "coordinates": inputs['polygon']
+        }
+    
+    Sat = []
+    # API Key stored as an env variable
+    PLANET_API_KEY = os.environ['PL_API_KEY']
+    
+    # # Setup Planet Data API base URL
+    # URL = "https://api.planet.com/data/v1"
+    # # Setup the session
+    # session = requests.Session()
+    # # Authenticate
+    # session.auth = (PLANET_API_KEY, "")
+
+    # get images that overlap with our AOI 
+    geomFilter = {
+        "type": "GeometryFilter",
+        "field_name": "geometry",
+        "config": AOI
+        }
+    
+    # get images acquired within a date range
+    dateFilter = {
+        "type": "DateRangeFilter",
+        "field_name": "acquired",
+        "config": {
+    "gte": inputs['dates'][0]+"T00:00:00.000Z",
+    "lte": "2022-04-01T00:00:00.000Z"
+        }
+    }
+
+    # only get images which have <50% cloud coverage
+    cloudFilter = {
+        "type": "RangeFilter",
+        "field_name": "cloud_cover",
+        "config": {
+            "lte": 0.5
+            }
+        }
+
+    # combine our geo, date, cloud filters
+    combinedFilter = {
+        "type": "AndFilter",
+        "config": [geomFilter, dateFilter, cloudFilter]
+        }
+    
+    item_type = "PSScene4Band"
+
+    # API request object
+    searchRequest = {
+        "item_types": [item_type], 
+        "filter": combinedFilter
+        }
+
+    # fire off the POST request
+    searchResult = \
+        requests.post(
+            'https://api.planet.com/data/v1/quick-search',
+            auth=HTTPBasicAuth(PLANET_API_KEY, ''),
+            json=searchRequest)
+    
+    # extract image IDs only
+    try:
+        imageIDs = [feature['id'] for feature in searchResult.json()['features']]
+        print('Number of images returned: '+str(len(imageIDs)))
+        Sat.append(imageIDs)
+    except:
+        print('ERROR: \n'+searchResult.text)
+    
+    return Sat
+    
+def PlanetDownload(Sat):
+    """
+    Download PlanetScope imagery directly using the Planet API.
+    FM 2022
+
+    Parameters
+    ----------
+    Sat : list
+        List of satellite image names per platform.
+
+    Returns
+    -------
+    idURLs : TYPE
+        DESCRIPTION.
+
+    """
+    idURLs = []
+    for ID in Sat[0]:
+        idURL = 'https://api.planet.com/data/v1/item-types/{}/items/{}/assets'.format('PSScene4Band', ID)
+
+        # Returns JSON metadata for assets in this ID. Learn more: planet.com/docs/reference/data-api/items-assets/#asset
+        result = \
+            requests.get(
+                idURL,
+                auth=HTTPBasicAuth(os.environ['PL_API_KEY'], '')
+                )
+        
+        # List of asset types available for this particular satellite image
+        #print(result.json().keys())
+        idURLs.append(idURL)
+        # Parse out useful links
+        links = result.json()[u'analytic']['_links']
+        selflink = links['_self']
+        activationlink = links['activate']        
+        # Activate analytic dataset
+        activateResult = \
+            requests.get(
+                activationlink,
+                auth=HTTPBasicAuth(os.environ['PL_API_KEY'], '')
+                )
+        activationStatResult = \
+            requests.get(
+                selflink,
+                auth=HTTPBasicAuth(os.environ['PL_API_KEY'], '')
+                )
+        print(activationStatResult.json()['status'])
+        while activationStatResult.json()['status'] != 'active':
+            print(ID+' is still '+activationStatResult.json()['status'])
+            time.sleep(10)
+        else:
+            break
+        # Download imagery
+        downloadlink = activationStatResult.json()["location"]
+        print(downloadlink)
+        
+    return idURLs
