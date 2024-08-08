@@ -3754,6 +3754,7 @@ def PCAPlots(MultivarGDF):
     pca = PCA(n_components=CompNum)
     PComps = pca.fit_transform(MultivarGDFStd)
     Var = pca.explained_variance_ratio_
+    
 
     # Create dataframe of PCs
     PCA_DF = pd.DataFrame(data=PComps, columns=[f'PC{i+1}' for i in range(CompNum)])
@@ -3781,7 +3782,51 @@ def PCAPlots(MultivarGDF):
     # plt.tight_layout()
     # plt.show()
     
+    # Biplot
+    # Classify plot based on eroding vs accreting veg
+    MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, 
+                                     columns=[r'$\Delta$VE (m/yr)',
+                                              r'$\Delta$WL (m/yr)',
+                                              r'TZwidth$_{\eta}$ (m)',
+                                              r'$\theta_{max}$ ($\circ$)',
+                                              r'$\mu_{net}$ (mm/s$^{2}$)'])
+    MultivarGDFbiplot['Class'] = 1
+    MultivarGDFbiplot['Class'].iloc[:int(len(MultivarGDFbiplot)/2)] = 0 # First half contains eroding Trs
+    # Separate features and labels
+    labels = MultivarGDFbiplot['Class']
+    # Classify the first two PCs
+    biplotDF = pd.DataFrame(data=PCA_DF, columns=['PC1', 'PC2'])
+    biplotDF['Class'] = labels
+    # Plot the data and eigenvectors in PC space
+    plt.figure(figsize=(5, 5), dpi=300)
+    # Horizontal and vertical lines through origin
+    plt.axvline(0, c=[0.5,0.5,0.5], lw=0.5, alpha=0.8, zorder=1)
+    plt.axhline(0, c=[0.5,0.5,0.5], lw=0.5, alpha=0.8, zorder=1)
+    plt.grid(c=[0.5,0.5,0.5], alpha=0.2, lw=0.5)
+    # Scaling for coefficient vectors
+    coeffs = np.transpose(pca.components_[0:2, :])
+    n_coeffs = coeffs.shape[0]
+    scalex = 1.0/(biplotDF['PC1'].max() - biplotDF['PC1'].min())
+    scaley = 1.0/(biplotDF['PC2'].max() - biplotDF['PC2'].min())
+    # Plot observations in principal component
+    scatterlab = ['Eroding VE', 'Accreting VE']
+    for clusterID, colour in enumerate(['#C51B2F','#5499DE']): # 0=eroding, 1=accreting
+        plt.scatter(biplotDF['PC1'][biplotDF['Class']==clusterID]*scalex, 
+                    biplotDF['PC2'][biplotDF['Class']==clusterID]*scaley, 
+                    s=10, c=colour, alpha=0.5, label=scatterlab[clusterID])
+    # Plot eignevectors of each variable
+    for i in range(n_coeffs):
+        plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, zorder=5)
+        plt.text(coeffs[i,0]* 1.15, coeffs[i,1]*1.15, MultivarGDFbiplot.columns[i].split('(')[0], 
+                 color='k', ha='center', va='center', zorder=5)
+    plt.xlim(-1,1)
+    plt.ylim(-1,1)
+    plt.xlabel(f'PC1 [explains {round(Var[0]*100,2)}% of the variance]')
+    plt.ylabel(f'PC2 [explains {round(Var[1]*100,2)}% of the variance]')
+
+    plt.show()
+    
     # Heatmap (using seaborn)
-    PlottingSeaborn.PCAHeatmap(pca, MultivarGDF)
+    # PlottingSeaborn.PCAHeatmap(pca, MultivarGDF)
 
     return PCA_DF
