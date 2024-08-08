@@ -698,8 +698,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
                 cloud_mask = im_QA
         else:
             # create empty cloud mask
-            im_QA = np.zeros(im_ms.shape).astype(bool)
-            cloud_mask = np.zeros(im_ms.shape).astype(bool)
+            im_QA = np.zeros(im_ms[:,:,0].shape).astype(bool) # needs to be one band of (nrow, ncol)
+            cloud_mask = np.zeros(im_ms[:,:,0].shape).astype(bool) # needs to be one band of (nrow, ncol)
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -819,8 +819,10 @@ def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
             int_veg = int_veg[np.random.choice(int_veg.shape[0],int_nonveg.shape[0], replace=False)]
         else:
             int_nonveg = int_nonveg[np.random.choice(int_nonveg.shape[0],int_veg.shape[0], replace=False)]
+        return int_veg, int_nonveg
+    else:
+        return None, None
             
-    return int_veg, int_nonveg
 
 
 def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):

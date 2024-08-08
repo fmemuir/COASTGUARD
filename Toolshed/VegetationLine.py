@@ -230,7 +230,10 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
 
             # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
             contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
-                
+            if contours_ndvi is None:
+                print(' - Poor image quality: no contours generated.')
+                continue
+            
             if settings['wetdry'] == True:
                 im_ndwi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
                 contours_ndwi, t_ndwi = FindShoreContours_Water(im_ndwi, sh_labels, cloud_mask, im_ref_buffer)
@@ -1022,9 +1025,11 @@ def FindShoreContours_WP(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     
     # clip down classified band index values to coastal buffer
     int_veg, int_nonveg = Image_Processing.ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer)
+    # Empty/low quality images
+    if int_veg is None or int_nonveg is None:
+        return None, None
     
     t_ndi, _ = Toolbox.FindWPThresh(int_veg, int_nonveg)
-            
     # find contour with Marching-Squares algorithm
     im_ndi_buffer = np.copy(im_ndi)
     im_ndi_buffer[~im_ref_buffer] = np.nan
