@@ -37,11 +37,14 @@ from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 import scipy.stats
 from statsmodels.tsa.seasonal import seasonal_decompose
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
 
-from Toolshed import Toolbox, Waves
+from Toolshed import Toolbox, Waves, PlottingSeaborn
 
 # SCALING:
 # Journal 2-column width: 224pt or 3.11in
@@ -1638,21 +1641,21 @@ def ClusterRates(sitename, TransectInterGDF, Sloc, Nloc):
     mpl.rcParams.update({'font.size':7})
     
     # Create array of veg change rates vs shoreline change rates per transect
-    RateArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
+    MultivarArray = np.array([[ID,x, y] for ID, x, y in zip(TransectInterGDF['TransectID'],TransectInterGDF['oldyoungRt'],TransectInterGDF['oldyungRtW'])])
     # Remove outliers (set to nan then remove in one go below)
-    RateArray[:,1] = np.where(RateArray[:,1] < 50, RateArray[:,1], np.nan)
-    RateArray[:,1] = np.where(RateArray[:,1] > -50, RateArray[:,1], np.nan)
-    RateArray[:,2] = np.where(RateArray[:,2] < 190, RateArray[:,2], np.nan)
-    RateArray[:,2] = np.where(RateArray[:,2] > -190, RateArray[:,2], np.nan)
+    MultivarArray[:,1] = np.where(MultivarArray[:,1] < 50, MultivarArray[:,1], np.nan)
+    MultivarArray[:,1] = np.where(MultivarArray[:,1] > -50, MultivarArray[:,1], np.nan)
+    MultivarArray[:,2] = np.where(MultivarArray[:,2] < 190, MultivarArray[:,2], np.nan)
+    MultivarArray[:,2] = np.where(MultivarArray[:,2] > -190, MultivarArray[:,2], np.nan)
     # Remove any transects with nan values in either column
-    RateArray = RateArray[~np.isnan(RateArray).any(axis=1)]
+    MultivarArray = MultivarArray[~np.isnan(MultivarArray).any(axis=1)]
     # Fit k-means clustering to array of rates
-    RateCluster = KMeans(n_clusters=8).fit_predict(RateArray[:,1:])
+    RateCluster = KMeans(n_clusters=8).fit_predict(MultivarArray[:,1:])
     
     fig, axs = plt.subplots(1,2, figsize=(5,5), dpi=200)
     # Plot array using clusters as colour map
-    ax1 = axs[0].scatter(RateArray[:,1], RateArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
-    ax2 = axs[1].scatter(RateArray[:,1], RateArray[:,2], c=RateArray[:,0], s=5, alpha=0.5, marker='.')
+    ax1 = axs[0].scatter(MultivarArray[:,1], MultivarArray[:,2], c=RateCluster, s=5, alpha=0.5, marker='.')
+    ax2 = axs[1].scatter(MultivarArray[:,1], MultivarArray[:,2], c=MultivarArray[:,0], s=5, alpha=0.5, marker='.')
     
     # axs[0].set_aspect('equal')
     # axs[1].set_aspect('equal')
@@ -1700,20 +1703,20 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
         
     ## Multivariate Plot
     # Subset into south and north transects
-    RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+    MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
-    RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+    MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
     
-    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    MultivarGDF = pd.concat([MultivarGDF1, MultivarGDF2], axis=0)
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
+    MultivarArray = np.array(MultivarGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
     
     mpl.rcParams.update({'font.size':12})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
+    fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
@@ -1721,28 +1724,28 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
            r'$TZwidth_{\eta}$ (m)',
            r'$slope_{max}$ ($\circ$)']
     
-    for row in range(RateArray.shape[1]):
-        for col in range(RateArray.shape[1]):
+    for row in range(MultivarArray.shape[1]):
+        for col in range(MultivarArray.shape[1]):
             
             # if plot is same var on x and y, change plot to a histogram    
             if row == col:
-                binnum = round(np.sqrt(len(RateArray)))*2
-                bins = np.histogram(RateArray[:,row],bins=binnum)[1]
-                axs[col,row].hist(RateArray[:,row],bins, color='k', alpha=0.5)
+                binnum = round(np.sqrt(len(MultivarArray)))*2
+                bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
+                axs[col,row].hist(MultivarArray[:,row],bins, color='k', alpha=0.5)
                 axs[col,row].set_yticks([]) # turns off ticks and tick labels
 
             # otherwise plot scatter of each variable against one another
             else:
-                scatterPl = axs[col,row].scatter(RateArray[:,row], RateArray[:,col], s=20, alpha=0.4, marker='.', c='k', edgecolors='none')
+                scatterPl = axs[col,row].scatter(MultivarArray[:,row], MultivarArray[:,col], s=20, alpha=0.4, marker='.', c='k', edgecolors='none')
                 
                 # overall linear reg line
-                z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                z = np.polyfit(list(MultivarArray[:,row]), list(MultivarArray[:,col]), 1)
                 poly = np.poly1d(z)
-                order = np.argsort(RateArray[:,row])
-                xlr = RateArray[:,row][order]
-                ylr = poly(RateArray[:,row][order])
+                order = np.argsort(MultivarArray[:,row])
+                xlr = MultivarArray[:,row][order]
+                ylr = poly(MultivarArray[:,row][order])
                 linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
-                r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                r, p = scipy.stats.pearsonr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
                 statstr = 'r = %.2f' % (r)
                 # label with stats [axes.text(x,y,str)]
                 if r > 0: # +ve line slanting up
@@ -1755,7 +1758,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
             vLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
             hLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
             
-            if row == RateArray.shape[1]-1: # set x label for last row only
+            if row == MultivarArray.shape[1]-1: # set x label for last row only
                 axs[row,col].set_xlabel(lab[col])
             if col == 0: # set y label for first column only
                 axs[row,col].set_ylabel(lab[row])
@@ -1767,7 +1770,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
                 axs[row,col].axis('equal')
             
             # clear plots on RHS of hists, print stats instead
-            for i in range(RateArray.shape[1]):
+            for i in range(MultivarArray.shape[1]):
                 if col == i and row > i:
                     # axs[col,row].cla() # clears axis on each loop
                     for Ln in [linregLn, scatterPl, hLn, vLn]:
@@ -1821,23 +1824,23 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
         
     ## Multivariate Plot
     # Subset into south and north transects
-    RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+    MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
-    RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+    MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
     
     # summer (pale) eroding = #F9C784 
     # summer (pale) accreting = #9DB4C0
     
-    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    MultivarGDF = pd.concat([MultivarGDF1, MultivarGDF2], axis=0)
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
+    MultivarArray = np.array(MultivarGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax']])
     
     mpl.rcParams.update({'font.size':12})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(11.6,5.9), dpi=300)
+    fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(11.6,5.9), dpi=300)
     
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
@@ -1845,16 +1848,16 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
            r'$TZwidth_{\eta}$ (m)',
            r'$slope_{max}$ ($\circ$)']
     
-    for row in range(RateArray.shape[1]):
-        for col in range(RateArray.shape[1]): 
-            for Arr, colour, strpos, leglabel in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+    for row in range(MultivarArray.shape[1]):
+        for col in range(MultivarArray.shape[1]): 
+            for Arr, colour, strpos, leglabel in zip([ MultivarArray[0:Loc1[1]-Loc1[0],:], MultivarArray[Loc2[1]-Loc2[0]:,:] ], 
                                            ['#B2182B','#2166AC'],
                                            [0.5,0.25],
                                            ['Eroding ','Accreting ']):
                 # if plot is same var on x and y, change plot to a histogram    
                 if row == col:
-                    binnum = round(np.sqrt(len(RateArray)))*2
-                    bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                    binnum = round(np.sqrt(len(MultivarArray)))*2
+                    bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
                     axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5, label=leglabel)
                     axs[col,row].set_yticks([]) # turns off ticks and tick labels
                     # axs[col,row].legend()
@@ -1864,13 +1867,13 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
                     scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
                     
                     # overall linear reg line
-                    z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                    z = np.polyfit(list(MultivarArray[:,row]), list(MultivarArray[:,col]), 1)
                     poly = np.poly1d(z)
-                    order = np.argsort(RateArray[:,row])
-                    xlr = RateArray[:,row][order]
-                    ylr = poly(RateArray[:,row][order])
+                    order = np.argsort(MultivarArray[:,row])
+                    xlr = MultivarArray[:,row][order]
+                    ylr = poly(MultivarArray[:,row][order])
                     linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
-                    r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                    r, p = scipy.stats.pearsonr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
                     statstr = 'r = %.2f' % (r)
                     # label with stats [axes.text(x,y,str)]
                     if r > 0: # +ve line slanting up
@@ -1892,7 +1895,7 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
                 hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
                 vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
                 
-                if row == RateArray.shape[1]-1: # set x axis labels on last row
+                if row == MultivarArray.shape[1]-1: # set x axis labels on last row
                     axs[row,col].set_xlabel(lab[col])
                 if col == 0: # set y axis labels on first column
                     axs[row,col].set_ylabel(lab[row])
@@ -1902,7 +1905,7 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
                     axs[row,col].axis('equal')
                     
                 # clear plots on RHS of hists, print stats instead
-                for i in range(RateArray.shape[1]):
+                for i in range(MultivarArray.shape[1]):
                     if col == i and row > i:
                         # axs[col,row].cla() # clears axis on each loop
                         for Ln in [linregLn,clustLn, scatterPl, hLn, vLn]:
@@ -1935,47 +1938,47 @@ def SplitGDF(TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, Tra
     if Loc1 is None:
         # If no transect subset locations are provided, slice based on eroding/accreting VE
         # Accreting VE
-        RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] > 0]],
+        MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] > 0]],
                                TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] > 0]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] > 0]],
                                TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]] ], axis=1)
         # Eroding VE
-        RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] < 0]],
+        MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]] ], axis=1)
     else:
         # Subset into south and north transects
-        RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+        MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                                TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
                                TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]]], axis=1)
                                # TransectInterGDFWave[['WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
     
-        RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+        MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                                TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
                                TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]]], axis=1)
                                # TransectInterGDFWave[['WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
     
     # Remove rows with NaNs
-    RateGDF1.dropna(axis=0, inplace=True)
-    RateGDF2.dropna(axis=0, inplace=True)
+    MultivarGDF1.dropna(axis=0, inplace=True)
+    MultivarGDF2.dropna(axis=0, inplace=True)
     
-    # Make sure RateArray is split into equal halves by randomly sampling n entries
+    # Make sure MultivarArray is split into equal halves by randomly sampling n entries
     # where n = len(smaller GDF)
-    if len(RateGDF1) > len(RateGDF2):
-        RateGDF1 = RateGDF1.sample(n=len(RateGDF2), random_state=1) # seed saved and reused
-    elif len(RateGDF1) < len(RateGDF2):
-        RateGDF2 = RateGDF2.sample(n=len(RateGDF1), random_state=1) # seed saved and reused
+    if len(MultivarGDF1) > len(MultivarGDF2):
+        MultivarGDF1 = MultivarGDF1.sample(n=len(MultivarGDF2), random_state=1) # seed saved and reused
+    elif len(MultivarGDF1) < len(MultivarGDF2):
+        MultivarGDF2 = MultivarGDF2.sample(n=len(MultivarGDF1), random_state=1) # seed saved and reused
     
-    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    MultivarGDF = pd.concat([MultivarGDF1, MultivarGDF2], axis=0)
 
-    return RateGDF
+    return MultivarGDF
 
 
 
-def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
+def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None):
     """
     Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
     Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
@@ -2006,25 +2009,25 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
     # summer (pale) accreting = #9DB4C0
         
     # Scale up diffusivity (mu) for nicer labelling
-    RateGDF['WaveDiffus'] = RateGDF['WaveDiffus']*1000
+    MultivarGDF['WaveDiffus'] = MultivarGDF['WaveDiffus']*1000
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus']])#, 'WaveStabil']])
+    MultivarArray = np.array(MultivarGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus']])#, 'WaveStabil']])
     
     fs = 7
     # fs = 10 # PPT dimensions
     mpl.rcParams.update({'font.size':fs})
 
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,6.55), dpi=300)
-    # fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
+    fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(6.55,6.55), dpi=300)
+    # fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
 
     # if no location of transects is specified, split array by eroding and accreting
     if Loc1 is None:
-        Arr1 = RateArray[0:int(len(RateArray)/2), :]
-        Arr2 = RateArray[int(len(RateArray)/2):, :]
+        Arr1 = MultivarArray[0:int(len(MultivarArray)/2), :]
+        Arr2 = MultivarArray[int(len(MultivarArray)/2):, :]
     else:   
-        Arr1 = RateArray[0:Loc1[1]-Loc1[0], :]
-        Arr2 = RateArray[Loc2[1]-Loc2[0]:, :]
+        Arr1 = MultivarArray[0:Loc1[1]-Loc1[0], :]
+        Arr2 = MultivarArray[Loc2[1]-Loc2[0]:, :]
     # Plot matrix of relationships
     lab = [r'$\Delta$VE (m/yr)',
            r'$\Delta$WL (m/yr)',
@@ -2033,8 +2036,8 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
            r'$\mu_{net}$ (mm/s$^{2}$)']
            # r'$\Gamma$ (1)']
     
-    for row in range(RateArray.shape[1]):
-        for col in range(RateArray.shape[1]): 
+    for row in range(MultivarArray.shape[1]):
+        for col in range(MultivarArray.shape[1]): 
             for Arr, colour, strpos, leglabel in zip(
                                                     [Arr1, Arr2], 
                                                     ['#C51B2F','#5499DE'],
@@ -2042,8 +2045,8 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
                                                     ['Eroding ','Accreting ']):
                 # if plot is same var on x and y, change plot to a histogram    
                 if row == col:
-                    binnum = round(np.sqrt(len(RateArray)))*2
-                    bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                    binnum = round(np.sqrt(len(MultivarArray)))*2
+                    bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
                     mn, var, skw, kurt = Toolbox.Moments(Arr[:,row])
                     stdv = np.sqrt(var)
                     moments_label = f'$\gamma_{1}$ = {round(skw,2)}\n$\gamma_{2}$ = {round(kurt,2)}'
@@ -2067,13 +2070,13 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
                     scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
                     
                     # overall linear reg line
-                    z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                    z = np.polyfit(list(MultivarArray[:,row]), list(MultivarArray[:,col]), 1)
                     poly = np.poly1d(z)
-                    order = np.argsort(RateArray[:,row])
-                    xlr = RateArray[:,row][order]
-                    ylr = poly(RateArray[:,row][order])
+                    order = np.argsort(MultivarArray[:,row])
+                    xlr = MultivarArray[:,row][order]
+                    ylr = poly(MultivarArray[:,row][order])
                     linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5, zorder=3)
-                    r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                    r, p = scipy.stats.pearsonr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
                     statstr = 'r = %.2f' % (r)
                     # label with stats [axes.text(x,y,str)]
                     if r > 0: # +ve line slanting up
@@ -2096,7 +2099,7 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
                 hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
                 vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
                 
-                if row == RateArray.shape[1]-1: # set x axis labels on last row
+                if row == MultivarArray.shape[1]-1: # set x axis labels on last row
                     axs[row,col].set_xlabel(lab[col])
                 else:
                     axs[row,col].tick_params(labelbottom=False)
@@ -2111,7 +2114,7 @@ def MultivariateMatrixClusteredWaves(sitename, RateGDF, Loc1=None, Loc2=None):
                     axs[row,col].axis('equal')
                     
                 # clear plots on RHS of hists, print stats instead
-                for i in range(RateArray.shape[1]):
+                for i in range(MultivarArray.shape[1]):
                     if col == i and row > i:
                         # axs[col,row].cla() # clears axis on each loop
                         for Ln in [linregLn,clustBuff, clustLn, scatterPl, hLn, vLn]:
@@ -2173,12 +2176,12 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
         os.mkdir(filepath)
     
     # Subset into south and north transects
-    RateGDF1 = pd.concat([ TransectInterGDF['dates'].iloc[Loc1[0]:Loc1[1]],
+    MultivarGDF1 = pd.concat([ TransectInterGDF['dates'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDF['distances'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFWater['wldates'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFWater['wlcorrdist'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidth']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
-    RateGDF2 = pd.concat([ TransectInterGDF['dates'].iloc[Loc2[0]:Loc2[1]],
+    MultivarGDF2 = pd.concat([ TransectInterGDF['dates'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDF['distances'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFWater['wldates'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFWater['wlcorrdist'].iloc[Loc2[0]:Loc2[1]],
@@ -2188,7 +2191,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     # summer (pale) eroding = #F9C784 
     # summer (pale) accreting = #9DB4C0
     
-    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    MultivarGDF = pd.concat([MultivarGDF1, MultivarGDF2], axis=0)
     
     # Seasonal summaries
     # For each transect, and each year in each transect's list of dates, compile summer and winter dists
@@ -2200,12 +2203,12 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     wlWinterRt = []
     TZsummer = []
     TZwinter = []
-    for Tr in range(len(RateGDF)): # for each transect
-        vegTrdates = RateGDF['dates'].iloc[Tr]
-        wlTrdates = RateGDF['wldates'].iloc[Tr]
-        vegTrdists = RateGDF['distances'].iloc[Tr]
-        wlTrdists = RateGDF['wlcorrdist'].iloc[Tr]
-        TZwidths = RateGDF['TZwidth'].iloc[Tr]
+    for Tr in range(len(MultivarGDF)): # for each transect
+        vegTrdates = MultivarGDF['dates'].iloc[Tr]
+        wlTrdates = MultivarGDF['wldates'].iloc[Tr]
+        vegTrdists = MultivarGDF['distances'].iloc[Tr]
+        wlTrdists = MultivarGDF['wlcorrdist'].iloc[Tr]
+        TZwidths = MultivarGDF['TZwidth'].iloc[Tr]
         
         
         summerTrRt = []
@@ -2263,21 +2266,21 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     
     # for some reason, values stored as sets of two items in list for veg and water;
     # take 1st element for veg and 2nd for water
-    RateGDF['SummerVegRt'] = [Rt[0] for Rt in SummerRt]
-    RateGDF['WinterVegRt'] = [Rt[0] for Rt in WinterRt]
-    RateGDF['SummerWLRt'] = [Rt[1] for Rt in SummerRt]
-    RateGDF['WinterWLRt'] = [Rt[1] for Rt in WinterRt]
-    RateGDF['SummerTZ'] = [Rt[2] for Rt in SummerRt]
-    RateGDF['WinterTZ'] = [Rt[2] for Rt in WinterRt]
+    MultivarGDF['SummerVegRt'] = [Rt[0] for Rt in SummerRt]
+    MultivarGDF['WinterVegRt'] = [Rt[0] for Rt in WinterRt]
+    MultivarGDF['SummerWLRt'] = [Rt[1] for Rt in SummerRt]
+    MultivarGDF['WinterWLRt'] = [Rt[1] for Rt in WinterRt]
+    MultivarGDF['SummerTZ'] = [Rt[2] for Rt in SummerRt]
+    MultivarGDF['WinterTZ'] = [Rt[2] for Rt in WinterRt]
     
  
     # Extract desired columns to an array for plotting
-    # RateArray = np.array(RateGDF[['SummerVegRt','SummerWLRt','WinterVegRt','WinterWLRt','TZwidthMn']])
-    RateArray = np.array(RateGDF[['SummerVegRt','SummerWLRt','WinterVegRt','WinterWLRt']])
+    # MultivarArray = np.array(MultivarGDF[['SummerVegRt','SummerWLRt','WinterVegRt','WinterWLRt','TZwidthMn']])
+    MultivarArray = np.array(MultivarGDF[['SummerVegRt','SummerWLRt','WinterVegRt','WinterWLRt']])
     
-    # VegRateArray = RateArray[:,[0,2]]
-    # WLRateArray = RateArray[:,[1,3]]
-    # RateArray = 
+    # VegMultivarArray = MultivarArray[:,[0,2]]
+    # WLMultivarArray = MultivarArray[:,[1,3]]
+    # MultivarArray = 
     
     mpl.rcParams.update({'font.size':10})
     fig, axs = plt.subplots(2, 2, figsize=(11.6,5.9), dpi=300)
@@ -2289,20 +2292,20 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     
     for row in range(2):
         for col in range(2): 
-            for Arr in [RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:]]:
+            for Arr in [MultivarArray[0:Loc1[1]-Loc1[0],:], MultivarArray[Loc2[1]-Loc2[0]:,:]]:
                 if row == 0 or row == 2: # summer
                     for i,colour in enumerate(['#F67E4B','#6EA6CD']):
                         if row == col:
-                            binnum = round(np.sqrt(len(RateArray)))*2
-                            bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                            binnum = round(np.sqrt(len(MultivarArray)))*2
+                            bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
                             axs[col,row].hist(Arr[:,row+i], bins, color=colour, alpha=0.5)
                         else:
                             scatterPl = axs[col,row].scatter(Arr[:,row+i], Arr[:,col+i], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
                 else: # winter
                     for i,colour in enumerate(['#A50026','#364B9A']):
                         if row == col:
-                            binnum = round(np.sqrt(len(RateArray)))*2
-                            bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+                            binnum = round(np.sqrt(len(MultivarArray)))*2
+                            bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
                             axs[col,row].hist(Arr[:,row+i], bins, color=colour, alpha=0.5)
                         else:
                             scatterPl = axs[col,row].scatter(Arr[:,row+i], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
@@ -2312,14 +2315,14 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     # for row in range(2):
     #     for col in range(2): 
     #         # for top and bottom half of array (eroding and accreting), 
-    #         for Arr, colour, strpos in zip([ VegRateArray[0:Loc1[1]-Loc1[0],0], VegRateArray[Loc2[1]-Loc2[0]:,1],
-    #                                          WLRateArray[0:Loc1[1]-Loc1[0],0], WLRateArray[Loc2[1]-Loc2[0]:,1] ], 
+    #         for Arr, colour, strpos in zip([ VegMultivarArray[0:Loc1[1]-Loc1[0],0], VegMultivarArray[Loc2[1]-Loc2[0]:,1],
+    #                                          WLMultivarArray[0:Loc1[1]-Loc1[0],0], WLMultivarArray[Loc2[1]-Loc2[0]:,1] ], 
     #                                        ['#F67E4B','#A50026','#6EA6CD','#364B9A'], # erode summer, erode winter, acc summer, acc winter
     #                                        [0.6,0.5,0.4,0.3]):
     #             # if plot is same var on x and y, change plot to a histogram    
     #             if row == col:
-    #                 binnum = round(np.sqrt(len(RateArray)))*2
-    #                 bins = np.histogram(RateArray[:,row],bins=binnum)[1]
+    #                 binnum = round(np.sqrt(len(MultivarArray)))*2
+    #                 bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
     #                 axs[col,row].hist(Arr,bins, color=colour, alpha=0.5)
     #                 axs[col,row].set_yticks([]) # turns off ticks and tick labels
     
@@ -2328,13 +2331,13 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     #                 scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
                     
     #                 # overall linear reg line
-    #                 z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+    #                 z = np.polyfit(list(MultivarArray[:,row]), list(MultivarArray[:,col]), 1)
     #                 poly = np.poly1d(z)
-    #                 order = np.argsort(RateArray[:,row])
-    #                 xlr = RateArray[:,row][order]
-    #                 ylr = poly(RateArray[:,row][order])
+    #                 order = np.argsort(MultivarArray[:,row])
+    #                 xlr = MultivarArray[:,row][order]
+    #                 ylr = poly(MultivarArray[:,row][order])
     #                 linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5)
-    #                 r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+    #                 r, p = scipy.stats.pearsonr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
     #                 statstr = 'r = %.2f' % (r)
     #                 # label with stats [axes.text(x,y,str)]
     #                 if r > 0: # +ve line slanting up
@@ -2356,7 +2359,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     #             hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
     #             vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
                 
-    #             if row == RateArray.shape[1]-1: # set x axis labels on last row
+    #             if row == MultivarArray.shape[1]-1: # set x axis labels on last row
     #                 axs[row,col].set_xlabel(lab[col])
     #             if col == 0: # set y axis labels on first column
     #                 axs[row,col].set_ylabel(lab[row])
@@ -2366,7 +2369,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     #                 axs[row,col].axis('equal')
                     
     #             # clear plots on RHS of hists, print stats instead
-    #             for i in range(RateArray.shape[1]):
+    #             for i in range(MultivarArray.shape[1]):
     #                 if col == i and row > i:
     #                     # axs[col,row].cla() # clears axis on each loop
     #                     for Ln in [linregLn,clustLn, scatterPl, hLn, vLn]:
@@ -2423,12 +2426,12 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
         
     ## Multivariate Plot
     # Subset into south and north transects
-    RateGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
+    MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
                            TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]]], axis=1)#, 'WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
 
-    RateGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
+    MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                            TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
                            TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]]], axis=1)#, 'WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
@@ -2436,16 +2439,16 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
     # summer (pale) eroding = #F9C784 
     # summer (pale) accreting = #9DB4C0
     
-    RateGDF = pd.concat([RateGDF1, RateGDF2], axis=0)
+    MultivarGDF = pd.concat([MultivarGDF1, MultivarGDF2], axis=0)
     # Scale up diffusivity (mu) for nicer labelling
-    RateGDF['WaveDiffus'] = RateGDF['WaveDiffus']*1000
+    MultivarGDF['WaveDiffus'] = MultivarGDF['WaveDiffus']*1000
     
     # Extract desired columns to an array for plotting
-    RateArray = np.array(RateGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus']])#, 'WaveStabil']])
+    MultivarArray = np.array(MultivarGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus']])#, 'WaveStabil']])
     
     mpl.rcParams.update({'font.size':10})
-    fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(6.55,8.33), dpi=300)
-    # fig, axs = plt.subplots(RateArray.shape[1],RateArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
+    fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(6.55,8.33), dpi=300)
+    # fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
 
     
     # Plot matrix of relationships
@@ -2456,34 +2459,34 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
            r'$\mu_{net}$ (mm/s$^{2}$)']
            #r'$\Gamma$ (1)']
     
-    for row in range(RateArray.shape[1]):
-        for col in range(RateArray.shape[1]): 
-            # for Arr, colour, strpos, leglabel in zip([ RateArray[0:Loc1[1]-Loc1[0],:], RateArray[Loc2[1]-Loc2[0]:,:] ], 
+    for row in range(MultivarArray.shape[1]):
+        for col in range(MultivarArray.shape[1]): 
+            # for Arr, colour, strpos, leglabel in zip([ MultivarArray[0:Loc1[1]-Loc1[0],:], MultivarArray[Loc2[1]-Loc2[0]:,:] ], 
             #                                ['#C51B2F','#5499DE'],
             #                                [0.5,0.25],
             #                                ['Eroding ','Accreting ']):
             # if plot is same var on x and y, change plot to a histogram    
             if row == col:
-                binnum = round(np.sqrt(len(RateArray)))*2
-                bins = np.histogram(RateArray[:,row],bins=binnum)[1]
-                axs[col,row].hist(RateArray[:,row],bins, color='k', alpha=0.5)
+                binnum = round(np.sqrt(len(MultivarArray)))*2
+                bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
+                axs[col,row].hist(MultivarArray[:,row],bins, color='k', alpha=0.5)
                 axs[col,row].set_yticks([]) # turns off ticks and tick labels
                 # axs[col,row].legend()
 
             # otherwise plot scatter of each variable against one another
             else:
-                scatterPl = axs[col,row].scatter(RateArray[:,row], RateArray[:,col], s=20, alpha=0.3, marker='.', c='k', edgecolors='none')
+                scatterPl = axs[col,row].scatter(MultivarArray[:,row], MultivarArray[:,col], s=20, alpha=0.3, marker='.', c='k', edgecolors='none')
                 
                 # overall linear reg line
-                z = np.polyfit(list(RateArray[:,row]), list(RateArray[:,col]), 1)
+                z = np.polyfit(list(MultivarArray[:,row]), list(MultivarArray[:,col]), 1)
                 poly = np.poly1d(z)
-                order = np.argsort(RateArray[:,row])
-                xlr = RateArray[:,row][order]
-                ylr = poly(RateArray[:,row][order])
+                order = np.argsort(MultivarArray[:,row])
+                xlr = MultivarArray[:,row][order]
+                ylr = poly(MultivarArray[:,row][order])
                 linregBuff, = axs[col,row].plot(xlr, ylr, c='w', ls='-', lw=1.9, alpha=0.7, zorder=1)
                 linregLn, = axs[col,row].plot(xlr, ylr, c='k', ls='--', lw=1.5, zorder=3)
                 
-                r, p = scipy.stats.pearsonr(list(RateArray[:,row]), list(RateArray[:,col]))
+                r, p = scipy.stats.pearsonr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
                 statstr = 'r = %.2f' % (r)
                 # label with stats [axes.text(x,y,str)]
                 if r > 0: # +ve line slanting up
@@ -2496,7 +2499,7 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
             hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
             vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
             
-            if row == RateArray.shape[1]-1: # set x axis labels on last row
+            if row == MultivarArray.shape[1]-1: # set x axis labels on last row
                 axs[row,col].set_xlabel(lab[col])
             else:
                 axs[row,col].tick_params(labelbottom=False)
@@ -2511,7 +2514,7 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
             #     axs[row,col].axis('equal')
                 
             # clear plots on RHS of hists, print stats instead
-            for i in range(RateArray.shape[1]):
+            for i in range(MultivarArray.shape[1]):
                 if col == i and row > i:
                     # axs[col,row].cla() # clears axis on each loop
                     for Ln in [linregLn,scatterPl, hLn, vLn]:
@@ -3718,3 +3721,67 @@ def AnnualStackTimeseries(sitename, TransectInterGDF, TransectIDs, Titles):
         plt.show()
         
         
+def PCAPlots(MultivarGDF):
+
+    mpl.rcParams.update({'font.size':7})
+    
+    # Standardise data columns
+    MultivarGDFStd = StandardScaler().fit_transform(MultivarGDF)
+    # Define and execute PCA
+    pca = PCA(n_components=len(MultivarGDF.columns))
+    PComps = pca.fit_transform(MultivarGDFStd)
+    # Calculate variance of each component
+    Var = pca.explained_variance_ratio_
+
+    print('Explained Variance:')
+    print(Var)
+
+    # Scree plot of explained variance
+    plt.figure(figsize=(4,3), dpi=200)
+    plt.bar(range(1, len(Var)+1), Var, alpha=0.5, align='center')
+    plt.step(range(1, len(Var)+1), np.cumsum(Var), where='mid')
+    plt.axhline(y=0.95, c='r', ls='--')
+    # plt.axhline(y=0.05, c='r', ls='--')
+    plt.xlabel('Explained variance ratio')
+    plt.ylabel('Principal components')
+    plt.tight_layout()
+    # plt.show()
+
+    # Find optimum number of components using a threshold for the explained variance
+    CumVar = np.cumsum(Var)
+    CompNum = np.argmax(CumVar >= 0.9) + 1
+    # Rerun PCA with new optimum number of components
+    pca = PCA(n_components=CompNum)
+    PComps = pca.fit_transform(MultivarGDFStd)
+    Var = pca.explained_variance_ratio_
+
+    # Create dataframe of PCs
+    PCA_DF = pd.DataFrame(data=PComps, columns=[f'PC{i+1}' for i in range(CompNum)])
+    print('Principal Components:')
+    print(PCA_DF)
+
+    # Scree plot
+    # plt.figure(figsize=(4,3), dpi=200)
+    # plt.bar(range(1, len(Var)+1), Var, alpha=0.5, align='center')
+    # plt.step(range(1, len(Var)+1), np.cumsum(Var), where='mid')
+    # plt.axhline(y=0.9, c='r', ls='--')
+    # # plt.axhline(y=0.05, c='r', ls='--')
+    # plt.xlabel('Explained variance ratio')
+    # plt.ylabel('Principal components')
+    # plt.tight_layout()
+    # plt.show()
+
+    # 3D scatter plot (to investigate clustering or patterns in PCs)
+    # fig = plt.figure(figsize=(4,3), dpi=200)
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(PCA_DF['PC1'],PCA_DF['PC2'],PCA_DF['PC3'])
+    # ax.set_xlabel('PC1')
+    # ax.set_ylabel('PC2')
+    # ax.set_zlabel('PC3')
+    # plt.tight_layout()
+    # plt.show()
+    
+    # Heatmap (using seaborn)
+    PlottingSeaborn.PCAHeatmap(pca, MultivarGDF)
+
+    return PCA_DF
