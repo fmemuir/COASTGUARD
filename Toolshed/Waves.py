@@ -145,9 +145,10 @@ def ReadWaveFile(WaveFilePath):
         WaveSeconds = WaveData.variables['time'][:]
         
         #  Fill empty cells using interpolation
-        Image
-            
-    
+        SigWaveHeight = Toolbox.InterpolateRaster(SigWaveHeight)
+        PeakWavePer = Toolbox.InterpolateRaster(PeakWavePer)
+        MeanWaveDir = Toolbox.InterpolateCircRaster(MeanWaveDir) # Needs circular interpolation instead
+
         WaveTime = []
         for i in range(0,len(WaveSeconds)):
             if 'UK' in WaveData.institution:
