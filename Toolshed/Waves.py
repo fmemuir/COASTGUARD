@@ -144,10 +144,11 @@ def ReadWaveFile(WaveFilePath):
         PeakWavePer = WaveData.variables['VTPK'][:,:,:] # Wave period at spectral peak (Tp)
         WaveSeconds = WaveData.variables['time'][:]
         
-        #  Fill empty cells using interpolation
-        SigWaveHeight = Toolbox.InterpolateRaster(SigWaveHeight)
-        PeakWavePer = Toolbox.InterpolateRaster(PeakWavePer)
-        MeanWaveDir = Toolbox.InterpolateCircRaster(MeanWaveDir) # Needs circular interpolation instead
+        #  Fill empty cells of each raster in stack using interpolation
+        for t in range(SigWaveHeight.shape[0]):
+            SigWaveHeight[t] = Toolbox.InterpolateRaster(SigWaveHeight[t])
+            PeakWavePer[t] = Toolbox.InterpolateRaster(PeakWavePer[t])
+            MeanWaveDir[t] = Toolbox.InterpolateCircRaster(MeanWaveDir[t]) # Needs circular interpolation instead
 
         WaveTime = []
         for i in range(0,len(WaveSeconds)):
