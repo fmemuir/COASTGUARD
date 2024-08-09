@@ -1185,13 +1185,12 @@ def ThresholdViolin(sitename,filepath,sites):
     
 
 
-def PCAHeatmap(pca, MultivarGDF):
-    MultivarGDF.drop(columns='Class')
+def PCAHeatmap(pca, MultivarGDF, colnames):
     # Get the loadings (components)
     loadings = pca.components_
     
     # Create a DataFrame for the loadings
-    loading_df = pd.DataFrame(loadings, columns=MultivarGDF.columns, index=[f'PC{i+1}' for i in range(loadings.shape[0])])
+    loading_df = pd.DataFrame(loadings, columns=colnames, index=[f'PC{i+1}' for i in range(loadings.shape[0])])
     
     # Plot the heatmap
     plt.figure(figsize=(6, 5), dpi=200)
