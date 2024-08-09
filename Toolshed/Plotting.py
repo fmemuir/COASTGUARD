@@ -3721,10 +3721,11 @@ def AnnualStackTimeseries(sitename, TransectInterGDF, TransectIDs, Titles):
         plt.show()
         
         
-def PCAPlots(MultivarGDF):
+def PCAPlots(OutFilePath, sitename, MultivarGDF):
 
     mpl.rcParams.update({'font.size':7})
     
+    MultivarGDF.reset_index(drop=True,inplace=True)
     # Standardise data columns
     MultivarGDFStd = StandardScaler().fit_transform(MultivarGDF)
     # Define and execute PCA
@@ -3737,23 +3738,26 @@ def PCAPlots(MultivarGDF):
     print(Var)
 
     # Scree plot of explained variance
-    plt.figure(figsize=(4,3), dpi=200)
-    plt.bar(range(1, len(Var)+1), Var, alpha=0.5, align='center')
-    plt.step(range(1, len(Var)+1), np.cumsum(Var), where='mid')
-    plt.axhline(y=0.95, c='r', ls='--')
-    # plt.axhline(y=0.05, c='r', ls='--')
-    plt.xlabel('Explained variance ratio')
-    plt.ylabel('Principal components')
-    plt.tight_layout()
-    # plt.show()
-
+    # plt.figure(figsize=(4,3), dpi=200)
+    # plt.bar(range(1, len(Var)+1), Var, alpha=0.5, align='center')
+    # plt.step(range(1, len(Var)+1), np.cumsum(Var), where='mid')
+    # plt.axhline(y=0.95, c='r', ls='--')
+    # # plt.axhline(y=0.05, c='r', ls='--')
+    # plt.xlabel('Explained variance ratio')
+    # plt.ylabel('Principal components')
+    # plt.tight_layout()
+    # figpath = os.path.join(OutFilePath,sitename+'_PCAScreePlot.png')
+    # plt.savefig(figpath)
+    # print('figure saved under '+figpath)
+    # # plt.show()
+    
     # Find optimum number of components using a threshold for the explained variance
     CumVar = np.cumsum(Var)
     CompNum = np.argmax(CumVar >= 0.9) + 1
     # Rerun PCA with new optimum number of components
     pca = PCA(n_components=CompNum)
     PComps = pca.fit_transform(MultivarGDFStd)
-    Var = pca.explained_variance_ratio_
+    New_Var = pca.explained_variance_ratio_
     
 
     # Create dataframe of PCs
@@ -3763,8 +3767,8 @@ def PCAPlots(MultivarGDF):
 
     # Scree plot
     # plt.figure(figsize=(4,3), dpi=200)
-    # plt.bar(range(1, len(Var)+1), Var, alpha=0.5, align='center')
-    # plt.step(range(1, len(Var)+1), np.cumsum(Var), where='mid')
+    # plt.bar(range(1, len(New_Var)+1), New_Var, alpha=0.5, align='center')
+    # plt.step(range(1, len(New_Var)+1), np.cumsum(New_Var), where='mid')
     # plt.axhline(y=0.9, c='r', ls='--')
     # # plt.axhline(y=0.05, c='r', ls='--')
     # plt.xlabel('Explained variance ratio')
@@ -3784,12 +3788,12 @@ def PCAPlots(MultivarGDF):
     
     # Biplot
     # Classify plot based on eroding vs accreting veg
-    MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, 
-                                     columns=[r'$\Delta$VE (m/yr)',
-                                              r'$\Delta$WL (m/yr)',
-                                              r'TZwidth$_{\eta}$ (m)',
-                                              r'$\theta_{max}$ ($\circ$)',
-                                              r'$\mu_{net}$ (mm/s$^{2}$)'])
+    colnames=[r'$\Delta$VE',
+             r'$\Delta$WL',
+             r'TZwidth$_{\eta}$',
+             r'$\theta_{max}$',
+             r'$\mu_{net}$']
+    MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, columns=colnames)
     MultivarGDFbiplot['Class'] = 1
     MultivarGDFbiplot['Class'].iloc[:int(len(MultivarGDFbiplot)/2)] = 0 # First half contains eroding Trs
     # Separate features and labels
@@ -3798,35 +3802,72 @@ def PCAPlots(MultivarGDF):
     biplotDF = pd.DataFrame(data=PCA_DF, columns=['PC1', 'PC2'])
     biplotDF['Class'] = labels
     # Plot the data and eigenvectors in PC space
-    plt.figure(figsize=(5, 5), dpi=300)
+    fig, ax1 = plt.subplots(figsize=(3.11, 3.11), dpi=300)
     # Horizontal and vertical lines through origin
-    plt.axvline(0, c=[0.5,0.5,0.5], lw=0.5, alpha=0.8, zorder=1)
-    plt.axhline(0, c=[0.5,0.5,0.5], lw=0.5, alpha=0.8, zorder=1)
-    plt.grid(c=[0.5,0.5,0.5], alpha=0.2, lw=0.5)
+    ax1.axvline(0, c=[0.5,0.5,0.5], lw=0.5, alpha=0.8, zorder=1)
+    ax1.axhline(0, c=[0.5,0.5,0.5], lw=0.5, alpha=0.8, zorder=1)
+    ax1.grid(c=[0.5,0.5,0.5], alpha=0.2, lw=0.5)
     # Scaling for coefficient vectors
     coeffs = np.transpose(pca.components_[0:2, :])
     n_coeffs = coeffs.shape[0]
-    scalex = 1.0/(biplotDF['PC1'].max() - biplotDF['PC1'].min())
-    scaley = 1.0/(biplotDF['PC2'].max() - biplotDF['PC2'].min())
+    scalex = 0.9/(biplotDF['PC1'].max() - biplotDF['PC1'].min())
+    scaley = 0.9/(biplotDF['PC2'].max() - biplotDF['PC2'].min())
     # Plot observations in principal component
     scatterlab = ['Eroding VE', 'Accreting VE']
     for clusterID, colour in enumerate(['#C51B2F','#5499DE']): # 0=eroding, 1=accreting
-        plt.scatter(biplotDF['PC1'][biplotDF['Class']==clusterID]*scalex, 
+        ax1.scatter(biplotDF['PC1'][biplotDF['Class']==clusterID]*scalex, 
                     biplotDF['PC2'][biplotDF['Class']==clusterID]*scaley, 
                     s=10, c=colour, alpha=0.5, label=scatterlab[clusterID])
     # Plot eignevectors of each variable
     for i in range(n_coeffs):
-        plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, zorder=5)
-        plt.text(coeffs[i,0]* 1.15, coeffs[i,1]*1.15, MultivarGDFbiplot.columns[i].split('(')[0], 
-                 color='k', ha='center', va='center', zorder=5)
-    plt.xlim(-1,1)
-    plt.ylim(-1,1)
-    plt.xlabel(f'PC1 [explains {round(Var[0]*100,2)}% of the variance]')
-    plt.ylabel(f'PC2 [explains {round(Var[1]*100,2)}% of the variance]')
-
+        ax1.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
+        ax1.annotate(text=MultivarGDFbiplot.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
+                     xytext=(coeffs[i,0]*15,5), textcoords='offset points',
+                     color='k', ha='center', va='center', zorder=5)
+    ax1.set_xlim(-1,1)
+    ax1.set_ylim(-1,1)
+    ax1.set_xticks(np.arange(-1,1.5,0.5))
+    ax1.set_yticks(np.arange(-1,1.5,0.5))
+    # ax1.axis('equal')
+    ax1.set_xlabel(f'PC1 [explains {round(Var[0]*100,1)}% of $\sigma^2$]')
+    ax1.set_ylabel(f'PC2 [explains {round(Var[1]*100,1)}% of $\sigma^2$]')
+    ax1.legend(loc='upper right')
+    
+    # Inset scree plot
+    ax2 = inset_axes(ax1, width='45%', height='35%', loc='upper left', borderpad=0)
+    varbar = ax2.bar(range(1, len(Var)+1), Var, facecolor=[0.5,0.5,0.5], alpha=0.5, align='center')
+    for i in range(len(Var)):
+        if i == 0:
+            ax2.text(x=i+1, y=Var[i]-0.13, s=f'PC{i+1}', ha='center')
+        else:
+            ax2.text(x=i+1, y=Var[i]+0.03, s=f'PC{i+1}', ha='center')
+    # ax2.bar_label(varbar, labels=[f'PC{i+1}' for i in range(len(Var))], label_type=labelloc)
+    # ax2.step(range(1, len(Var)+1), np.cumsum(Var), where='mid', c='k', lw=1)
+    ax2.plot(range(1, len(Var)+1), np.cumsum(Var), c='k', lw=1, marker='o', markersize=1.5)
+    ax2.axhline(y=0.95, c='r', ls='--', lw=0.5)
+    # plt.axhline(y=0.05, c='r', ls='--', lw=0.5)
+    ax2.grid(axis='y', c=[0.5,0.5,0.5], alpha=0.2, lw=0.5)
+    ax2.set_ylabel(r'Explained $\sigma^2$ (%)', labelpad=0.5)
+    ax2.yaxis.set_label_position('right')
+    ax2.yaxis.set_ticks_position('right')
+    ax2.set_yticks(np.arange(0.2,1,0.2))
+    ax2.set_yticklabels([])
+    ax2.set_xticks([])
+    for tic in ax2.yaxis.get_major_ticks():
+        tic.tick1line.set_visible(False)
+        tic.tick2line.set_visible(False)
+        tic.label1.set_visible(False)
+        tic.label2.set_visible(False)
+    ax2.text(x=5, y=0.85, s='95%', c='r', ha='center')
+    ax2.set_ylim(0,1)
+    # Save full biplot fig
+    plt.tight_layout()
+    figpath = os.path.join(OutFilePath,sitename+'_PCABiplot.png')
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
     plt.show()
     
     # Heatmap (using seaborn)
-    # PlottingSeaborn.PCAHeatmap(pca, MultivarGDF)
+    # PlottingSeaborn.PCAHeatmap(pca, MultivarGDF, colnames)
 
     return PCA_DF
