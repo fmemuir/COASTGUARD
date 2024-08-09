@@ -2960,3 +2960,58 @@ def InterpolateRaster(raster, method='nearest'):
     interp_raster[mask] = interp_vals
     
     return interp_raster
+
+def InterpolateCircRaster(raster, method='nearest'):
+    '''
+    Interpolate over empty values in a raster of angles in degrees between 0 and 360 (e.g. wave directions).
+    FM July 2024
+
+    Parameters
+    ----------
+    raster : array
+        2D array of raster values.
+    method : str, optional
+        Interpolation method to be used ['linear','nearest','cubic']. Nearest
+        is the only method to fill all cells in a raster.
+
+    Returns
+    -------
+    interp_raster : array
+        Interpolated raster.
+
+    '''
+
+    # Convert degrees to radians and then to complex numbers
+    radians = np.deg2rad(raster)
+    complex_numbers = np.exp(1j * radians)
+
+    # Get the real and imaginary parts
+    real_part = np.real(complex_numbers)
+    imag_part = np.imag(complex_numbers)
+
+    # Create a grid of indices
+    x, y = np.indices(raster.shape)
+    # Mask for known (non-NaN) values
+    mask = ~np.isnan(raster)
+    known_points = np.array((x[mask], y[mask])).T
+    # Known values for real and imaginary parts
+    known_real_values = real_part[mask]
+    known_imag_values = imag_part[mask]
+    # Points where values are unknown (NaN)
+    unknown_points = np.array((x[~mask], y[~mask])).T
+
+    # Interpolate the real and imaginary parts separately
+    interp_real = interpolate.griddata(known_points, known_real_values, unknown_points, method='nearest')
+    interp_imag = interpolate.griddata(known_points, known_imag_values, unknown_points, method='nearest')
+
+    # Combine interpolated real and imaginary parts back into complex numbers and back to degrees
+    interp_complex = interp_real + 1j * interp_imag
+    interpolated_angles = np.rad2deg(np.angle(interp_complex))
+    # Adjust the angles to ensure they are within the range [0, 360)
+    interpolated_angles = np.mod(interpolated_angles, 360)
+
+    # Fill with the interpolated values
+    interp_raster = raster.data.copy()
+    interp_raster[~mask] = interpolated_angles
+    
+    return interp_raster
