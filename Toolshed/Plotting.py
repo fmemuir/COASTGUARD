@@ -3871,3 +3871,48 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
     # PlottingSeaborn.PCAHeatmap(pca, MultivarGDF, colnames)
 
     return PCA_DF
+
+
+def WavesVsStorms(settings, CSVpath, WaveOutFile):
+    
+    # Get storms data from CSV
+    StormsDF = pd.read_csv(CSVpath)
+    StormsDF['starttime'] = pd.to_datetime(StormsDF['Start'], format='%d/%m/%Y')
+    StormsDF['endtime'] = pd.to_datetime(StormsDF['End'], format='%d/%m/%Y')
+
+    # Extract wave data from wave file
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = Waves.ReadWaveFile(os.path.join(settings['inputs']['filepath'],
+                                                                                                      'tides',
+                                                                                                      WaveOutFile))
+    # Wave data to dataframe to be paired with storm event (based on matching timing)
+    WaveHsDF = pd.DataFrame({'time':WaveTime, 'hs':SigWaveHeight[:,1,0], 'dir':MeanWaveDir[:,1,0], 'tp':PeakWavePer[:,1,0]})
+    WaveHsDF['storm'] = False
+    WaveHsDF['storm_name'] = None
+    WaveHsDF['storm_gust'] = None
+    for _, storm in StormsDF.iterrows():
+        mask = (WaveHsDF['time'] >= storm['starttime']) & (WaveHsDF['time'] <= storm['endtime'])
+        WaveHsDF.loc[mask, 'storm'] = True
+        WaveHsDF.loc[mask, 'storm_name'] = storm['Name']
+        WaveHsDF.loc[mask, 'storm_gust'] = storm['WindGust']
+
+    # Plot wave direction, wave period and wave height for normal wave conditions vs storm wave conditions
+    fig, ax = plt.subplots()
+    ax.hist(WaveHsDF['hs'], bins=np.arange(WaveHsDF['hs'].min(), WaveHsDF['hs'].max(), 0.1), facecolor='b')
+    ax2 = ax.twinx()
+    ax2.hist(WaveHsDF[WaveHsDF['storm']==True]['hs'], bins=np.arange(WaveHsDF['hs'].min(), WaveHsDF['hs'].max(), 0.1),
+             facecolor='r', alpha=0.5)
+    plt.show()
+
+    fig, ax = plt.subplots()
+    ax.hist(WaveHsDF['dir'], bins=np.arange(WaveHsDF['dir'].min(), WaveHsDF['dir'].max(), 5), facecolor='b')
+    ax2 = ax.twinx()
+    ax2.hist(WaveHsDF[WaveHsDF['storm']==True]['dir'], bins=np.arange(WaveHsDF['dir'].min(), WaveHsDF['dir'].max(), 5),
+             facecolor='r', alpha=0.5)
+    plt.show()
+
+    fig, ax = plt.subplots()
+    ax.hist(WaveHsDF['tp'], bins=np.arange(WaveHsDF['tp'].min(), WaveHsDF['tp'].max(), 0.5), facecolor='b')
+    ax2 = ax.twinx()
+    ax2.hist(WaveHsDF[WaveHsDF['storm']==True]['tp'], bins=np.arange(WaveHsDF['tp'].min(), WaveHsDF['tp'].max(), 0.5),
+             facecolor='r', alpha=0.5)
+    plt.show()
