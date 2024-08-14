@@ -3662,7 +3662,7 @@ def ImageDateHist(OutFilePath, sitename, output, metadata, satname='S2'):
     plt.show()
     
     
-def AnnualStackTimeseries(sitename, TransectInterGDF, TransectIDs, Titles):
+def AnnualStackTimeseries(sitename, TransectInterGDF, TransectInterGDFWater, TransectIDs, Titles):
     
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
@@ -3673,31 +3673,35 @@ def AnnualStackTimeseries(sitename, TransectInterGDF, TransectIDs, Titles):
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, ax = plt.subplots(1,len(TransectIDs),figsize=(6.55,4), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,len(TransectIDs),figsize=(6.55,4), dpi=300, sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, ax = plt.subplots(1,1,figsize=(6.55,4), dpi=300, sharex=True)
+        fig, axs = plt.subplots(1,1,figsize=(6.55,4), dpi=300, sharex=True)
         # axs = [axs] # to be able to loop through
             
-    for TransectID, Title in zip(TransectIDs, Titles):
+    for TransectID, Title, axID in zip(TransectIDs, Titles, axs):
         # Define variables for each subplot per column/Transect
-        ax_WL = ax
-        ax_VE = ax_WL.twinx()
+        # ax_WL = ax[0]
+        # ax_VE = ax_WL.twinx()
+        ax_VE = axs[axID]
         
         # Process plot data
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID]]
         plotsatdist = TransectInterGDF['distances'].iloc[TransectID]
-        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID]]
-        plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID]
+        plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFWater['wldates'].iloc[TransectID]]
+        plotwldist = TransectInterGDFWater['wlcorrdist'].iloc[TransectID]
         
         plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
 
         
-        for ax, plotT, plotD, in zip([ax_WL, ax_VE], 
-                                     [plotwldate, plotdate], 
-                                     [plotwldist,plotsatdist]):
+        # for ax, plotT, plotD, in zip([ax_WL, ax_VE], 
+        #                              [plotwldate, plotdate], 
+        #                              [plotwldist,plotsatdist]):
+        for ax, plotT, plotD, in zip([ax_VE], 
+                                     [plotdate], 
+                                     [plotsatdist]):
             
             plotDF = pd.DataFrame({'date':plotT, 'dist':plotD})
             
@@ -3710,12 +3714,17 @@ def AnnualStackTimeseries(sitename, TransectInterGDF, TransectIDs, Titles):
             Nyears = len(years)
             
             grouped = plotDF.groupby('year')
-            
+                        
             cmap = plt.get_cmap('Greens')
             colours = [cmap(i/Nyears) for i in range(Nyears)]
             
-            for (year, group), colour in zip(grouped, colours):
-                ax.plot(group['day_of_year'], group['value'], label=str(year), color=colour)
+            for ic, pltyear in enumerate(years):
+                plt.plot(plotDF['day_of_year'][plotDF['year']==pltyear],plotDF['dist'][plotDF['year']==pltyear],
+                         c=colours[ic])
+
+            
+            # for (year, group), colour in zip(grouped, colours):
+            #     ax.plot(group['day_of_year'], group['value'], label=str(year), color=colour)
         
         plt.grid(True)
         plt.show()
