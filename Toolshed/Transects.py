@@ -840,7 +840,10 @@ def TZIntersect(settings,TransectInterGDF, VeglinesGDF, BasePath):
             
             # fill in distance between first TZ intersection point and VE-Tr intersection
             for i in range(len(TZpolyClipInter)):
-                TZpolyClipInter['pntdist'].iloc[i] = list(TZpolyClipInter['TrIntersect'].iloc[i])[0].distance(TransectInterGDF['interpnt'][Tr][ImInd])
+                Point1 = list(TZpolyClipInter['TrIntersect'].iloc[i].geoms)[0]  # Extract the first point from the MultiPoint
+                TZpolyClipInter['pntdist'].iloc[i] = Point1.distance(TransectInterGDF['interpnt'][Tr][ImInd])
+                # below line causes error for iterating over multipoints
+                # TZpolyClipInter['pntdist'].iloc[i] = list(TZpolyClipInter['TrIntersect'].iloc[i])[0].distance(TransectInterGDF['interpnt'][Tr][ImInd])
             # TZpolyClip['pntdist'] = TZpolyClip.centroid.distance(TransectInterGDF['interpnt'][Tr][ImInd])
             
             # if Transect doesn't intersect with any TZ polygons
