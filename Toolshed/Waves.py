@@ -10,6 +10,7 @@ import math
 from datetime import datetime, timedelta
 
 import numpy as np
+import pandas as pd
 
 import geopandas as gpd
 from shapely import geometry
@@ -159,8 +160,10 @@ def ReadWaveFile(WaveFilePath):
             else:
                 # Global Wave Reanalysis is stored as 'number of hours since 1950-01-01 00:00:00'
                 WaveTime.append(datetime(1950,1,1,0,0,0)+timedelta(hours=int(WaveSeconds[i])))
+                
+        StormEvents = CalcStorms(SigWaveHeight)
         
-    return WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime
+    return WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents
 
 
 def SampleWaves(settings, TransectInterGDF, WaveFilePath):
@@ -635,3 +638,33 @@ def CalcRunup(WaveHs):
         # RunupsMean.append(np.nanmean(RunupTr))
         # RunupsMedian.append(np.nanmedian(RunupTr))
     return Runups
+
+
+def CalcStorms(WaveTime, SigWaveHeight):
+    """
+    Generate boolean array of same size as wave height timestack, marked 1 where
+    wave heights exceed the 95th percentile for each individual cell's timeseries.
+    FM Aug 2024
+
+    Parameters
+    ----------
+    WaveTime : list
+        List of timesteps matching length of wave height timestack.
+    SigWaveHeight : array
+        3D array of offshore significant wave height rasters (shape=(time, y, x)).
+
+    Returns
+    -------
+    StormEvents : array
+        3D boolean array of storm events, with shape=SigWaveHeight.shape
+
+    """
+ 
+    # Calculate 95th percentile of wave height for 'storm' limit (creates percentile array of shape y,x)
+    pct = np.percentile(SigWaveHeight, 95, axis=0)
+    # Create boolean mask for where wave height exceeds 95th percentile
+    StormMask = SigWaveHeight > pct
+    # Generate boolean array where 1 = storm (exceeded wave height) and 0 = normal conditions
+    StormEvents = np.where(StormMask, 1, 0)
+    
+    return StormEvents
