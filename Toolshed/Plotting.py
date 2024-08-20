@@ -3261,7 +3261,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
         # If no plot start and end dates provided, plot whole timeseries from .nc file
         PlotDates = [WaveFilePath[0][-30:-20], WaveFilePath[0][-19:-9]] 
     
-    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = Waves.ReadWaveFile(WaveFilePath)
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = Waves.ReadWaveFile(WaveFilePath)
 
     
     # create stages for wave height breaks
@@ -3365,7 +3365,7 @@ def FullWaveHsTimeseries(sitename, PlotDates=None):
         # If no plot start and end dates provided, plot whole timeseries from .nc file
         PlotDates = [WaveFilePath[0][-30:-20], WaveFilePath[0][-19:-9]] 
     
-    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = Waves.ReadWaveFile(WaveFilePath)
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = Waves.ReadWaveFile(WaveFilePath)
 
 
 
@@ -3890,7 +3890,7 @@ def WavesVsStorms(settings, CSVpath, WaveOutFile):
     StormsDF['endtime'] = pd.to_datetime(StormsDF['End'], format='%d/%m/%Y')
 
     # Extract wave data from wave file
-    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = Waves.ReadWaveFile(os.path.join(settings['inputs']['filepath'],
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = Waves.ReadWaveFile(os.path.join(settings['inputs']['filepath'],
                                                                                                       'tides',
                                                                                                       WaveOutFile))
     # Wave data to dataframe to be paired with storm event (based on matching timing)

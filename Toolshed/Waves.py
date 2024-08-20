@@ -175,7 +175,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     
     print('Extracting wave data to transects ...')
 
-    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime = ReadWaveFile(WaveFilePath)
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = ReadWaveFile(WaveFilePath)
 
     # Calculate time step used for interpolating data between
     TimeStep = (WaveTime[1]-WaveTime[0]).total_seconds()/(60*60)    
