@@ -43,4 +43,14 @@ TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFW
 # Compile relevant coastal change metrics into one dataframe
 CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
 
+#%% Subset and interpolate timeseries to match up to same dates
+TransectIDs = [50]
+
+for Tr in TransectIDs:
+    TransectDF = Predictions.InterpWL(CoastalDF, Tr)
+    
+    
+    
+#%%
+
 
