@@ -3894,34 +3894,48 @@ def WavesVsStorms(settings, CSVpath, WaveOutFile):
                                                                                                       'tides',
                                                                                                       WaveOutFile))
     # Wave data to dataframe to be paired with storm event (based on matching timing)
-    WaveHsDF = pd.DataFrame({'time':WaveTime, 'hs':SigWaveHeight[:,1,0], 'dir':MeanWaveDir[:,1,0], 'tp':PeakWavePer[:,1,0]})
-    WaveHsDF['storm'] = False
-    WaveHsDF['storm_name'] = None
-    WaveHsDF['storm_gust'] = None
+    WaveDF = pd.DataFrame({'time':WaveTime, 'hs':SigWaveHeight[:,1,0], 'dir':MeanWaveDir[:,1,0], 'tp':PeakWavePer[:,1,0]})
+    WaveDF['storm'] = False
+    WaveDF['storm_name'] = None
+    WaveDF['storm_gust'] = None
     for _, storm in StormsDF.iterrows():
-        mask = (WaveHsDF['time'] >= storm['starttime']) & (WaveHsDF['time'] <= storm['endtime'])
-        WaveHsDF.loc[mask, 'storm'] = True
-        WaveHsDF.loc[mask, 'storm_name'] = storm['Name']
-        WaveHsDF.loc[mask, 'storm_gust'] = storm['WindGust']
+        mask = (WaveDF['time'] >= storm['starttime']) & (WaveDF['time'] <= storm['endtime'])
+        WaveDF.loc[mask, 'storm'] = True
+        WaveDF.loc[mask, 'storm_name'] = storm['Name']
+        WaveDF.loc[mask, 'storm_gust'] = storm['WindGust']
+
+    # Calculate 95th percentile of wave height for 'storm' limit
+    pct = np.percentile(WaveDF['hs'], 95)
+    fig, ax = plt.subplots()
+    plt.plot(WaveDF['time'],WaveDF['hs'])
+    plt.axhline(pct, 'k--')
 
     # Plot wave direction, wave period and wave height for normal wave conditions vs storm wave conditions
     fig, ax = plt.subplots()
-    ax.hist(WaveHsDF['hs'], bins=np.arange(WaveHsDF['hs'].min(), WaveHsDF['hs'].max(), 0.1), facecolor='b')
+    ax.hist(WaveDF['hs'], bins=np.arange(WaveDF['hs'].min(), WaveDF['hs'].max(), 0.1), 
+            facecolor='b', label='Normal')
     ax2 = ax.twinx()
-    ax2.hist(WaveHsDF[WaveHsDF['storm']==True]['hs'], bins=np.arange(WaveHsDF['hs'].min(), WaveHsDF['hs'].max(), 0.1),
-             facecolor='r', alpha=0.5)
+    ax2.hist(WaveDF[WaveDF['storm']==True]['hs'], bins=np.arange(WaveDF['hs'].min(), WaveDF['hs'].max(), 0.1),
+             facecolor='r', alpha=0.5, label='Storm')
+    plt.legend()
     plt.show()
 
     fig, ax = plt.subplots()
-    ax.hist(WaveHsDF['dir'], bins=np.arange(WaveHsDF['dir'].min(), WaveHsDF['dir'].max(), 5), facecolor='b')
+    ax.hist(WaveDF['dir'], bins=np.arange(WaveDF['dir'].min(), WaveDF['dir'].max(), 5), 
+            facecolor='b', label='Normal')
     ax2 = ax.twinx()
-    ax2.hist(WaveHsDF[WaveHsDF['storm']==True]['dir'], bins=np.arange(WaveHsDF['dir'].min(), WaveHsDF['dir'].max(), 5),
-             facecolor='r', alpha=0.5)
+    ax2.hist(WaveDF[WaveDF['storm']==True]['dir'], bins=np.arange(WaveDF['dir'].min(), WaveDF['dir'].max(), 5),
+             facecolor='r', alpha=0.5, label='Storm')
+    plt.legend()
     plt.show()
 
     fig, ax = plt.subplots()
-    ax.hist(WaveHsDF['tp'], bins=np.arange(WaveHsDF['tp'].min(), WaveHsDF['tp'].max(), 0.5), facecolor='b')
+    ax.hist(WaveDF['tp'], bins=np.arange(WaveDF['tp'].min(), WaveDF['tp'].max(), 0.5), 
+            facecolor='b', label='Normal')
     ax2 = ax.twinx()
-    ax2.hist(WaveHsDF[WaveHsDF['storm']==True]['tp'], bins=np.arange(WaveHsDF['tp'].min(), WaveHsDF['tp'].max(), 0.5),
-             facecolor='r', alpha=0.5)
+    ax2.hist(WaveDF[WaveDF['storm']==True]['tp'], bins=np.arange(WaveDF['tp'].min(), WaveDF['tp'].max(), 0.5),
+             facecolor='r', alpha=0.5, label='Storm')
+    plt.legend()
     plt.show()
+    
+    return WaveDF
