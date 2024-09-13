@@ -3939,3 +3939,43 @@ def WavesVsStorms(settings, CSVpath, WaveOutFile):
     plt.show()
     
     return WaveDF
+
+
+def WaveHsHists(SigWaveHeight):
+    
+    
+    cmp = cm.get_cmap('viridis')
+    
+    if SigWaveHeight.shape[1] > 1 and SigWaveHeight.shape[2] > 1:
+        fig, axs = plt.subplots(nrows=SigWaveHeight.shape[1], ncols=SigWaveHeight.shape[2], figsize=(10,8), sharex=True)
+        
+        for y in range(SigWaveHeight.shape[1]):
+            for x in range(SigWaveHeight.shape[2]):
+                axs[y,x].hist(SigWaveHeight[:,y,x], bins=np.arange(0,4,0.1), color=cmp((y+1)/SigWaveHeight.shape[1]), alpha=0.5)
+                axs[y,x].axvline(np.percentile(SigWaveHeight, 95, axis=0)[y, x], c=cmp((y+1)/SigWaveHeight.shape[1]), lw=2)
+                axs[y,x].axvline(np.max(SigWaveHeight[:,y,x]), c=cmp((y+1)/SigWaveHeight.shape[1]), lw=2, ls='--')
+        plt.xlabel('Significant wave height (m)')
+        plt.tight_layout()
+        plt.show()
+        
+    elif SigWaveHeight.shape[2] == 1: # only one column
+        fig, axs = plt.subplots(nrows=SigWaveHeight.shape[1], ncols=SigWaveHeight.shape[2], figsize=(10,8), sharex=True)
+
+        for y in range(SigWaveHeight.shape[1]):
+            axs[y].hist(SigWaveHeight[:,y,0], bins=np.arange(0,4,0.1), color=cmp((y+1)/SigWaveHeight.shape[1]), alpha=0.5)
+            axs[y].axvline(np.percentile(SigWaveHeight, 95, axis=0)[y], c=cmp((y+1)/SigWaveHeight.shape[1]), lw=2)
+            axs[y].axvline(np.max(SigWaveHeight[:,y,0]), c=cmp((y+1)/SigWaveHeight.shape[1]), lw=2, ls='--')
+        plt.xlabel('Significant wave height (m)')
+        plt.tight_layout()
+        plt.show()
+        
+    elif SigWaveHeight.shape[1] == 1: # only one row
+        fig, axs = plt.subplots(nrows=SigWaveHeight.shape[1], ncols=SigWaveHeight.shape[2], figsize=(10,8), sharex=True)
+
+        for x in range(SigWaveHeight.shape[2]):
+            axs[x].hist(SigWaveHeight[:,0,x], bins=np.arange(0,4,0.1), color=cmp((x+1)/SigWaveHeight.shape[2]), alpha=0.5)
+            axs[x].axvline(np.percentile(SigWaveHeight, 95, axis=0)[x], c=cmp((x+1)/SigWaveHeight.shape[2]), lw=2)
+            axs[x].axvline(np.max(SigWaveHeight[:,0,x]), c=cmp((x+1)/SigWaveHeight.shape[2]), lw=2, ls='--')
+        plt.xlabel('Significant wave height (m)')
+        plt.tight_layout()
+        plt.show()

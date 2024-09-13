@@ -161,7 +161,7 @@ def ReadWaveFile(WaveFilePath):
                 # Global Wave Reanalysis is stored as 'number of hours since 1950-01-01 00:00:00'
                 WaveTime.append(datetime(1950,1,1,0,0,0)+timedelta(hours=int(WaveSeconds[i])))
                 
-        StormEvents = CalcStorms(SigWaveHeight)
+        StormEvents = CalcStorms(WaveTime, SigWaveHeight)
         
     return WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents
 
