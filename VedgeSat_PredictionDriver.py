@@ -15,6 +15,7 @@ import pandas as pd
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
+
 # from sklearn.utils.class_weight import compute_class_weight
 # from imblearn.over_sampling import SMOTE
 
@@ -44,7 +45,7 @@ TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFW
 CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
 
 #%% Subset and interpolate timeseries to match up to same dates
-TransectIDs = [50]
+TransectIDs = [271]
 
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpWL(CoastalDF, Tr)
@@ -52,5 +53,7 @@ for Tr in TransectIDs:
     
     
 #%%
+VarDF = Predictions.Cluster(TransectDF)
 
+#%%
 
