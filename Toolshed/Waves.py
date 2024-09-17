@@ -409,9 +409,13 @@ def CalcShoreAngle(TransectInterGDF, Tr):
 
     return ShoreAngle
 
-def CalcAlpha(WaveDir, ShoreAngle):
+def CalcAlpha(WaveDir, ShoreAngle, Tr):
     
-
+    # Calculate angle between shore and each wave on each transect's timeseries
+    # modulo ensures value returned is same sign as dividend
+    WaveAlpha = [(Dir - ShoreAngle[Tr]) + 180 % 360-180 for Dir in WaveDir[Tr]]
+    
+    return WaveAlpha
 
 def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
     """
