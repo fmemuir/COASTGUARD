@@ -191,6 +191,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     StDevWaveTp = []
     WaveDiffusivity = []
     WaveStability = []
+    ShoreAngles = []
     
     def find(item, lst):
         start = 0
@@ -224,7 +225,9 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
             except:
                 pass
         
+        # Calculate shore angle at current transect using angle of transect (start and end points)
         ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
+        ShoreAngles.append(ShoreAngle)
         
         # Calculate wave climate indicators per transect over timeframe of provided date range
         TrWaveDiffusivity, TrWaveStability = WaveClimate(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
@@ -323,7 +326,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         WaveDiffusivity.append(TrWaveDiffusivity)
         WaveStability.append(TrWaveStability)
 
-    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability
+    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles
 
 
 def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
@@ -405,6 +408,9 @@ def CalcShoreAngle(TransectInterGDF, Tr):
         ShoreAngle = ShoreAngle - 360
 
     return ShoreAngle
+
+def CalcAlpha(WaveDir, ShoreAngle):
+    
 
 
 def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
