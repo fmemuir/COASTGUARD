@@ -2961,7 +2961,7 @@ def InterpolateRaster(raster, method='nearest'):
     
     return interp_raster
 
-def InterpolateCircRaster(raster, method='nearest'):
+def InterpolateCircRaster(raster, method='nearest', nodata_value=-32767):
     '''
     Interpolate over empty values in a raster of angles in degrees between 0 and 360 (e.g. wave directions).
     FM July 2024
@@ -2976,42 +2976,72 @@ def InterpolateCircRaster(raster, method='nearest'):
 
     Returns
     -------
-    interp_raster : array
-        Interpolated raster.
+    interpolated_degrees : array
+        Interpolated raster of degrees.
 
     '''
 
+
+    # Convert nodata values (-32767) to NaN for interpolation
+    raster_data = np.where(raster.data == nodata_value, np.nan, raster.data)
+
     # Convert degrees to radians and then to complex numbers
-    radians = np.deg2rad(raster)
+    radians = np.deg2rad(raster_data)
     complex_numbers = np.exp(1j * radians)
 
-    # Get the real and imaginary parts
+    # Extract real and imaginary parts
     real_part = np.real(complex_numbers)
     imag_part = np.imag(complex_numbers)
 
-    # Create a grid of indices
-    x, y = np.indices(raster.shape)
-    # Mask for known (non-NaN) values
-    mask = ~np.isnan(raster)
-    known_points = np.array((x[mask], y[mask])).T
-    # Known values for real and imaginary parts
-    known_real_values = real_part[mask]
-    known_imag_values = imag_part[mask]
-    # Points where values are unknown (NaN)
-    unknown_points = np.array((x[~mask], y[~mask])).T
+    # Get indices for all raster points
+    x, y = np.indices(raster_data.shape)
 
-    # Interpolate the real and imaginary parts separately
-    interp_real = interpolate.griddata(known_points, known_real_values, unknown_points, method='nearest')
-    interp_imag = interpolate.griddata(known_points, known_imag_values, unknown_points, method='nearest')
+    # Identify valid points (those that are not NaN)
+    valid_mask = ~np.isnan(raster_data)
+    valid_points = np.array((x[valid_mask], y[valid_mask])).T
+    valid_real = real_part[valid_mask]
+    valid_imag = imag_part[valid_mask]
 
-    # Combine interpolated real and imaginary parts back into complex numbers and back to degrees
-    interp_complex = interp_real + 1j * interp_imag
-    interpolated_angles = np.rad2deg(np.angle(interp_complex))
-    # Adjust the angles to ensure they are within the range [0, 360)
-    interpolated_angles = np.mod(interpolated_angles, 360)
+    # Identify points that need interpolation (those that are NaN)
+    masked_mask = np.isnan(raster_data)
+    masked_points = np.array((x[masked_mask], y[masked_mask])).T
 
-    # Fill with the interpolated values
-    interp_raster = raster.data.copy()
-    interp_raster[~mask] = interpolated_angles
-    
-    return interp_raster
+    # Perform linear interpolation first
+    interp_real_linear = interpolate.griddata(valid_points, valid_real, masked_points, method='linear')
+    interp_imag_linear = interpolate.griddata(valid_points, valid_imag, masked_points, method='linear')
+
+    # Create a copy of the raster to store linear interpolation results
+    interpolated_real = real_part.copy()
+    interpolated_imag = imag_part.copy()
+    interpolated_real[masked_mask] = interp_real_linear
+    interpolated_imag[masked_mask] = interp_imag_linear
+
+    # Reconstruct complex numbers from linear interpolation results
+    interpolated_complex = interpolated_real + 1j * interpolated_imag
+    interpolated_radians = np.angle(interpolated_complex)
+    interpolated_degrees = np.rad2deg(interpolated_radians)
+    interpolated_degrees = np.mod(interpolated_degrees, 360)
+
+    # Identify any remaining NaNs after linear interpolation
+    remaining_mask = np.isnan(interpolated_degrees)
+    if np.any(remaining_mask):
+        # Perform nearest-neighbor interpolation on remaining NaNs
+        masked_points_remaining = np.array((x[remaining_mask], y[remaining_mask])).T
+        interp_real_nearest = interpolate.griddata(valid_points, valid_real, masked_points_remaining, method='nearest')
+        interp_imag_nearest = interpolate.griddata(valid_points, valid_imag, masked_points_remaining, method='nearest')
+
+        # Fill remaining NaNs with nearest-neighbor results
+        # Ensure the interpolation result has the correct shape before assignment
+        interpolated_real[remaining_mask] = np.where(np.isnan(interp_real_nearest), interpolated_real[remaining_mask], interp_real_nearest)
+        interpolated_imag[remaining_mask] = np.where(np.isnan(interp_imag_nearest), interpolated_imag[remaining_mask], interp_imag_nearest)
+
+        # Reconstruct complex numbers for remaining values
+        interpolated_complex = interpolated_real + 1j * interpolated_imag
+        interpolated_radians = np.angle(interpolated_complex)
+        interpolated_degrees = np.rad2deg(interpolated_radians)
+        interpolated_degrees = np.mod(interpolated_degrees, 360)
+
+    # Return the fully interpolated raster (with no NaNs)
+    return interpolated_degrees
+
+
