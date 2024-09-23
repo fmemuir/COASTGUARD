@@ -212,18 +212,18 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         
         # NEEDS WORK TO IMPLEMENT PROPERLY (11/07/24)
         # Is grid cell empty? Look for closest grid cell with data
-        if np.ma.count_masked(SigWaveHeight[:,IDLat,IDLong]) > 0:
-            try: # catch if goes outside of lat long bounds
-                # if grid square successfully found, save as new grid cell to use
-                if np.ma.count_masked(SigWaveHeight[:,IDLat,IDLong+1]) == 0:
-                    IDLong = IDLong+1 
-                elif np.ma.count_masked(SigWaveHeight[:,IDLat+1,IDLong]) == 0:
-                    IDLat = IDLat+1
-                elif np.ma.count_masked(SigWaveHeight[:,IDLat+1,IDLong+1]) == 0:
-                    IDLat = IDLat+1
-                    IDLong = IDLong+1
-            except:
-                pass
+        # if np.ma.count_masked(SigWaveHeight[:,IDLat,IDLong]) > 0:
+        #     try: # catch if goes outside of lat long bounds
+        #         # if grid square successfully found, save as new grid cell to use
+        #         if np.ma.count_masked(SigWaveHeight[:,IDLat,IDLong+1]) == 0:
+        #             IDLong = IDLong+1 
+        #         elif np.ma.count_masked(SigWaveHeight[:,IDLat+1,IDLong]) == 0:
+        #             IDLat = IDLat+1
+        #         elif np.ma.count_masked(SigWaveHeight[:,IDLat+1,IDLong+1]) == 0:
+        #             IDLat = IDLat+1
+        #             IDLong = IDLong+1
+        #     except:
+        #         pass
         
         # Calculate shore angle at current transect using angle of transect (start and end points)
         ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
@@ -410,10 +410,33 @@ def CalcShoreAngle(TransectInterGDF, Tr):
     return ShoreAngle
 
 def CalcAlpha(WaveDir, ShoreAngle, Tr):
-    
-    # Calculate angle between shore and each wave on each transect's timeseries
-    # modulo ensures value returned is same sign as dividend
-    WaveAlpha = [(Dir - ShoreAngle[Tr]) + 180 % 360-180 for Dir in WaveDir[Tr]]
+    """
+    Calculate angle between shore and each wave on each transect's timeseries.
+    FM Sept 2024
+
+    Parameters
+    ----------
+    WaveDir : list
+        Timeseries of mean wave directions (in degrees from N).
+    ShoreAngle : float
+        Angle of shore in degrees from N.
+    Tr : int
+        Cross-shore transect ID.
+
+    Returns
+    -------
+    WaveAlpha : list
+        List of same length as WaveDir, representing angle between shore and each wave observation.
+
+    """
+    # If no wave directions were recorded (i.e. no VE or WL intersections on that transect), return NaN
+    # No condition is needed if NaNs are present in the WaveDir timeseries (the sum just returns NaN);
+    # this is why .all() is used
+    if np.isnan(WaveDir[Tr]).all():
+        WaveAlpha = np.nan
+    else:
+        # modulo ensures value returned is same sign as dividend
+        WaveAlpha = [(Dir - ShoreAngle[Tr]) + 180 % 360-180 for Dir in WaveDir[Tr]]
     
     return WaveAlpha
 
