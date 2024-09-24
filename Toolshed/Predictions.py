@@ -181,9 +181,11 @@ def PreprocessTraining(CoastalDF):
     X_scaled = scaler.fit_transform(X)
     
     
-def Cluster(TransectDF, ValPlots=False):
+def ClusterKMeans(TransectDF, ValPlots=False):
     """
-    
+    Classify coastal change indicator data into low, medium or high impact from hazards,
+    using a KMeans clustering routine.
+    FM Sept 2024
 
     Parameters
     ----------
@@ -342,6 +344,125 @@ def Cluster(TransectDF, ValPlots=False):
             )
             clusterDF.append(cluster_data)
         # Plot eignevectors of each variable
+        coeffs = np.transpose(eigenvectors[0:2, :])*2
+        n_coeffs = coeffs.shape[0]
+        for i in range(n_coeffs):
+            plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
+            plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
+                         xytext=(coeffs[i,0]*15,5), textcoords='offset points',
+                         color='k', ha='center', va='center', zorder=5)
+        plt.tight_layout()
+        plt.show()
+            
+        # 3D scatter plot (to investigate clustering or patterns in PCs)
+        fig = plt.figure(figsize=(6,5))
+        ax = fig.add_subplot(111, projection='3d')
+        for cluster in pca_df['Cluster'].unique():
+            cluster_data = pca_df[pca_df['Cluster'] == cluster]
+            ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'])
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+            ax.set_zlabel('PC3')
+        # Plot eignevectors of each variable
+        # coeffs = np.transpose(eigenvectors[0:3, :])*2
+        # n_coeffs = coeffs.shape[0]
+        # for i in range(n_coeffs):
+        #     plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
+        #     plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
+        #                  xytext=(coeffs[i,0]*15,5), textcoords='offset points',
+        #                  color='k', ha='center', va='center', zorder=5)
+        plt.tight_layout()
+        plt.show()
+        
+        
+    return VarDFClust
+
+
+def Cluster(TransectDF):
+    """
+    Classify coastal change indicator data into low, medium or high impact from hazards,
+    using a SpectralCluster clustering routine.
+    FM Sept 2024
+
+    Parameters
+    ----------
+    TransectDF : DataFrame
+        Dataframe of single cross-shore transect, with timeseries of satellite-derived metrics attached.
+    ValPlots : bool, optional
+        Plot validation plots of silhouette score and inertia. The default is False.
+
+    Returns
+    -------
+    VarDF : DataFrame
+        Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
+
+    """
+    # Define variables dataframe from transect dataframe by removing dates and transposing
+    VarDF = TransectDF.drop(columns=['TransectID', 'dates'])
+    VarDF.interpolate(method='nearest', axis=0, inplace=True) # fill nans using nearest
+    VarDF.interpolate(method='linear', axis=0, inplace=True) # if any nans left over at start or end, fill with linear
+    VarDF_scaled = StandardScaler().fit_transform(VarDF)
+    
+    # Apply PCA to reduce the dimensions to 3D for visualization
+    pca = PCA(n_components=3)
+    pca_VarDF = pca.fit_transform(VarDF_scaled)
+    eigenvectors = pca.components_
+    
+    ClusterMods = {'spectral':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
+    for Mod in ClusterMods.keys():
+        
+        # Map labels to cluster IDs based on cluster centres and their distance to eigenvectors
+        ClusterMods[Mod].fit(VarDF_scaled)
+        VarDF[Mod+'Cluster'] = ClusterMods[Mod].labels_        
+        ClusterCentres = np.array([pca_VarDF[VarDF[Mod+'Cluster'] == i].mean(axis=0) for i in range(3)])
+        # Define cluster labels using centres
+        HighImpact = np.argmax(ClusterCentres[:, 0])
+        LowImpact = np.argmax(ClusterCentres[:, 1])
+        MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
+        # Map labels to cluster IDs
+        ClusterToImpact = {HighImpact:'High',
+                           MediumImpact:'Medium',
+                           LowImpact:'Low'}
+        ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF[Mod+'Cluster']]
+        VarDFClust = VarDF.copy()
+        VarDFClust[Mod+'Impact'] = ImpactLabels
+    
+        # Create a DataFrame for PCA results and add cluster labels
+        pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
+        pca_df['Cluster'] = ClusterMods[Mod].labels_
+    
+        # Visualization of clusters
+        # Example clustered timeseries using one or two variables
+        fig, ax = plt.subplots(figsize=(10, 5))
+        bluecm = cm.get_cmap('cool')
+        greencm = cm.get_cmap('summer')
+        ax.scatter(VarDF.index, 
+                   VarDF['WaveHs'], 
+                   c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
+        ax2 = ax.twinx()
+        ax2.scatter(VarDF.index, 
+                   VarDF['distances'], 
+                   c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  
+        plt.title(f'Clustering Method: {Mod}')
+        ax.set_xlabel('Time')
+        ax.set_ylabel('Significant wave height (m)')
+        ax2.set_ylabel('VE distance (m)')
+        plt.show()
+        
+        # Plot the clusters in the PCA space
+        fig, ax = plt.subplots(figsize=(5, 5))
+        clusterDF = []
+        for cluster in pca_df['Cluster'].unique():
+            cluster_data = pca_df[pca_df['Cluster'] == cluster]
+            plt.scatter(
+                cluster_data['PC1'], 
+                cluster_data['PC2'], 
+                label=f'Cluster {cluster}', 
+                s=40,
+                alpha=0.7
+            )
+            clusterDF.append(cluster_data)
+        # Overlay eignevectors of each variable
         coeffs = np.transpose(eigenvectors[0:2, :])*2
         n_coeffs = coeffs.shape[0]
         for i in range(n_coeffs):
