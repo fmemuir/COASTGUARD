@@ -45,7 +45,8 @@ TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFW
 CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
 
 #%% Subset and interpolate timeseries to match up to same dates
-TransectIDs = [271]
+# TransectIDs = [271]
+TransectIDs = [1325]
 
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpWL(CoastalDF, Tr)
