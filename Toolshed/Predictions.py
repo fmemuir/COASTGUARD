@@ -12,7 +12,9 @@ import pickle
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import pandas as pd
+pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 from scipy.interpolate import interp1d
 
 from sklearn.decomposition import PCA
@@ -216,13 +218,13 @@ def Cluster(TransectDF, ValPlots=False):
         inertia.append(kmeansmod.inertia_)
         sil_scores.append(silhouette_score(VarDF_scaled, kmeansmod.labels_))
     
-    # Apply PCA to reduce the dimensions to 2D for visualization
-    pca = PCA(n_components=2)
+    # Apply PCA to reduce the dimensions to 3D for visualization
+    pca = PCA(n_components=3)
     pca_VarDF = pca.fit_transform(VarDF_scaled)
     eigenvectors = pca.components_
 
     # Create a DataFrame for PCA results and add cluster labels
-    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2'])
+    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
     pca_df['Cluster'] = kmeansmod.labels_
     
     
@@ -273,7 +275,8 @@ def Cluster(TransectDF, ValPlots=False):
                            MediumImpact:'Medium',
                            LowImpact:'Low'}
         ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF[Mod+'Cluster']]
-        VarDF['Impact'] = ImpactLabels
+        VarDFClust = VarDF.copy()
+        VarDFClust[Mod+'Impact'] = ImpactLabels
         
         # HighImpact = ClusterMeans[(ClusterMeans['distances'] == ClusterMeans['distances'].min()) & # landward VE
         #                           (ClusterMeans['wlcorrdist'] == ClusterMeans['wlcorrdist'].min()) & # landward WL
@@ -303,22 +306,26 @@ def Cluster(TransectDF, ValPlots=False):
         # sil_scores.append(silhouette_score(VarDF_scaled, ClusterMods[Mod].labels_))
     
         # Create a DataFrame for PCA results and add cluster labels
-        pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2'])
+        pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
         pca_df['Cluster'] = ClusterMods[Mod].labels_
     
         # Optional: Visualization of clusters
         # For high dimensional data, consider using PCA or t-SNE to reduce dimensions for visualization
         fig, ax = plt.subplots(figsize=(10, 5))
+        bluecm = cm.get_cmap('cool')
+        greencm = cm.get_cmap('summer')
         ax.scatter(VarDF.index, 
                    VarDF['WaveHs'], 
-                   c=VarDF[Mod+'Cluster'], 
-                   cmap='RdYlGn')  # Example visualization using one variable
-        # ax2 = ax.twinx()
-        # ax2.scatter(VarDF.index, VarDF['WaveHs'], c=VarDF['Cluster'], cmap='viridis', marker='s')  # Example visualization using one variable
+                   c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
+        ax2 = ax.twinx()
+        ax2.scatter(VarDF.index, 
+                   VarDF['distances'], 
+                   c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  # Example visualization using one variable
         plt.title(f'Clustering Method: {Mod}')
         ax.set_xlabel('Time')
         # ax.set_ylabel('Cross-shore VE position (m)')
         ax.set_ylabel('Significant wave height (m)')
+        ax2.set_ylabel('VE distance (m)')
         plt.show()
         
         # Plot the clusters in the PCA space
@@ -334,22 +341,36 @@ def Cluster(TransectDF, ValPlots=False):
                 alpha=0.7
             )
             clusterDF.append(cluster_data)
-        
-        coeffs = np.transpose(pca.components_[0:2, :])*2
-        n_coeffs = coeffs.shape[0]
-        
         # Plot eignevectors of each variable
+        coeffs = np.transpose(eigenvectors[0:2, :])*2
+        n_coeffs = coeffs.shape[0]
         for i in range(n_coeffs):
             plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
             plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
                          xytext=(coeffs[i,0]*15,5), textcoords='offset points',
                          color='k', ha='center', va='center', zorder=5)
-        
-        plt.title(f'{Mod} Clusters in PCA Space')
-        plt.xlabel('Principal Component 1')
-        plt.ylabel('Principal Component 2')
-        plt.legend()
+        plt.tight_layout()
+        plt.show()
+            
+        # 3D scatter plot (to investigate clustering or patterns in PCs)
+        fig = plt.figure(figsize=(6,5))
+        ax = fig.add_subplot(111, projection='3d')
+        for cluster in pca_df['Cluster'].unique():
+            cluster_data = pca_df[pca_df['Cluster'] == cluster]
+            ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'])
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+            ax.set_zlabel('PC3')
+        # Plot eignevectors of each variable
+        # coeffs = np.transpose(eigenvectors[0:3, :])*2
+        # n_coeffs = coeffs.shape[0]
+        # for i in range(n_coeffs):
+        #     plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
+        #     plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
+        #                  xytext=(coeffs[i,0]*15,5), textcoords='offset points',
+        #                  color='k', ha='center', va='center', zorder=5)
+        plt.tight_layout()
         plt.show()
         
         
-    return VarDF
+    return VarDFClust
