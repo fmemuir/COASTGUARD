@@ -364,13 +364,14 @@ def ClusterKMeans(TransectDF, ValPlots=False):
             ax.set_ylabel('PC2')
             ax.set_zlabel('PC3')
         # Plot eignevectors of each variable
-        # coeffs = np.transpose(eigenvectors[0:3, :])*2
-        # n_coeffs = coeffs.shape[0]
-        # for i in range(n_coeffs):
-        #     plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
-        #     plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
-        #                  xytext=(coeffs[i,0]*15,5), textcoords='offset points',
-        #                  color='k', ha='center', va='center', zorder=5)
+        coeffs = np.transpose(eigenvectors[0:3, :])*2
+        n_coeffs = coeffs.shape[0]
+        for i in range(n_coeffs):
+            ax.quiver(0,0,0, 
+                      coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
+                      color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
+            ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
+                    VarDF.columns[i], color='k', ha='center', va='center')
         plt.tight_layout()
         plt.show()
         
@@ -482,14 +483,15 @@ def Cluster(TransectDF):
             ax.set_xlabel('PC1')
             ax.set_ylabel('PC2')
             ax.set_zlabel('PC3')
-        # Plot eignevectors of each variable
-        # coeffs = np.transpose(eigenvectors[0:3, :])*2
-        # n_coeffs = coeffs.shape[0]
-        # for i in range(n_coeffs):
-        #     plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
-        #     plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
-        #                  xytext=(coeffs[i,0]*15,5), textcoords='offset points',
-        #                  color='k', ha='center', va='center', zorder=5)
+        # Plot eigenvectors of each variable        
+        coeffs = np.transpose(eigenvectors[0:3, :])*2
+        n_coeffs = coeffs.shape[0]
+        for i in range(n_coeffs):
+            ax.quiver(0,0,0, 
+                      coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
+                      color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
+            ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
+                    VarDF.columns[i], color='k', ha='center', va='center')
         plt.tight_layout()
         plt.show()
         
