@@ -312,23 +312,23 @@ def ClusterKMeans(TransectDF, ValPlots=False):
         pca_df['Cluster'] = ClusterMods[Mod].labels_
     
         # Optional: Visualization of clusters
-        # For high dimensional data, consider using PCA or t-SNE to reduce dimensions for visualization
-        fig, ax = plt.subplots(figsize=(10, 5))
-        bluecm = cm.get_cmap('cool')
-        greencm = cm.get_cmap('summer')
-        ax.scatter(VarDF.index, 
-                   VarDF['WaveHs'], 
-                   c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
-        ax2 = ax.twinx()
-        ax2.scatter(VarDF.index, 
-                   VarDF['distances'], 
-                   c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  # Example visualization using one variable
-        plt.title(f'Clustering Method: {Mod}')
-        ax.set_xlabel('Time')
-        # ax.set_ylabel('Cross-shore VE position (m)')
-        ax.set_ylabel('Significant wave height (m)')
-        ax2.set_ylabel('VE distance (m)')
-        plt.show()
+        if ValPlots is True:
+            fig, ax = plt.subplots(figsize=(10, 5))
+            bluecm = cm.get_cmap('cool')
+            greencm = cm.get_cmap('summer')
+            ax.scatter(VarDF.index, 
+                       VarDF['WaveHs'], 
+                       c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
+            ax2 = ax.twinx()
+            ax2.scatter(VarDF.index, 
+                       VarDF['distances'], 
+                       c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  # Example visualization using one variable
+            plt.title(f'Clustering Method: {Mod}')
+            ax.set_xlabel('Time')
+            # ax.set_ylabel('Cross-shore VE position (m)')
+            ax.set_ylabel('Significant wave height (m)')
+            ax2.set_ylabel('VE distance (m)')
+            plt.show()
         
         # Plot the clusters in the PCA space
         fig, ax = plt.subplots(figsize=(5, 5))
@@ -379,7 +379,7 @@ def ClusterKMeans(TransectDF, ValPlots=False):
     return VarDFClust
 
 
-def Cluster(TransectDF):
+def Cluster(TransectDF, ValPlots=False):
     """
     Classify coastal change indicator data into low, medium or high impact from hazards,
     using a SpectralCluster clustering routine.
@@ -409,7 +409,7 @@ def Cluster(TransectDF):
     pca_VarDF = pca.fit_transform(VarDF_scaled)
     eigenvectors = pca.components_
     
-    ClusterMods = {'spectral':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
+    ClusterMods = {'':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
     for Mod in ClusterMods.keys():
         
         # Map labels to cluster IDs based on cluster centres and their distance to eigenvectors
@@ -434,21 +434,22 @@ def Cluster(TransectDF):
     
         # Visualization of clusters
         # Example clustered timeseries using one or two variables
-        fig, ax = plt.subplots(figsize=(10, 5))
-        bluecm = cm.get_cmap('cool')
-        greencm = cm.get_cmap('summer')
-        ax.scatter(VarDF.index, 
-                   VarDF['WaveHs'], 
-                   c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
-        ax2 = ax.twinx()
-        ax2.scatter(VarDF.index, 
-                   VarDF['distances'], 
-                   c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  
-        plt.title(f'Clustering Method: {Mod}')
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Significant wave height (m)')
-        ax2.set_ylabel('VE distance (m)')
-        plt.show()
+        if ValPlots is True:
+            fig, ax = plt.subplots(figsize=(10, 5))
+            bluecm = cm.get_cmap('cool')
+            greencm = cm.get_cmap('summer')
+            ax.scatter(VarDF.index, 
+                       VarDF['WaveHs'], 
+                       c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
+            ax2 = ax.twinx()
+            ax2.scatter(VarDF.index, 
+                       VarDF['distances'], 
+                       c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  
+            plt.title(f'Clustering Method: {Mod}')
+            ax.set_xlabel('Time')
+            ax.set_ylabel('Significant wave height (m)')
+            ax2.set_ylabel('VE distance (m)')
+            plt.show()
         
         # Plot the clusters in the PCA space
         fig, ax = plt.subplots(figsize=(5, 5))
@@ -479,10 +480,10 @@ def Cluster(TransectDF):
         ax = fig.add_subplot(111, projection='3d')
         for cluster in pca_df['Cluster'].unique():
             cluster_data = pca_df[pca_df['Cluster'] == cluster]
-            ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'])
-            ax.set_xlabel('PC1')
-            ax.set_ylabel('PC2')
-            ax.set_zlabel('PC3')
+            ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'], label=ClusterToImpact[cluster])
+        ax.set_xlabel('PC1')
+        ax.set_ylabel('PC2')
+        ax.set_zlabel('PC3')
         # Plot eigenvectors of each variable        
         coeffs = np.transpose(eigenvectors[0:3, :])*2
         n_coeffs = coeffs.shape[0]
@@ -492,8 +493,101 @@ def Cluster(TransectDF):
                       color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
             ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
                     VarDF.columns[i], color='k', ha='center', va='center')
+        plt.legend()
         plt.tight_layout()
         plt.show()
         
         
     return VarDFClust
+
+
+def CreateSequences(X, y, time_steps=1):
+    '''
+    Function to create sequences
+    FM June 2024
+
+    Parameters
+    ----------
+    X : array
+        Training data as array of feature vectors.
+    y : array
+        Training classes as array of binary labels.
+    time_steps : int, optional
+        Number of time steps over which to generate sequences. The default is 1.
+
+    Returns
+    -------
+    array, array
+        Numpy arrays of sequenced data
+
+    '''
+    Xs = []
+    ys = []
+    if len(X) > time_steps:  # Check if there's enough data
+        for i in range(len(X) - time_steps):
+            Xs.append(X[i:(i + time_steps)]) # Slice feature set into sequences using moving window of size = number of timesteps
+            ys.append(y.iloc[i + time_steps])
+        return np.array(Xs), np.array(ys)
+    else:
+        # Not enough data to create a sequence
+        print(f"Not enough data to create sequences with time_steps={time_steps}")
+        return np.array([]), np.array([])
+
+
+def PrepData(VarDF, UseSMOTE=False):
+    
+    
+    PredDict = {'mlabel':['test'],
+                    'model':[],
+                    'history':[],
+                    'loss':[],
+                    'accuracy':[],
+                    'train_time':[],
+                    'X_train_seq':[],
+                    'y_train_seq':[],
+                    'X_test_seq':[],
+                    'y_test_seq':[],
+                    
+                    'epochS':[],
+                    'batchS':[]}
+    
+    X = VarDF.drop(columns=['Cluster','Impact'])
+    y = VarDF['Cluster']
+    
+    for mlabel, testS, hours in zip(PredDict['mlabel'], [0.2], [24]):
+        # Normalize the features
+        scaler = StandardScaler()
+        # scaler = MinMaxScaler()
+        X_scaled = scaler.fit_transform(X)
+        
+        testS = testS # proportion of data to use for training vs. testing
+        t_seq = hours # number of timesteps over which to generate sequence (hours)
+        
+        # Separate test and train data
+        X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=testS, random_state=0, stratify=y)
+        # Create sequences
+        X_train_seq, y_train_seq = CreateSequences(X_train, y_train, t_seq)
+        # Create test sequences
+        X_test_seq, y_test_seq = CreateSequences(X_test, y_test, t_seq)
+        PredDict['X_test_seq'].append(X_test_seq)
+        PredDict['y_test_seq'].append(y_test_seq)
+        
+        # Use SMOTE for oversampling when dealing with imbalanced classification
+        if UseSMOTE is True:
+            smote = SMOTE()
+            X_train_smote, y_train_smote = smote.fit_resample(X_train_seq.reshape(X_train_seq.shape[0], -1), y_train_seq)
+            X_train_smote = X_train_smote.reshape(X_train_smote.shape[0], X_train_seq.shape[1], X_train_seq.shape[2])
+            # set back onto original sequenced features/labels
+            PredDict['X_train_seq'].append(X_train_smote)
+            PredDict['y_train_seq'].append(y_train_smote)
+        else: # just use unsmoted sequenced data from above
+            PredDict['X_train_seq'].append(X_train_seq)
+            PredDict['y_train_seq'].append(y_train_seq)
+            
+        
+    return PredDict
+
+# def TrainRNN(PredDict):
+    
+#     inshape = (X_train_seq.shape[1], X_train_seq.shape[2])
+    
