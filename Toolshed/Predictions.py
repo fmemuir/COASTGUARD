@@ -25,6 +25,7 @@ from sklearn.model_selection import train_test_split
 # from sklearn.utils.class_weight import compute_class_weight
 # from imblearn.over_sampling import SMOTE
 
+from tensorflow.keras import backend as K
 from tensorflow.keras.models import Sequential
 from tensorflow.keras import Input
 from tensorflow.keras.layers import GRU, Dense, Dropout
@@ -501,41 +502,25 @@ def Cluster(TransectDF, ValPlots=False):
     return VarDFClust
 
 
-def CreateSequences(X, y, time_steps=1):
-    '''
-    Function to create sequences
-    FM June 2024
 
+def PrepData(VarDF, UseSMOTE=False):
+    """
+    Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.    
+    FM Sept 2024
+    
     Parameters
     ----------
-    X : array
-        Training data as array of feature vectors.
-    y : array
-        Training classes as array of binary labels.
-    time_steps : int, optional
-        Number of time steps over which to generate sequences. The default is 1.
+    VarDF : DataFrame
+        Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
+    UseSMOTE : bool, optional
+        Flag for using SMOTE to oversample imbalanced data. The default is False.
 
     Returns
     -------
-    array, array
-        Numpy arrays of sequenced data
+    PredDict : dict
+        Dictionary to store all the NN model metadata.
 
-    '''
-    Xs = []
-    ys = []
-    if len(X) > time_steps:  # Check if there's enough data
-        for i in range(len(X) - time_steps):
-            Xs.append(X[i:(i + time_steps)]) # Slice feature set into sequences using moving window of size = number of timesteps
-            ys.append(y.iloc[i + time_steps])
-        return np.array(Xs), np.array(ys)
-    else:
-        # Not enough data to create a sequence
-        print(f"Not enough data to create sequences with time_steps={time_steps}")
-        return np.array([]), np.array([])
-
-
-def PrepData(VarDF, UseSMOTE=False):
-    
+    """
     
     PredDict = {'mlabel':['test'],
                     'model':[],
@@ -587,7 +572,111 @@ def PrepData(VarDF, UseSMOTE=False):
         
     return PredDict
 
-# def TrainRNN(PredDict):
+
+def TrainRNN(PredDict, costsensitive=False):
     
-#     inshape = (X_train_seq.shape[1], X_train_seq.shape[2])
+    inshape = (PredDict['X_train_seq'].shape[1], PredDict['X_train_seq'].shape[2])
     
+    # GRU Model (3-layer)
+    GRUmodel = Sequential([
+                           Input(shape=inshape), 
+                           GRU(64, return_sequences=True),
+                           Dropout(0.2),
+                           GRU(64, return_sequences=True),
+                           Dropout(0.2),
+                           GRU(32),
+                           Dropout(0.2),
+                           Dense(1, activation='sigmoid')
+                           ])
+    # Compile model and define loss function and metrics
+    # Define values for false +ve and -ve and create matrix
+    if costsensitive:
+        falsepos_cost = 1   # Inconvenience of incorrect classification
+        falseneg_cost = 100 # Risk to infrastructure by incorrect classification
+        binary_thresh = 0.5
+        LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
+    
+        GRUmodel.compile(optimizer=Adam(learning_rate=0.001), 
+                         loss=LossFn, 
+                         metrics=['accuracy'])
+
+    else:
+        GRUmodel.compile(optimizer=Adam(learning_rate=0.001), 
+                         loss='binary_focal_crossentropy', 
+                         metrics=['accuracy'])
+
+    PredDict['model'].append(GRUmodel)
+    
+    return PredDict
+    
+    
+def CreateSequences(X, y, time_steps=1):
+    '''
+    Function to create sequences
+    FM June 2024
+
+    Parameters
+    ----------
+    X : array
+        Training data as array of feature vectors.
+    y : array
+        Training classes as array of binary labels.
+    time_steps : int, optional
+        Number of time steps over which to generate sequences. The default is 1.
+
+    Returns
+    -------
+    array, array
+        Numpy arrays of sequenced data
+
+    '''
+    Xs = []
+    ys = []
+    if len(X) > time_steps:  # Check if there's enough data
+        for i in range(len(X) - time_steps):
+            Xs.append(X[i:(i + time_steps)]) # Slice feature set into sequences using moving window of size = number of timesteps
+            ys.append(y.iloc[i + time_steps])
+        return np.array(Xs), np.array(ys)
+    else:
+        # Not enough data to create a sequence
+        print(f"Not enough data to create sequences with time_steps={time_steps}")
+        return np.array([]), np.array([])
+
+
+def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
+    """
+    Create a cost-sensitive loss function to implement within an NN model.compile() step.
+    FM June 2024
+
+    Parameters
+    ----------
+    falsepos_cost : int
+        Proportional weight towards false positive classification.
+    falseneg_cost : int
+        Proportional weight towards false negative classification.
+    binary_thresh : float
+        Value between 0 and 1 representing .
+
+    Returns
+    -------
+    loss : function
+        Calls the loss function when it is set within model.compile(loss=LossFn).
+
+    """
+    def loss(y_true, y_pred):
+        # Flatten the arrays
+        y_true = K.flatten(y_true)
+        y_pred = K.flatten(y_pred)
+        
+        # Convert predictions to binary class predictions
+        y_pred_classes = K.cast(K.greater(y_pred, binary_thresh), tf.float32)
+        
+        # Calculate cost
+        falsepos = K.sum(y_true * (1 - y_pred_classes) * falseneg_cost)
+        falseneg = K.sum((1 - y_true) * y_pred_classes * falsepos_cost)
+        
+        bce = K.binary_crossentropy(y_true, y_pred)
+        
+        return bce + falsepos + falseneg
+    
+    return loss
