@@ -57,12 +57,12 @@ for Tr in TransectIDs:
 VarDF = Predictions.Cluster(TransectDF)
 
 #%%
-PredDict = Predictions.PrepData(VarDF, ['test1','test2'], [0.2,0.2], [24,48])
+PredDict = Predictions.PrepData(VarDF, ['test1','test2'], [0.2,0.2], [1,1])
 
 #%%
 PredDict = Predictions.CompileRNN(PredDict)
 
 #%%
-
+PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 
 

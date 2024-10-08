@@ -549,10 +549,10 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
         
         # Separate test and train data
         X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=testS, random_state=0, stratify=y)
-        # # Create sequences
-        # X_train_seq, y_train_seq = CreateSequences(X_train, y_train, t_seq)
-        # # Create test sequences
-        # X_test_seq, y_test_seq = CreateSequences(X_test, y_test, t_seq)
+        # Create sequences
+        X_train, y_train = CreateSequences(X_train, y_train, t_seq)
+        # Create test sequences
+        X_test, y_test = CreateSequences(X_test, y_test, t_seq)
         PredDict['X_test'].append(X_test)
         PredDict['y_test'].append(y_test)
         
@@ -573,60 +573,97 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
 
 
 def CompileRNN(PredDict, costsensitive=False):
-    
-    inshape = (PredDict['X_train_seq'].shape[1], PredDict['X_train_seq'].shape[2])
-    
-    # GRU Model (3-layer)
-    # Model = Sequential([
-    #                        Input(shape=inshape), 
-    #                        GRU(64, return_sequences=True),
-    #                        Dropout(0.2),
-    #                        GRU(64, return_sequences=True),
-    #                        Dropout(0.2),
-    #                        GRU(32),
-    #                        Dropout(0.2),
-    #                        Dense(1, activation='sigmoid')
-    #                        ])
-    
-    # Number  of hidden layers can be decided by rule of thumb:
-        # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
-    N_hidden = []
-    
-    # LSTM (1 layer)
-    # LSTM() has dimension of (batchsize, timesteps, units) and retains info at each timestep (return_sequences=True)
-    # Dropout() randomly sets inputs to 0 during training to prevent overfitting
-    # Dense() transforms output into normalised PDF across the 3 categories
-    Model = Sequential([
-                        LSTM(units=N_hidden, return_sequences=True, input_shape=inshape),
-                        Dropout(0.2), 
-                        Dense(3, activation='softmax') 
-                        ])
-    
-    # Compile model and define loss function and metrics
-    if costsensitive:
-        # Define values for false +ve and -ve and create matrix
-        falsepos_cost = 1   # Inconvenience of incorrect classification
-        falseneg_cost = 100 # Risk to infrastructure by incorrect classification
-        binary_thresh = 0.5
-        LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
-    
-        Model.compile(optimizer=Adam(learning_rate=0.001), 
-                         loss=LossFn, 
-                         metrics=['accuracy', 'loss'])
-    else:
-        # If not cost-sensitive, just use categorical loss fn
-        Model.compile(optimizer=Adam(learning_rate=0.001), 
-                         loss='sparse_categorical_crossentropy', 
-                         metrics=['accuracy', 'loss'])
-    
-    # Save model infrastructure to dictionary of model sruns
-    PredDict['model'].append(Model)
+    for mlabel in PredDict['mlabel']:
+        # Index of model setup
+        mID = PredDict['mlabel'].index(mlabel)
+        
+        # inshape = (N_timesteps, N_features)
+        inshape = (PredDict['X_train'][mID].shape[0], PredDict['X_train'][mID].shape[2])
+        
+        # GRU Model (3-layer)
+        # Model = Sequential([
+        #                        Input(shape=inshape), 
+        #                        GRU(64, return_sequences=True),
+        #                        Dropout(0.2),
+        #                        GRU(64, return_sequences=True),
+        #                        Dropout(0.2),
+        #                        GRU(32),
+        #                        Dropout(0.2),
+        #                        Dense(1, activation='sigmoid')
+        #                        ])
+        
+        # Number  of hidden layers can be decided by rule of thumb:
+            # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
+        N_hidden = round(inshape[0] / (2 * (inshape[1] + 3)))
+        
+        # LSTM (1 layer)
+        # Input() takes input shape, used for sequential models
+        # LSTM() has dimension of (batchsize, timesteps, units) and retains info at each timestep (return_sequences=True)
+        # Dropout() randomly sets inputs to 0 during training to prevent overfitting
+        # Dense() transforms output into normalised PDF across the 3 categories
+        Model = Sequential([
+                            Input(shape=inshape),
+                            LSTM(units=N_hidden, return_sequences=True),
+                            Dropout(0.2), 
+                            Dense(3, activation='softmax') 
+                            ])
+        
+        # Compile model and define loss function and metrics
+        if costsensitive:
+            # Define values for false +ve and -ve and create matrix
+            falsepos_cost = 1   # Inconvenience of incorrect classification
+            falseneg_cost = 100 # Risk to infrastructure by incorrect classification
+            binary_thresh = 0.5
+            LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
+        
+            Model.compile(optimizer=Adam(learning_rate=0.001), 
+                             loss=LossFn, 
+                             metrics=['accuracy', 'loss'])
+        else:
+            # If not cost-sensitive, just use categorical loss fn
+            Model.compile(optimizer=Adam(learning_rate=0.001), 
+                             loss='sparse_categorical_crossentropy', 
+                             metrics=['accuracy', 'loss'])
+        
+        # Save model infrastructure to dictionary of model sruns
+        PredDict['model'].append(Model)
     
     return PredDict
 
 
-def TrainRNN(PredDict):
+def TrainRNN(PredDict,filepath,sitename):
     
+    for mlabel in PredDict['mlabel']:
+        # Index of model setup
+        mID = PredDict['mlabel'].index(mlabel)
+        
+        Model = PredDict['model'][mID]
+        
+        X_train = PredDict['X_train'][mID]
+        y_train = PredDict['y_train'][mID]
+        X_test = PredDict['X_test'][mID]
+        y_test = PredDict['y_test'][mID]
+        
+        # Train the model on the training data, setting aside a small split of 
+        # this data for validation 
+        start=time.time() # start timer
+        PredDict['history'].append(Model.fit(X_train, y_train, 
+                                             epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID], 
+                                             validation_split=0.1, verbose=1))
+        end=time.time() # end timer
+        
+        # Time taken to train model
+        PredDict['train_time'].append(end-start)
+        
+        # Evaluate the model
+        loss, accuracy = Model.evaluate(X_test, y_test)
+        PredDict['loss'].append(loss)
+        PredDict['accuracy'].append(accuracy)
+        
+        # Save trained models in dictionary for posterity
+        with open(f"{os.path.join(filepath, sitename)}/predictions/{'_'.join(PredDict['mlabel'])}.pkl", 'wb') as f:
+            pickle.dump(PredDict, f)
+            
     return PredDict
     
     
