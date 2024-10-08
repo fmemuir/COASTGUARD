@@ -522,16 +522,16 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
 
     """
     
-    PredDict = {'mlabel':[l_mlabel],
+    PredDict = {'mlabel':l_mlabel,
                 'model':[],
                 'history':[],
                 'loss':[],
                 'accuracy':[],
                 'train_time':[],
-                'X_train_seq':[],
-                'y_train_seq':[],
-                'X_test_seq':[],
-                'y_test_seq':[],
+                'X_train':[],
+                'y_train':[],
+                'X_test':[],
+                'y_test':[],
                 'epochS':[],
                 'batchS':[]}
     
@@ -549,30 +549,30 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
         
         # Separate test and train data
         X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=testS, random_state=0, stratify=y)
-        # Create sequences
-        X_train_seq, y_train_seq = CreateSequences(X_train, y_train, t_seq)
-        # Create test sequences
-        X_test_seq, y_test_seq = CreateSequences(X_test, y_test, t_seq)
-        PredDict['X_test_seq'].append(X_test_seq)
-        PredDict['y_test_seq'].append(y_test_seq)
+        # # Create sequences
+        # X_train_seq, y_train_seq = CreateSequences(X_train, y_train, t_seq)
+        # # Create test sequences
+        # X_test_seq, y_test_seq = CreateSequences(X_test, y_test, t_seq)
+        PredDict['X_test'].append(X_test)
+        PredDict['y_test'].append(y_test)
         
         # Use SMOTE for oversampling when dealing with imbalanced classification
         if UseSMOTE is True:
             smote = SMOTE()
-            X_train_smote, y_train_smote = smote.fit_resample(X_train_seq.reshape(X_train_seq.shape[0], -1), y_train_seq)
-            X_train_smote = X_train_smote.reshape(X_train_smote.shape[0], X_train_seq.shape[1], X_train_seq.shape[2])
+            X_train_smote, y_train_smote = smote.fit_resample(X_train.reshape(X_train.shape[0], -1), y_train)
+            X_train_smote = X_train_smote.reshape(X_train_smote.shape[0], X_train.shape[1], X_train.shape[2])
             # set back onto original sequenced features/labels
-            PredDict['X_train_seq'].append(X_train_smote)
-            PredDict['y_train_seq'].append(y_train_smote)
+            PredDict['X_train'].append(X_train_smote)
+            PredDict['y_train'].append(y_train_smote)
         else: # just use unsmoted sequenced data from above
-            PredDict['X_train_seq'].append(X_train_seq)
-            PredDict['y_train_seq'].append(y_train_seq)
+            PredDict['X_train'].append(X_train)
+            PredDict['y_train'].append(y_train)
             
         
     return PredDict
 
 
-def TrainRNN(PredDict, costsensitive=False):
+def CompileRNN(PredDict, costsensitive=False):
     
     inshape = (PredDict['X_train_seq'].shape[1], PredDict['X_train_seq'].shape[2])
     
@@ -588,12 +588,16 @@ def TrainRNN(PredDict, costsensitive=False):
     #                        Dense(1, activation='sigmoid')
     #                        ])
     
+    # Number  of hidden layers can be decided by rule of thumb:
+        # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
+    N_hidden = []
+    
     # LSTM (1 layer)
     # LSTM() has dimension of (batchsize, timesteps, units) and retains info at each timestep (return_sequences=True)
     # Dropout() randomly sets inputs to 0 during training to prevent overfitting
     # Dense() transforms output into normalised PDF across the 3 categories
     Model = Sequential([
-                        LSTM(units=8, return_sequences=True, input_shape=inshape),
+                        LSTM(units=N_hidden, return_sequences=True, input_shape=inshape),
                         Dropout(0.2), 
                         Dense(3, activation='softmax') 
                         ])
@@ -614,8 +618,14 @@ def TrainRNN(PredDict, costsensitive=False):
         Model.compile(optimizer=Adam(learning_rate=0.001), 
                          loss='sparse_categorical_crossentropy', 
                          metrics=['accuracy', 'loss'])
-
+    
+    # Save model infrastructure to dictionary of model sruns
     PredDict['model'].append(Model)
+    
+    return PredDict
+
+
+def TrainRNN(PredDict):
     
     return PredDict
     
