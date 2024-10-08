@@ -28,7 +28,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Sequential
 from tensorflow.keras import Input
-from tensorflow.keras.layers import GRU, Dense, Dropout
+from tensorflow.keras.layers import GRU, LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from imblearn.over_sampling import SMOTE
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
@@ -503,7 +503,7 @@ def Cluster(TransectDF, ValPlots=False):
 
 
 
-def PrepData(VarDF, UseSMOTE=False):
+def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
     """
     Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.    
     FM Sept 2024
@@ -522,24 +522,23 @@ def PrepData(VarDF, UseSMOTE=False):
 
     """
     
-    PredDict = {'mlabel':['test'],
-                    'model':[],
-                    'history':[],
-                    'loss':[],
-                    'accuracy':[],
-                    'train_time':[],
-                    'X_train_seq':[],
-                    'y_train_seq':[],
-                    'X_test_seq':[],
-                    'y_test_seq':[],
-                    
-                    'epochS':[],
-                    'batchS':[]}
+    PredDict = {'mlabel':[l_mlabel],
+                'model':[],
+                'history':[],
+                'loss':[],
+                'accuracy':[],
+                'train_time':[],
+                'X_train_seq':[],
+                'y_train_seq':[],
+                'X_test_seq':[],
+                'y_test_seq':[],
+                'epochS':[],
+                'batchS':[]}
     
     X = VarDF.drop(columns=['Cluster','Impact'])
     y = VarDF['Cluster']
     
-    for mlabel, testS, hours in zip(PredDict['mlabel'], [0.2], [24]):
+    for mlabel, testS, hours in zip(PredDict['mlabel'], l_testS, l_hours):
         # Normalize the features
         scaler = StandardScaler()
         # scaler = MinMaxScaler()
@@ -578,34 +577,45 @@ def TrainRNN(PredDict, costsensitive=False):
     inshape = (PredDict['X_train_seq'].shape[1], PredDict['X_train_seq'].shape[2])
     
     # GRU Model (3-layer)
-    GRUmodel = Sequential([
-                           Input(shape=inshape), 
-                           GRU(64, return_sequences=True),
-                           Dropout(0.2),
-                           GRU(64, return_sequences=True),
-                           Dropout(0.2),
-                           GRU(32),
-                           Dropout(0.2),
-                           Dense(1, activation='sigmoid')
-                           ])
+    # Model = Sequential([
+    #                        Input(shape=inshape), 
+    #                        GRU(64, return_sequences=True),
+    #                        Dropout(0.2),
+    #                        GRU(64, return_sequences=True),
+    #                        Dropout(0.2),
+    #                        GRU(32),
+    #                        Dropout(0.2),
+    #                        Dense(1, activation='sigmoid')
+    #                        ])
+    
+    # LSTM (1 layer)
+    # LSTM() has dimension of (batchsize, timesteps, units) and retains info at each timestep (return_sequences=True)
+    # Dropout() randomly sets inputs to 0 during training to prevent overfitting
+    # Dense() transforms output into normalised PDF across the 3 categories
+    Model = Sequential([
+                        LSTM(units=8, return_sequences=True, input_shape=inshape),
+                        Dropout(0.2), 
+                        Dense(3, activation='softmax') 
+                        ])
+    
     # Compile model and define loss function and metrics
-    # Define values for false +ve and -ve and create matrix
     if costsensitive:
+        # Define values for false +ve and -ve and create matrix
         falsepos_cost = 1   # Inconvenience of incorrect classification
         falseneg_cost = 100 # Risk to infrastructure by incorrect classification
         binary_thresh = 0.5
         LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
     
-        GRUmodel.compile(optimizer=Adam(learning_rate=0.001), 
+        Model.compile(optimizer=Adam(learning_rate=0.001), 
                          loss=LossFn, 
-                         metrics=['accuracy'])
-
+                         metrics=['accuracy', 'loss'])
     else:
-        GRUmodel.compile(optimizer=Adam(learning_rate=0.001), 
-                         loss='binary_focal_crossentropy', 
-                         metrics=['accuracy'])
+        # If not cost-sensitive, just use categorical loss fn
+        Model.compile(optimizer=Adam(learning_rate=0.001), 
+                         loss='sparse_categorical_crossentropy', 
+                         metrics=['accuracy', 'loss'])
 
-    PredDict['model'].append(GRUmodel)
+    PredDict['model'].append(Model)
     
     return PredDict
     
