@@ -401,7 +401,7 @@ def check_images_available(inputs):
 
     # check if EE was initialised or not
     try:
-        ee.ImageCollection('LANDSAT/LT05/C01/T1_TOA')
+        ee.ImageCollection('LANDSAT/LT05/C02/T1_TOA')
     except:
         ee.Initialize()
 
@@ -414,10 +414,10 @@ def check_images_available(inputs):
     #              'S2':'COPERNICUS/S2'}
     # New Collection 2 names
     col_names_T1 = {'L5':'LANDSAT/LT05/C02/T1_TOA',
-                  'L7':'LANDSAT/LE07/C02/T1_TOA',
-                  'L8':'LANDSAT/LC08/C02/T1_TOA',
-                  'L9':'LANDSAT/LC09/C02/T1_TOA',
-                  'S2':'COPERNICUS/S2'}
+                    'L7':'LANDSAT/LE07/C02/T1_TOA',
+                    'L8':'LANDSAT/LC08/C02/T1_TOA',
+                    'L9':'LANDSAT/LC09/C02/T1_TOA',
+                    'S2':'COPERNICUS/S2'}
     
 
     print('- In Landsat Tier 1 & Sentinel-2 Level-1C:')
@@ -456,9 +456,9 @@ def check_images_available(inputs):
 
     # otherwise check how many images are available in Landsat Tier 2
     col_names_T2 = {'L5':'LANDSAT/LT05/C02/T2_TOA',
-                 'L7':'LANDSAT/LE07/C02/T2_TOA',
-                 'L8':'LANDSAT/LC08/C02/T2_TOA',
-                 'L9':'LANDSAT/LC09/C02/T2_TOA'}
+                    'L7':'LANDSAT/LE07/C02/T2_TOA',
+                    'L8':'LANDSAT/LC08/C02/T2_TOA',
+                    'L9':'LANDSAT/LC09/C02/T2_TOA'}
     print('- In Landsat Tier 2:', end='\n')
     im_dict_T2 = dict([])
     sum_img = 0
