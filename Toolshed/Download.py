@@ -401,7 +401,7 @@ def check_images_available(inputs):
 
     # check if EE was initialised or not
     try:
-        ee.ImageCollection('LANDSAT/LT05/C01/T1_TOA')
+        ee.ImageCollection('LANDSAT/LT05/C02/T1_TOA')
     except:
         ee.Initialize()
 
