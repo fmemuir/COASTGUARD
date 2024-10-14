@@ -1088,14 +1088,17 @@ def image_retrieval(inputs):
         cloud_thresh = 90
         
     if 'L5' in inputs['sat_list']:
-        Landsat5 = ee.ImageCollection("LANDSAT/LT05/C01/T1_TOA").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1])
+        Landsat5 = ee.ImageCollection("LANDSAT/LT05/C02/T1_TOA").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1])
         Sat.append(Landsat5)
     if 'L7' in inputs['sat_list']:
         Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
         Sat.append(Landsat7)
     if 'L8' in inputs['sat_list']:
-        Landsat8 = ee.ImageCollection('LANDSAT/LC08/C01/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
+        Landsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
         Sat.append(Landsat8)
+    if 'L9' in inputs['sat_list']:
+        Landsat9 = ee.ImageCollection('LANDSAT/LC09/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
+        Sat.append(Landsat9)
     if 'S2' in inputs['sat_list']:
         Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
         Sat.append(Sentinel2)
@@ -1785,6 +1788,9 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename):
     
     # Create bounding box from refline (with small buffer) and convert it to a geodataframe
     referenceLineDF = gpd.read_file(referenceLinePath)
+    if len(referenceLineDF.geometry) > 1:
+        print('More than one line object found in reference line; make sure you only have one continuous line!\n')
+        return
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
     projstr = FindUTM(float(referenceLineDF.bounds.miny), float(referenceLineDF.bounds.minx))
     referenceLineDF.to_crs(crs=projstr, inplace=True)
