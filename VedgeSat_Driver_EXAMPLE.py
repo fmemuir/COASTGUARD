@@ -94,10 +94,10 @@ metadata = Toolbox.metadata_collection(inputs, Sat)
 #%% Vegetation Edge Settings
 # ONLY EDIT IF ADJUSTMENTS ARE NEEDED
 
-BasePath = 'Data/' + sitename + '/lines'
+LinesPath = 'Data/' + sitename + '/lines'
 
-if os.path.isdir(BasePath) is False:
-    os.mkdir(BasePath)
+if os.path.isdir(LinesPath) is False:
+    os.mkdir(LinesPath)
 
 # Choose which ANN classifier to use (the default is already uncommented)
 # clf_model = 'MLPClassifier_Veg_L8S2.pkl'
@@ -171,10 +171,10 @@ output = Toolbox.RemoveDuplicates(output)
 #%% Save Veglines as Local Shapefiles
 
 # Save output veglines 
-Toolbox.SaveConvShapefiles(output, BasePath, sitename, settings['output_epsg'])
+Toolbox.SaveConvShapefiles(output, LinesPath, sitename, settings['output_epsg'])
 # Save output shorelines if they were generated
 if settings['wetdry'] == True:
-    Toolbox.SaveConvShapefiles_Water(output, BasePath, sitename, settings['output_epsg'])
+    Toolbox.SaveConvShapefiles_Water(output, LinesPath, sitename, settings['output_epsg'])
 
 
 #%% EDIT ME: Define Settings for Cross-shore Transects
@@ -191,17 +191,17 @@ beachslope = 0.24
 
 #%% Create Cross-shore Transects
 
-VegBasePath = 'Data/' + sitename + '/lines'
-VeglineShp = glob.glob(BasePath+'/*veglines.shp')
+LinesPath = 'Data/' + sitename + '/lines'
+VeglineShp = glob.glob(LinesPath+'/*veglines.shp')
 VeglineGDF = gpd.read_file(VeglineShp[0])
-WaterlineShp = glob.glob(BasePath+'/*waterlines.shp')
+WaterlineShp = glob.glob(LinesPath+'/*waterlines.shp')
 WaterlineGDF = gpd.read_file(WaterlineShp[0])
 # Produces Transects for the reference line
-TransectSpec =  os.path.join(BasePath, sitename+'_Transects.shp')
+TransectSpec =  os.path.join(LinesPath, sitename+'_Transects.shp')
 
 # If transects already exist, load them in
 if os.path.isfile(TransectSpec[:-3]+'pkl') is False:
-    TransectGDF = Transects.ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, VegBasePath, referenceLineShp)
+    TransectGDF = Transects.ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, DistanceInland, DistanceOffshore, LinesPath, referenceLineShp)
 else:
     print('Transects already exist and were loaded')
     with open(TransectSpec[:-3]+'pkl', 'rb') as Tfile: 
@@ -221,9 +221,9 @@ if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '
         TransectInterGDF = pickle.load(f)
 else:
     # Get intersections
-    TransectInterGDF = Transects.GetIntersections(BasePath, TransectGDF, VeglineGDF)
+    TransectInterGDF = Transects.GetIntersections(LinesPath, TransectGDF, VeglineGDF)
     # Save newly intersected transects as shapefile
-    TransectInterGDF = Transects.SaveIntersections(TransectInterGDF, VeglineGDF, BasePath, sitename)
+    TransectInterGDF = Transects.SaveIntersections(TransectInterGDF, VeglineGDF, LinesPath, sitename)
     # Repopulate dict with intersection distances along transects normalised to transect midpoints
     TransectInterGDF = Transects.CalculateChanges(TransectInterGDF)
     
@@ -239,8 +239,8 @@ if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '
         TransectInterGDFWater = pickle.load(f)
 else:        
     if settings['wetdry'] == True:
-        TransectInterGDFWater = Transects.GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
-        TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  BasePath, sitename, settings['projection_epsg'])
+        TransectInterGDFWater = Transects.GetBeachWidth(LinesPath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
+        TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  LinesPath, sitename, settings['projection_epsg'])
     
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDFWater, f)
@@ -256,8 +256,8 @@ if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '
         TransectInterGDFTopo = pickle.load(f)
 else:
     # Update Transects with Transition Zone widths and slope if available
-    TransectInterGDFTopo = Transects.TZIntersect(settings, TransectInterGDF, VeglineGDF, BasePath)
-    TransectInterGDFTopo = Transects.SlopeIntersect(settings, TransectInterGDFTopo, VeglineGDF, BasePath, TIF)
+    TransectInterGDFTopo = Transects.TZIntersect(settings, TransectInterGDF, VeglineGDF, LinesPath)
+    TransectInterGDFTopo = Transects.SlopeIntersect(settings, TransectInterGDFTopo, VeglineGDF, LinesPath, TIF)
     
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_topo_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDFTopo, f)
