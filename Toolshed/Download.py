@@ -407,11 +407,18 @@ def check_images_available(inputs):
 
     print('Images available between %s and %s:'%(inputs['dates'][0],inputs['dates'][-1]), end='\n')
     # check how many images are available in Tier 1 and Sentinel Level-1C
-    col_names_T1 = {'L5':'LANDSAT/LT05/C01/T1_TOA',
-                 'L7':'LANDSAT/LE07/C01/T1_TOA',
-                 'L8':'LANDSAT/LC08/C01/T1_TOA',
-                 'L9':'LANDSAT/LC09/C02/T1_TOA',
-                 'S2':'COPERNICUS/S2'}
+    # col_names_T1 = {'L5':'LANDSAT/LT05/C01/T1_TOA',
+    #              'L7':'LANDSAT/LE07/C01/T1_TOA',
+    #              'L8':'LANDSAT/LC08/C01/T1_TOA',
+    #              'L9':'LANDSAT/LC09/C02/T1_TOA',
+    #              'S2':'COPERNICUS/S2'}
+    # New Collection 2 names
+    col_names_T1 = {'L5':'LANDSAT/LT05/C02/T1_TOA',
+                  'L7':'LANDSAT/LE07/C02/T1_TOA',
+                  'L8':'LANDSAT/LC08/C02/T1_TOA',
+                  'L9':'LANDSAT/LC09/C02/T1_TOA',
+                  'S2':'COPERNICUS/S2'}
+    
 
     print('- In Landsat Tier 1 & Sentinel-2 Level-1C:')
     im_dict_T1 = dict([])
@@ -448,9 +455,9 @@ def check_images_available(inputs):
         return inputs
 
     # otherwise check how many images are available in Landsat Tier 2
-    col_names_T2 = {'L5':'LANDSAT/LT05/C01/T2_TOA',
-                 'L7':'LANDSAT/LE07/C01/T2_TOA',
-                 'L8':'LANDSAT/LC08/C01/T2_TOA',
+    col_names_T2 = {'L5':'LANDSAT/LT05/C02/T2_TOA',
+                 'L7':'LANDSAT/LE07/C02/T2_TOA',
+                 'L8':'LANDSAT/LC08/C02/T2_TOA',
                  'L9':'LANDSAT/LC09/C02/T2_TOA'}
     print('- In Landsat Tier 2:', end='\n')
     im_dict_T2 = dict([])
