@@ -39,6 +39,7 @@ __pycache__/
 Data/EXAMPLE/AOImap.html
 Data/
 Results/
+!Data/EXAMPLE/lines/
 
 aviso-fes/
 fes2014/
