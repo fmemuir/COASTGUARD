@@ -611,6 +611,7 @@ def remove_cloudy_images(im_list, satname, prc_cloud_cover=95):
     Removes from the EE collection very cloudy images (>95% cloud cover)
 
     KV WRL 2018
+    Updated for L9 by FM Oct 2024
 
     Arguments:
     -----------
@@ -628,7 +629,7 @@ def remove_cloudy_images(im_list, satname, prc_cloud_cover=95):
     """
 
     # remove very cloudy images from the collection (>95% cloud)
-    if satname in ['L5','L7','L8']:
+    if satname in ['L5','L7','L8','L9']:
         cloud_property = 'CLOUD_COVER'
     elif satname in ['S2']:
         cloud_property = 'CLOUDY_PIXEL_PERCENTAGE'
