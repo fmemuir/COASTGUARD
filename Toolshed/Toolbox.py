@@ -1483,7 +1483,9 @@ def ProcessRefline(referenceLineShp,settings):
     # merged = linemerge([lineseg for lineseg in referenceLineDF.geometry])
     # referenceLineDF = gpd.GeoDataFrame(geometry=[merged], crs=4326)
     
-    refLinex,refLiney = referenceLineDF.geometry[0].coords.xy # NEED TO ADD TYPE CHECK, linestring vs. multilinestring...
+    if len(referenceLineDF.geometry) > 1:
+        print('More than one line object found in reference line; using just the first line found.')
+    refLinex,refLiney = referenceLineDF.geometry[0].coords.xy 
     
     # swap latlon coordinates (or don't? check this) around and format into list
     #referenceLineList = list([refLinex[i],refLiney[i]] for i in range(len(refLinex)))
