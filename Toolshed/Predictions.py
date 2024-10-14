@@ -573,6 +573,23 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
 
 
 def CompileRNN(PredDict, costsensitive=False):
+    """
+    Compile the NN using the settings and data stored in the NN dictionary.
+    FM Sept 2024
+
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata.
+    costsensitive : bool, optional
+        Option for including a cost-sensitive loss function. The default is False.
+
+    Returns
+    -------
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with compiled models added
+
+    """
     for mlabel in PredDict['mlabel']:
         # Index of model setup
         mID = PredDict['mlabel'].index(mlabel)
@@ -632,7 +649,25 @@ def CompileRNN(PredDict, costsensitive=False):
 
 
 def TrainRNN(PredDict,filepath,sitename):
-    
+    """
+    Train the compiled NN based on the training data set aside for it.
+    FM Sept 2024
+
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata.
+    filepath : str
+        Filepath to save the PredDict dictionary to (for reading the trained model back in).
+    sitename : str
+        Name of the site of interest.
+
+    Returns
+    -------
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with trained NN models.
+
+    """
     for mlabel in PredDict['mlabel']:
         # Index of model setup
         mID = PredDict['mlabel'].index(mlabel)
