@@ -25,13 +25,6 @@ ee.Initialize()
 
 #%% EDIT ME: Requirements
 
-# Define desired coordinate projections. 
-# NOTE: image_epsg should always be in the NORTHERN UTM zone, regardless of whether your location is 
-# in the northern or southern hemisphere. E.g. if your location is New South Wales (UTM Zone 56S), 
-# the image_epsg should be 32656 (which is UTM Zone 56N).
-projection_epsg = 27700 # OSGB 1936
-image_epsg = 32630 # UTM Zone 30N
-
 # Name of site to save directory and files under
 sitename = 'SITENAME'
 
@@ -62,7 +55,7 @@ filepath = Toolbox.CreateFileStructure(sitename, sat_list)
 # Return AOI from reference line bounding box and save AOI folium map HTML in sitename directory
 referenceLinePath = os.path.join(filepath, 'referenceLines', referenceLineShp)
 referenceLineDF = gpd.read_file(referenceLinePath)
-polygon, point, lonmin, lonmax, latmin, latmax = Toolbox.AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg)
+polygon, point, lonmin, lonmax, latmin, latmax = Toolbox.AOIfromLine(referenceLinePath, max_dist_ref, sitename)
 
 # It's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
@@ -112,12 +105,12 @@ BasePath = 'Data/' + sitename + '/lines'
 if os.path.isdir(BasePath) is False:
     os.mkdir(BasePath)
 
-image_epsg = Toolbox.GetImageEPSG(inputs,metadata)
+projection_epsg, _ = Toolbox.FindUTM(polygon[0][0][1],polygon[0][0][0])
 
 settings = {
     # general parameters:
     'cloud_thresh': cloud_thresh,        # threshold on maximum cloud cover
-    'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
+    'output_epsg': projection_epsg,     # epsg code of spatial reference system desired for the output   
     'wetdry': wetdry,              # extract wet-dry boundary as well as veg
     # quality control:
     'check_detection': True,    # if True, shows each shoreline detection to the user for validation

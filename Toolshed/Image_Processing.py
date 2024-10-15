@@ -151,7 +151,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         georef = Landsat5.getInfo().get('features')[0]['bands'][0]['crs_transform']
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        outProj = Proj(init=Landsat5.getInfo().get('features')[0]['bands'][0]['crs'])
+        # outProj = Proj(init=Landsat5.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
+        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
@@ -227,7 +228,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
    
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        outProj = Proj(init=Landsat7.getInfo().get('features')[0]['bands'][0]['crs'])
+        # outProj = Proj(init=Landsat7.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
+        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
@@ -334,7 +336,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs'])
+        # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
+        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
@@ -440,7 +443,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs'])
+        # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
+        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
@@ -546,7 +550,8 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
         georef = img.getInfo()['bands'][3]['crs_transform'] # get transform info from Band4
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        outProj = Proj(init=img.getInfo()['bands'][3]['crs'])
+        # outProj = Proj(init=img.getInfo()['bands'][3]['crs']) # inconsistent for S Hem EPSGs
+        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         

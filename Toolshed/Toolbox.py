@@ -1518,7 +1518,7 @@ def GetImageEPSG(inputs, metadata):
         image_epsg = metadata[inputs['sat_list'][0]]['epsg'][0]
     return image_epsg
 
-    
+
 def NearestDates(surveys,metadata,sat_list):
     """
     
@@ -1645,7 +1645,7 @@ def AOI(lonmin, lonmax, latmin, latmax, sitename):
                     [lonmin, latmax]])
     BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs = {'init':'epsg:4326'})
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
-    projstr = FindUTM(latmin, lonmin)
+    _, projstr = FindUTM(latmin, lonmin)
     BBoxGDF = BBoxGDF.to_crs(crs=projstr)
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
@@ -1711,7 +1711,7 @@ def AOIfromLeaflet(polygon, point, sitename):
     # Convert bounding box to a geodataframe
     BBoxGDF = gpd.GeoDataFrame(geometry=[BBox], crs = {'init':'epsg:4326'})
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
-    projstr = FindUTM(latmin, lonmin)
+    _, projstr = FindUTM(latmin, lonmin)
     BBoxGDF = BBoxGDF.to_crs(crs=projstr)
     # Check if AOI could exceed the 262144 (512x512) pixel limit on ee requests
     if (int(BBoxGDF.area)/(10*10))>262144:
@@ -1792,7 +1792,7 @@ def AOIfromLine(referenceLinePath, max_dist_ref, sitename):
         print('More than one line object found in reference line; make sure you only have one continuous line!\n')
         return
     # convert crs of geodataframe to UTM to get metre measurements (not degrees)
-    projstr = FindUTM(float(referenceLineDF.bounds.miny), float(referenceLineDF.bounds.minx))
+    _, projstr = FindUTM(float(referenceLineDF.bounds.miny), float(referenceLineDF.bounds.minx))
     referenceLineDF.to_crs(crs=projstr, inplace=True)
     
     xmin, xmax, ymin, ymax = [float(referenceLineDF.bounds.minx-max_dist_ref),
@@ -1858,11 +1858,13 @@ def FindUTM(lat, lon):
     utmNum = utm.from_latlon(lat, lon)[2]
     if lat < 0:
         hemi = ' +south '
+        EPSG = 32700 + utmNum
     else:
         hemi = ' '
+        EPSG = 32600 + utmNum
     projstr = '+proj=utm +zone='+str(utmNum)+hemi+'+ellps=WGS84 +datum=WGS84 +units=m +no_defs'
     
-    return projstr
+    return EPSG, projstr
 
 
 def GStoArr(shoreline):
