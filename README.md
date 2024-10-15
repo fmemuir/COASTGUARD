@@ -12,6 +12,7 @@ Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA04
 
 
 ## :warning: PATCH NOTES :wrench:
+- **14 October 2024**: Google Earth Engine has migrated all Landsat images from Collection 1 to Collection 2. This means the server names/paths have changed from `C01` to `C02`. This has been updated throughout the code, more details in [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/18) and in [the GEE documentation](https://developers.google.com/earth-engine/landsat_c1_to_c2).
 - **26 June 2024**: Some new Sentinel-2 images no longer have the same quality assurance/masking band names (QA10, QA20, QA60). QA60 is used to generate cloud masks in pre-processing. An option has been added to use the new opaque cloud mask band name MSK_CLASSI_OPAQUE if QA60 isn't available. More details in [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/13).
 - **25 March 2024**: In response to the Copernicus Marine Service November 2023 updates, the wave data download functions have been overhauled ([more info here](https://marine.copernicus.eu/news/unveiling-exciting-updates-copernicus-marine-service-november-2023-release)). Use of Motu for downloading data has been discontinued, the in-house Copernicus client is now being used instead (which is only working via `pip` right now). **This requires the `copernicusmarine` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
 ```
