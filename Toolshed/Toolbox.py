@@ -2361,38 +2361,48 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
 
     """
     
-    print('Compiling tide heights for given date range...')
-    # add buffer of one day either side
-    startdate = datetime.strptime(daterange[0], '%Y-%m-%d') - timedelta(days=1)
-    enddate = datetime.strptime(daterange[1], '%Y-%m-%d') + timedelta(days=1)
-    # create array of hourly timesteps between dates
-    dates = np.arange(startdate, enddate, timedelta(hours=1)).astype(datetime) 
+    tideoutpath = os.path.join(settings['inputs']['filepath'],
+                               'tides',settings['inputs']['sitename']+'_tides_'+
+                               settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
     
-    # pass configuration files to pyfes handler to gather up tidal constituents
-    config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
-    ocean_tide = pyfes.Handler("ocean", "io", config_ocean)
-    config_load = os.path.join(tidepath,"load_tide.ini")
-    load_tide = pyfes.Handler("radial", "io", config_load)
-    
-    # format dates and latlon
-    dates_np = np.empty((len(dates),), dtype='datetime64[us]')
-    for i,date in enumerate(dates):
-        dates_np[i] = datetime(date.year,date.month,date.day,date.hour,date.minute,date.second)
-    lons = tidelatlon[0]*np.ones(len(dates))
-    lats = tidelatlon[1]*np.ones(len(dates))
-    
-    # compute heights for ocean tide and loadings (both are needed for elastic tide elevations)
-    ocean_short, ocean_long, min_points = ocean_tide.calculate(lons, lats, dates_np)
-    load_short, load_long, min_points = load_tide.calculate(lons, lats, dates_np)
-    # sum up all components and convert from cm to m
-    tide_level = (ocean_short + ocean_long + load_short + load_long)/100
-    
-    # export as csv to tides folder
-    tidesDF = pd.DataFrame([dates, tide_level]).transpose()
-    tidesDF.columns = ['date', 'tide']
-    print('saving computed tides under '+os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
-    tidesDF.to_csv(os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
-    
+    if os.path.isfile(tideoutpath) is True: 
+        print('Tide data already compiled.')
+
+    else:
+        print('Compiling tide heights for given date range...')
+        # add buffer of one day either side
+        startdate = datetime.strptime(daterange[0], '%Y-%m-%d') - timedelta(days=1)
+        enddate = datetime.strptime(daterange[1], '%Y-%m-%d') + timedelta(days=1)
+        # create array of hourly timesteps between dates
+        dates = np.arange(startdate, enddate, timedelta(hours=1)).astype(datetime) 
+        
+        # pass configuration files to pyfes handler to gather up tidal constituents
+        config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
+        ocean_tide = pyfes.Handler("ocean", "io", config_ocean)
+        config_load = os.path.join(tidepath,"load_tide.ini")
+        load_tide = pyfes.Handler("radial", "io", config_load)
+        
+        # format dates and latlon
+        dates_np = np.empty((len(dates),), dtype='datetime64[us]')
+        for i,date in enumerate(dates):
+            dates_np[i] = datetime(date.year,date.month,date.day,date.hour,date.minute,date.second)
+        lons = tidelatlon[0]*np.ones(len(dates))
+        lats = tidelatlon[1]*np.ones(len(dates))
+        
+        # compute heights for ocean tide and loadings (both are needed for elastic tide elevations)
+        ocean_short, ocean_long, min_points = ocean_tide.calculate(lons, lats, dates_np)
+        load_short, load_long, min_points = load_tide.calculate(lons, lats, dates_np)
+        # sum up all components and convert from cm to m
+        tide_level = (ocean_short + ocean_long + load_short + load_long)/100
+        
+        # export as csv to tides folder
+        tidesDF = pd.DataFrame([dates, tide_level]).transpose()
+        tidesDF.columns = ['date', 'tide']
+        # print('saving computed tides under '+os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
+        # tidesDF.to_csv(os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
+        print('saving computed tides under '+tideoutpath)
+        tidesDF.to_csv(tideoutpath)
+        
     return 
 
 
