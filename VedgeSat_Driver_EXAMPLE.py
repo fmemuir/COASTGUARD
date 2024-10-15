@@ -25,12 +25,8 @@ ee.Initialize()
 
 #%% EDIT ME: Requirements
 
-# Define desired coordinate projections
-projection_epsg = 27700 # OSGB 1936
-image_epsg = 32631 # UTM Zone 31N
 
-# Define AOI using coordinates of a rectangle
-# The points represent the corners of a bounding box that go around your site
+# Define name of site
 sitename = 'EXAMPLE'
 
 # Date range
@@ -60,7 +56,7 @@ filepath = Toolbox.CreateFileStructure(sitename, sat_list)
 # Return AOI from reference line bounding box and save AOI folium map HTML in sitename directory
 referenceLinePath = os.path.join(filepath, 'referenceLines', referenceLineShp)
 referenceLineDF = gpd.read_file(referenceLinePath)
-polygon, point, lonmin, lonmax, latmin, latmax = Toolbox.AOIfromLine(referenceLinePath, max_dist_ref, sitename, image_epsg)
+polygon, point, lonmin, lonmax, latmin, latmax = Toolbox.AOIfromLine(referenceLinePath, max_dist_ref, sitename)
 
 # It's recommended to convert the polygon to the smallest rectangle (sides parallel to coordinate axes)       
 polygon = Toolbox.smallest_rectangle(polygon)
@@ -98,16 +94,13 @@ LinesPath = 'Data/' + sitename + '/lines'
 
 if os.path.isdir(LinesPath) is False:
     os.mkdir(LinesPath)
-
-# Choose which ANN classifier to use (the default is already uncommented)
-# clf_model = 'MLPClassifier_Veg_L8S2.pkl'
-# clf_model = 'MLPClassifier_Veg_PSScene.pkl'
-clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
+    
+projection_epsg, _ = Toolbox.FindUTM(polygon[0][0][1],polygon[0][0][0])
 
 settings = {
     # general parameters:
     'cloud_thresh': cloud_thresh,        # threshold on maximum cloud cover
-    'output_epsg': image_epsg,     # epsg code of spatial reference system desired for the output   
+    'output_epsg': projection_epsg,     # epsg code of spatial reference system desired for the output   
     'wetdry': wetdry,              # extract wet-dry boundary as well as veg
     # quality control:
     'check_detection': False,    # if True, shows each shoreline detection to the user for validation
@@ -118,7 +111,6 @@ settings = {
     'buffer_size': 250,         # radius (in metres) for buffer around sandy pixels considered in the shoreline detection
     'min_length_sl': 500,       # minimum length (in metres) of shoreline perimeter to be valid
     'cloud_mask_issue': False,  # switch this parameter to True if sand pixels are masked (in black) on many images  
-    'clf_model': clf_model,
     # add the inputs defined previously
     'inputs': inputs,
     'projection_epsg': projection_epsg,

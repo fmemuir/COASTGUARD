@@ -153,8 +153,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             if cloud_mask is None:
                 continue
             
-            # get image spatial reference system (epsg code) from metadata dict
-            image_epsg = int(metadata[satname]['epsg'][i])
+            # get image spatial reference system (epsg code) from refline location
+            image_epsg = settings['projection_epsg']
             # compute cloud_cover percentage (with no data pixels)
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
                                     (cloud_mask.shape[0]*cloud_mask.shape[1]))
@@ -1677,7 +1677,6 @@ def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
         shoreline, shoreline_latlon, shoreline_proj = ProcessShoreline(contours_ndwi, cloud_mask, georef, image_epsg, settings)
         
     # convert shoreline to pixels
-    # THIS NEEDS FIXED (AFFINE TRANSFORM)
     if len(vegline) > 0:
         # shoreline dataframe back to array
         veglineArr = Toolbox.GStoArr(vegline)
@@ -1694,7 +1693,6 @@ def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
             sl_pix = np.array([[np.nan, np.nan],[np.nan, np.nan]])
             
     # plot the shoreline on the images
-    # TO DO: size pixels based on image size (small dots on small imagery!)
     vl_plot1 = ax1.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
     vl_plot2 = ax2.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
     vl_plot3 = ax3.scatter(vl_pix[:,0], vl_pix[:,1], c='k', marker='.', s=5)
