@@ -85,7 +85,7 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
     
     cloud_mask_issue = settings['cloud_mask_issue']
     
-    point = ee.Geometry.Point(polygon[0][0]) 
+    # point = ee.Geometry.Point(polygon[0][0]) 
         
     """
     FM: Problem still exists for ee_to_numpy where requests are limited to 262144 pixels (5120m for S2, 7680m for L5/7/8).
@@ -145,7 +145,7 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = Landsat5.getInfo().get('features')[0]['bands'][0]['crs_transform']
+        georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform']
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
         # outProj = Proj(init=Landsat5.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
@@ -212,7 +212,6 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
 
         #Apply the mask to the image and display the result.
         masked = img.updateMask(mask);
-        
         
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
