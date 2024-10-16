@@ -40,13 +40,15 @@ from pyproj import transform as Transf
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function to preprocess a satellite image
-def preprocess_single(fn, filenames, satname, settings, polygon, dates):
+def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates):
     """
     Main function to preprocess a satellite image
 
 
     Parameters
     ----------
+    ImgColl : 
+        GEE image collection, collated for each platform.
     fn : int
         Iteration number.
     filenames : list
@@ -101,15 +103,10 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     # L5 images
     #=============================================================================================#
     if satname == 'L5':
-        
-        imgs = []
-        for i in range(len(filenames)):
-            imgs.append(ee.Image(filenames[i]))
-        Landsat5 = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','QA_PIXEL'])
             
-        img = ee.Image(Landsat5.getInfo().get('features')[fn]['id'])
+        img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         
-        cloud_scoree = Landsat5.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+        cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
             return None, None, None, None, None, None, None
@@ -123,7 +120,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
             print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
-        acqtime = datetime.utcfromtimestamp(Landsat5.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         # down-sample to 15 m (half of the original pixel size)
         nrows = im_ms.shape[0]*2
@@ -188,19 +185,15 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     # L7 images
     #=============================================================================================#
     elif satname == 'L7':
+
+        img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         
-        imgs = []
-        for i in range(len(filenames)):
-            imgs.append(ee.Image(filenames[i]))
-        Landsat7 = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','B8','QA_PIXEL'])
-        
-        cloud_scoree = Landsat7.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+        cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
             return None, None, None, None, None, None, None
         
-        img = ee.Image(Landsat7.getInfo().get('features')[fn]['id'])
         im_ms = geemap.ee_to_numpy(img, 
                                    bands = ['B1','B2','B3','B4','B5', 'B8','QA_PIXEL'], 
                                    region=ee.Geometry.Polygon(polygon),
@@ -210,7 +203,7 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
             print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
-        acqtime = datetime.utcfromtimestamp(Landsat7.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
 
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
@@ -296,19 +289,14 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     #=============================================================================================#
     elif satname == 'L8':
         
-        imgs = []
-        for i in range(len(filenames)):
-            imgs.append(ee.Image(filenames[i]))
-        # B,G,R,NIR,SWIR1,PAN,TIR1,TIR2,QA
-        Landsat8 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','QA_PIXEL'])
-        
-        cloud_scoree = Landsat8.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+        img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
+
+        cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
             return None, None, None, None, None, None, None
         
-        img = ee.Image(Landsat8.getInfo().get('features')[fn]['id'])
         im_ms = geemap.ee_to_numpy(img, 
                                    bands = ['B2','B3','B4','B5', 'B6','B7','B10','B11','QA_PIXEL'], 
                                    region=ee.Geometry.Polygon(polygon),
@@ -318,16 +306,12 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
             print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
-        acqtime = datetime.utcfromtimestamp(Landsat8.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')      
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')      
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
         #Create a mask from the cloud score and combine it with the image mask.
-        mask = cloud_scored.select(['cloud']).lte(20);
-
-        #Apply the mask to the image and display the result.
-        masked = img.updateMask(mask);
-        
+        mask = cloud_scored.select(['cloud']).lte(20);      
         
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
@@ -404,19 +388,14 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     #=============================================================================================#
     elif satname == 'L9':
         
-        imgs = []
-        for i in range(len(filenames)):
-            imgs.append(ee.Image(filenames[i]))
-        # B,G,R,NIR,SWIR1,PAN,TIR1,TIR2,QA
-        Landsat9 = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','QA_PIXEL'])
-        
-        cloud_scoree = Landsat9.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+        img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
+
+        cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
             return None, None, None, None, None, None, None
         
-        img = ee.Image(Landsat9.getInfo().get('features')[fn]['id'])
         im_ms = geemap.ee_to_numpy(img, 
                                    bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','QA_PIXEL'], 
                                    region=ee.Geometry.Polygon(polygon),
@@ -426,15 +405,12 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
             print(' - Skipped: empty raster')
             return None, None, None, None, None, None, None
         
-        acqtime = datetime.utcfromtimestamp(Landsat9.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
         #Create a mask from the cloud score and combine it with the image mask.
         mask = cloud_scored.select(['cloud']).lte(20);
-
-        #Apply the mask to the image and display the result.
-        masked = img.updateMask(mask);
         
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
@@ -511,20 +487,15 @@ def preprocess_single(fn, filenames, satname, settings, polygon, dates):
     #=============================================================================================#
     elif satname == 'S2':
         
-        imgs = []
-        for i in range(len(filenames)):
-            imgs.append(ee.Image(filenames[i]))
-        Sentinel2 = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
-        
-        cloud_scoree = Sentinel2.getInfo().get('features')[fn]['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
+        cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
             return None, None, None, None, None, None, None
         
-        acqtime = datetime.utcfromtimestamp(Sentinel2.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
 
-        img = ee.Image(Sentinel2.getInfo().get('features')[fn]['id'])
+        img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         # read 10m bands (R,G,B,NIR)        
         im10 = geemap.ee_to_numpy(img, 
                                   bands = ['B2','B3','B4','B8'], 

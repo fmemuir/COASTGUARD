@@ -99,7 +99,11 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         # get images
         #filepath = Toolbox.get_filepath(settings['inputs'],satname)
         filenames = metadata[satname]['filenames']
-
+        # Collate filenames of images per platform
+        imgs = []
+        for i in range(len(filenames)):
+            imgs.append(ee.Image(filenames[i]))
+        
         # initialise the output variables
         output_date = []       # datetime at which the image was acquired (YYYY-MM-DD)
         output_time = []            # UTC timestamp
@@ -116,15 +120,27 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         output_t_ndvi = []          # NDVI threshold used to map the vegline
         output_t_ndwi = []          # NDWI threshold used to map the vegline
         
-        # get pixel size from dimensions in first image
-        if satname in ['L5','L7','L8','L9']:
+        # get pixel sizes and image collections for each platform
+        if satname == 'L5':
+            pixel_size = 15
+            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
+            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','QA_PIXEL'])
+        elif satname == 'L7':
+            pixel_size = 15
+            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
+            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','B8','QA_PIXEL'])
+        elif satname == 'L8':
+            pixel_size = 15
+            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
+            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','QA_PIXEL'])
+        elif satname == 'L9':
             pixel_size = 15
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
-            # ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0] / 2 # after downsampling
+            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','QA_PIXEL'])
         elif satname == 'S2':
             pixel_size = 10
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
-            # ee.Image(metadata[satname]['filenames'][0]).getInfo()['bands'][1]['crs_transform'][0]
+            ImgColl = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
         else: # Planet or local
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
             clf_model = 'MLPClassifier_Veg_PSScene.pkl' 
@@ -138,14 +154,15 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         buffer_size_pixels = np.ceil(settings['buffer_size']/pixel_size)
         min_beach_area_pixels = np.ceil(settings['min_beach_area']/pixel_size**2)
 
+
         # loop through the images
         for i in range(len(filenames)):
-
+            
             print('\r%s:   %0.3f %% ' % (satname,((i+1)/len(filenames))*100), end='')
 
             # preprocess image (cloud mask + pansharpening/downsampling)
             fn = int(i)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
 
             if im_ms is None:
                 continue
