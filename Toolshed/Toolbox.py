@@ -2040,10 +2040,12 @@ def FindWPThresh(int_veg, int_nonveg):
                 while len(prom) == 0:
                     prom, _ = scipy.signal.find_peaks(probabilities, prominence=promlimit)
                     promlimit -= 0.05 
-            if len(prom) > 1:    
-                if (bins[prom] < 0).any(): 
-                    # always take peak closest to 0 (corresponds to bare land/sand in veg classification)
-                    peaks.append(min(bins[prom], key=abs))
+            if len(prom) > 1: # if more than one peak 
+                if (bins[prom] < 0).any(): # if any of the peaks have an NDVI less than 0
+                    # # always take peak closest to 0 (corresponds to bare land/sand in veg classification)
+                    # peaks.append(min(bins[prom], key=abs))
+                    # always take maximum peak (representing bare land)
+                    peaks.append(max(bins[prom]))
                 else:
                     peaks.append(bins[prom[0]])
             else:
