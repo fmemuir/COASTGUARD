@@ -1660,6 +1660,8 @@ def SetUpDetectPlot(sitename, settings, im_ms, im_RGB, im_class, im_labels,
     binwidth = 0.01
     ax4.set_facecolor('0.7')
     ax4.yaxis.grid(color='w', linestyle='--', linewidth=0.5)
+    ax4ticks = np.arange(-1, 1.1, 0.1)
+    ax4.set_xticks(ax4ticks)
     ax4.set(ylabel='PDF',yticklabels=[], xlim=[-1,1])    
     if len(int_nonveg_clip) > 0 and sum(~np.isnan(int_nonveg_clip)) > 0:
         bins = np.arange(-1, 1, binwidth)
