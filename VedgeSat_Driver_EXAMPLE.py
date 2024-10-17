@@ -232,7 +232,7 @@ if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '
 else:        
     if settings['wetdry'] == True:
         TransectInterGDFWater = Transects.GetBeachWidth(LinesPath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
-        TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  LinesPath, sitename, settings['projection_epsg'])
+        TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  LinesPath, sitename)
     
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDFWater, f)
