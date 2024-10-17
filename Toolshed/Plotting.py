@@ -56,6 +56,23 @@ from Toolshed import Toolbox, Waves, PlottingSeaborn
 #%%
 
 def MovingAverage(series, windowsize):
+    """
+    Generate a moving window average trendline from a timeseries 
+    FM Apr 2023
+
+    Parameters
+    ----------
+    series : list
+        Timeseries to be plotted (yvalues).
+    windowsize : int
+        Number of steps to smooth over.
+
+    Returns
+    -------
+    mvav : list
+        Timeseries of values smoothed over requested interval.
+
+    """
     # moving average trendline
     window = np.ones(int(windowsize))/float(windowsize)
     mvav = np.convolve(series, window, 'same')
@@ -65,6 +82,21 @@ def MovingAverage(series, windowsize):
     return mvav
 
 def InterpNaN(listvals):
+    """
+    Interpolate over NaN values in a timeseries.
+    FM Nov 2023
+
+    Parameters
+    ----------
+    listvals : list
+        Values with NaNs to interpolate over.
+
+    Returns
+    -------
+    listinterp : list
+        Filled timseries.
+
+    """
     listnans = [x if (x > (np.mean(listvals) - 2*np.std(listvals)) 
                          and x < (np.mean(listvals) + 2*np.std(listvals))) 
                    else np.nan for x in listvals]
@@ -84,10 +116,6 @@ def SatGIF(metadata,settings,output):
     Sat : list
         Image collection metadata
 
-
-    Returns
-    -------
-    None.
     """
     
 
@@ -160,7 +188,6 @@ def SatGIF(metadata,settings,output):
 
 
 def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Titles=None, ShowPlot=True):
-    
     """
     Plot timeseries of cross-shore veg edge change for selected transect(s).
     If more than one transect is supplied in a list, create subplots for comparison.
@@ -168,14 +195,20 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Title
 
     Parameters
     ----------
-    ValidDF : TYPE
-        DESCRIPTION.
-    TransectID : TYPE
-        DESCRIPTION.
+    sitename : str
+        Name of site.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
+    TransectIDs : list
+        List of transect IDs to plot.
+    Hemisphere : str, optional
+        Northern (N) or Southern (S) Hemisphere for marking 'winter' season. The default is 'N'.
+    Titles : list, optional
+        List of strings of same length as TransectIDs, denoting what alternative 
+        title the plots should have. The default is None.
+    ShowPlot : bool, optional
+        Flag to turn plt.show() on or off (if plotting lots of transects). The default is True.
 
-    Returns
-    -------
-    None.
 
     """
     
@@ -296,7 +329,6 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Title
     
     
 def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', ShowPlot=True):
-    
     """
     Plot timeseries of cross-shore veg edge change for selected transect(s) [NEON EFFECT]
     If more than one transect is supplied in a list, create subplots for comparison.
@@ -304,19 +336,24 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
 
     Parameters
     ----------
-    ValidDF : TYPE
-        DESCRIPTION.
-    TransectID : TYPE
-        DESCRIPTION.
+    sitename : str
+        Name of site.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
+    TransectIDs : list
+        List of transect IDs to plot.
+    Hemisphere : str, optional
+        Northern (N) or Southern (S) Hemisphere for marking 'winter' season. The default is 'N'.
+    ShowPlot : bool, optional
+        Flag to turn plt.show() on or off (if plotting lots of transects). The default is True.
 
-    Returns
-    -------
-    None.
 
     """
-       
     
     def neonplot(x,y,colour,ax=None):
+        """
+        Apply neon effect by plotting successively narrowing lines atop one another.
+        """
         if ax is None:
             ax = plt.gca()
         line, = ax.plot(x, y, lw=1, color=colour, zorder=6, label='3pt Mov. Av. VegEdge')
@@ -451,14 +488,13 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
 
     Parameters
     ----------
-    ValidDF : TYPE
-        DESCRIPTION.
-    TransectID : TYPE
-        DESCRIPTION.
-
-    Returns
-    -------
-    None.
+    sitename : str
+        Name of site.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
+    TransectID : list
+        Transect ID(s) to plot.
+        
 
     """
     
@@ -607,19 +643,15 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Titles=None, He
     sitename : str
         Name of site.
     TransectInterGDF : GeoDataFrame
-        GDF of intersected transects.
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
     TransectIDs : list
-        Transect IDs to plot.
+        List of transect IDs to plot.
     Hemisphere : str, optional
-        Northern or Southern Hemisphere (for 'winter' rectangles). The default is 'N'.
+        Northern (N) or Southern (S) Hemisphere for marking 'winter' season. The default is 'N'.
     Normal : bool, optional
         Flag to normalise axes between veg and water. The default is False.
     P : bool, optional
         Flag for calculting seasonality period (observations per cycle) using N obs. The default is None.
-
-    Returns
-    -------
-    None.
 
     '''
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
@@ -803,14 +835,17 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
 
     Parameters
     ----------
-    ValidDF : TYPE
-        DESCRIPTION.
-    TransectID : TYPE
-        DESCRIPTION.
+    sitename : str
+        Name of site.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    TransectIDs : list
+        List of transect IDs to plot.
+    Hemisphere : str, optional
+        Northern (N) or Southern (S) Hemisphere for marking 'winter' season. The default is 'N'.
+    ShowPlot : bool, optional
+        Flag to turn plt.show() on or off (if plotting lots of transects). The default is True.
 
-    Returns
-    -------
-    None.
 
     """
     
@@ -938,14 +973,12 @@ def ValidTimeseries(sitename, ValidInterGDF, TransectID):
 
     Parameters
     ----------
-    ValidDF : TYPE
-        DESCRIPTION.
-    TransectID : TYPE
-        DESCRIPTION.
-
-    Returns
-    -------
-    None.
+    sitename : str
+        Name of site.
+    ValidDF : GeoDataFrame
+        DataFrame of transects intersected with validation lines.
+    TransectID : list
+        Transect ID(s) to plot.
 
     """
     
@@ -1005,14 +1038,11 @@ def WidthTimeseries(sitename, TransectInterGDFWater, TransectIDs, Hemisphere = '
 
     Parameters
     ----------
-    ValidDF : TYPE
-        DESCRIPTION.
-    TransectID : TYPE
-        DESCRIPTION.
+    ValidDF : GeoDataFrame
+        DataFrame of transects intersected with validation lines.
+    TransectID : list
+        Transect ID(s) to plot.
 
-    Returns
-    -------
-    None.
 
     """
     
@@ -1167,9 +1197,6 @@ def ValidPDF(sitename, VeglineGDF, DatesCol, ValidDF, TransectIDs, PlotTitle):
     PlotTitle : str
         Plot title for placename locations.
 
-    Returns
-    -------
-    None.
 
     """
     # font size 8 and width of 6.55in fit 2-column journal formatting
@@ -1686,7 +1713,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     sitename : str
         Name of site of interest.
     TransectInterGDF : GeoDataFrame
-        GeoDataFrame of transects intersected with veg edges.
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
     TransectInterGDFWater : GeoDataFrame
         GeoDataFrame of transects intersected with waterlines.
     TransectInterGDFTopo : GeoDataFrame
@@ -1807,7 +1834,7 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     sitename : str
         Name of site of interest.
     TransectInterGDF : GeoDataFrame
-        GeoDataFrame of transects intersected with veg edges.
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
     TransectInterGDFWater : GeoDataFrame
         GeoDataFrame of transects intersected with waterlines.
     TransectInterGDFTopo : GeoDataFrame
@@ -1990,7 +2017,7 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
     sitename : str
         Name of site of interest.
     TransectInterGDF : GeoDataFrame
-        GeoDataFrame of transects intersected with veg edges.
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
     TransectInterGDFWater : GeoDataFrame
         GeoDataFrame of transects intersected with waterlines.
     TransectInterGDFTopo : GeoDataFrame
@@ -2160,7 +2187,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     sitename : str
         Name of site of interest.
     TransectInterGDF : GeoDataFrame
-        GeoDataFrame of transects intersected with veg edges.
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
     TransectInterGDFWater : GeoDataFrame
         GeoDataFrame of transects intersected with waterlines.
     TransectInterGDFTopo : GeoDataFrame
@@ -2407,7 +2434,7 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
     sitename : str
         Name of site of interest.
     TransectInterGDF : GeoDataFrame
-        GeoDataFrame of transects intersected with veg edges.
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
     TransectInterGDFWater : GeoDataFrame
         GeoDataFrame of transects intersected with waterlines.
     TransectInterGDFTopo : GeoDataFrame
@@ -2557,10 +2584,6 @@ def WPErrors(filepath, sitename, WPErrorPath, WPPath):
     CSVpath : str
         Filepath to Weighted Peaks RMSE values stored in CSV.
 
-    Returns
-    -------
-    None.
-
     """
     
     mpl.rcParams.update({'font.size':7})
@@ -2681,9 +2704,6 @@ def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
     cmapDates : list
         List of date strings to be used to create a colour ramp.
 
-    Returns
-    -------
-    None.
 
     """
     mpl.rcParams.update({'font.size':7})
@@ -2766,9 +2786,6 @@ def StormsTimeline(figpath, sitename, CSVpath):
         Path (and filename) of CSV holding data to be plotted (laid out as 
         name, start date, end date, max wind gust).
 
-    Returns
-    -------
-    None.
 
     """
     
@@ -2847,9 +2864,6 @@ def StormsTimelineSimple(figpath, sitename, CSVpath, StormsLim=None):
     StormsLim : list
         Lower and upper limit of x axis (should match tide data timeframe limit)
 
-    Returns
-    -------
-    None.
 
     """
     
@@ -2982,18 +2996,15 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         Name of site of interest.
     CSVpath : str
         Path to CSV which stores storm timeline data.
-    TransectInterGDF : DataFrame
-        Pandas DF of transects intersected with veg edges and shorelines.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
     TransectIDs : list
         List of transect IDs to plot.
     Hemisphere : str, optional
-        Northern or Southern Hemisphere (for plotting 'winter'). The default is 'N'.
+        Northern (N) or Southern (S) Hemisphere for marking 'winter' season. The default is 'N'.
     ShowPlot : bool, optional
-        Flag to turn plt.show() off (if plotting lots of transects). The default is True.
+        Flag to turn plt.show() on or off (if plotting lots of transects). The default is True.
 
-    Returns
-    -------
-    None.
 
     """
     # Read in errors CSV
@@ -3135,20 +3146,19 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     
 def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
     """
+    Wave rose plot (on polar projection) of wave direction, with wave height
+    represented as a histogram.
     FM March 2024
 
     Parameters
     ----------
     sitename : str
         Name of site of interest.
-    TransectInterGDFWave : TYPE
-        DESCRIPTION.
-    TransectIDs : TYPE
-        DESCRIPTION.
+    TransectInterGDFWave : GeoDataFrame
+        GeoDataFrame of transects intersected with wave hindcasts.
+    TransectIDs : list
+        List of transect IDs to plot.
 
-    Returns
-    -------
-    None.
 
     """
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
@@ -3242,9 +3252,6 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
     PlotDates : list, optional
         List of start and end dates for constraining plot. The default is None.
 
-    Returns
-    -------
-    None.
 
     """
     # outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
@@ -3343,18 +3350,17 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
     
 def FullWaveHsTimeseries(sitename, PlotDates=None):
     """
+    IN DEVELOPMENT
+    Plot wave height timeseries (with storm events marked).
     FM March 2024
 
     Parameters
     ----------
     sitename : str
         Name of site of interest.
-    PlotDates : TYPE, optional
-        DESCRIPTION. The default is None.
+    PlotDates : list, optional
+        List of two strings to limit the start and end date. The default is None.
 
-    Returns
-    -------
-    None.
 
     """
     # Path to Copernicus wave file 
@@ -3402,9 +3408,6 @@ def TidesSatPlot(sitename, output, dates, TidePath, OutFilePath):
     OutFilePath : str
         Filepath to save fig to.
 
-    Returns
-    -------
-    None.
 
     """
     
@@ -3484,16 +3487,13 @@ def TidesPlotAnnual(sitename, dates, TidePath, OutFilePath):
     ----------
     sitename : str
         Name of site of interest.
-    dates : TYPE
-        DESCRIPTION.
-    TidePath : TYPE
-        DESCRIPTION.
-    OutFilePath : TYPE
-        DESCRIPTION.
+    dates : list
+        List of start and end dates as strings (from settings['inputs']['dates']).
+    TidePath : str
+        Path to where tides CSV is stored.
+    OutFilePath : str
+        Path to where the figure should be saved.
 
-    Returns
-    -------
-    None.
 
     """
     

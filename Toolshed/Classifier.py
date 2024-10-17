@@ -3,6 +3,9 @@ This module contains functions to label satellite images, use the labels to
 train a pixel-wise classifier and evaluate the classifier
 
 Author: Kilian Vos, Water Research Laboratory, University of New South Wales
+
+COASTGUARD edits and updates: Freya Muir, University of Glasgow
+
 """
 
 # load modules
@@ -363,7 +366,7 @@ def label_vegimages(metadata, settings):
     """
     Load satellite images and interactively label different classes (hard-coded)
 
-    FM 2022
+    FM Aug 2022
 
     Arguments:
     -----------
@@ -638,7 +641,7 @@ def label_WV_images(metadata, polygon, Sat, settings):
     """
     Load satellite images and interactively label different classes (incl. veg and water)
 
-    FM 2023
+    FM May 2023
 
     Arguments:
     -----------
