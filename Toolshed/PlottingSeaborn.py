@@ -69,19 +69,23 @@ ee.Initialize()
 #%%
 
 
-def ValidViolin(sitename, ValidationShp,DatesCol,ValidDF,TransectIDs):
+def ValidViolin(sitename, ValidationShp, DatesCol, ValidDF, TransectIDs):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
 
     Parameters
     ----------
+    sitename : str
+        Name of site of interest.
     ValidationShp : str
         Path to validation lines shapefile.
     DatesCol : str
         Name of dates column in shapefile.
     ValidDF : GeoDataFrame
-        Validation GDF created from ValidateIntersects().
+        GeoDataFrame of cross-shore transects intersected with validation lines.
+    TransectIDs : list
+        Transect IDs to plot (range from ID1 to ID2).
 
     """
     
@@ -150,19 +154,25 @@ def ValidViolin(sitename, ValidationShp,DatesCol,ValidDF,TransectIDs):
     print('figure saved under '+figpath)
     
 
-def SatViolin(sitename, SatGDF, DatesCol,ValidDF,TransectIDs, PlotTitle):
+def SatViolin(sitename, SatGDF, DatesCol, ValidDF, TransectIDs, PlotTitle):
     """
     Violin plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
 
     Parameters
     ----------
-    ValidationShp : str
-        Path to validation lines shapefile.
+    sitename : str
+        Name of site of interest.
+    SatGDF : GeoDataFrame
+        GeoDataFrame of satellite-derived lines to use for unique dates.
     DatesCol : str
         Name of dates column in shapefile.
     ValidDF : GeoDataFrame
-        Validation dictionary created from ValidateIntersects().
+        GeoDataFrame of cross-shore transects intersected with validation lines.
+    TransectIDs : list
+        Transect IDs to plot (range from ID1 to ID2).
+    PlotTitle : str
+        Alternative plot title for placename locations.
 
     """
     
@@ -303,19 +313,25 @@ def SatViolin(sitename, SatGDF, DatesCol,ValidDF,TransectIDs, PlotTitle):
     plt.show()
     
 
-def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
+def SatPDF(sitename, SatGDF, DatesCol, ValidInterGDF, TransectIDs, PlotTitle):
     """
     Prob density function plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
 
     Parameters
     ----------
-    ValidationShp : str
-        Path to validation lines shapefile.
+    sitename : str
+        Name of site of interest.
+    SatGDF : GeoDataFrame
+        GeoDataFrame of satellite-derived lines to use for unique dates.
     DatesCol : str
         Name of dates column in shapefile.
-    ValidDF : GeoDataFrame
-        Validation GDF created from ValidateIntersects().
+    ValidInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects intersected with validation lines.
+    TransectIDs : list
+        Transect IDs to plot (range from ID1 to ID2).
+    PlotTitle : str
+        Alternative plot title for placename locations.
 
     """
     
@@ -506,19 +522,25 @@ def SatPDF(sitename, SatGDF,DatesCol,ValidInterGDF,TransectIDs, PlotTitle):
      
     
     
-def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
+def SatPDFPoster(sitename, SatGDF, DatesCol, ValidDF, TransectIDs, PlotTitle):
     """
     Prob density function plot showing distances between validation and satellite, for each date of validation line.
     FM Oct 2022
 
     Parameters
     ----------
-    ValidationShp : str
-        Path to validation lines shapefile.
+    sitename : str
+        Name of site of interest.
+    SatGDF : GeoDataFrame
+        GeoDataFrame of satellite-derived lines to use for unique dates.
     DatesCol : str
         Name of dates column in shapefile.
     ValidDF : GeoDataFrame
-        Validation GDF created from ValidateIntersects().
+        GeoDataFrame of cross-shore transects intersected with validation lines.
+    TransectIDs : list
+        Transect IDs to plot (range from ID1 to ID2).
+    PlotTitle : str
+        Alternative plot title for placename locations.
 
     """
     
@@ -712,19 +734,25 @@ def SatPDFPoster(sitename, SatGDF,DatesCol,ValidDF,TransectIDs, PlotTitle):
     
     
 
-def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
+def PlatformViolin(sitename, SatShp, SatCol, ValidDF, TransectIDs, PlotTitle=None):
     """
     Violin plot showing distances between validation and satellite, for each platform used.
     FM Oct 2022
 
     Parameters
     ----------
-    ValidationShp : str
-        Path to validation lines shapefile.
-    DatesCol : str
-        Name of sat column in shapefile.
+    sitename : str
+        Name of site of interest.
+    SatShp : GeoDataFrame, str
+        GeoDataFrame (or path to shapefile) of satellite-derived lines to use for unique dates.
+    SatCol : str
+        Name of satellite platform column (e.g. 'satname').
     ValidDF : GeoDataFrame
-        Validation GDF created from ValidateIntersects().
+        GeoDataFrame of cross-shore transects intersected with validation lines.
+    TransectIDs : list
+        Transect IDs to plot (range from ID1 to ID2).
+    PlotTitle : str, optional
+        Alternative plot title for placename locations. The default is None.
 
     """
     
@@ -886,19 +914,25 @@ def PlatformViolin(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
         
         
         
-def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=None):
+def PlatformViolinPoster(sitename, SatShp, SatCol, ValidDF, TransectIDs, PlotTitle=None):
     """
     Violin plot showing distances between validation and satellite, for each platform used.
     FM Oct 2022
 
     Parameters
     ----------
-    ValidationShp : str
-        Path to validation lines shapefile.
-    DatesCol : str
-        Name of sat column in shapefile.
+    sitename : str
+        Name of site of interest.
+    SatShp : GeoDataFrame, str
+        GeoDataFrame (or path to shapefile) of satellite-derived lines to use for unique dates.
+    SatCol : str
+        Name of satellite platform column (e.g. 'satname').
     ValidDF : GeoDataFrame
-        Validation GDF created from ValidateIntersects().
+        GeoDataFrame of cross-shore transects intersected with validation lines.
+    TransectIDs : list
+        Transect IDs to plot (range from ID1 to ID2).
+    PlotTitle : str, optional
+        Alternative plot title for placename locations. The default is None.
 
     """
     
@@ -1096,8 +1130,23 @@ def PlatformViolinPoster(sitename, SatShp,SatCol,ValidDF,TransectIDs, PlotTitle=
             subpix = (df[i].between(-10,10).sum()/df[i].count())*100
         print(str(round(subpix,2))+'%')
     
-def ThresholdViolin(sitename,filepath,sites):
-    
+def ThresholdViolin(sitename, filepath, sites):
+    """
+    Violin plot of NDVI thresholds calculated throughout entire VE extraction run.
+    Specific to St Andrews east (open coast) and west (estuarine).
+    FM Apr 2023
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    filepath : str
+        Path to COASTGUARD/Data folder.
+    sites : list
+        Separate sitenames to compare.
+
+
+    """
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
@@ -1186,6 +1235,22 @@ def ThresholdViolin(sitename,filepath,sites):
 
 
 def PCAHeatmap(pca, MultivarGDF, colnames):
+    """
+    IN DEVELOPMENT/UNUSED
+    Principal Component Analysis heatmap (similar to 
+    https://medium.com/analytics-vidhya/principal-component-analysis-754781cfb30f)
+    FM Aug 2024
+
+    Parameters
+    ----------
+    pca : sklearn.decomposition PCA object
+        Principal Component Analysis object created and fitted to data.
+    MultivarGDF : GeoDataFrame
+        Multivariate dataframe holding data to be used in PCA.
+    colnames : list
+        List of strings representing dataframe columns (variables) to be plotted.
+
+    """
     # Get the loadings (components)
     loadings = pca.components_
     
