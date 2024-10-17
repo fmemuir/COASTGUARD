@@ -33,15 +33,11 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     Parameters
     ----------
     settings : dict
-        Veg edge model settings (including user inputs).
+        Veg edge extraction tool settings (including user inputs).
     output : dict
         Output veg edges produced by model.
     lonmin, lonmax, latmin, latmax : float
         Bounding box coords.
-    User : str
-        CMEMS username.
-    Pwd : str
-        CMEMS password.
 
     """
     
@@ -84,15 +80,11 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     Parameters
     ----------
     settings : dict
-        Veg edge model settings (including user inputs).
+        Veg edge extraction tool settings (including user inputs).
     output : dict
         Output veg edges produced by model.
     lonmin, lonmax, latmin, latmax : float
         Bounding box coords.
-    User : str
-        CMEMS username.
-    Pwd : str
-        CMEMS password.
 
     """
     
@@ -127,9 +119,28 @@ def ReadWaveFile(WaveFilePath):
     Read wave data stored in NetCDF file (and fill any empty cells).
     FM March 2024
 
+    Parameters
+    -------
+    WaveFilePath : str
+        Path to wave timeseries NetCDF file.
+
     Returns
     -------
-    None.
+    WaveX : float
+        Upper left x coord of wave grid cell.
+    WaveY : TYPE
+        Upper left y coord of wave grid cell.
+    SigWaveHeight : list
+        Timeseries of significant wave height (in metres).
+    MeanWaveDir : list
+        Timeseries of mean wave direction (in degrees from).
+    PeakWavePer : list
+        Timeseries of peak wave period (in seconds).
+    WaveTime : list
+        Timestamps of timeseries to match wave conditions.
+    StormEvents : list
+        Timeseries of bools with same length as timeseries (1 where wave heights
+        exceed the 95th percentile for each individual cell's timeseries.)
 
     """
     # open the raster dataset to work on
@@ -171,6 +182,21 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     Function to extract wave information from Copernicus NWS data
     
     FM, Oct 2021 (updated Aug 2023)
+
+    Parameters
+    ----------
+    settings : dict
+        Veg edge extraction tool settings (including user inputs).
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    WaveFilePath : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    TYPE
+        DESCRIPTION.
+
     """
     
     print('Extracting wave data to transects ...')
@@ -192,11 +218,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     WaveDiffusivity = []
     WaveStability = []
     ShoreAngles = []
-    
-    def find(item, lst):
-        start = 0
-        start = lst.index(item, start)
-        return start
+
 
     # more efficient to define centroids outside loop
     Centroids = TransectInterGDF.to_crs('4326').centroid
@@ -261,11 +283,11 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
                         WaveSat.append(np.nan)
                     else:
                         # find preceding and following hourly tide levels and times
-                        Time_1 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]                        
-                        Wave_1 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
+                        Time_1 = WaveTime[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]                        
+                        Wave_1 = WaveProp[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
                         
-                        Time_2 = WaveTime[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
-                        Wave_2 = WaveProp[find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
+                        Time_2 = WaveTime[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
+                        Wave_2 = WaveProp[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
                         
                         # Find time difference of actual satellite timestamp (next wave timestamp minus sat timestamp)
                         TimeDiff = Time_2 - DateTimeSat
@@ -344,7 +366,7 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     Parameters
     ----------
     TransectInterGDF : GeoDataFrame
-        GeoDataFrame holding coastal info per cross-shore transect.
+        GeoDataFrame of transects with veg edge intersection info assigned.
 
     Returns
     -------
@@ -396,7 +418,24 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
 
 
 def CalcShoreAngle(TransectInterGDF, Tr):
-    
+    """
+    Calculate shore angle using the perpendicular of each transect angle,
+    as measured clockwise from N.
+    FM Mar 2024
+
+    Parameters
+    ----------
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    Tr : int
+        Transect ID.
+
+    Returns
+    -------
+    ShoreAngle : list
+        List of shore angles in degrees for each transect.
+
+    """
     x_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][0]
     y_on = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[0][1]
     x_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][0]
@@ -450,13 +489,13 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
     Parameters
     ----------
     TransectInterGDF : GeoDataFrame
-        GeoDataFrame holding coastal info per cross-shore transect.
-    Hs : TYPE
-        DESCRIPTION.
-    Dir : TYPE
-        DESCRIPTION.
-    Tp : TYPE
-        DESCRIPTION.
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    SigWaveHeight : list
+        Timeseries of significant wave height (in metres).
+    Dir : list
+        Timeseries of mean wave direction (in degrees from).
+    Tp : list
+        Timeseries of peak wave period (in seconds).
 
     Returns
     -------
