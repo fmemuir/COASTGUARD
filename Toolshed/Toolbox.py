@@ -411,6 +411,29 @@ def mask_raster(fn, mask):
 # UTILITIES
 ###################################################################################################
     
+def find(item, lst):
+    """
+    Iterate through list to find matching item.
+    FM 2022
+
+    Parameters
+    ----------
+    item : TYPE
+        DESCRIPTION.
+    lst : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    start : TYPE
+        DESCRIPTION.
+
+    """
+    start = 0
+    start = lst.index(item, start)
+    return start
+
+
 def get_filepath(inputs,satname):
     """
     Create filepath to the different folders containing the satellite images.
@@ -724,10 +747,7 @@ def get_closest_datapoint(dates, dates_ts, values_ts):
     
     # get closest point to each date (no interpolation)
     temp = []
-    def find(item, lst):
-        start = 0
-        start = lst.index(item, start)
-        return start
+
     for i,date in enumerate(dates):
         print('\rExtracting closest points: %d%%' % int((i+1)*100/len(dates)), end='')
         temp.append(values_ts[find(min(item for item in dates_ts if item > date), dates_ts)])
@@ -2532,10 +2552,6 @@ def GetWaterElevs(settings, Dates_Sat):
     TimeStep = (Dates_ts[1]-Dates_ts[0]).total_seconds()/(60*60)
     
     Tides_Sat = []
-    def find(item, lst):
-        start = 0
-        start = lst.index(item, start)
-        return start
     
     # Previously found first following tide time, but incorrect when time is e.g. only 1min past the hour
     # for i,date in enumerate(dates_sat):
