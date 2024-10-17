@@ -43,7 +43,18 @@ np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates):
     """
     Main function to preprocess a satellite image
-
+    Updated FM Apr 2022
+    
+    FM: Problem still exists for ee_to_numpy where requests are limited to 262144 pixels (5120m for S2, 7680m for L5/7/8).
+    Potential solution may be to export full image to Google Drive then convert from there?
+    Example:
+    bbox = img.getInfo()['properties']['system:footprint']['coordinates']
+    task = ee.batch.Export.image.toDrive(img, 
+        scale=10000,
+        description='MOD09A1',
+        fileFormat='GeoTIFF',
+        region=bbox)
+    task.start()
 
     Parameters
     ----------
@@ -56,7 +67,7 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
     satname : str
         Name of satellite platform.
     settings : dict
-        Settings for running the model.
+        Settings for running the veg edge/waterline extraction tool.
     polygon : list
         Earth Engine geom representing bounding box.
     dates : list
@@ -84,21 +95,7 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
     """
     
     cloud_mask_issue = settings['cloud_mask_issue']
-    
-    # point = ee.Geometry.Point(polygon[0][0]) 
-        
-    """
-    FM: Problem still exists for ee_to_numpy where requests are limited to 262144 pixels (5120m for S2, 7680m for L5/7/8).
-    Potential solution may be to export full image to Google Drive then convert from there?
-    Example:
-    bbox = img.getInfo()['properties']['system:footprint']['coordinates']
-    task = ee.batch.Export.image.toDrive(img, 
-        scale=10000,
-        description='MOD09A1',
-        fileFormat='GeoTIFF',
-        region=bbox)
-    task.start()
-    """
+            
     #=============================================================================================#
     # L5 images
     #=============================================================================================#
@@ -751,21 +748,21 @@ def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
 
     Parameters
     ----------
-    cloud_mask : TYPE
-        DESCRIPTION.
-    im_ndi : TYPE
-        DESCRIPTION.
-    im_labels : TYPE
-        DESCRIPTION.
-    im_ref_buffer : TYPE
-        DESCRIPTION.
+    cloud_mask : array
+        Cloud mask raster created from defined nodata pixels
+    im_ndi : array
+        Normalised difference raster.
+    im_labels : np.array
+        3D boolean raster containing an image for each class (im_classif == label)
+    im_ref_buffer : np.array
+        Boolean 2D array matching image dimensions, with ref shoreline buffer zone = 1.
 
     Returns
     -------
-    int_veg : TYPE
-        DESCRIPTION.
-    int_nonveg : TYPE
-        DESCRIPTION.
+    int_veg : array
+        Reshaped version of raster image, with vegetation pixels labelled.
+    int_nonveg : array
+        Reshaped version of raster image, with non-vegetation pixels labelled.
 
     """
     nrows = cloud_mask.shape[0]
@@ -801,17 +798,25 @@ def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):
 
 
 def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
-    '''
+    """
     Saves local georeferenced versions of the RGB and NDVI images to be investigated in a GIS.
     FM March 2022
-    Arguments:
-    --------
-    im_ms:
-        multispectral image array
-    cloud_mask:
-        cloud mask created from defined nodata pixels
-    
-    '''
+
+    Parameters
+    ----------
+    im_ms : array
+        Multispectral satellite image array.
+    cloud_mask : array
+        2D boolean raster created from defined nodata pixels.
+    georef : list
+        List of affine transformation values.
+    filenames : str
+        Name of satellite image to save to file.
+    settings : dict
+        Settings for running the veg edge/waterline extraction tool.
+
+
+    """
     print(' \nsaving '+filenames)
     im_NDVI = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,2], cloud_mask) # NIR and red bands
     try: # some sentinel images with 0 axis don't get caught before this
@@ -855,17 +860,26 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
                 tif.write(imarray_brc,1) # single band raster requires an index param
   
 def save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames, settings):
-    '''
+    """
     Saves local georeferenced version of the classified image to be investigated in a GIS.
     FM Sept 2022
-    Arguments:
-    --------
-    im_ms:
-        multispectral image array
-    cloud_mask:
-        cloud mask created from defined nodata pixels
-    
-    '''
+
+    Parameters
+    ----------
+    im_classif : np.array
+        2D image containing pixel labels
+    im_labels : np.array
+        3D boolean raster containing an image for each class (im_classif == label)
+    cloud_mask : array
+        2D boolean raster created from defined nodata pixels
+    georef : list
+        List of affine transformation values.
+    filenames : str
+        Name of satellite image to save to file.
+    settings : dict
+        Settings for running the veg edge/waterline extraction tool.
+
+    """
     print(' \nsaving classified '+filenames)
 
     # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
@@ -889,17 +903,28 @@ def save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames, settings)
         tif.write(im_classif,1)
        
 def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, settings):
-    '''
+    """
     Saves local georeferenced version of the transition zone to be investigated in a GIS.
     FM Sept 2022
-    Arguments:
-    --------
-    im_ms:
-        multispectral image array
-    cloud_mask:
-        cloud mask created from defined nodata pixels
-    
-    '''
+
+    Parameters
+    ----------
+    im_ms : array
+        Multispectral satellite image array.
+    im_labels : TYPE
+        DESCRIPTION.
+    cloud_mask : array
+        2D boolean raster created from defined nodata pixels.
+    im_ref_buffer : np.array
+        Boolean 2D array matching image dimensions, with ref shoreline buffer zone = 1.
+    georef : list
+        List of affine transformation values.
+    filenames : str
+        Name of satellite image to save to file.
+    settings : dict
+        Settings for running the veg edge/waterline extraction tool.
+
+    """
     print(' \nsaving transition zone of '+filenames)
 
     # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]

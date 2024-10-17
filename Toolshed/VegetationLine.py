@@ -717,23 +717,23 @@ def classify_image_NN(im_ms, im_extra, cloud_mask, min_beach_area, clf):
 
     Arguments:
     -----------
-    im_ms: np.array
+    im_ms : np.array
         Pansharpened RGB + downsampled NIR and SWIR
-    im_extra:
+    im_extra :
         only used for Landsat 7 and 8 where im_extra is the panchromatic band
-    cloud_mask: np.array
+    cloud_mask : np.array
         2D cloud mask with True where cloud pixels are
-    min_beach_area: int
+    min_beach_area : int
         minimum number of pixels that have to be connected to belong to the SAND class
-    clf: joblib object
+    clf : joblib object
         pre-trained classifier
 
     Returns:    
     -----------
-    im_classif: np.array
-        2D image containing labels
-    im_labels: np.array of booleans
-        3D image containing a boolean image for each class (im_classif == label)
+    im_classif : np.array
+        2D image containing pixel labels
+    im_labels : np.array
+        3D boolean raster containing an image for each class (im_classif == label)
 
     """
 
@@ -848,7 +848,7 @@ def FindShoreContours_Trad(im_ndi, cloud_mask, im_ref_buffer):
     cloud_mask: np.ndarray
         2D cloud mask with True where cloud pixels are
     im_ref_buffer: np.array
-        Binary image containing a buffer around the reference shoreline
+        Binary image marking a buffer around the reference shoreline
     Returns    
     -----------
     contours: list of np.arrays
