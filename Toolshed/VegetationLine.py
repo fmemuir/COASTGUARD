@@ -79,6 +79,13 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
 
+    # Initialise counter for run success rates
+    skipped = {
+        'empty_poor': [],
+        'missing_mask':[],
+        'cloudy': [],
+        'no_classes': [],
+        'no_contours': []}
     
     # initialise output structure
     output = dict([])
@@ -93,12 +100,16 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
 
     print('Mapping veglines:')
 
+    imgcount = 0
+    
     # loop through satellite list
     for satname in metadata.keys():
 
+        imgcount += len(metadata[satname]['filenames'])
         # get images
         #filepath = Toolbox.get_filepath(settings['inputs'],satname)
         filenames = metadata[satname]['filenames']
+        datelist = metadata[satname]['dates']
         # Collate filenames of images per platform
         imgs = []
         for i in range(len(filenames)):
@@ -156,13 +167,14 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
 
 
         # loop through the images
-        for i in range(len(filenames)):
+        for fn in range(len(filenames)):
             
-            print('\r%s:   %0.3f %% ' % (satname,((i+1)/len(filenames))*100), end='')
+            print('\r%s:   %0.3f %% ' % (satname,((fn+1)/len(filenames))*100), end='')
 
+            # Image acqusition date
+            acqdate = metadata[satname]['dates'][fn]
             # preprocess image (cloud mask + pansharpening/downsampling)
-            fn = int(i)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polygon, dates, skipped)
 
             if im_ms is None:
                 continue
@@ -176,7 +188,6 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             cloud_cover_combined = np.divide(sum(sum(cloud_mask.astype(int))),
                                     (cloud_mask.shape[0]*cloud_mask.shape[1]))
             if cloud_cover_combined > 0.95: # if 99% of cloudy pixels in image skip
-                print(" - Skipped: cloud cover over 95%")
                 continue
             # remove no data pixels from the cloud mask 
             # (for example L7 bands of no data should not be accounted for)
@@ -190,7 +201,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
 
             # calculate a buffer around the reference shoreline
             im_ref_buffer_og = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
-            if i == 0: # if the first image in a sat set, use the ref shoreline
+            if fn == 0: # if the first image in a sat set, use the ref shoreline
                 im_ref_buffer = im_ref_buffer_og
             else:
                 im_ref_buffer = im_ref_buffer_og
@@ -235,6 +246,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             
             # if classified image comes back with almost no pixels in either class (<5%), skip
             if (np.count_nonzero(im_labels[:,:,0])/(len(im_labels) * len(im_labels[0]))) < 0.05 or (np.count_nonzero(im_labels[:,:,1])/(len(im_labels) * len(im_labels[0]))) < 0.05:
+                skipped['no_classes'].append([filenames[fn], satname, acqdate+' '+acqtime])
                 print(' - Skipped: classifier cannot find enough variety of classes')
                 continue
             
@@ -248,6 +260,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # contours_ndvi, t_ndvi = FindShoreContours_Enhc(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
             contours_ndvi, t_ndvi = FindShoreContours_WP(im_ndvi, im_labels, cloud_mask, im_ref_buffer)
             if contours_ndvi is None:
+                skipped['no_contours'].append([filenames[fn], satname, acqdate+' '+acqtime])
                 print(' - Poor image quality: no contours generated.')
                 continue
             
@@ -263,7 +276,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
 
             # if adjust_detection is True, let the user adjust the detected shoreline
             if settings['adjust_detection']:
-                date = metadata[satname]['dates'][i]
+                date = metadata[satname]['dates'][fn]
                 if settings['wetdry'] == True:
                     skip_image, vegline, vegline_latlon, vegline_proj, t_ndvi = adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, vegline_latlon, vegline_proj,
                                                                                                  image_epsg, georef, settings, date, satname, contours_ndvi, t_ndvi,
@@ -277,7 +290,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             
             else:
                 if settings['check_detection'] or settings['save_figure']:
-                    date = metadata[satname]['dates'][i]
+                    date = metadata[satname]['dates'][fn]
                     if not settings['check_detection']:
                         plt.ioff() # turning interactive plotting off
                     if settings['wetdry'] == True:
@@ -295,7 +308,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             
 
             # append to output variables
-            output_date.append(metadata[satname]['dates'][i])
+            output_date.append(acqdate)
             output_time.append(acqtime)
             output_vegline.append(vegline)
             output_vegline_latlon.append(vegline_latlon)
@@ -310,10 +323,10 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
                 output_shoreline_latlon.append(np.nan)
                 output_shoreline_proj.append(np.nan)
                 output_t_ndwi.append(np.nan)
-            output_filename.append(filenames[i])
+            output_filename.append(filenames[fn])
             output_cloudcover.append(cloud_cover)
-            output_geoaccuracy.append(metadata[satname]['acc_georef'][i])
-            output_idxkeep.append(i)
+            output_geoaccuracy.append(metadata[satname]['acc_georef'][fn])
+            output_idxkeep.append(fn)
             output_t_ndvi.append(t_ndvi)
 
         
@@ -380,9 +393,10 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     
     
     # print statistics of run
-    
-    
-    # save outputput structure as output.pkl
+    for reason in skipped.keys():
+        print(f"Skipped due to {reason}: {len(skipped[reason])} / {imgcount} ({round(len(skipped[reason])/imgcount,4)}%)")
+        
+    # save output structure as output.pkl
     print('saving output pickle files ...')
     filepath = os.path.join(filepath_data, sitename)
     with open(os.path.join(filepath, sitename + '_output.pkl'), 'wb') as f:
@@ -396,6 +410,9 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         
     with open(os.path.join(filepath, sitename + '_output_proj.pkl'), 'wb') as f:
         pickle.dump(output_proj, f)
+        
+    with open(os.path.join(filepath, sitename + '_skip_stats.pkl'), 'wb') as f:
+        pickle.dump(skipped, f)
     
     # close figure window if still open
     if plt.get_fignums():

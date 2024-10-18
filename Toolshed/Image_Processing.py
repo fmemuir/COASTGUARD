@@ -40,7 +40,7 @@ from pyproj import transform as Transf
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function to preprocess a satellite image
-def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates):
+def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polygon, dates, skipped):
     """
     Main function to preprocess a satellite image
     Updated FM Apr 2022
@@ -95,6 +95,7 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
     """
     
     cloud_mask_issue = settings['cloud_mask_issue']
+    
             
     #=============================================================================================#
     # L5 images
@@ -103,10 +104,14 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
             
         img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqdate = datelist[fn]
+        
         cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
-            return None, None, None, None, None, None, None
+            skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         im_ms = geemap.ee_to_numpy(img, 
                                    bands = ['B1','B2','B3','B4','B5','QA_PIXEL'], 
@@ -118,10 +123,9 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if im_ms is None:
             print(' - Skipped: empty/low quality raster')
-            return None, None, None, None, None, None, None
-        
-        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
-        
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
+                
         # down-sample to 15 m (half of the original pixel size)
         nrows = im_ms.shape[0]*2
         ncols = im_ms.shape[1]*2
@@ -140,7 +144,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_mask is None:
             print(" - Skipped: no cloud mask available")
-            return None, None, None, None, None, None, None
+            skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
 
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
@@ -188,11 +193,14 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
 
         img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+
         cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
-            return None, None, None, None, None, None, None
+            skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         im_ms = geemap.ee_to_numpy(img, 
                                    bands = ['B1','B2','B3','B4','B5', 'B8','QA_PIXEL'], 
@@ -204,9 +212,9 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if im_ms is None:
             print(' - Skipped: empty/low quality raster')
-            return None, None, None, None, None, None, None
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
-        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
 
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
@@ -255,7 +263,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_mask is None:
             print(" - Skipped: no cloud mask available")
-            return None, None, None, None, None, None, None
+            skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -297,7 +306,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
-            return None, None, None, None, None, None, None
+            skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         im_ms = geemap.ee_to_numpy(img, 
                                    bands = ['B2','B3','B4','B5', 'B6','B7','B10','B11','QA_PIXEL'], 
@@ -309,7 +319,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if im_ms is None:
             print(' - Skipped: empty/low quality raster')
-            return None, None, None, None, None, None, None
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')      
         
@@ -357,7 +368,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_mask is None:
             print(" - Skipped: no cloud mask available")
-            return None, None, None, None, None, None, None
+            skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -399,7 +411,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
-            return None, None, None, None, None, None, None
+            skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         im_ms = geemap.ee_to_numpy(img, 
                                    bands = ['B2','B3','B4','B5', 'B6','B8','B10','B11','QA_PIXEL'], 
@@ -411,7 +424,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if im_ms is None:
             print(' - Skipped: empty/low quality raster')
-            return None, None, None, None, None, None, None
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         
@@ -459,7 +473,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_mask is None:
             print(" - Skipped: no cloud mask available")
-            return None, None, None, None, None, None, None
+            skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -499,7 +514,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
-            return None, None, None, None, None, None, None
+            skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
 
@@ -511,7 +527,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
                                   scale=10)
         if im10 is None:
             print(' - Skipped: empty raster')
-            return None, None, None, None, None, None, None
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         # if image contains only zeros (can happen with S2), skip the image
         if sum(sum(sum(im10))) < 1:
@@ -550,7 +567,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if im20 is None:
             print(' - Skipped: empty raster')
-            return None, None, None, None, None, None, None
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         im20 = im20[:,:,0]
         im20 = im20/10000 # TOA scaled to 10000
@@ -578,7 +596,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if im60 is None:
             print(' - Skipped: empty raster')
-            return None, None, None, None, None, None, None
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         im_QA = im60[:,:,0]
         cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
@@ -588,7 +607,8 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
         
         if cloud_mask is None:
             print(" - Skipped: no cloud mask available")
-            return None, None, None, None, None, None, None
+            skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         # check if -inf or nan values on any band and create nodata image
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
