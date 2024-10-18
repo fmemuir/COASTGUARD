@@ -65,7 +65,7 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
     filenames : list
         Sat image filenames.
     satname : str
-        Name of satellite platform.
+        Name of satellite platform (Landsat 5/7/8/9 = L5/L7/L8/L9, Sentinel-2 = S2, PlanetScope = PS).
     settings : dict
         Settings for running the veg edge/waterline extraction tool.
     polygon : list
@@ -113,8 +113,11 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
                                    region=ee.Geometry.Polygon(polygon),
                                    scale=30)
         
+        # Run initial QA on image
+        im_ms = QAMask(im_ms, satname, settings['cloud_thresh'])
+        
         if im_ms is None:
-            print(' - Skipped: empty raster')
+            print(' - Skipped: empty/low quality raster')
             return None, None, None, None, None, None, None
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
@@ -196,8 +199,11 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
                                    region=ee.Geometry.Polygon(polygon),
                                    scale=30)
         
+        # Run initial QA on image
+        im_ms = QAMask(im_ms, satname, settings['cloud_thresh'])
+        
         if im_ms is None:
-            print(' - Skipped: empty raster')
+            print(' - Skipped: empty/low quality raster')
             return None, None, None, None, None, None, None
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
@@ -298,8 +304,11 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
                                    region=ee.Geometry.Polygon(polygon),
                                    scale=30)
         
+        # Run initial QA on image
+        im_ms = QAMask(im_ms, satname, settings['cloud_thresh'])
+        
         if im_ms is None:
-            print(' - Skipped: empty raster')
+            print(' - Skipped: empty/low quality raster')
             return None, None, None, None, None, None, None
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')      
@@ -397,8 +406,11 @@ def preprocess_single(ImgColl, fn, filenames, satname, settings, polygon, dates)
                                    region=ee.Geometry.Polygon(polygon),
                                    scale=30)
         
+        # Run initial QA on image
+        im_ms = QAMask(im_ms, satname, settings['cloud_thresh'])
+        
         if im_ms is None:
-            print(' - Skipped: empty raster')
+            print(' - Skipped: empty/low quality raster')
             return None, None, None, None, None, None, None
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
@@ -972,6 +984,70 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
         transform=transform,
     ) as tif:
         tif.write(im_TZ_cl_fill,1)
+
+
+def QAMask(im_ms, satname, cloud_thresh):
+    """
+    Run an additional masking check for any images that have slipped past cloud
+    masking using the cloud band, by using the QA band bit-packed values instead.
+    Primarily for Landsat, Sentinel-2 has new MSK_CLASSI_OPAQUE band.
+    FM Oct 2024
+    
+    More info:
+        https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/LSDS-1618_Landsat-4-7_C2-L2-ScienceProductGuide-v4.pdf
+        https://d9-wret.s3.us-west-2.amazonaws.com/assets/palladium/production/s3fs-public/media/files/LSDS-1619_Landsat8-9-Collection2-Level2-Science-Product-Guide-v6.pdf
+
+    Parameters
+    ----------
+    im_ms : array
+        Multispectral satellite image array.
+    satname : str
+        Name of satellite platform (Landsat 5/7/8/9 = L5/L7/L8/L9, Sentinel-2 = S2, PlanetScope = PS).
+    cloud_thresh : float
+        Percentage of image covered in cloud, above which it is discarded.
+
+    Returns
+    -------
+    im_ms : array or None
+        Multispectral satellite image array (empty if too many pixels are poor).
+
+    """
+    
+    # Different satellites have different bit-packed QA values to mean different land cover
+    if satname == 'L5':
+        # Landsat 4-7 Pixel Quality Assessment (QA_PIXEL)
+        # High Confidence cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
+        maskvals = [5896, 7960, 8088, 13664]
+        QAband = 5 # index of QA band in im_ms
+    if satname == 'L7':
+        # Landsat 4-7 Pixel Quality Assessment (QA_PIXEL)
+        # High Confidence cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
+        maskvals = [5896, 7960, 8088, 13664]
+        QAband = 6 # index of QA band in im_ms
+    elif satname in ['L8', 'L9']:
+        # High Confidence cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
+        maskvals = [22280, 24344, 24472, 30048]
+        QAband = 8 # index of QA band in im_ms
+        
+    # For each QA pixel value representing cloud of some sort
+    pixcounts = []
+    for maskval in maskvals:
+        # Count how many pixels equal that QA value
+        pixcounts.append(np.sum(im_ms[:,:,QAband] == maskval))
+    # Calculate the total number of poor pixels and the % of the total image
+    pixcount = np.sum(pixcounts)
+    maskpct = pixcount / (im_ms.shape[0] * im_ms.shape[1])
+    
+    # If poor quality pixel % exceeds cloud threshold, return an emtpy multispectral raster
+    if maskpct > cloud_thresh:
+        im_ms = None
+    
+    return im_ms
+
+
+###################################################################################################
+# AUXILIARY COASTSAT FUNCTIONS
+###################################################################################################
 
 def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """
