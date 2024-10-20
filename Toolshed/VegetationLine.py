@@ -267,7 +267,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             if settings['wetdry'] == True:
                 im_ndwi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
                 contours_ndwi, t_ndwi = FindShoreContours_Water(im_ndwi, sh_labels, cloud_mask, im_ref_buffer)
-                if contours_ndvi is None:
+                if contours_ndwi is None:
                     skipped['no_contours'].append([filenames[fn], satname, acqdate+' '+acqtime])
                     print(' - Poor image quality: no water contours generated.')
                     continue
