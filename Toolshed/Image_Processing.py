@@ -1041,16 +1041,16 @@ def QAMask(im_ms, satname, cloud_thresh):
     # Different satellites have different bit-packed QA values to mean different land cover
     if satname == 'L5':
         # Landsat 4-7 Pixel Quality Assessment (QA_PIXEL)
-        # High Confidence cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
+        # HiConf cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
         maskvals = [5896, 7960, 8088, 13664]
         QAband = 5 # index of QA band in im_ms
     if satname == 'L7':
         # Landsat 4-7 Pixel Quality Assessment (QA_PIXEL)
-        # High Confidence cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
-        maskvals = [5896, 7960, 8088, 13664]
+        # Empty (scan line error), HiConf cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
+        maskvals = [0, 5896, 7960, 8088, 13664]
         QAband = 6 # index of QA band in im_ms
     elif satname in ['L8', 'L9']:
-        # High Confidence cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
+        # HiConf cloud, HiConf cloud with shadow, HiConf cloud with shadow over water, HiConf snow/ice
         maskvals = [22280, 24344, 24472, 30048]
         QAband = 8 # index of QA band in im_ms
         
