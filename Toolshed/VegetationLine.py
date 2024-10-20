@@ -267,7 +267,11 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             if settings['wetdry'] == True:
                 im_ndwi = Toolbox.nd_index(im_ms[:,:,3], im_ms[:,:,1], cloud_mask)
                 contours_ndwi, t_ndwi = FindShoreContours_Water(im_ndwi, sh_labels, cloud_mask, im_ref_buffer)
-
+                if contours_ndvi is None:
+                    skipped['no_contours'].append([filenames[fn], satname, acqdate+' '+acqtime])
+                    print(' - Poor image quality: no water contours generated.')
+                    continue
+                
             # process the contours into a vegline
             vegline, vegline_latlon, vegline_proj = ProcessShoreline(contours_ndvi, cloud_mask, georef, image_epsg, settings)
             if settings['wetdry'] == True:
@@ -1007,6 +1011,9 @@ def FindShoreContours_Water(im_ndi, im_labels, cloud_mask, im_ref_buffer):
     # select water/sand pixels that are within the buffer
     int_water = vec_ndi[np.logical_and(vec_buffer,vec_water)]
     int_nonwater = vec_ndi[np.logical_and(vec_buffer,vec_nonwater)]
+    # Empty/low quality images
+    if len(int_water) == 0 or len(int_nonwater) == 0:
+        return None, None
 
     # make sure both classes have the same number of pixels before thresholding
     if len(int_water) > 0 and len(int_nonwater) > 0:
