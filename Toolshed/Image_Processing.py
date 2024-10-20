@@ -194,6 +194,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         
         acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqdate = datelist[fn]
 
         cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
@@ -301,6 +302,9 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
     elif satname == 'L8':
         
         img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
+        
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')      
+        acqdate = datelist[fn]
 
         cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
@@ -321,9 +325,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
             print(' - Skipped: empty/low quality raster')
             skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
             return None, None, None, None, None, None, acqtime
-        
-        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')      
-        
+
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
         #Create a mask from the cloud score and combine it with the image mask.
@@ -407,6 +409,9 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         
         img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
 
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqdate = datelist[fn]
+        
         cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
         
         if cloud_scoree > settings['cloud_thresh']:
@@ -426,9 +431,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
             print(' - Skipped: empty/low quality raster')
             skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
             return None, None, None, None, None, None, acqtime
-        
-        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
-        
+
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
         #Create a mask from the cloud score and combine it with the image mask.
@@ -510,6 +513,9 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
     #=============================================================================================#
     elif satname == 'S2':
         
+        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqdate = datelist[fn]
+        
         cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
         
         if cloud_scoree > settings['cloud_thresh']:
@@ -517,7 +523,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
             skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
             return None, None, None, None, None, None, acqtime
         
-        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
 
         img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         # read 10m bands (R,G,B,NIR)        
