@@ -78,6 +78,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     # ref_line = np.delete(settings['reference_shoreline'],2,1)
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
+    filepath_out = os.path.join(filepath_data, sitename)
+
 
     # Initialise counter for run success rates
     skipped = {
@@ -87,14 +89,31 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         'no_classes': [],
         'no_contours': []}
     
-    # initialise output structure
-    output = dict([])
-    output_latlon = dict([])
-    output_proj = dict([])
+    if os.path.isfile(os.path.join(filepath_out, sitename + '_output.pkl')):
+        # If output already exists, load it in
+        SiteFilepath = os.path.join(filepath_data, sitename)
+        with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
+            output = pickle.load(f)
+        with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
+            output_latlon = pickle.load(f)
+        with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
+            output_proj = pickle.load(f)
+        # If platform has already been processed and saved to output,
+        # redefine satnames from ones which haven't been done yet
+        satnames = sorted(set(metadata.keys()) ^ set(output_proj.keys()))
+
+    else:
+        # use full metadata for satnames
+        satnames = metadata.keys()
+        # initialise output structure
+        output = dict([])
+        output_latlon = dict([])
+        output_proj = dict([])
+        
     # create a subfolder to store the .jpg images showing the detection
     filepath_jpg = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
     if not os.path.exists(filepath_jpg):
-            os.makedirs(filepath_jpg)
+        os.makedirs(filepath_jpg)
     # close all open figures
     plt.close('all')
 
@@ -103,8 +122,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     imgcount = 0
     
     # loop through satellite list
-    for satname in metadata.keys():
-
+    for satname in satnames:
+        
         imgcount += len(metadata[satname]['filenames'])
         # get images
         #filepath = Toolbox.get_filepath(settings['inputs'],satname)
@@ -391,7 +410,6 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         output_proj[satname]['tideelev'] = output_waterelev
         
         # Save output after each platform is completed
-        filepath_out = os.path.join(filepath_data, sitename)
         with open(os.path.join(filepath_out, sitename + '_output.pkl'), 'wb') as f:
             pickle.dump(output, f)
         with open(os.path.join(filepath_out, sitename + '_output_latlon.pkl'), 'wb') as f:
