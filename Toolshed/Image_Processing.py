@@ -1098,7 +1098,7 @@ def create_cloud_mask(im_QA, satname, cloud_mask_issue):
     """
 
     # convert QA bits (the bits allocated to cloud cover vary depending on the satellite mission)
-    if satname == 'L8':
+    if satname == 'L8' or satname == 'L9':
         cloud_values = [2800, 2804, 2808, 2812, 6896, 6900, 6904, 6908]
     elif satname == 'L7' or satname == 'L5' or satname == 'L4':
         cloud_values = [752, 756, 760, 764]
