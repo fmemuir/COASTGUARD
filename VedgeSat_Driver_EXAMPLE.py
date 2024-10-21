@@ -148,9 +148,7 @@ output, output_latlon, output_proj = VegetationLine.extract_veglines(metadata, s
 OPTION 2: Load in pre-existing outputs
 """
 
-SiteFilepath = os.path.join(inputs['filepath'], sitename)
-with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
-    output = pickle.load(f)
+output, output_latlon, output_proj = Toolbox.ReadOutput(inputs)
 
     
 
