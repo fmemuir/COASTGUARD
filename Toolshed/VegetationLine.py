@@ -333,7 +333,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             output_idxkeep.append(fn)
             output_t_ndvi.append(t_ndvi)
 
-        
+
+        # Outside of per-image loop
         # create dictionary of output
         output[satname] = {
                 'dates': output_date,
@@ -346,7 +347,6 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
                 'vthreshold': output_t_ndvi,
                 'wthreshold': output_t_ndwi
                 }
-        print('')
     
         output_latlon[satname] = {
                 'dates': output_date,
@@ -390,38 +390,50 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         output_latlon[satname]['tideelev'] = output_waterelev
         output_proj[satname]['tideelev'] = output_waterelev
         
-    # change the format to have one list sorted by date with all the veglines (easier to use)
-    output = Toolbox.merge_output(output)
-    output_latlon = Toolbox.merge_output(output_latlon)
-    output_proj = Toolbox.merge_output(output_proj)
-    
+        # Save output after each platform is completed
+        filepath_out = os.path.join(filepath_data, sitename)
+        with open(os.path.join(filepath_out, sitename + '_output.pkl'), 'wb') as f:
+            pickle.dump(output, f)
+        with open(os.path.join(filepath_out, sitename + '_output_latlon.pkl'), 'wb') as f:
+            pickle.dump(output_latlon, f)
+        with open(os.path.join(filepath_out, sitename + '_output_proj.pkl'), 'wb') as f:
+            pickle.dump(output_proj, f)
+        
+    # This is from previous structure where output is saved as one dict;
+    # Now done when output is read in with Toolbox.ReadOutput()
+    # output = Toolbox.merge_output(output)
+    # output_latlon = Toolbox.merge_output(output_latlon)
+    # output_proj = Toolbox.merge_output(output_proj)
     
     # print statistics of run
     for reason in skipped.keys():
         print(f"Skipped due to {reason}: {len(skipped[reason])} / {imgcount} ({round(len(skipped[reason])/imgcount,4)}%)")
         
-    # save output structure as output.pkl
+    # save per-platform output structure as output.pkl
     print('saving output pickle files ...')
-    filepath = os.path.join(filepath_data, sitename)
-    with open(os.path.join(filepath, sitename + '_output.pkl'), 'wb') as f:
+    filepath_out = os.path.join(filepath_data, sitename)
+    with open(os.path.join(filepath_out, sitename + '_output.pkl'), 'wb') as f:
         pickle.dump(output, f)
     
-    with open(os.path.join(filepath, sitename + '_settings.pkl'), 'wb') as f:
+    with open(os.path.join(filepath_out, sitename + '_settings.pkl'), 'wb') as f:
         pickle.dump(settings, f)
 
-    with open(os.path.join(filepath, sitename + '_output_latlon.pkl'), 'wb') as f:
+    with open(os.path.join(filepath_out, sitename + '_output_latlon.pkl'), 'wb') as f:
         pickle.dump(output_latlon, f)
         
-    with open(os.path.join(filepath, sitename + '_output_proj.pkl'), 'wb') as f:
+    with open(os.path.join(filepath_out, sitename + '_output_proj.pkl'), 'wb') as f:
         pickle.dump(output_proj, f)
         
-    with open(os.path.join(filepath, sitename + '_skip_stats.pkl'), 'wb') as f:
+    with open(os.path.join(filepath_out, sitename + '_skip_stats.pkl'), 'wb') as f:
         pickle.dump(skipped, f)
     
     # close figure window if still open
     if plt.get_fignums():
         plt.close()
-        
+    
+    # Read back in and convert to {'dates':[],'satname':[], etc.} format
+    output, output_latlon, output_proj = Toolbox.ReadOutput(settings['inputs'])
+    
     return output, output_latlon, output_proj
 
 

@@ -540,8 +540,8 @@ def get_filenames(filename, filepath, satname):
 
 def merge_output(output):
     """
-    Function to merge the output dictionnary, which has one key per satellite mission
-    into a dictionnary containing all the shorelines and dates ordered chronologically.
+    Function to merge the output dictionary, which has one key per satellite mission
+    into a dictionary containing all the shorelines and dates ordered chronologically.
     
     Arguments:
     -----------
@@ -1255,6 +1255,54 @@ def PlanetMetadata(sat_list, Sat, filepath_data, sitename):
         pickle.dump(metadata, f)
         
     return metadata
+
+
+def ReadOutput(inputs):
+    """
+    Read in the saved output dictionary from a run of VedgeSat/CoastSat, and 
+    convert it from the format:
+        {'L5':{}, 'L7':{}, etc.}
+    to the easier to use and date-sorted format:
+        {'dates':[], 'satname':[], 'veglines':[], etc.}
+    Should only run with new runs of VedgeSat, old output files will not be 
+    affected and should be loaded in using the old method:
+        with open(os.path.join(SiteFilepath, inputs['sitename'] + '_output.pkl'), 'rb') as f:
+            output = pickle.load(f)
+        
+    FM Oct 2024
+
+    Parameters
+    ----------
+    inputs : dict
+        Dictionary of user requirements for VedgeSat/CoastSat run.
+
+    Returns
+    -------
+    output : dict
+        Dictionary of extracted veg edges and associated info with each.
+    output_latlon : dict
+        Dictionary of extracted veg edges and associated info with each (in WGS84).
+    output_proj : dict
+        Dictionary of extracted veg edges and associated info with each (in chosen CRS).
+
+    """
+    SiteFilepath = os.path.join(inputs['filepath'], inputs['sitename'])
+    
+    with open(os.path.join(SiteFilepath, inputs['sitename'] + '_output.pkl'), 'rb') as f:
+        output = pickle.load(f)
+    with open(os.path.join(SiteFilepath, inputs['sitename'] + '_output_latlon.pkl'), 'rb') as f:
+        output_latlon = pickle.load(f)
+    with open(os.path.join(SiteFilepath, inputs['sitename'] + '_output_proj.pkl'), 'rb') as f:
+        output_proj = pickle.load(f)
+
+    # output saved as dict{'satname1':{}, 'satname2':{}, etc.}
+    # Need to convert it to dict{'dates':[], 'satname':[], 'veglines':[], etc.}
+    output = merge_output(output)
+    output_latlon = merge_output(output_latlon)
+    output_proj = merge_output(output_proj)
+
+    return output, output_latlon, output_proj
+
 
 def SaveShapefiles(output, name_prefix, sitename, epsg):
     """
