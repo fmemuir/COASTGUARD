@@ -101,7 +101,9 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         # If platform has already been processed and saved to output,
         # redefine satnames from ones which haven't been done yet
         satnames = sorted(set(metadata.keys()) ^ set(output_proj.keys()))
-
+        satnames_done = sorted(set(metadata.keys()) & set(output_proj.keys()))
+        print(f"Already found outputs for {', '.join([str(i) for i in satnames_done])}")
+        print(f"starting from {satnames[0]}")
     else:
         # use full metadata for satnames
         satnames = metadata.keys()
