@@ -79,39 +79,10 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     filepath_data = settings['inputs']['filepath']
     filepath_models = os.path.join(os.getcwd(), 'Classification', 'models')
     filepath_out = os.path.join(filepath_data, sitename)
-
-
-    # Initialise counter for run success rates
-    skipped = {
-        'empty_poor': [],
-        'missing_mask':[],
-        'cloudy': [],
-        'no_classes': [],
-        'no_contours': []}
     
-    if os.path.isfile(os.path.join(filepath_out, sitename + '_output.pkl')):
-        # If output already exists, load it in
-        SiteFilepath = os.path.join(filepath_data, sitename)
-        with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
-            output = pickle.load(f)
-        with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
-            output_latlon = pickle.load(f)
-        with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
-            output_proj = pickle.load(f)
-        # If platform has already been processed and saved to output,
-        # redefine satnames from ones which haven't been done yet
-        satnames = sorted(set(metadata.keys()) ^ set(output_proj.keys()))
-        satnames_done = sorted(set(metadata.keys()) & set(output_proj.keys()))
-        print(f"Already found outputs for {', '.join([str(i) for i in satnames_done])}")
-        print(f"starting from {satnames[0]}")
-    else:
-        # use full metadata for satnames
-        satnames = metadata.keys()
-        # initialise output structure
-        output = dict([])
-        output_latlon = dict([])
-        output_proj = dict([])
-        
+    # Check if run already exists partially or if it needs to be initialised
+    satnames, output, output_latlon, output_proj, skipped = Toolbox.ResumeVeglines(filepath_data, filepath_out, sitename, metadata)
+    
     # create a subfolder to store the .jpg images showing the detection
     filepath_jpg = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
     if not os.path.exists(filepath_jpg):

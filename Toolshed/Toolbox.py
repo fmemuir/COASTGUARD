@@ -1257,6 +1257,87 @@ def PlanetMetadata(sat_list, Sat, filepath_data, sitename):
     return metadata
 
 
+def ResumeVeglines(filepath_data, filepath_out, sitename, metadata):
+    """
+    Check if VedgeSat/CoastSat run alredy exists partially (e.g. if a previous
+    run failed and only some of the satellite platforms have been processed). 
+    If a partial run does exist (i.e. if an output.pkl file has been saved),
+    load it in and only run the process from start of the platforms not yet done.
+    If no output file exists, initialise the output and skipped dictionaries.
+    
+    This is to save time if a run fails on a specific image or for some unsolved
+    reason, so users don't need to re-process images that were already successful.
+    
+    FM Oct 2024
+
+    Parameters
+    ----------
+    filepath_data : str
+        Path to 'Data' folder.
+    filepath_out : str
+        Path to site folder to save outputs to.
+    sitename : str
+        Name of site of interest.
+    metadata : dict
+        Dictionary of sat image filenames, georeferencing info, EPSGs and dates of capture.
+
+    Returns
+    -------
+    satnames : list
+        List of satellite platform names, either full list from metadata or 
+        shortened to just the platforms not processed yet.
+    output : dict
+        Dictionary of extracted veg edges and associated info with each.
+    output_latlon : dict
+        Dictionary of extracted veg edges and associated info with each (in WGS84).
+    output_proj : dict
+        Dictionary of extracted veg edges and associated info with each (in chosen CRS).
+    skipped : dict
+        Global dictionary storing the reasons for each image that fails or is skipped.
+
+    """
+    
+    # If output already exists, load it in
+    if os.path.isfile(os.path.join(filepath_out, sitename + '_output.pkl')):
+        SiteFilepath = os.path.join(filepath_data, sitename)
+        with open(os.path.join(SiteFilepath, sitename + '_output.pkl'), 'rb') as f:
+            output = pickle.load(f)
+        with open(os.path.join(SiteFilepath, sitename + '_output_latlon.pkl'), 'rb') as f:
+            output_latlon = pickle.load(f)
+        with open(os.path.join(SiteFilepath, sitename + '_output_proj.pkl'), 'rb') as f:
+            output_proj = pickle.load(f)
+        # If platform has already been processed and saved to output,
+        # redefine satnames from ones which haven't been done yet
+        satnames = sorted(set(metadata.keys()) ^ set(output_proj.keys()))
+        satnames_done = sorted(set(metadata.keys()) & set(output_proj.keys()))
+        
+        # Load in existing counter for run success rates
+        with open(os.path.join(SiteFilepath, sitename + '_skip_stats.pkl'), 'rb') as f:
+            skipped = pickle.load(f)
+        
+        print(f"Already found outputs for {', '.join([str(i) for i in satnames_done])}")
+        print(f"starting from {satnames[0]}")
+    
+    # If not, start new run
+    else:
+        # use full metadata for satnames
+        satnames = metadata.keys()
+        # initialise output structure
+        output = dict([])
+        output_latlon = dict([])
+        output_proj = dict([])
+        
+        # Initialise counter for run success rates
+        skipped = {
+            'empty_poor': [],
+            'missing_mask':[],
+            'cloudy': [],
+            'no_classes': [],
+            'no_contours': []}
+        
+    return satnames, output, output_latlon, output_proj, skipped
+
+
 def ReadOutput(inputs):
     """
     Read in the saved output dictionary from a run of VedgeSat/CoastSat, and 

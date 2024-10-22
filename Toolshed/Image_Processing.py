@@ -62,6 +62,8 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         GEE image collection, collated for each platform.
     fn : int
         Iteration number.
+    datelist : list
+        
     filenames : list
         Sat image filenames.
     satname : str
@@ -72,8 +74,8 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         Earth Engine geom representing bounding box.
     dates : list
         Desired start date and end date in format 'YYYY-MM-DD'.
-    savetifs : bool
-        Flag for saving TIF versions of imagery.
+    skipped : dict
+        Global dictionary storing the reasons for each image that fails or is skipped.
 
     Returns
     -------
