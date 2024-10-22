@@ -441,7 +441,13 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
 
 def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
     """
+    Correct cross-shore waterline distances to remove the effects of tides. Uses
+    the equation "x_tide = x + ( z_tide / tan(beta) )", where x is cross-shore
+    distance along transect of waterline intersection, z_tide is the tidal stage
+    at a chosen elevation above sea level, and beta is the rise/run of the beach
+    between mean sea level and mean high water spring. 
     
+    FM Nov 2022
 
     Parameters
     ----------
