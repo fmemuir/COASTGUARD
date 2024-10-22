@@ -567,7 +567,7 @@ def merge_output(output):
     for satname in list(output.keys()):
         for key in output[satnames[0]].keys():
             output_all[key] = output_all[key] + output[satname][key]
-        output_all['satname'] = output_all['satname'] + [_ for _ in np.tile(satname,
+        output_all['satname'] = output_all['satname'] + [str(_) for _ in np.tile(satname,
                   len(output[satname]['dates']))]
     # sort chronologically
     idx_sorted = sorted(range(len(output_all['dates'])), key=output_all['dates'].__getitem__)
