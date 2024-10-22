@@ -541,7 +541,9 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
             georef = []
             # skip the image by giving it a full cloud_mask
             cloud_mask = np.ones((im10.shape[0],im10.shape[1])).astype('bool')
-            return im_ms, georef, cloud_mask, [], [], []
+            print(' - Skipped: only zeros in raster')
+            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+            return None, None, None, None, None, None, acqtime
         
         im10 = im10/10000 # TOA scaled to 10000
         
