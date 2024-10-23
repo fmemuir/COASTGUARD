@@ -481,6 +481,7 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     # lookup for each transect (rather than repeating GetWaterElevs() per-transect needlessly)
     tide_sat = Toolbox.GetWaterElevs(settings,dates_sat)
     tides_sat = np.array(tide_sat)
+    tide_dict = dict(zip(dates_sat, tides_sat))
     
     # tidal correction along each transect
     # elevation at which you would like the shoreline time-series to be
@@ -497,19 +498,24 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
             for dt in dates_sat:
                 if dt.date() == date:
                     dates_sat_tr.append(datetime.combine(date, dt.time()))
-        tides_sat_tr = [tide for date, tide in zip(dates_sat, tides_sat) if date.date() in dates_sat_tr]
-        matching_tides = [tide for date, tide in zip(main_dates, tide_heights) if date.date() in {subdate.date() for subdate in sublist_dates}]
-        # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
+        tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
+        # if only a few observations exist, just use global-constant beach slope
+        if len(dates_sat_tr) < 10:
+            BeachSlope.append(AvBeachSlope)
+            continue
+        
         # TO DO: figure out way of running this per transect
         DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
         if os.path.exists(DEMpath):
             MSL = 1.0
             MHWS = 0.1
             BeachSlope.append(GetBeachSlopesDEM(MSL, MHWS, DEMpath))
+        
         elif AvBeachSlope is None:
 
             cross_distances = TransectInterGDF['wldists'].iloc[Tr]
             BeachSlope.append(Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances))
+        
         else:
             BeachSlope.append(AvBeachSlope)
             
