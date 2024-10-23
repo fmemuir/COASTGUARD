@@ -365,11 +365,6 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
             (AllIntersects['wlinterpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + 
             (AllIntersects['wlinterpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
     AllIntersects['wldists'] = distances
-
-    # Tidal correction to get corrected distances along transects
-    CorrectedDists, TidalStages = TidalCorrection(settings, output, AllIntersects, AvBeachSlope)
-    AllIntersects['wlcorrdist'] = CorrectedDists
-    AllIntersects['waterelev'] = TidalStages
     
     # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
     TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=AllIntersects['waterelev'])
@@ -389,7 +384,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     dates, distances, corrdists, welev, tzone, interpnt = ([] for i in range(6)) # per-transect lists of values
 
     Key = [dates, distances, corrdists, welev, tzone, interpnt]
-    KeyName = ['wldates','wldists', 'wlcorrdist','waterelev','tidezone','wlinterpnt']
+    KeyName = ['wldates','wldists','tidezone','wlinterpnt']
        
     # for each column name
     for i in range(len(Key)):
@@ -434,13 +429,16 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
         TransectInterGDF['beachwidth'].iloc[Tr] = VLSLDists
         
         print('calculating tidally corrected cross-shore distances...')
-    
+        # Tidal correction to get corrected distances along transects
+        TransectInterGDF = TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope)
+        
+        
     print("TransectDict with beach width and waterline intersections created.")
         
     return TransectInterGDF
     
 
-def TidalCorrection(settings, output, IntersectDF, AvBeachSlope=None):
+def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     """
     Correct cross-shore waterline distances to remove the effects of tides. Uses
     the equation "x_tide = x + ( z_tide / tan(Beta) )", where x is cross-shore
@@ -490,6 +488,8 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope=None):
         MSL = 1.0
         MHWS = 0.1
         BeachSlope = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
+    elif AvBeachSlope is None:
+        BeachSlope = Slope.CoastSatSlope()
     else:
         BeachSlope = AvBeachSlope
         
@@ -509,8 +509,11 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope=None):
         # correction is minus because transect dists are defined land to seaward
         CorrIntDistances.append(Dist - Correction)
         TidalStages.append(TidalElev)
+        
+    TransectInterGDF['wlcorrdist'] = CorrectedDists
+    TransectInterGDF['waterelev'] = TidalStages
     
-    return CorrIntDistances, TidalStages
+    return TransectInterGDF
 
 
 def GetBeachSlopesDEM(MSL, MHWS, DEMpath):
