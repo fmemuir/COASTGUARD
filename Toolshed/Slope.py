@@ -45,7 +45,7 @@ def CoastSatSlope(dates_sat, tide_sat, cross_distances):
     
 #%%
 
-def DefineSlopeSettings(cross_distance):
+def DefineSlopeSettings(cross_distances):
     
     days_in_year = 365.2425
     seconds_in_day = 24*3600
@@ -58,15 +58,15 @@ def DefineSlopeSettings(cross_distance):
                       'freqs_cutoff':     1./(seconds_in_day*30), # 1 month frequency
                       'delta_f':          1e-8,                   # deltaf for buffer around max peak
                       'prc_conf':         0.05,                   # percentage above minimum to define confidence bands in energy curve
-                      }
+                      'n_days':           8}                      # minimum number of days for peak freq interval
     settings_slope['date_range'] = [pytz.utc.localize(datetime(settings_slope['date_range'][0],5,1)),
                                     pytz.utc.localize(datetime(settings_slope['date_range'][1],1,1))]
     beach_slopes = range_slopes(settings_slope['slope_min'], settings_slope['slope_max'], settings_slope['delta_slope'])
     
-    # clip the dates between 1999 and 2020 as we need at least 2 Landsat satellites in orbit simultaneously 
-    idx_dates = [np.logical_and(_>settings_slope['date_range'][0],_<settings_slope['date_range'][1]) for _ in output['dates']]
-    for key in cross_distance.keys():
-        cross_distance[key] = cross_distance[key][idx_dates]
+    # # clip the dates between 1999 and 2020 as we need at least 2 Landsat satellites in orbit simultaneously 
+    # idx_dates = [np.logical_and(_>settings_slope['date_range'][0],_<settings_slope['date_range'][1]) for _ in output['dates']]
+    # for key in cross_distance.keys():
+    #     cross_distance[key] = cross_distance[key][idx_dates]
 
     return settings_slope, beach_slopes
 
