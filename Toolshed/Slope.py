@@ -19,6 +19,9 @@ from scipy import interpolate as sinterpolate
 from astropy.timeseries import LombScargle
 
 import matplotlib.pyplot as plt
+from matplotlib import cm
+from matplotlib import colorbar
+from matplotlib import lines
 
 
 #%%
@@ -32,13 +35,13 @@ def CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances):
     # find tidal peak frequency
     settings_slope['freqs_max'] = find_tide_peak(dates_sat_tr, tides_sat_tr, settings_slope)
     
-    # remove NaNs
-    idx_nan = np.isnan(cross_distances)
-    tide = tides_sat_tr[~idx_nan]
-    composite = cross_distances[~idx_nan]
+    # remove NaNs (but won't be any in VedgeSat GDF per-transect list)
+    # idx_nan = np.isnan(cross_distances)
+    # tide = tides_sat_tr[~idx_nan]
+    # composite = cross_distances[~idx_nan]
     
-    tcorr = tide_correct(composite, tide, beach_slopes)
-    slope_est, cis = integrate_power_spectrum(dates_sat_tr, tcorr, settings_slope)
+    tcorr = tide_correct(cross_distances, tides_sat_tr, beach_slopes)
+    slope_est, conf_ints = integrate_power_spectrum(dates_sat_tr, tcorr, settings_slope)
     
     return slope_est
     
@@ -158,7 +161,7 @@ def range_slopes(min_slope, max_slope, delta_slope):
     return beach_slopes
 
 
-def integrate_power_spectrum(dates_rand,tsall,settings):
+def integrate_power_spectrum(dates_rand, tsall, settings, Plot=False):
     'integrate power spectrum at the frequency band of peak tidal signal'
     t = np.array([_.timestamp() for _ in dates_rand]).astype('float64')
     seconds_in_day = 24*3600
@@ -184,29 +187,30 @@ def integrate_power_spectrum(dates_rand,tsall,settings):
     else:
         ci = [beach_slopes[np.argmin(E)],beach_slopes[np.argmin(E)]]
     
-    # plot energy vs slope curve
-    fig = plt.figure()
-    fig.set_size_inches([12,4])
-    fig.set_tight_layout(True)
-    ax = fig.add_subplot(111)
-    ax.grid(linestyle=':', color='0.5')
-    ax.set(title='Energy in tidal frequency band', xlabel='slope values',ylabel='energy')
-    ax.plot(beach_slopes_interp,E_interp,'-k',lw=1.5)
-    cmap = cm.get_cmap('RdYlGn')
-    color_list = cmap(np.linspace(0,1,len(beach_slopes)))
-    for i in range(len(beach_slopes)): ax.plot(beach_slopes[i], E[i],'o',ms=8,mec='k',mfc=color_list[i,:])
-    ax.plot(beach_slopes[np.argmin(E)],np.min(E),'bo',ms=14,mfc='None',mew=2)
-    ax.text(0.65,0.85,
-            'slope estimate = %.3f\nconf. band = [%.3f , %.3f]'%(beach_slopes[np.argmin(E)],ci[0],ci[1]),
-            transform=ax.transAxes,va='center',ha='left',
-            bbox=dict(boxstyle='round', ec='k',fc='w', alpha=0.5),fontsize=12)
-    ax.axhspan(ymin=np.min(E),ymax=np.min(E)*(1+prc),fc='0.7',alpha=0.5)
-    ybottom = ax.get_ylim()[0]
-    ax.plot([ci[0],ci[0]],[ybottom,f(ci[0])],'k--',lw=1,zorder=0)
-    ax.plot([ci[1],ci[1]],[ybottom,f(ci[1])],'k--',lw=1,zorder=0)
-    ax.plot([ci[0],ci[1]],[ybottom,ybottom],'k--',lw=1,zorder=0)
-
+    if Plot is True:
+        # plot energy vs slope curve
+        fig = plt.figure()
+        fig.set_size_inches([12,4])
+        fig.set_tight_layout(True)
+        ax = fig.add_subplot(111)
+        ax.grid(linestyle=':', color='0.5')
+        ax.set(title='Energy in tidal frequency band', xlabel='slope values',ylabel='energy')
+        ax.plot(beach_slopes_interp,E_interp,'-k',lw=1.5)
+        cmap = cm.get_cmap('RdYlGn')
+        color_list = cmap(np.linspace(0,1,len(beach_slopes)))
+        for i in range(len(beach_slopes)): ax.plot(beach_slopes[i], E[i],'o',ms=8,mec='k',mfc=color_list[i,:])
+        ax.plot(beach_slopes[np.argmin(E)],np.min(E),'bo',ms=14,mfc='None',mew=2)
+        ax.text(0.65,0.85,
+                'slope estimate = %.3f\nconf. band = [%.3f , %.3f]'%(beach_slopes[np.argmin(E)],ci[0],ci[1]),
+                transform=ax.transAxes,va='center',ha='left',
+                bbox=dict(boxstyle='round', ec='k',fc='w', alpha=0.5),fontsize=12)
+        ax.axhspan(ymin=np.min(E),ymax=np.min(E)*(1+prc),fc='0.7',alpha=0.5)
+        ybottom = ax.get_ylim()[0]
+        ax.plot([ci[0],ci[0]],[ybottom,f(ci[0])],'k--',lw=1,zorder=0)
+        ax.plot([ci[1],ci[1]],[ybottom,f(ci[1])],'k--',lw=1,zorder=0)
+        ax.plot([ci[0],ci[1]],[ybottom,ybottom],'k--',lw=1,zorder=0)
     
+        
     return beach_slopes[np.argmin(E)], ci
 
 
