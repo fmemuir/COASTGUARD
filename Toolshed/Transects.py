@@ -287,10 +287,11 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
 def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, AvBeachSlope):
     """
     Intersect waterlines with transects, based on geopandas GDFs/shapefiles.
-    Waterlines are tidally corrected using either a DEM of slopes or a single slope value for all transects.
+    Waterlines are tidally corrected using either a DEM of slopes, CoastSat.slope,
+    or a single slope value for all transects.
     
     FM Sept 2022
-
+    Updated Oct 2024
 
     Parameters
     ----------
@@ -315,7 +316,6 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
         GeoDataFrame of cross-shore transects with width between 
 
     """
-    
      
     print("performing intersections between transects and waterlines...")
     
@@ -383,8 +383,8 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     #initialise lists used for storing each transect's intersection values
     dates, distances, corrdists, welev, tzone, interpnt = ([] for i in range(6)) # per-transect lists of values
 
-    Key = [dates, distances, corrdists, welev, tzone, interpnt]
-    KeyName = ['wldates','wldists','tidezone','wlinterpnt']
+    Key = [dates, distances, interpnt]
+    KeyName = ['wldates','wldists','wlinterpnt']
        
     # for each column name
     for i in range(len(Key)):
@@ -403,8 +403,11 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
           
     # Create beach width attribute
     # must initialise with list of same length as waterline dates
-    TransectInterGDF['beachwidth'] = TransectInterGDF['wldates'].copy() 
-    # for each transect
+    TransectInterGDF['beachwidth'] = TransectInterGDF['wldates'].copy()
+    print('calculating tidally corrected cross-shore distances...')
+    # Tidal correction to get corrected distances along transects
+    TransectInterGDF = TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope)
+    # for each transect    
     for Tr in range(len(TransectGDF['TransectID'])):
         print('calculating distances between veg and water lines...')
         # dates into transect-specific list
@@ -427,10 +430,6 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
             # and calculate distance between two intersections (veg - water means +ve is veg measured seaward towards water)
             VLSLDists.append(TransectInterGDF['wlcorrdist'].iloc[Tr][D] - TransectInterGDF['distances'].iloc[Tr][DateIndex])
         TransectInterGDF['beachwidth'].iloc[Tr] = VLSLDists
-        
-        print('calculating tidally corrected cross-shore distances...')
-        # Tidal correction to get corrected distances along transects
-        TransectInterGDF = TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope)
         
         
     print("TransectDict with beach width and waterline intersections created.")
@@ -467,33 +466,34 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         Tidal elevations per transect.
 
     """
-    for Tr in range(len(TransectInterGDF )):   
-        # get the tide level corresponding to the time of sat image acquisition
-        dates_sat = []
-        for i in range(len(output['dates'])):
-            dates_sat_str = output['dates'][i] +' '+output['times'][i]
-            dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
-        
-        tide_sat = Toolbox.GetWaterElevs(settings,dates_sat)
-        tides_sat = np.array(tide_sat)
-        
-        # tidal correction along each transect
-        # elevation at which you would like the shoreline time-series to be
-        RefElev = 1.0
-        
+    # get the tide level corresponding to the time of sat image acquisition
+    dates_sat = []
+    for i in range(len(output['dates'])):
+        dates_sat_str = output['dates'][i] +' '+output['times'][i]
+        dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
+    
+    tide_sat = Toolbox.GetWaterElevs(settings,dates_sat)
+    tides_sat = np.array(tide_sat)
+    
+    # tidal correction along each transect
+    # elevation at which you would like the shoreline time-series to be
+    RefElev = 1.0
+    
+    BeachSlope = []
+    for Tr in range(len(TransectInterGDF)):   
         # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
         # TO DO: figure out way of running this per transect
         DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
         if os.path.exists(DEMpath):
             MSL = 1.0
             MHWS = 0.1
-            BeachSlope = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
+            BeachSlope.append(GetBeachSlopesDEM(MSL, MHWS, DEMpath))
         elif AvBeachSlope is None:
-            BeachSlope = Slope.CoastSatSlope()
+            cross_distances = TransectInterGDF['wldists'].iloc[Tr]
+            BeachSlope.append(Slope.CoastSatSlope(dates_sat, tide_sat, cross_distances))
         else:
-            BeachSlope = AvBeachSlope
+            BeachSlope.append(AvBeachSlope)
             
-        
         CorrIntDistances = []
         TidalStages = []
         
@@ -501,8 +501,8 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         for dt in dates_sat:
             dates_sat_d.append(dt.date())
         
-        for D, Dist in enumerate(IntersectDF['wldists']):
-            DateIndex = dates_sat_d.index(datetime.strptime(IntersectDF['wldates'][D], '%Y-%m-%d').date())
+        for D, Dist in enumerate(TransectInterGDF['wldists']):
+            DateIndex = dates_sat_d.index(datetime.strptime(TransectInterGDF['wldates'][D], '%Y-%m-%d').date())
             # calculate and apply cross-shore correction 
             TidalElev = tides_sat[DateIndex] - RefElev
             Correction = TidalElev / BeachSlope
