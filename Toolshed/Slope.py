@@ -23,22 +23,22 @@ import matplotlib.pyplot as plt
 
 #%%
 
-def CoastSatSlope(dates_sat, tide_sat, cross_distances):
+def CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances):
     
     # Slope calculation happens per-transect, so single value returned if only
     # one timeseries list is provided
     settings_slope, beach_slopes = DefineSlopeSettings(cross_distances)
     
     # find tidal peak frequency
-    settings_slope['freqs_max'] = find_tide_peak(dates_sat, tide_sat, settings_slope)
+    settings_slope['freqs_max'] = find_tide_peak(dates_sat_tr, tides_sat_tr, settings_slope)
     
     # remove NaNs
     idx_nan = np.isnan(cross_distances)
-    tide = tide_sat[~idx_nan]
+    tide = tides_sat_tr[~idx_nan]
     composite = cross_distances[~idx_nan]
     
     tcorr = tide_correct(composite, tide, beach_slopes)
-    slope_est, cis = integrate_power_spectrum(dates_sat, tcorr, settings_slope)
+    slope_est, cis = integrate_power_spectrum(dates_sat_tr, tcorr, settings_slope)
     
     return slope_est
     
@@ -52,7 +52,6 @@ def DefineSlopeSettings(cross_distances):
                       'slope_max':        0.2,                    # maximum slope to trial
                       'delta_slope':      0.005,                  # resolution of slopes to trial
                       'date_range':       [1999,2020],            # range of dates over which to perform the analysis
-                      'n_days':           7,                      # sampling period [days]
                       'n0':               50,                     # for Nyquist criterium
                       'freqs_cutoff':     1./(seconds_in_day*30), # 1 month frequency
                       'delta_f':          1e-8,                   # deltaf for buffer around max peak
@@ -61,7 +60,7 @@ def DefineSlopeSettings(cross_distances):
     settings_slope['date_range'] = [pytz.utc.localize(datetime(settings_slope['date_range'][0],5,1)),
                                     pytz.utc.localize(datetime(settings_slope['date_range'][1],1,1))]
     beach_slopes = range_slopes(settings_slope['slope_min'], settings_slope['slope_max'], settings_slope['delta_slope'])
-    
+        
     # # clip the dates between 1999 and 2020 as we need at least 2 Landsat satellites in orbit simultaneously 
     # idx_dates = [np.logical_and(_>settings_slope['date_range'][0],_<settings_slope['date_range'][1]) for _ in output['dates']]
     # for key in cross_distance.keys():
@@ -76,6 +75,13 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
     t = np.array([_.timestamp() for _ in dates]).astype('float64')
     days_in_year = 365.2425
     seconds_in_day = 24*3600
+    
+    # check if tidal frequency peak is on Day 7 or 8
+    t = np.array([_.timestamp() for _ in dates]).astype('float64')
+    delta_t = np.diff(t)
+    np.histogram(delta_t / seconds_in_day, bins=bins)
+    settings['n_days']
+    
     time_step = settings['n_days']*seconds_in_day
     freqs = frequency_grid(t,time_step,settings['n0'])
     # compute power spectrum
