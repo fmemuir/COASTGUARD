@@ -23,20 +23,20 @@ import matplotlib.pyplot as plt
 
 #%%
 
-def CoastSatSlope(dates_sat, tide_sat, cross_distance):
+def CoastSatSlope(dates_sat, tide_sat, cross_distances):
     
     # Slope calculation happens per-transect, so single value returned if only
     # one timeseries list is provided
-    settings_slope, beach_slopes = DefineSlopeSettings(cross_distance)
+    settings_slope, beach_slopes = DefineSlopeSettings(cross_distances)
     
     # find tidal peak frequency
     settings_slope['n_days'] = 8
     settings_slope['freqs_max'] = find_tide_peak(dates_sat, tide_sat, settings_slope)
     
     # remove NaNs
-    idx_nan = np.isnan(cross_distance)
+    idx_nan = np.isnan(cross_distances)
     tide = tide_sat[~idx_nan]
-    composite = cross_distance[~idx_nan]
+    composite = cross_distances[~idx_nan]
     
     tcorr = tide_correct(composite, tide, beach_slopes)
     slope_est, cis = integrate_power_spectrum(dates_sat, tcorr, settings_slope)
