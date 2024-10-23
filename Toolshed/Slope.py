@@ -108,10 +108,35 @@ def DefineSlopeSettings(cross_distances):
 
     return settings_slope
 
-def FreqParams(dates, settings_slope):
-    
+
+def FreqParams(dates_sat_tr, settings_slope):
+    """
+    Define common parameters required in various functions throughout the Slope routine.
+    FM Oct 2024
+
+    Parameters
+    ----------
+    dates_sat_tr : list
+        Datetime of satellite image capture times (per-transect timeseries).
+    settings_slope : dict
+        Dictionary of settings required for slope-finding routine.
+
+    Returns
+    -------
+    t : array
+        Array of timesteps as floats.
+    days_in_year : float
+        Number of decimal days in a year.
+    seconds_in_day : int
+        Number of seconds in a day.
+    time_step : int
+        Time interval (7 or 8 days) converted to seconds.
+    freqs : TYPE
+        Frequency grid created with Slope.frequency_grid().
+
+    """
     # set common params
-    t = np.array([_.timestamp() for _ in dates]).astype('float64')
+    t = np.array([_.timestamp() for _ in dates_sat_tr]).astype('float64')
     days_in_year = 365.2425
     seconds_in_day = 24*3600
     time_step = settings_slope['n_days']*seconds_in_day
@@ -121,6 +146,7 @@ def FreqParams(dates, settings_slope):
     return t, days_in_year, seconds_in_day, time_step, freqs
 
 
+#%%
 def find_tide_peak(dates, tide_level, settings_slope, Plot=False):
     'find the high frequency peak in the tidal time-series'
     # set common params
