@@ -27,7 +27,27 @@ from matplotlib import lines
 #%%
 
 def CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances):
-    
+    """
+    Run the main CoastSat.slope routines to get beach slope which minimises high
+    frequency tidal fluctuations compared to lower-frequency erosion/accretion signals.
+    FM Oct 2024
+
+    Parameters
+    ----------
+    dates_sat_tr : list
+        Datetime of satellite image capture times (per-transect timeseries).
+    tides_sat_tr : list
+        List of tidal elevations at each satellite image capture time (per-transect timeseries).
+    cross_distances : list
+        List of distances along a cross-shore transect where each sat-derived 
+        waterline intersects (per-transect timeseries).
+
+    Returns
+    -------
+    slope_est : float
+        Estimated tan(Beta) beach slope value.
+
+    """
     # Slope calculation happens per-transect, so single value returned if only
     # one timeseries list is provided
     settings_slope = DefineSlopeSettings(cross_distances)
