@@ -365,23 +365,9 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
             (AllIntersects['wlinterpnt'][i].x - AllIntersects['geometry'][i].coords[0][0])**2 + 
             (AllIntersects['wlinterpnt'][i].y - AllIntersects['geometry'][i].coords[0][1])**2 ))
     AllIntersects['wldists'] = distances
-    
-    # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
-    TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=AllIntersects['waterelev'])
-    ShoreLevels = []
-    for i in range(len(AllIntersects)):
-        if AllIntersects['waterelev'][i] >= TideSteps[0] and AllIntersects['waterelev'][i] <= TideSteps[1]:
-            ShoreLevels.append('lower')
-        elif AllIntersects['waterelev'][i] >= TideSteps[1] and AllIntersects['waterelev'][i] <= TideSteps[2]:
-            ShoreLevels.append('middle')
-        elif AllIntersects['waterelev'][i] >= TideSteps[2] and AllIntersects['waterelev'][i] <= TideSteps[3]:
-            ShoreLevels.append('upper')
-
-    AllIntersects['tidezone'] = ShoreLevels
-
-    
+       
     #initialise lists used for storing each transect's intersection values
-    dates, distances, corrdists, welev, tzone, interpnt = ([] for i in range(6)) # per-transect lists of values
+    dates, distances, interpnt = ([] for i in range(3)) # per-transect lists of values
 
     Key = [dates, distances, interpnt]
     KeyName = ['wldates','wldists','wlinterpnt']
@@ -400,15 +386,34 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
             Key[i].append(TrKey)
     
         TransectInterGDF[KeyName[i]] = Key[i]
-          
+        
+    
     # Create beach width attribute
     # must initialise with list of same length as waterline dates
     TransectInterGDF['beachwidth'] = TransectInterGDF['wldates'].copy()
     print('calculating tidally corrected cross-shore distances...')
     # Tidal correction to get corrected distances along transects
     TransectInterGDF = TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope)
+    
+    
     # for each transect    
     for Tr in range(len(TransectGDF['TransectID'])):
+        
+        # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
+        TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=TransectInterGDF['waterelev'])
+        ShoreLevels = []
+        # for each water elevation obs in each transect
+        for welev in TransectInterGDF['waterelev'].iloc[Tr]:
+            if welev >= TideSteps[0] and welev <= TideSteps[1]:
+                ShoreLevels.append('lower')
+            elif welev >= TideSteps[1] and welev <= TideSteps[2]:
+                ShoreLevels.append('middle')
+            elif welev >= TideSteps[2] and welev <= TideSteps[3]:
+                ShoreLevels.append('upper')
+
+        TransectInterGDF['tidezone'].iloc[Tr] = ShoreLevels
+        
+        
         print('calculating distances between veg and water lines...')
         # dates into transect-specific list
         WLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDF['wldates'].iloc[Tr]]
@@ -512,6 +517,7 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         
     TransectInterGDF['wlcorrdist'] = CorrectedDists
     TransectInterGDF['waterelev'] = TidalStages
+    TransectInterGDF['beachslope'] = BeachSlope
     
     return TransectInterGDF
 
