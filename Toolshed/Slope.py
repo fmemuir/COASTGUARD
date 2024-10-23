@@ -25,6 +25,8 @@ import matplotlib.pyplot as plt
 
 def CoastSatSlope(dates_sat, tide_sat, cross_distance):
     
+    # Slope calculation happens per-transect, so single value returned if only
+    # one timeseries list is provided
     settings_slope, beach_slopes = DefineSlopeSettings(cross_distance)
     
     # find tidal peak frequency

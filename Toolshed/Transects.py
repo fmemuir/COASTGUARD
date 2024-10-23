@@ -467,48 +467,48 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         Tidal elevations per transect.
 
     """
-    
-    # get the tide level corresponding to the time of sat image acquisition
-    dates_sat = []
-    for i in range(len(output['dates'])):
-        dates_sat_str = output['dates'][i] +' '+output['times'][i]
-        dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
-    
-    tide_sat = Toolbox.GetWaterElevs(settings,dates_sat)
-    tides_sat = np.array(tide_sat)
-    
-    # tidal correction along each transect
-    # elevation at which you would like the shoreline time-series to be
-    RefElev = 1.0
-    
-    # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
-    # TO DO: figure out way of running this per transect
-    DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
-    if os.path.exists(DEMpath):
-        MSL = 1.0
-        MHWS = 0.1
-        BeachSlope = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
-    elif AvBeachSlope is None:
-        BeachSlope = Slope.CoastSatSlope()
-    else:
-        BeachSlope = AvBeachSlope
+    for Tr in range(len(TransectInterGDF )):   
+        # get the tide level corresponding to the time of sat image acquisition
+        dates_sat = []
+        for i in range(len(output['dates'])):
+            dates_sat_str = output['dates'][i] +' '+output['times'][i]
+            dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
         
-    
-    CorrIntDistances = []
-    TidalStages = []
-    
-    dates_sat_d = []
-    for dt in dates_sat:
-        dates_sat_d.append(dt.date())
-    
-    for D, Dist in enumerate(IntersectDF['wldists']):
-        DateIndex = dates_sat_d.index(datetime.strptime(IntersectDF['wldates'][D], '%Y-%m-%d').date())
-        # calculate and apply cross-shore correction 
-        TidalElev = tides_sat[DateIndex] - RefElev
-        Correction = TidalElev / BeachSlope
-        # correction is minus because transect dists are defined land to seaward
-        CorrIntDistances.append(Dist - Correction)
-        TidalStages.append(TidalElev)
+        tide_sat = Toolbox.GetWaterElevs(settings,dates_sat)
+        tides_sat = np.array(tide_sat)
+        
+        # tidal correction along each transect
+        # elevation at which you would like the shoreline time-series to be
+        RefElev = 1.0
+        
+        # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
+        # TO DO: figure out way of running this per transect
+        DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
+        if os.path.exists(DEMpath):
+            MSL = 1.0
+            MHWS = 0.1
+            BeachSlope = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
+        elif AvBeachSlope is None:
+            BeachSlope = Slope.CoastSatSlope()
+        else:
+            BeachSlope = AvBeachSlope
+            
+        
+        CorrIntDistances = []
+        TidalStages = []
+        
+        dates_sat_d = []
+        for dt in dates_sat:
+            dates_sat_d.append(dt.date())
+        
+        for D, Dist in enumerate(IntersectDF['wldists']):
+            DateIndex = dates_sat_d.index(datetime.strptime(IntersectDF['wldates'][D], '%Y-%m-%d').date())
+            # calculate and apply cross-shore correction 
+            TidalElev = tides_sat[DateIndex] - RefElev
+            Correction = TidalElev / BeachSlope
+            # correction is minus because transect dists are defined land to seaward
+            CorrIntDistances.append(Dist - Correction)
+            TidalStages.append(TidalElev)
         
     TransectInterGDF['wlcorrdist'] = CorrectedDists
     TransectInterGDF['waterelev'] = TidalStages
