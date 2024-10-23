@@ -30,7 +30,7 @@ def CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances):
     
     # Slope calculation happens per-transect, so single value returned if only
     # one timeseries list is provided
-    settings_slope, beach_slopes = DefineSlopeSettings(cross_distances)
+    settings_slope = DefineSlopeSettings(cross_distances)
     
     # find tidal peak frequency
     settings_slope['freqs_max'] = find_tide_peak(dates_sat_tr, tides_sat_tr, settings_slope)
@@ -40,7 +40,7 @@ def CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances):
     # tide = tides_sat_tr[~idx_nan]
     # composite = cross_distances[~idx_nan]
     
-    tcorr = tide_correct(cross_distances, tides_sat_tr, beach_slopes)
+    tcorr = tide_correct(cross_distances, tides_sat_tr, settings_slope['beach_slopes'])
     slope_est, conf_ints = integrate_power_spectrum(dates_sat_tr, tcorr, settings_slope)
     
     return slope_est
@@ -61,22 +61,32 @@ def DefineSlopeSettings(cross_distances):
                       'n_days':           8}                      # minimum number of days for peak freq interval
     settings_slope['date_range'] = [pytz.utc.localize(datetime(settings_slope['date_range'][0],5,1)),
                                     pytz.utc.localize(datetime(settings_slope['date_range'][1],1,1))]
-    beach_slopes = range_slopes(settings_slope['slope_min'], settings_slope['slope_max'], settings_slope['delta_slope'])
+    settings_slope['beach_slopes'] = range_slopes(settings_slope['slope_min'], settings_slope['slope_max'], settings_slope['delta_slope'])
         
     # # clip the dates between 1999 and 2020 as we need at least 2 Landsat satellites in orbit simultaneously 
     # idx_dates = [np.logical_and(_>settings_slope['date_range'][0],_<settings_slope['date_range'][1]) for _ in output['dates']]
     # for key in cross_distance.keys():
     #     cross_distance[key] = cross_distance[key][idx_dates]
 
-    return settings_slope, beach_slopes
+    return settings_slope
+
+def FreqParams(dates, settings):
+    
+    # set common params
+    t = np.array([_.timestamp() for _ in dates]).astype('float64')
+    days_in_year = 365.2425
+    seconds_in_day = 24*3600
+    time_step = settings['n_days']*seconds_in_day
+    # create frequency grid
+    freqs = frequency_grid(t,time_step,settings['n0'])
+    
+    return t, days_in_year, seconds_in_day, time_step, freqs
 
 
 def find_tide_peak(dates, tide_level, settings, Plot=False):
     'find the high frequency peak in the tidal time-series'
-    # create frequency grid
-    t = np.array([_.timestamp() for _ in dates]).astype('float64')
-    days_in_year = 365.2425
-    seconds_in_day = 24*3600
+    # set common params
+    t, days_in_year, seconds_in_day, time_step, freqs = FreqParams(dates, settings)
     
     # check if tidal frequency peak is on Day 7 or 8
     delta_t = np.diff(t)
@@ -88,8 +98,6 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
         # change day interval to 7
         settings['n_days'] = 7
     
-    time_step = settings['n_days']*seconds_in_day
-    freqs = frequency_grid(t,time_step,settings['n0'])
     # compute power spectrum
     ps_tide,_,_ = power_spectrum(t,tide_level,freqs,[])
     # find peaks in spectrum
@@ -162,11 +170,10 @@ def range_slopes(min_slope, max_slope, delta_slope):
 
 def integrate_power_spectrum(dates_rand, tsall, settings, Plot=False):
     'integrate power spectrum at the frequency band of peak tidal signal'
-    t = np.array([_.timestamp() for _ in dates_rand]).astype('float64')
-    seconds_in_day = 24*3600
-    time_step = settings['n_days']*seconds_in_day
-    freqs = frequency_grid(t,time_step,settings['n0'])    
-    beach_slopes = range_slopes(settings['slope_min'], settings['slope_max'], settings['delta_slope'])
+    # set common params
+    t, days_in_year, seconds_in_day, time_step, freqs = FreqParams(dates_rand, settings)
+
+    beach_slopes = settings_slope['beach_slopes']
     # integrate power spectrum
     idx_interval = np.logical_and(freqs >= settings['freqs_max'][0], freqs <= settings['freqs_max'][1]) 
     E = np.zeros(beach_slopes.size)
