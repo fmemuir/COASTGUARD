@@ -37,9 +37,9 @@ def CoastSatSlope(dates_sat, tide_sat, cross_distance):
     composite = cross_distance[~idx_nan]
     
     tcorr = tide_correct(composite, tide, beach_slopes)
-    integrate_power_spectrum(dates_sat, tcorr, settings_slope)
+    slope_est, cis = integrate_power_spectrum(dates_sat, tcorr, settings_slope)
     
-    
+    return slope_est
     
 #%%
 
