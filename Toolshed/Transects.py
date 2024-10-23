@@ -491,8 +491,14 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     TidalStages = []
     
     for Tr in range(len(TransectInterGDF)):
-        dates_sat_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in TransectInterGDF['wldates'].iloc[Tr]]
+        dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in TransectInterGDF['wldates'].iloc[Tr]]
+        dates_sat_tr = [] # attach times to per-transect dates
+        for date in dates_dt_tr:
+            for dt in dates_sat:
+                if dt.date() == date:
+                    dates_sat_tr.append(datetime.combine(date, dt.time()))
         tides_sat_tr = [tide for date, tide in zip(dates_sat, tides_sat) if date.date() in dates_sat_tr]
+        matching_tides = [tide for date, tide in zip(main_dates, tide_heights) if date.date() in {subdate.date() for subdate in sublist_dates}]
         # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
         # TO DO: figure out way of running this per transect
         DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
