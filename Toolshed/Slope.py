@@ -68,7 +68,25 @@ def CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances):
 #%%
 
 def DefineSlopeSettings(cross_distances):
-    
+    """
+    Function to define the slope routine settings as a dictionary. Includes
+    the minimum number of days for peak frequency interval, a date range (which
+    isn't relevant if you have less than the 1999-2020 range), and a list of 
+    beach slopes to check the energy levels of.
+    FM Oct 2024
+
+    Parameters
+    ----------
+    cross_distances : list
+        List of distances along a cross-shore transect where each sat-derived 
+        waterline intersects (per-transect timeseries).
+
+    Returns
+    -------
+    settings_slope : dict
+        Dictionary of settings required for slope-finding routine.
+
+    """
     seconds_in_day = 24*3600
     settings_slope = {'slope_min':        0.035,                  # minimum slope to trial
                       'slope_max':        0.2,                    # maximum slope to trial
