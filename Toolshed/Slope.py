@@ -70,23 +70,23 @@ def DefineSlopeSettings(cross_distances):
 
     return settings_slope
 
-def FreqParams(dates, settings):
+def FreqParams(dates, settings_slope):
     
     # set common params
     t = np.array([_.timestamp() for _ in dates]).astype('float64')
     days_in_year = 365.2425
     seconds_in_day = 24*3600
-    time_step = settings['n_days']*seconds_in_day
+    time_step = settings_slope['n_days']*seconds_in_day
     # create frequency grid
-    freqs = frequency_grid(t,time_step,settings['n0'])
+    freqs = frequency_grid(t,time_step,settings_slope['n0'])
     
     return t, days_in_year, seconds_in_day, time_step, freqs
 
 
-def find_tide_peak(dates, tide_level, settings, Plot=False):
+def find_tide_peak(dates, tide_level, settings_slope, Plot=False):
     'find the high frequency peak in the tidal time-series'
     # set common params
-    t, days_in_year, seconds_in_day, time_step, freqs = FreqParams(dates, settings)
+    t, days_in_year, seconds_in_day, time_step, freqs = FreqParams(dates, settings_slope)
     
     # check if tidal frequency peak is on Day 7 or 8
     delta_t = np.diff(t)
@@ -96,7 +96,7 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
     day8 = np.digitize(8,bin_edges)-1
     if counts[day7] > counts[day8]: # if Day 7 peak is larger than Day 8
         # change day interval to 7
-        settings['n_days'] = 7
+        settings_slope['n_days'] = 7
     
     # compute power spectrum
     ps_tide,_,_ = power_spectrum(t,tide_level,freqs,[])
@@ -105,9 +105,9 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
     y_peaks = _['peak_heights']
     idx_peaks = idx_peaks[np.flipud(np.argsort(y_peaks))]
     # find the strongest peak at the high frequency (defined by freqs_cutoff[1])
-    idx_max = idx_peaks[freqs[idx_peaks] > settings['freqs_cutoff']][0]
+    idx_max = idx_peaks[freqs[idx_peaks] > settings_slope['freqs_cutoff']][0]
     # compute the frequencies around the max peak with some buffer (defined by buffer_coeff)
-    freqs_max = [freqs[idx_max] - settings['delta_f'], freqs[idx_max] + settings['delta_f']]
+    freqs_max = [freqs[idx_max] - settings_slope['delta_f'], freqs[idx_max] + settings_slope['delta_f']]
     
     # make a plot of the spectrum
     if Plot is True:
@@ -117,7 +117,7 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
         ax = fig.add_subplot(111)
         ax.grid(linestyle=':', color='0.5')
         ax.plot(freqs,ps_tide)
-        ax.set_title('$\Delta t$ = %d days'%settings['n_days'], x=0, ha='left')
+        ax.set_title('$\Delta t$ = %d days'%settings_slope['n_days'], x=0, ha='left')
         ax.set(xticks=[(days_in_year*seconds_in_day)**-1, (30*seconds_in_day)**-1, (16*seconds_in_day)**-1, (8*seconds_in_day)**-1],
                        xticklabels=['1y','1m','16d','8d']);
         # show top 3 peaks
@@ -127,7 +127,7 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
                     ha='center', va='bottom', fontsize=8, bbox=dict(boxstyle='square', ec='k',fc='w', alpha=0.5))
         ax.axvline(x=freqs_max[1], ls='--', c='0.5')
         ax.axvline(x=freqs_max[0], ls='--', c='0.5')
-        ax.axvline(x=(2*settings['n_days']*seconds_in_day)**-1, ls='--', c='k')
+        ax.axvline(x=(2*settings_slope['n_days']*seconds_in_day)**-1, ls='--', c='k')
     
     return freqs_max
 
@@ -168,23 +168,23 @@ def range_slopes(min_slope, max_slope, delta_slope):
     return beach_slopes
 
 
-def integrate_power_spectrum(dates_rand, tsall, settings, Plot=False):
+def integrate_power_spectrum(dates_rand, tsall, settings_slope, Plot=False):
     'integrate power spectrum at the frequency band of peak tidal signal'
     # set common params
-    t, days_in_year, seconds_in_day, time_step, freqs = FreqParams(dates_rand, settings)
+    t, days_in_year, seconds_in_day, time_step, freqs = FreqParams(dates_rand, settings_slope)
 
     beach_slopes = settings_slope['beach_slopes']
     # integrate power spectrum
-    idx_interval = np.logical_and(freqs >= settings['freqs_max'][0], freqs <= settings['freqs_max'][1]) 
+    idx_interval = np.logical_and(freqs >= settings_slope['freqs_max'][0], freqs <= settings_slope['freqs_max'][1]) 
     E = np.zeros(beach_slopes.size)
     for i in range(len(tsall)):
         ps, _, _ = power_spectrum(t,tsall[i],freqs,[])
         E[i] = sintegrate.simps(ps[idx_interval], x=freqs[idx_interval], even='avg')
     # calculate confidence interval
     delta = 0.0001
-    prc = settings['prc_conf']
+    prc = settings_slope['prc_conf']
     f = sinterpolate.interp1d(beach_slopes, E, kind='linear')
-    beach_slopes_interp = range_slopes(settings['slope_min'],settings['slope_max']-delta,delta)
+    beach_slopes_interp = range_slopes(settings_slope['slope_min'],settings_slope['slope_max']-delta,delta)
     E_interp = f(beach_slopes_interp)
     # find values below minimum + 5%
     slopes_min = beach_slopes_interp[np.where(E_interp <= np.min(E)*(1+prc))[0]]
