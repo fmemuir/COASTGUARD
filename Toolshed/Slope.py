@@ -79,8 +79,13 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
     # check if tidal frequency peak is on Day 7 or 8
     t = np.array([_.timestamp() for _ in dates]).astype('float64')
     delta_t = np.diff(t)
-    np.histogram(delta_t / seconds_in_day, bins=bins)
-    settings['n_days']
+    bin_edges = np.arange(np.min(delta_t)/seconds_in_day, np.max(delta_t)/seconds_in_day+1,1)-0.5
+    counts, bin_edges = np.histogram(delta_t / seconds_in_day, bins=bin_edges)
+    day7 = np.digitize(7,bin_edges)-1
+    day8 = np.digitize(8,bin_edges)-1
+    if counts[day7] > counts[day8]: # if Day 7 peak is larger than Day 8
+        # change day interval to 7
+        settings['n_days'] = 7
     
     time_step = settings['n_days']*seconds_in_day
     freqs = frequency_grid(t,time_step,settings['n0'])
