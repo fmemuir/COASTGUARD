@@ -52,7 +52,7 @@ def DefineSlopeSettings(cross_distances):
                       'slope_max':        0.2,                    # maximum slope to trial
                       'delta_slope':      0.005,                  # resolution of slopes to trial
                       'date_range':       [1999,2020],            # range of dates over which to perform the analysis
-                      'n_days':           8,                      # sampling period [days]
+                      'n_days':           7,                      # sampling period [days]
                       'n0':               50,                     # for Nyquist criterium
                       'freqs_cutoff':     1./(seconds_in_day*30), # 1 month frequency
                       'delta_f':          1e-8,                   # deltaf for buffer around max peak
@@ -70,7 +70,7 @@ def DefineSlopeSettings(cross_distances):
     return settings_slope, beach_slopes
 
 
-def find_tide_peak(dates, tide_level, settings):
+def find_tide_peak(dates, tide_level, settings, Plot=False):
     'find the high frequency peak in the tidal time-series'
     # create frequency grid
     t = np.array([_.timestamp() for _ in dates]).astype('float64')
@@ -88,24 +88,27 @@ def find_tide_peak(dates, tide_level, settings):
     idx_max = idx_peaks[freqs[idx_peaks] > settings['freqs_cutoff']][0]
     # compute the frequencies around the max peak with some buffer (defined by buffer_coeff)
     freqs_max = [freqs[idx_max] - settings['delta_f'], freqs[idx_max] + settings['delta_f']]
+    
     # make a plot of the spectrum
-    fig = plt.figure()
-    fig.set_size_inches([12,4])
-    fig.set_tight_layout(True)
-    ax = fig.add_subplot(111)
-    ax.grid(linestyle=':', color='0.5')
-    ax.plot(freqs,ps_tide)
-    ax.set_title('$\Delta t$ = %d days'%settings['n_days'], x=0, ha='left')
-    ax.set(xticks=[(days_in_year*seconds_in_day)**-1, (30*seconds_in_day)**-1, (16*seconds_in_day)**-1, (8*seconds_in_day)**-1],
-                   xticklabels=['1y','1m','16d','8d']);
-    # show top 3 peaks
-    for k in range(2):
-        ax.plot(freqs[idx_peaks[k]], ps_tide[idx_peaks[k]], 'ro', ms=4)
-        ax.text(freqs[idx_peaks[k]], ps_tide[idx_peaks[k]]+1, '%.1f d'%((freqs[idx_peaks[k]]**-1)/(3600*24)),
-                ha='center', va='bottom', fontsize=8, bbox=dict(boxstyle='square', ec='k',fc='w', alpha=0.5))
-    ax.axvline(x=freqs_max[1], ls='--', c='0.5')
-    ax.axvline(x=freqs_max[0], ls='--', c='0.5')
-    ax.axvline(x=(2*settings['n_days']*seconds_in_day)**-1, ls='--', c='k')
+    if Plot is True:
+        fig = plt.figure()
+        fig.set_size_inches([12,4])
+        fig.set_tight_layout(True)
+        ax = fig.add_subplot(111)
+        ax.grid(linestyle=':', color='0.5')
+        ax.plot(freqs,ps_tide)
+        ax.set_title('$\Delta t$ = %d days'%settings['n_days'], x=0, ha='left')
+        ax.set(xticks=[(days_in_year*seconds_in_day)**-1, (30*seconds_in_day)**-1, (16*seconds_in_day)**-1, (8*seconds_in_day)**-1],
+                       xticklabels=['1y','1m','16d','8d']);
+        # show top 3 peaks
+        for k in range(2):
+            ax.plot(freqs[idx_peaks[k]], ps_tide[idx_peaks[k]], 'ro', ms=4)
+            ax.text(freqs[idx_peaks[k]], ps_tide[idx_peaks[k]]+1, '%.1f d'%((freqs[idx_peaks[k]]**-1)/(3600*24)),
+                    ha='center', va='bottom', fontsize=8, bbox=dict(boxstyle='square', ec='k',fc='w', alpha=0.5))
+        ax.axvline(x=freqs_max[1], ls='--', c='0.5')
+        ax.axvline(x=freqs_max[0], ls='--', c='0.5')
+        ax.axvline(x=(2*settings['n_days']*seconds_in_day)**-1, ls='--', c='k')
+    
     return freqs_max
 
 
