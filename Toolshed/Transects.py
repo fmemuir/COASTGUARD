@@ -477,6 +477,8 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         dates_sat_str = output['dates'][i] +' '+output['times'][i]
         dates_sat.append(datetime.strptime(dates_sat_str, '%Y-%m-%d %H:%M:%S.%f'))
     
+    # more efficient to get all possible dates and matching tides, then use as
+    # lookup for each transect (rather than repeating GetWaterElevs() per-transect needlessly)
     tide_sat = Toolbox.GetWaterElevs(settings,dates_sat)
     tides_sat = np.array(tide_sat)
     
@@ -485,7 +487,12 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     RefElev = 1.0
     
     BeachSlope = []
-    for Tr in range(len(TransectInterGDF)):   
+    CorrIntDistances = []
+    TidalStages = []
+    
+    for Tr in range(len(TransectInterGDF)):
+        dates_sat_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in TransectInterGDF['wldates'].iloc[Tr]]
+        tides_sat_tr = [tide for date, tide in zip(dates_sat, tides_sat) if date.date() in dates_sat_tr]
         # if a DEM exists, use it to extract cross-shore slope between MSL and MHWS
         # TO DO: figure out way of running this per transect
         DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
@@ -494,26 +501,28 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
             MHWS = 0.1
             BeachSlope.append(GetBeachSlopesDEM(MSL, MHWS, DEMpath))
         elif AvBeachSlope is None:
+
             cross_distances = TransectInterGDF['wldists'].iloc[Tr]
-            BeachSlope.append(Slope.CoastSatSlope(dates_sat, tide_sat, cross_distances))
+            BeachSlope.append(Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances))
         else:
             BeachSlope.append(AvBeachSlope)
             
-        CorrIntDistances = []
-        TidalStages = []
+        TidalStages.append(tides_sat_tr)
         
-        dates_sat_d = []
-        for dt in dates_sat:
-            dates_sat_d.append(dt.date())
         
-        for D, Dist in enumerate(TransectInterGDF['wldists']):
-            DateIndex = dates_sat_d.index(datetime.strptime(TransectInterGDF['wldates'][D], '%Y-%m-%d').date())
-            # calculate and apply cross-shore correction 
-            TidalElev = tides_sat[DateIndex] - RefElev
-            Correction = TidalElev / BeachSlope
-            # correction is minus because transect dists are defined land to seaward
-            CorrIntDistances.append(Dist - Correction)
-            TidalStages.append(TidalElev)
+        
+        # dates_sat_d = []
+        # for dt in dates_sat:
+        #     dates_sat_d.append(dt.date())
+        
+        # for D, Dist in enumerate(TransectInterGDF['wldists']):
+        #     DateIndex = dates_sat_d.index(datetime.strptime(TransectInterGDF['wldates'][D], '%Y-%m-%d').date())
+        #     # calculate and apply cross-shore correction 
+        #     TidalElev = tides_sat[DateIndex] - RefElev
+        #     Correction = TidalElev / BeachSlope
+        #     # correction is minus because transect dists are defined land to seaward
+        #     CorrIntDistances.append(Dist - Correction)
+        #     TidalStages.append(TidalElev)
         
     TransectInterGDF['wlcorrdist'] = CorrectedDists
     TransectInterGDF['waterelev'] = TidalStages
