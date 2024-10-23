@@ -79,7 +79,6 @@ def find_tide_peak(dates, tide_level, settings, Plot=False):
     seconds_in_day = 24*3600
     
     # check if tidal frequency peak is on Day 7 or 8
-    t = np.array([_.timestamp() for _ in dates]).astype('float64')
     delta_t = np.diff(t)
     bin_edges = np.arange(np.min(delta_t)/seconds_in_day, np.max(delta_t)/seconds_in_day+1,1)-0.5
     counts, bin_edges = np.histogram(delta_t / seconds_in_day, bins=bin_edges)
