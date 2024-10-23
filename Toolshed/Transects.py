@@ -27,7 +27,7 @@ from rasterio.features import shapes
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
 
 
-from Toolshed import Toolbox, Waves
+from Toolshed import Toolbox, Waves, Slope
 from Toolshed.Coast import *
 
 
@@ -407,11 +407,11 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
         TransectInterGDF[KeyName[i]] = Key[i]
           
     # Create beach width attribute
-    print('calculating distances between veg and water lines...')
     # must initialise with list of same length as waterline dates
     TransectInterGDF['beachwidth'] = TransectInterGDF['wldates'].copy() 
     # for each transect
     for Tr in range(len(TransectGDF['TransectID'])):
+        print('calculating distances between veg and water lines...')
         # dates into transect-specific list
         WLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDF['wldates'].iloc[Tr]]
         VLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDF['dates'].iloc[Tr]]
@@ -431,20 +431,21 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
             # use date index to identify matching distance along transect
             # and calculate distance between two intersections (veg - water means +ve is veg measured seaward towards water)
             VLSLDists.append(TransectInterGDF['wlcorrdist'].iloc[Tr][D] - TransectInterGDF['distances'].iloc[Tr][DateIndex])
-            
         TransectInterGDF['beachwidth'].iloc[Tr] = VLSLDists
+        
+        print('calculating tidally corrected cross-shore distances...')
     
     print("TransectDict with beach width and waterline intersections created.")
         
     return TransectInterGDF
     
 
-def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
+def TidalCorrection(settings, output, IntersectDF, AvBeachSlope=None):
     """
     Correct cross-shore waterline distances to remove the effects of tides. Uses
-    the equation "x_tide = x + ( z_tide / tan(beta) )", where x is cross-shore
+    the equation "x_tide = x + ( z_tide / tan(Beta) )", where x is cross-shore
     distance along transect of waterline intersection, z_tide is the tidal stage
-    at a chosen elevation above sea level, and beta is the rise/run of the beach
+    at a chosen elevation above sea level, and Beta is the rise/run of the beach
     between mean sea level and mean high water spring. 
     
     FM Nov 2022
@@ -457,15 +458,15 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
         Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
     IntersectDF : GeoDataFrame
         AllIntersects GeoDataFrame with information from transect-veg edge intersections extracted.
-    AvBeachSlope : float
-        Average tan(Beta) value across the intertidal zone.
+    AvBeachSlope : float, optional
+        Average tan(Beta) value across the intertidal zone. The default value is None.
 
     Returns
     -------
-    CorrIntDistances : TYPE
-        DESCRIPTION.
-    TidalStages : TYPE
-        DESCRIPTION.
+    CorrIntDistances : list
+        Corrected cross-shore waterline distances per transect.
+    TidalStages : list
+        Tidal elevations per transect.
 
     """
     
@@ -490,9 +491,8 @@ def TidalCorrection(settings, output, IntersectDF, AvBeachSlope):
         MHWS = 0.1
         BeachSlope = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
     else:
-        # if no DEM exists, use same slope value for all transects
-        # TO DO: incorporate CoastSat.slope into this part?
         BeachSlope = AvBeachSlope
+        
     
     CorrIntDistances = []
     TidalStages = []
