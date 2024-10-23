@@ -46,7 +46,6 @@ def CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances):
 
 def DefineSlopeSettings(cross_distances):
     
-    days_in_year = 365.2425
     seconds_in_day = 24*3600
     settings_slope = {'slope_min':        0.035,                  # minimum slope to trial
                       'slope_max':        0.2,                    # maximum slope to trial
@@ -55,8 +54,8 @@ def DefineSlopeSettings(cross_distances):
                       'n0':               50,                     # for Nyquist criterium
                       'freqs_cutoff':     1./(seconds_in_day*30), # 1 month frequency
                       'delta_f':          1e-8,                   # deltaf for buffer around max peak
-                      'prc_conf':         0.05}                   # percentage above minimum to define confidence bands in energy curve
-                      # minimum number of days for peak freq interval
+                      'prc_conf':         0.05,                   # percentage above minimum to define confidence bands in energy curve
+                      'n_days':           8}                      # minimum number of days for peak freq interval
     settings_slope['date_range'] = [pytz.utc.localize(datetime(settings_slope['date_range'][0],5,1)),
                                     pytz.utc.localize(datetime(settings_slope['date_range'][1],1,1))]
     beach_slopes = range_slopes(settings_slope['slope_min'], settings_slope['slope_max'], settings_slope['delta_slope'])
