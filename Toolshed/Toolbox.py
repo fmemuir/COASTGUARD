@@ -2672,7 +2672,10 @@ def GetWaterElevs(settings, Dates_Sat):
     '''
 
     # load tidal data
-    TideFilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+    # TideFilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+    TideFilepath = os.path.join(settings['inputs']['filepath'],
+                                'tides',settings['inputs']['sitename']+'_tides_'+
+                                settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
     Tide_Data = pd.read_csv(TideFilepath, parse_dates=['date'])
     Dates_ts = [_.to_pydatetime() for _ in Tide_Data['date']]
     Tides_ts = np.array(Tide_Data['tide'])
