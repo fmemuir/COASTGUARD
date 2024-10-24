@@ -19,7 +19,6 @@ import pandas as pd
 import geopandas as gpd
 import rasterio
 from rasterio import features
-from geoarray import GeoArray 
 
 # machine learning modules
 import sklearn
@@ -209,16 +208,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # Coregistration of satellite images based on AROSICS phase shifts
             # Uses GeoArray(array, geotransform, projection)
             # Read in provided reference image (if it has been provided)
-            if settings['reference_coreg_im'] is not None:
-                # reference image to coregister to (given as filepath)
-                refArr = GeoArray(settings['reference_coreg_im'])
-                # target sat image to register (current image in loop)
-                trgArr = GeoArray(im_ms[:,:,0:3], georef, 'EPSG:'+str(image_epsg))
-                # add reference shoreline buffer (and cloud mask) to region for avoiding tie point creation
-                refArr.mask_baddata = im_ref_buffer
-                trgArr.mask_baddata = cloud_mask + im_ref_buffer
-                
-                georef = Image_Processing.Coreg(refArr,trgArr,georef)
+            if settings['reference_coreg_im'] is not None:                
+                georef = Image_Processing.Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef)
             
             if savetifs == True:
                 Image_Processing.save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)

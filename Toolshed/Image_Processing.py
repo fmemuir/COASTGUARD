@@ -16,6 +16,8 @@ import skimage.transform as transform
 import skimage.morphology as morphology
 import sklearn.decomposition as decomposition
 import skimage.exposure as exposure
+from skimage.transform import resize
+from geoarray import GeoArray 
 import rasterio
 from arosics import COREG
 
@@ -740,7 +742,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
 # AUXILIARY FUNCTIONS
 ###################################################################################################
 
-def Coreg(refArr, trgArr, georef):
+def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
     """
     Coregister each satellite image to the first one in a list of images. Uses
     the AROSICS package for calculating phase shifts in images.
@@ -758,6 +760,21 @@ def Coreg(refArr, trgArr, georef):
     newgeoref : list
         Updated/shifted georeference information for affine transforms.
     """
+    image_epsg = settings['projection_epsg']
+    
+    # reference image to coregister to (given as filepath)
+    refArr = GeoArray(settings['reference_coreg_im'])
+    # target sat image to register (current image in loop)
+    # if needed, resize target to match reference image rows and cols
+    if refArr.shape != im_ms[:,:,0:3].shape:
+        trgArr_rs = resize(im_ms[:,:,0:3], (refArr.shape[0], refArr.shape[1], im_ms[:,:,0:3].shape[2]), 
+                                mode='reflect', anti_aliasing=True)
+        trgArr = GeoArray(trgArr_rs, [georef], 'EPSG:'+str(image_epsg))
+    else:
+        trgArr = GeoArray(im_ms[:,:,0:3], georef, 'EPSG:'+str(image_epsg))
+    # add reference shoreline buffer (and cloud mask) to region for avoiding tie point creation
+    refArr.mask_baddata = im_ref_buffer
+    trgArr.mask_baddata = cloud_mask + im_ref_buffer
 
     # wp = custom matching window position in (X,Y) in same CRS as reference image
     # ws = custom matching window size in pixels as (X,Y)
