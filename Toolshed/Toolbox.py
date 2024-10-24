@@ -1480,9 +1480,9 @@ def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg): #, shpFileName):
                 outputGDF[key] = output[key][i]
             # add formatted geodataframe to list of all geodataframes
             DFlist.append(outputGDF)
-            # concatenate to one GDF with individual lines exploded out
-            outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
-            outputsGDF = outputsGDF.drop('veglines', axis=1)
+        # concatenate to one GDF with individual lines exploded out
+        outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
+        outputsGDF = outputsGDF.drop('veglines', axis=1)
     
     print(f"saving shapefile to {os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp')}")
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp'))
@@ -1535,9 +1535,9 @@ def SaveConvShapefiles_Water(outputOG, name_prefix, sitename, epsg):
                 outputGDF[key] = output[key][i]
             # add formatted geodataframe to list of all geodataframes
             DFlist.append(outputGDF)
-            # concatenate to one GDF with individual lines exploded out
-            outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
-            outputsGDF = outputsGDF.drop('waterlines', axis=1)
+        # concatenate to one GDF with individual lines exploded out
+        outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
+        outputsGDF = outputsGDF.drop('waterlines', axis=1)
     
     print(f"saving shapefile to {os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_waterlines.shp')}")        
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_waterlines.shp'))
