@@ -1483,7 +1483,8 @@ def SaveConvShapefiles(outputOG, name_prefix, sitename, epsg): #, shpFileName):
             # concatenate to one GDF with individual lines exploded out
             outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
             outputsGDF = outputsGDF.drop('veglines', axis=1)
-            
+    
+    print(f"saving shapefile to {os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp')}")
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_veglines.shp'))
     #outputsGDF.to_file(os.path.join(name_prefix, shpFileName))
     
@@ -1537,7 +1538,8 @@ def SaveConvShapefiles_Water(outputOG, name_prefix, sitename, epsg):
             # concatenate to one GDF with individual lines exploded out
             outputsGDF = gpd.GeoDataFrame( pd.concat( DFlist, ignore_index=True), crs=str(epsg))
             outputsGDF = outputsGDF.drop('waterlines', axis=1)
-            
+    
+    print(f"saving shapefile to {os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_waterlines.shp')}")        
     outputsGDF.to_file(os.path.join(name_prefix, sitename + '_' + str(min(output['dates'])) + '_' + str(max(output['dates'])) + '_waterlines.shp'))
     
     
