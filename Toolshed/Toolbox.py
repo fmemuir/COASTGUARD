@@ -667,45 +667,45 @@ def RemoveDuplicates(output):
         dates_str = [datetime.strptime(_,'%Y-%m-%d').strftime('%Y-%m-%d') for _ in dates]
         # create a dictionary with the duplicates
         dupl = dict(sorted(duplicates_dict(dates_str).items(), key=lambda x:x[1]))
-        return dupl
-
-    dupl = update_dupl(output)
-
-    while dupl:
         
-        dupl = update_dupl(output)
-        
-        # if there are duplicates, only keep the element with the longest line
         if dupl:
             # Keep duplicates with different satnames
             for key,IDval in list(dupl.items()): # has to be list so as not to change dict while looping
                 if len(set(output['satname'][IDval[0]:IDval[1]+1])) > 1:
                     del(dupl[key])
-            
-            dupcount = []
-            for key,IDval in list(dupl.items()):
-                dupcount.append(IDval[0])
-                lengths = []
-                # calculate lengths of duplicated line features
-                for v in IDval:
-                    if len(output['veglines'][output['idx'].index(v)]) > 1: # multiline feature; take sum of line lengths
-                        lengths.append(sum(output['veglines'][output['idx'].index(v)].length))
-                    else:
-                        if len(output['veglines'][output['idx'].index(v)].length) == 0: # empty geoms
-                            lengths.append(0)
-                        else:
-                            lengths.append(output['veglines'][output['idx'].index(v)].length.iloc[0])
+        return dupl
 
-                    minlenID = lengths.index(min(lengths))
-               
-                # keep the longest line (i.e. remove the shortest)
-                for okey in list(output.keys()):
-                    # delete the other keys first, leaving idx for last
-                    if okey != 'idx':
-                        delID = output['idx'].index(IDval[minlenID])
-                        del(output[okey][delID])
-                delID = output['idx'].index(IDval[minlenID])
-                del(output['idx'][delID])
+    dupl = update_dupl(output)
+      
+    # if there are duplicates, only keep the element with the longest line
+    while dupl:
+        
+        dupl = update_dupl(output)
+            
+        dupcount = []
+        for key,IDval in list(dupl.items()):
+            dupcount.append(IDval[0])
+            lengths = []
+            # calculate lengths of duplicated line features
+            for v in IDval:
+                if len(output['veglines'][output['idx'].index(v)]) > 1: # multiline feature; take sum of line lengths
+                    lengths.append(sum(output['veglines'][output['idx'].index(v)].length))
+                else:
+                    if len(output['veglines'][output['idx'].index(v)].length) == 0: # empty geoms
+                        lengths.append(0)
+                    else:
+                        lengths.append(output['veglines'][output['idx'].index(v)].length.iloc[0])
+
+                minlenID = lengths.index(min(lengths))
+           
+            # keep the longest line (i.e. remove the shortest)
+            for okey in list(output.keys()):
+                # delete the other keys first, leaving idx for last
+                if okey != 'idx':
+                    delID = output['idx'].index(IDval[minlenID])
+                    del(output[okey][delID])
+            delID = output['idx'].index(IDval[minlenID])
+            del(output['idx'][delID])
                     
         print('%d duplicates' % len(dupcount))
         
