@@ -771,6 +771,11 @@ def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
                                 mode='reflect', anti_aliasing=True)
         # use resized raster as array, and refArr georef to avoid any pixel grid mismatches
         trgArr = GeoArray(trgArr_rs, refArr.geotransform, 'EPSG:'+str(settings['projection_epsg']))
+        # also resize reference shoreline buffer and cloud mask
+        im_ref_buffer = resize(im_ref_buffer, (refArr.shape[0], refArr.shape[1]),
+                               mode='reflect', anti_aliasing=False)
+        cloud_mask = resize(cloud_mask, (refArr.shape[0], refArr.shape[1]),
+                               mode='reflect', anti_aliasing=False)
     else:
         trgArr = GeoArray(im_ms[:,:,0:3], georef, 'EPSG:'+str(settings['projection_epsg']))
     
@@ -785,18 +790,21 @@ def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
     try:
         CR.calculate_spatial_shifts()
     except: # RuntimeError for caculated shifts being abnormally large
-        print('Coreg: calculated shift is too large to be valid. georef has not changed.')
+        print('\nCoreg: calculated shift is too large to be valid. georef has not changed.')
         return georef
     # DOn't perform shift if calculation reliability is lower than 50%
     if CR.shift_reliability < 50:
-        print('Coreg: calculated shift reliability is too low (%0.1f%%). georef has not changed.' % CR.shift_reliability)
+        print('\nCoreg: calculated shift reliability is too low (%0.1f%%). georef has not changed.' % CR.shift_reliability)
         return georef
     # Correct georeferencing info based on calculated shifts
     corrCR = CR.correct_shifts()
-    print('Coreg: X shift = %0.3fm | Y shift = %0.3fm | Reliability = %0.1f%%' % (CR.x_shift_map, CR.y_shift_map, CR.shift_reliability))
+    print('\nCoreg: X shift = %0.3fm | Y shift = %0.3fm | Reliability = %0.1f%%' % (CR.x_shift_map, CR.y_shift_map, CR.shift_reliability))
     
     # Reset georef info to newly shifted georef
     newgeoref = list(corrCR['updated geotransform'])
+    # use original pixel sizes
+    newgeoref[1] = georef[1]
+    newgeoref[5] = georef[5]
 
     return newgeoref
 
