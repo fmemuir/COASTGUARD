@@ -706,9 +706,7 @@ def RemoveDuplicates(output):
                         del(output[okey][delID])
                 delID = output['idx'].index(IDval[minlenID])
                 del(output['idx'][delID])
-            
-        dupl = update_dupl(output)
-        
+                    
         print('%d duplicates' % len(dupcount))
         
     else:
