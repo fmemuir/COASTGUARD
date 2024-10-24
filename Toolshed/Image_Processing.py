@@ -760,18 +760,20 @@ def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
     newgeoref : list
         Updated/shifted georeference information for affine transforms.
     """
-    image_epsg = settings['projection_epsg']
     
     # reference image to coregister to (given as filepath)
     refArr = GeoArray(settings['reference_coreg_im'])
+    
     # target sat image to register (current image in loop)
-    # if needed, resize target to match reference image rows and cols
     if refArr.shape != im_ms[:,:,0:3].shape:
+        # if needed, resize target to match reference image rows and cols
         trgArr_rs = resize(im_ms[:,:,0:3], (refArr.shape[0], refArr.shape[1], im_ms[:,:,0:3].shape[2]), 
                                 mode='reflect', anti_aliasing=True)
-        trgArr = GeoArray(trgArr_rs, [georef], 'EPSG:'+str(image_epsg))
+        # use resized raster as array, and refArr georef to avoid any pixel grid mismatches
+        trgArr = GeoArray(trgArr_rs, refArr.geotransform, 'EPSG:'+str(settings['projection_epsg']))
     else:
-        trgArr = GeoArray(im_ms[:,:,0:3], georef, 'EPSG:'+str(image_epsg))
+        trgArr = GeoArray(im_ms[:,:,0:3], georef, 'EPSG:'+str(settings['projection_epsg']))
+    
     # add reference shoreline buffer (and cloud mask) to region for avoiding tie point creation
     refArr.mask_baddata = im_ref_buffer
     trgArr.mask_baddata = cloud_mask + im_ref_buffer
