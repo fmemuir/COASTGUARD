@@ -1314,7 +1314,8 @@ def ResumeVeglines(filepath_data, filepath_out, sitename, metadata):
             skipped = pickle.load(f)
         
         print(f"Already found outputs for {', '.join([str(i) for i in satnames_done])}")
-        print(f"starting from {satnames[0]}")
+        if len(satnames) != 0:
+            print(f"starting from {satnames[0]}")
     
     # If not, start new run
     else:

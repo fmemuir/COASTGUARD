@@ -82,6 +82,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     
     # Check if run already exists partially or if it needs to be initialised
     satnames, output, output_latlon, output_proj, skipped = Toolbox.ResumeVeglines(filepath_data, filepath_out, sitename, metadata)
+    if len(satnames) == 0: # if there are no more sats to process, finish process
+        return output, output_latlon, output_proj
     
     # create a subfolder to store the .jpg images showing the detection
     filepath_jpg = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
