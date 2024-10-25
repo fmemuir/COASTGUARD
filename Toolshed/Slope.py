@@ -158,6 +158,7 @@ def find_tide_peak(dates, tide_level, settings_slope, Plot=False):
     counts, bin_edges = np.histogram(delta_t / seconds_in_day, bins=bin_edges)
     day7 = np.digitize(7,bin_edges)-1
     day8 = np.digitize(8,bin_edges)-1
+    
     if counts[day7] > counts[day8]: # if Day 7 peak is larger than Day 8
         # change day interval to 7
         settings_slope['n_days'] = 7

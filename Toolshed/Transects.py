@@ -513,7 +513,8 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
             # if only a few observations exist, just use global-constant beach slope of tan(Beta) = 0.1
             if len(dates_sat_tr) < 10:
                 BeachSlope = 0.1
-            BeachSlope = Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances)
+            else:
+                BeachSlope = Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances)
         
         else: # just use user-provided beach-average slope
             BeachSlope = AvBeachSlope
