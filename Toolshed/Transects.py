@@ -487,7 +487,7 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     # elevation at which you would like the shoreline time-series to be
     RefElev = 1.0
     
-    # BeachSlope = [] # single value per transect
+    BeachSlopes = [] # single value per transect
     TidalStages = [] # timeseries value per transect
     CorrectedDists = [] # timeseries value per transect
     
@@ -510,14 +510,16 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
             BeachSlope = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
         
         elif AvBeachSlope is None: # no average slope provided, calculate slope
-            # if only a few observations exist, just use global-constant beach slope
+            # if only a few observations exist, just use global-constant beach slope of tan(Beta) = 0.1
             if len(dates_sat_tr) < 10:
                 BeachSlope = 0.1
             BeachSlope = Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances)
         
         else: # just use user-provided beach-average slope
             BeachSlope = AvBeachSlope
-        # generate per-transect tidal elevation list    
+        
+        # generate per-transect tidal elevation and slope list
+        BeachSlopes.append(BeachSlope)
         TidalStages.append(tides_sat_tr)
         
         # After calculating tidal stages (and beach slopes if needed), perform 
