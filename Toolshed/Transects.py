@@ -284,7 +284,7 @@ def GetIntersections(BasePath, TransectGDF, ShorelineGDF):
     
  
 
-def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, AvBeachSlope):
+def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, AvBeachSlope=None):
     """
     Intersect waterlines with transects, based on geopandas GDFs/shapefiles.
     Waterlines are tidally corrected using either a DEM of slopes, CoastSat.slope,
@@ -307,8 +307,8 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
         Dictionary of user-defined settings used for the veg edge/waterline extraction.
     output : dict
         Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
-    AvBeachSlope : float
-        Average tan(Beta) value across the intertidal zone.
+    AvBeachSlope : float, optional
+        Average tan(Beta) value across the intertidal zone. The default is None.
 
     Returns
     -------
@@ -487,9 +487,9 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     # elevation at which you would like the shoreline time-series to be
     RefElev = 1.0
     
-    BeachSlope = []
-    CorrIntDistances = []
-    TidalStages = []
+    BeachSlope = [] # single value per transect
+    TidalStages = [] # timeseries value per transect
+    CorrectedDists = [] # timeseries value per transect
     
     for Tr in range(len(TransectInterGDF)):
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in TransectInterGDF['wldates'].iloc[Tr]]
@@ -504,6 +504,8 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
             BeachSlope.append(AvBeachSlope)
             continue
         
+        cross_distances = TransectInterGDF['wldists'].iloc[Tr]
+        
         # TO DO: figure out way of running this per transect
         DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
         if os.path.exists(DEMpath):
@@ -513,16 +515,22 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         
         elif AvBeachSlope is None:
 
-            cross_distances = TransectInterGDF['wldists'].iloc[Tr]
             BeachSlope.append(Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances))
         
         else:
             BeachSlope.append(AvBeachSlope)
-            
+        # generate per-transect tidal elevation list    
         TidalStages.append(tides_sat_tr)
         
+        # After calculating tidal stages (and beach slopes if needed), perform 
+        # tidal correction on each waterline position in each transect
+        CorrectedDistsTr = []
         
-        
+        for cross_distance in cross_distances:
+            
+            CorrectedDistsTr.append()
+    
+     
         # dates_sat_d = []
         # for dt in dates_sat:
         #     dates_sat_d.append(dt.date())
