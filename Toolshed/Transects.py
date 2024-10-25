@@ -487,7 +487,7 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     # elevation at which you would like the shoreline time-series to be
     RefElev = 1.0
     
-    BeachSlope = [] # single value per transect
+    # BeachSlope = [] # single value per transect
     TidalStages = [] # timeseries value per transect
     CorrectedDists = [] # timeseries value per transect
     
@@ -499,10 +499,6 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
                 if dt.date() == date:
                     dates_sat_tr.append(datetime.combine(date, dt.time()))
         tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
-        # if only a few observations exist, just use global-constant beach slope
-        if len(dates_sat_tr) < 10:
-            BeachSlope.append(AvBeachSlope)
-            continue
         
         cross_distances = TransectInterGDF['wldists'].iloc[Tr]
         
@@ -511,23 +507,24 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         if os.path.exists(DEMpath):
             MSL = 1.0
             MHWS = 0.1
-            BeachSlope.append(GetBeachSlopesDEM(MSL, MHWS, DEMpath))
+            BeachSlope = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
         
-        elif AvBeachSlope is None:
-
-            BeachSlope.append(Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances))
+        elif AvBeachSlope is None: # no average slope provided, calculate slope
+            # if only a few observations exist, just use global-constant beach slope
+            if len(dates_sat_tr) < 10:
+                BeachSlope = 0.1
+            BeachSlope = Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances)
         
-        else:
-            BeachSlope.append(AvBeachSlope)
+        else: # just use user-provided beach-average slope
+            BeachSlope = AvBeachSlope
         # generate per-transect tidal elevation list    
         TidalStages.append(tides_sat_tr)
         
         # After calculating tidal stages (and beach slopes if needed), perform 
         # tidal correction on each waterline position in each transect
-        CorrectedDistsTr = []
-        
-        for cross_distance in cross_distances:
-            
+        CorrectedDistsTr = [] # per timestep
+        for ts, cross_distance in enumerate(cross_distances):
+            TidalElev = tides_sat[ts] - RefElev
             CorrectedDistsTr.append()
     
      
