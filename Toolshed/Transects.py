@@ -485,7 +485,7 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     
     # tidal correction along each transect
     # elevation at which you would like the shoreline time-series to be
-    RefElev = 1.0
+    RefElev = 0
     
     BeachSlopes = [] # single value per transect
     TidalStages = [] # timeseries value per transect
@@ -527,22 +527,14 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         CorrectedDistsTr = [] # per timestep
         for ts, cross_distance in enumerate(cross_distances):
             TidalElev = tides_sat[ts] - RefElev
-            CorrectedDistsTr.append()
+            Correction = TidalElev / BeachSlope
+            # correction is minus because transect dists are defined land to seaward
+            CorrectedDistsTr.append(cross_distance - Correction)
+        # append list of single corrections per-transect back onto larger list for GDF
+        CorrectedDists.append(CorrectedDistsTr)    
+        
     
-     
-        # dates_sat_d = []
-        # for dt in dates_sat:
-        #     dates_sat_d.append(dt.date())
-        
-        # for D, Dist in enumerate(TransectInterGDF['wldists']):
-        #     DateIndex = dates_sat_d.index(datetime.strptime(TransectInterGDF['wldates'][D], '%Y-%m-%d').date())
-        #     # calculate and apply cross-shore correction 
-        #     TidalElev = tides_sat[DateIndex] - RefElev
-        #     Correction = TidalElev / BeachSlope
-        #     # correction is minus because transect dists are defined land to seaward
-        #     CorrIntDistances.append(Dist - Correction)
-        #     TidalStages.append(TidalElev)
-        
+    # Once each transect has been corrected, add finished lists to geodataframe
     TransectInterGDF['wlcorrdist'] = CorrectedDists
     TransectInterGDF['waterelev'] = TidalStages
     TransectInterGDF['beachslope'] = BeachSlope
