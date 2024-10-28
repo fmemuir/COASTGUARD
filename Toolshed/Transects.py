@@ -8,7 +8,6 @@ Martin Hurst, Freya Muir - University of Glasgow
 # load modules
 import os
 import glob
-import time
 
 import numpy as np
 import pandas as pd
@@ -558,8 +557,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     TransectInterGDFWater['beachwidth'] = TransectInterGDFWater['wldates'].copy()
     print('calculating tidally corrected cross-shore distances...')
     # Tidal correction to get corrected distances along transects
-    TransectInterGDFWater = TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope)
-    
+    TransectInterGDFWater = TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope)
     
     # for each transect    
     for Tr in range(len(TransectGDF['TransectID'])):
@@ -616,6 +614,7 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
     between mean sea level and mean high water spring. 
     
     FM Nov 2022
+    Updated Oct 2024
 
     Parameters
     ----------
@@ -657,6 +656,8 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
     CorrectedDists = [] # timeseries value per transect
     
     for Tr in range(len(TransectInterGDFWater)):
+        print(f"\r{Tr} / {len(TransectInterGDFWater)}", end='\r')        
+        
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in TransectInterGDFWater['wldates'].iloc[Tr]]
         dates_sat_tr = [] # attach times to per-transect dates
         for date in dates_dt_tr:
@@ -688,14 +689,9 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
         # tidal correction on each waterline position in each transect
         CorrectedDistsTr = [] # per timestep
         for ts, cross_distance in enumerate(cross_distances):
-            try:
-                TidalElev = tides_sat_tr[ts] - RefElev
-            except:
-                import pdb
-                pdb.set_trace()
+            TidalElev = tides_sat_tr[ts] - RefElev
             Correction = TidalElev / BeachSlope
-            # correction is minus because transect dists are defined land to seaward
-            CorrectedDistsTr.append(cross_distance - Correction)
+            CorrectedDistsTr.append(cross_distance + Correction)
         # append list of single corrections per-transect back onto larger list for GDF
         CorrectedDists.append(CorrectedDistsTr)    
         
@@ -709,6 +705,105 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
     TransectInterGDFWater['waterelev'] = TidalStages
     TransectInterGDFWater['beachslope'] = BeachSlopes
     
+    return TransectInterGDFWater
+
+
+def TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope=None):
+    """
+    IN DEVELOPMENT: This is an attempt to make TidalCorrection() more efficient.
+    
+    Correct cross-shore waterline distances to remove the effects of tides. Uses
+    the equation "x_tide = x + ( z_tide / tan(Beta) )", where x is cross-shore
+    distance along transect of waterline intersection, z_tide is the tidal stage
+    at a chosen elevation above sea level, and Beta is the rise/run of the beach
+    between mean sea level and mean high water spring. 
+    
+    FM Nov 2022
+    Updated Oct 2024
+
+    Parameters
+    ----------
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
+    output : dict
+        Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
+    IntersectDF : GeoDataFrame
+        AllIntersects GeoDataFrame with information from transect-veg edge intersections extracted.
+    AvBeachSlope : float, optional
+        Average tan(Beta) value across the intertidal zone. The default value is None.
+
+    Returns
+    -------
+    CorrIntDistances : list
+        Corrected cross-shore waterline distances per transect.
+    TidalStages : list
+        Tidal elevations per transect.
+
+    """
+    
+    
+    # Parse satellite acquisition datetime and create lookup dictionary
+    dates_sat = [
+        datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f') 
+        for date, time in zip(output['dates'], output['times'])
+    ]
+    tide_dict = dict(zip(dates_sat, Toolbox.GetWaterElevs(settings, dates_sat)))
+    
+    # Reference elevation
+    RefElev = 0
+    
+    # Initialize lists for each transect's final data
+    BeachSlopes, TidalStages, CorrectedDists = [], [], []
+    
+    # Path to DEM file for slope calculation (if available)
+    DEMpath = os.path.join(settings['inputs']['filepath'], 'tides', f"{settings['inputs']['sitename']}_DEM.tif")
+    
+    # Precomputed beach slope if available
+    if os.path.exists(DEMpath):
+        MSL, MHWS = 1.0, 0.1
+        BeachSlopeDEM = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
+    else:
+        BeachSlopeDEM = None  # No DEM slope
+    
+    # Process each transect
+    for Tr, transect in TransectInterGDFWater.iterrows():
+        print(f"\r{Tr} / {len(TransectInterGDFWater)}", end='\r')        
+        # Gather and match dates for each transect's observations
+        dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in transect['wldates']]
+        dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
+        tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
+    
+        # Retrieve transect cross distances
+        cross_distances = transect['wldists']
+    
+        # Determine beach slope for this transect
+        if BeachSlopeDEM is not None:
+            BeachSlope = BeachSlopeDEM
+        elif AvBeachSlope is not None:
+            BeachSlope = AvBeachSlope
+        else:
+            # Calculate beach slope dynamically if needed
+            if len(dates_sat_tr) < 10:
+                BeachSlope = 0.1
+            else:
+                BeachSlope = Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances)
+    
+        # Correct each cross-shore distance for tidal elevation
+        CorrectedDistsTr = [
+            cross_distance + ((tide_elev - RefElev) / BeachSlope)
+            for cross_distance, tide_elev in zip(cross_distances, tides_sat_tr)
+        ]
+    
+        # Append results for this transect
+        CorrectedDists.append(CorrectedDistsTr)
+        BeachSlopes.append(BeachSlope)
+        TidalStages.append(tides_sat_tr)
+    
+    # Add results back to TransectInterGDFWater
+    TransectInterGDFWater['wlcorrdist'] = CorrectedDists
+    TransectInterGDFWater['waterelev'] = TidalStages
+    TransectInterGDFWater['beachslope'] = BeachSlopes
+
     return TransectInterGDFWater
 
 
