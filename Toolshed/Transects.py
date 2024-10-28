@@ -443,6 +443,183 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     return TransectInterGDFWater
     
 
+def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, AvBeachSlope=None):
+    """
+    IN DEVELOPMENT: This is an attempt to make GetBeachWidth() more efficient.
+    
+    Intersect waterlines with transects, based on geopandas GDFs/shapefiles.
+    Waterlines are tidally corrected using either a DEM of slopes, CoastSat.slope,
+    or a single slope value for all transects.
+    
+    
+    FM Sept 2022
+    Updated Oct 2024
+
+    Parameters
+    ----------
+    BasePath : str
+        Path to shapefiles of transects.
+    TransectGDF : GeoDataFrame
+        GDF of shore-normal transects created.
+    TransectGDF : GeoDataFrame
+        GDF of shore-normal transects created, with veg edge intersection data stored.
+    WaterlineGDF : TYPE
+        GeoDataFrame of waterlines extracted from satellite images.
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
+    output : dict
+        Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
+    AvBeachSlope : float, optional
+        Average tan(Beta) value across the intertidal zone. The default is None.
+
+    Returns
+    -------
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects with width between 
+
+    """
+     
+    print("performing intersections between transects and waterlines...")
+    
+    TransectInterGDFWater = TransectInterGDF.copy()
+    
+    # Coordinate system check
+    if TransectGDF.crs != WaterlineGDF.crs:
+        print("Coordinate systems mismatched; aligning transect CRS with shoreline CRS...")
+        TransectGDF = TransectGDF.to_crs(WaterlineGDF.crs)
+    
+    # Initialize lists to store intersections and attributes
+    ColumnData = []
+    Geoms = []
+    
+    # Spatial indexing with `sindex`
+    WaterlineGDF_sindex = WaterlineGDF.sindex
+    
+    # Perform intersection operations efficiently
+    for row in TransectGDF.itertuples():
+        _, _, ID, TrGeom, refpnt = row
+        # Extend transect line as needed
+        TrGeom = Toolbox.ExtendLine(TrGeom, 300)
+    
+        # Use spatial indexing to find possible intersecting shorelines
+        possible_matches_index = list(WaterlineGDF_sindex.intersection(TrGeom.bounds))
+        possible_matches = WaterlineGDF.iloc[possible_matches_index]
+    
+        for shore_row in possible_matches.itertuples():
+            _, dates, _, _, _, _, _, _, _, _, SGeom = shore_row
+            Intersects = TrGeom.intersection(SGeom)
+            
+            if not Intersects.is_empty:
+                ColumnData.append((ID, dates))
+                Geoms.append(Intersects)
+    
+    # Create GeoDataFrame of intersections and filter empty intersections
+    AllIntersects = gpd.GeoDataFrame(ColumnData, geometry=Geoms, columns=['TransectID', 'wldates'])
+    AllIntersects = AllIntersects[~AllIntersects.is_empty].reset_index(drop=True)
+    
+    
+    def get_first_point(geometry):
+        """Extract the first Point from a geometry, handling MultiPoint and GeometryCollection."""
+        if geometry.is_empty:
+            return None  # Return None for empty geometries
+        elif geometry.geom_type == 'Point':
+            return geometry
+        elif geometry.geom_type == 'MultiPoint':
+            return geometry.geoms[0]  # Extract first point from MultiPoint
+        elif geometry.geom_type == 'GeometryCollection':
+            # Extract the first Point within a GeometryCollection if available
+            for geom in geometry.geoms:
+                if geom.geom_type == 'Point':
+                    return geom
+        return None  # Return None if no Point is found
+
+    # Ensure that wlinterpnt only contains single Point geometries
+    AllIntersects['wlinterpnt'] = AllIntersects['geometry'].apply(get_first_point)
+
+    # Rename and merge geometry
+    AllIntersects = AllIntersects.rename_geometry('pntgeometry')
+    AllIntersects = AllIntersects.merge(TransectGDF[['TransectID', 'geometry']], on='TransectID')
+    
+    AllIntersects['wldists'] = AllIntersects.apply(
+        lambda row: row['wlinterpnt'].distance(row['geometry'].boundary[0]) if row['wlinterpnt'] else np.nan,
+        axis=1
+    )
+
+    print("Formatting into GeoDataFrame...")
+    
+    # Use dictionary to store data for each transect, avoiding repetitive loc calls
+    transect_data = {name: [] for name in ['wldates', 'wldists', 'wlinterpnt']}
+    
+    # Group by TransectID to gather intersection values per transect
+    for transect_id, group in AllIntersects.groupby('TransectID'):
+        transect_data['wldates'].append(group['wldates'].tolist())
+        transect_data['wldists'].append(group['wldists'].tolist())
+        transect_data['wlinterpnt'].append(group['wlinterpnt'].tolist())
+    
+    # Assign lists to the TransectInterGDF
+    for key, data in transect_data.items():
+        TransectInterGDF[key] = data
+    
+    # Initialize beach width attribute directly using a list comprehension
+    TransectInterGDFWater['beachwidth'] = [[] for _ in range(len(TransectInterGDFWater))]
+    
+    print("Calculating tidally corrected cross-shore distances...")
+    TransectInterGDFWater = TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope)
+    
+    # Define TideSteps once using BeachTideLoc
+    TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=TransectInterGDFWater['waterelev'])
+    
+    def assign_tide_zone(waterelev):
+        """Assigns tide zone based on water elevation for each transect row."""
+        shore_levels = []
+        for welev in waterelev:
+            if TideSteps[0] <= welev <= TideSteps[1]:
+                shore_levels.append('lower')
+            elif TideSteps[1] < welev <= TideSteps[2]:
+                shore_levels.append('middle')
+            elif TideSteps[2] < welev <= TideSteps[3]:
+                shore_levels.append('upper')
+        return shore_levels
+    
+    # Apply tide zone assignment in a vectorized manner
+    TransectInterGDFWater['tidezone'] = TransectInterGDFWater['waterelev'].apply(assign_tide_zone)
+    
+    print("Calculating distances between veg and water lines...")
+    
+    # Convert date strings to datetime objects and store in new columns for efficient access
+    TransectInterGDFWater['wldates_dt'] = TransectInterGDFWater['wldates'].apply(lambda dates: [datetime.strptime(date, '%Y-%m-%d') for date in dates])
+    TransectInterGDFWater['dates_dt'] = TransectInterGDFWater['dates'].apply(lambda dates: [datetime.strptime(date, '%Y-%m-%d') for date in dates])
+    
+    # Function to calculate distances between veg and water lines for each transect
+    def calculate_beachwidth(wl_dates, vl_dates, wlcorrdist, distances):
+        """Calculate beach width based on nearest veg line for each waterline date."""
+        VLSLDists = []
+        for wl_date, wl_dist in zip(wl_dates, wlcorrdist):
+            # Use a custom function like merge_asof for efficient date matching if dates are sorted
+            if vl_dates:
+                closest_vl_date = Toolbox.NearDate(wl_date, vl_dates)
+                if closest_vl_date:
+                    # Find index of matching date in veg line dates
+                    DateIndex = vl_dates.index(closest_vl_date)
+                    # Calculate distance and append
+                    VLSLDists.append(wl_dist - distances[DateIndex])
+                else:
+                    VLSLDists.append(np.nan)
+            else:
+                VLSLDists.append(np.nan)
+        return VLSLDists
+    
+    # Apply beach width calculation across all transects
+    TransectInterGDFWater['beachwidth'] = TransectInterGDFWater.apply(
+        lambda row: calculate_beachwidth(row['wldates_dt'], row['dates_dt'], row['wlcorrdist'], row['distances']),
+        axis=1
+    )
+
+    print("TransectDict with beach width and waterline intersections created.")
+        
+    return TransectInterGDFWater
+
+
 def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     """
     Correct cross-shore waterline distances to remove the effects of tides. Uses
