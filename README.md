@@ -12,7 +12,8 @@ Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA04
 
 
 ## :warning: PATCH NOTES :wrench:
-- **23 October 2024**: [CoastSat.slope](https://github.com/kvos/CoastSat.slope/) has now been implemented to get more robust per-transects slopes for tidal correction of waterlines, as opposed to the old way of a user-provided single slope value. You can opt to use this by writing in your driver file and then calling:
+- **28 October 2024**: Related to 23 Oct updates, the transect intersection with waterlines has been streamlined to try and speed up the process. This is in a new function `Transects.GetWaterIntersections()`. Users can still call the old/stable `Transects.GetBeachWidth()` if desired.
+- **23 October 2024**: [CoastSat.slope](https://github.com/kvos/CoastSat.slope/) has now been implemented to get more robust per-transect slopes for tidal correction of waterlines, as opposed to the old way of a user-provided single slope value. You can opt to use this by writing in your driver file and then calling:
     ```
     beachslope = None
     ...
