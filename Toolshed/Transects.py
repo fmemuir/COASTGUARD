@@ -482,7 +482,6 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
      
     print("performing intersections between transects and waterlines...")
     
-    TransectInterGDFWater = TransectInterGDF.deepcopy()
     # checking for mismatched coordinate systems
     if TransectGDF.crs != WaterlineGDF.crs:
         print("Your coordinate systems are mismatched; changing transect CRS to match shorelines CRS...")
@@ -526,7 +525,6 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     AllIntersects = AllIntersects.drop('pntgeometry',axis=1)
     
-    print("formatting into GeoDataFrame...")
     # calculate distances of intersections 
     # START of faster code
     AllIntersects['wldists'] = AllIntersects.apply(
@@ -534,6 +532,8 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         if row['wlinterpnt'] 
         else np.nan, axis=1)
 
+    print("formatting into GeoDataFrame...")
+    TransectInterGDFWater = TransectInterGDF.copy()
     # Initialise dictionary with empty lists for each TransectID in TransectInterGDFWater
     WLData = {name: [[] for _ in range(len(TransectInterGDFWater))] for name in ['wldates', 'wldists', 'wlinterpnt']}
 
