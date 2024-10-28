@@ -319,6 +319,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
      
     print("performing intersections between transects and waterlines...")
     
+    TransectInterGDFWater = TransectInterGDF.copy()
     # checking for mismatched coordinate systems
     if TransectGDF.crs != WaterlineGDF.crs:
         print("Your coordinate systems are mismatched; changing transect CRS to match shorelines CRS...")
@@ -385,25 +386,25 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
                 TrKey.append(AllIntersects[KeyName[i]].loc[AllIntersects['TransectID']==Tr].iloc[j]) 
             Key[i].append(TrKey)
     
-        TransectInterGDF[KeyName[i]] = Key[i]
+        TransectInterGDFWater[KeyName[i]] = Key[i]
         
     
     # Create beach width attribute
     # must initialise with list of same length as waterline dates
-    TransectInterGDF['beachwidth'] = TransectInterGDF['wldates'].copy()
+    TransectInterGDFWater['beachwidth'] = TransectInterGDFWater['wldates'].copy()
     print('calculating tidally corrected cross-shore distances...')
     # Tidal correction to get corrected distances along transects
-    TransectInterGDF = TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope)
+    TransectInterGDFWater = TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope)
     
     
     # for each transect    
     for Tr in range(len(TransectGDF['TransectID'])):
         
         # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
-        TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=TransectInterGDF['waterelev'])
+        TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=TransectInterGDFWater['waterelev'])
         ShoreLevels = []
         # for each water elevation obs in each transect
-        for welev in TransectInterGDF['waterelev'].iloc[Tr]:
+        for welev in TransectInterGDFWater['waterelev'].iloc[Tr]:
             if welev >= TideSteps[0] and welev <= TideSteps[1]:
                 ShoreLevels.append('lower')
             elif welev >= TideSteps[1] and welev <= TideSteps[2]:
@@ -411,13 +412,13 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
             elif welev >= TideSteps[2] and welev <= TideSteps[3]:
                 ShoreLevels.append('upper')
 
-        TransectInterGDF['tidezone'].iloc[Tr] = ShoreLevels
+        TransectInterGDFWater['tidezone'].iloc[Tr] = ShoreLevels
         
         
         print('calculating distances between veg and water lines...')
         # dates into transect-specific list
-        WLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDF['wldates'].iloc[Tr]]
-        VLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDF['dates'].iloc[Tr]]
+        WLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDFWater['wldates'].iloc[Tr]]
+        VLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDFWater['dates'].iloc[Tr]]
         # find index of closest waterline date to each vegline date
         VLSLDists = []
         for D, WLDate in enumerate(WLDateList):
@@ -433,13 +434,13 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
                 continue
             # use date index to identify matching distance along transect
             # and calculate distance between two intersections (veg - water means +ve is veg measured seaward towards water)
-            VLSLDists.append(TransectInterGDF['wlcorrdist'].iloc[Tr][D] - TransectInterGDF['distances'].iloc[Tr][DateIndex])
-        TransectInterGDF['beachwidth'].iloc[Tr] = VLSLDists
+            VLSLDists.append(TransectInterGDFWater['wlcorrdist'].iloc[Tr][D] - TransectInterGDFWater['distances'].iloc[Tr][DateIndex])
+        TransectInterGDFWater['beachwidth'].iloc[Tr] = VLSLDists
         
         
     print("TransectDict with beach width and waterline intersections created.")
         
-    return TransectInterGDF
+    return TransectInterGDFWater
     
 
 def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
