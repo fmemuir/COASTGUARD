@@ -607,7 +607,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     return TransectInterGDFWater
 
 
-def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
+def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
     """
     Correct cross-shore waterline distances to remove the effects of tides. Uses
     the equation "x_tide = x + ( z_tide / tan(Beta) )", where x is cross-shore
@@ -656,8 +656,8 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
     TidalStages = [] # timeseries value per transect
     CorrectedDists = [] # timeseries value per transect
     
-    for Tr in range(len(TransectInterGDF)):
-        dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in TransectInterGDF['wldates'].iloc[Tr]]
+    for Tr in range(len(TransectInterGDFWater)):
+        dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in TransectInterGDFWater['wldates'].iloc[Tr]]
         dates_sat_tr = [] # attach times to per-transect dates
         for date in dates_dt_tr:
             for dt in dates_sat:
@@ -665,7 +665,7 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
                     dates_sat_tr.append(datetime.combine(date, dt.time()))
         tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
         
-        cross_distances = TransectInterGDF['wldists'].iloc[Tr]
+        cross_distances = TransectInterGDFWater['wldists'].iloc[Tr]
         
         # TO DO: figure out way of running this per transect
         DEMpath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_DEM.tif')
@@ -705,11 +705,11 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         
     
     # Once each transect has been corrected, add finished lists to geodataframe
-    TransectInterGDF['wlcorrdist'] = CorrectedDists
-    TransectInterGDF['waterelev'] = TidalStages
-    TransectInterGDF['beachslope'] = BeachSlope
+    TransectInterGDFWater['wlcorrdist'] = CorrectedDists
+    TransectInterGDFWater['waterelev'] = TidalStages
+    TransectInterGDFWater['beachslope'] = BeachSlope
     
-    return TransectInterGDF
+    return TransectInterGDFWater
 
 
 def GetBeachSlopesDEM(MSL, MHWS, DEMpath):
