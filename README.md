@@ -12,26 +12,33 @@ Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA04
 
 
 ## :warning: PATCH NOTES :wrench:
+- **23 October 2024**: [CoastSat.slope](https://github.com/kvos/CoastSat.slope/) has now been implemented to get more robust per-transects slopes for tidal correction of waterlines, as opposed to the old way of a user-provided single slope value. You can opt to use this by writing in your driver file and then calling:
+    ```
+    beachslope = None
+    ...
+    TransectInterGDFWater = Transects.GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)
+    ```
+    (or use the old method by providing an average value between 0.007 and 0.565, e.g. `beachslope = 0.01`).
 - **14 October 2024**: Google Earth Engine has migrated all Landsat images from Collection 1 to Collection 2. This means the server names/paths have changed from `C01` to `C02`. This has been updated throughout the code, more details in [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/18) and in [the GEE documentation](https://developers.google.com/earth-engine/landsat_c1_to_c2).
 - **26 June 2024**: Some new Sentinel-2 images no longer have the same quality assurance/masking band names (QA10, QA20, QA60). QA60 is used to generate cloud masks in pre-processing. An option has been added to use the new opaque cloud mask band name MSK_CLASSI_OPAQUE if QA60 isn't available. More details in [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/13).
 - **25 March 2024**: In response to the Copernicus Marine Service November 2023 updates, the wave data download functions have been overhauled ([more info here](https://marine.copernicus.eu/news/unveiling-exciting-updates-copernicus-marine-service-november-2023-release)). Use of Motu for downloading data has been discontinued, the in-house Copernicus client is now being used instead (which is only working via `pip` right now). **This requires the `copernicusmarine` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
-```
-conda activate coastguard
-pip install copernicusmarine
-```
+    ```
+    conda activate coastguard
+    pip install copernicusmarine
+    ```
 
 - **28 February 2024**: Second update to the code in response to the same issue; location mismatches were found in the coastal buffer vs. satellite images, but only for Landsat imagery (see [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/10) for more info). The reason is Landsat images are always stored in projection system UTM North (even if in the southern hemisphere), to avoid issues with images falling across the equator. A function to find correct UTM codes for a user's AOI has been included in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/Toolbox.py). **This requires the `utm` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
-```
-conda activate coastguard
-conda install utm
-```
+    ```
+    conda activate coastguard
+    conda install utm
+    ```
 
 - **21 February 2024**: Recent updates have been made to incorporate the AROSICS package into the COASTGUARD toolkit, to coregister satellite images after obtaining their metadata (and georeferencing info) from GEE. Implementing this led to knock-on changes that were made (namely a big update to `geemap`). See [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/10) for more info. **This requires the `arosics` package and an update to the `geemap` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
-```
-conda activate coastguard
-conda update geemap
-conda install arosics
-```
+    ```
+    conda activate coastguard
+    conda update geemap
+    conda install arosics
+    ```
 
 - **January 2024**: Google have recently updated their authentication proces for using Earth Engine. You may be prompted to create an Earth Engine cloud project before you can generate a token for using Earth Engine within notebook environments. **Just call it something related like ee-coastguard.**
 
