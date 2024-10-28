@@ -684,10 +684,6 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
         else: # just use user-provided beach-average slope
             BeachSlope = AvBeachSlope
         
-        # generate per-transect tidal elevation and slope list
-        BeachSlopes.append(BeachSlope)
-        TidalStages.append(tides_sat_tr)
-        
         # After calculating tidal stages (and beach slopes if needed), perform 
         # tidal correction on each waterline position in each transect
         CorrectedDistsTr = [] # per timestep
@@ -703,11 +699,15 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
         # append list of single corrections per-transect back onto larger list for GDF
         CorrectedDists.append(CorrectedDistsTr)    
         
+        # generate per-transect tidal elevation and slope list
+        BeachSlopes.append(BeachSlope)
+        TidalStages.append(tides_sat_tr)
+        
     
     # Once each transect has been corrected, add finished lists to geodataframe
     TransectInterGDFWater['wlcorrdist'] = CorrectedDists
     TransectInterGDFWater['waterelev'] = TidalStages
-    TransectInterGDFWater['beachslope'] = BeachSlope
+    TransectInterGDFWater['beachslope'] = BeachSlopes
     
     return TransectInterGDFWater
 
