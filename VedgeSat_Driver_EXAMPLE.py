@@ -177,6 +177,7 @@ DistanceOffshore = 100
 
 # provide average beach slope for site, for calculating corrected beach widths
 beachslope = 0.24
+# beachslope = None
 
 
 #%% Create Cross-shore Transects
@@ -229,7 +230,7 @@ if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '
         TransectInterGDFWater = pickle.load(f)
 else:        
     if settings['wetdry'] == True:
-        TransectInterGDFWater = Transects.GetBeachWidth(LinesPath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
+        TransectInterGDFWater = Transects.GetWaterIntersections(LinesPath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
         TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  LinesPath, sitename)
     
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl'), 'wb') as f:
