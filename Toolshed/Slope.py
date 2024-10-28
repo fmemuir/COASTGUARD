@@ -88,9 +88,9 @@ def DefineSlopeSettings(cross_distances):
 
     """
     seconds_in_day = 24*3600
-    settings_slope = {'slope_min':        0.035,                  # minimum slope to trial
-                      'slope_max':        0.2,                    # maximum slope to trial
-                      'delta_slope':      0.005,                  # resolution of slopes to trial
+    settings_slope = {'slope_min':        0.001,                  # minimum slope to trial (global 10th%)
+                      'slope_max':        0.5,                    # maximum slope to trial (global 90th%)
+                      'delta_slope':      0.003,                  # resolution of slopes to trial
                       'date_range':       [1999,2020],            # range of dates over which to perform the analysis
                       'n0':               50,                     # for Nyquist criterium
                       'freqs_cutoff':     1./(seconds_in_day*30), # 1 month frequency
