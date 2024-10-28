@@ -475,14 +475,14 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
 
     Returns
     -------
-    TransectInterGDF : GeoDataFrame
+    TransectInterGDFWater : GeoDataFrame
         GeoDataFrame of cross-shore transects with width between 
 
     """
      
     print("performing intersections between transects and waterlines...")
     
-    TransectInterGDFWater = TransectInterGDF.copy()
+    TransectInterGDFWater = TransectInterGDF.deepcopy()
     # checking for mismatched coordinate systems
     if TransectGDF.crs != WaterlineGDF.crs:
         print("Your coordinate systems are mismatched; changing transect CRS to match shorelines CRS...")
@@ -533,30 +533,26 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         lambda row: row['wlinterpnt'].distance(Point(row['geometry'].coords[0])) 
         if row['wlinterpnt'] 
         else np.nan, axis=1)
+
+    # Initialise dictionary with empty lists for each TransectID in TransectInterGDFWater
+    WLData = {name: [[] for _ in range(len(TransectInterGDFWater))] for name in ['wldates', 'wldists', 'wlinterpnt']}
+
+    # Create a mapping of TransectID to index for quick assignment
+    Tr_Ind = {Tr: idx for idx, Tr in enumerate(TransectInterGDFWater['TransectID'])}
+
+    # Populate WLData only for TransectIDs with intersections
+    for TrID, group in AllIntersects.groupby('TransectID'):
+        idx = Tr_Ind[TrID]  # Get the index in TransectInterGDF for this TransectID
+        WLData['wldates'][idx] = group['wldates'].tolist()
+        WLData['wldists'][idx] = group['wldists'].tolist()
+        WLData['wlinterpnt'][idx] = group['wlinterpnt'].tolist()
+
+    # Assign now-filled lists to the corresponding TransectInterGDFWater columns
+    for key, data in WLData.items():
+        TransectInterGDFWater[key] = data
+        
     # END of faster code
 
-    #initialise lists used for storing each transect's intersection values
-    dates, distances, interpnt = ([] for i in range(3)) # per-transect lists of values
-
-    Key = [dates, distances, interpnt]
-    KeyName = ['wldates','wldists','wlinterpnt']
-       
-    # for each column name
-    for i in range(len(Key)):
-        # for each transect
-        for Tr in range(len(TransectGDF['TransectID'])):
-            # refresh per-transect list
-            TrKey = []
-            # for each matching intersection on a single transect
-            for j in range(len(AllIntersects.loc[AllIntersects['TransectID']==Tr])):
-                # append each intersection value to a list for each transect
-                # iloc used so index doesn't restart at 0 each loop
-                TrKey.append(AllIntersects[KeyName[i]].loc[AllIntersects['TransectID']==Tr].iloc[j]) 
-            Key[i].append(TrKey)
-    
-        TransectInterGDFWater[KeyName[i]] = Key[i]
-        
-    
     # Create beach width attribute
     # must initialise with list of same length as waterline dates
     TransectInterGDFWater['beachwidth'] = TransectInterGDFWater['wldates'].copy()
