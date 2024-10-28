@@ -527,7 +527,11 @@ def TidalCorrection(settings, output, TransectInterGDF, AvBeachSlope=None):
         # tidal correction on each waterline position in each transect
         CorrectedDistsTr = [] # per timestep
         for ts, cross_distance in enumerate(cross_distances):
-            TidalElev = tides_sat[ts] - RefElev
+            try:
+                TidalElev = tides_sat_tr[ts] - RefElev
+            except:
+                import pdb
+                pdb.set_trace()
             Correction = TidalElev / BeachSlope
             # correction is minus because transect dists are defined land to seaward
             CorrectedDistsTr.append(cross_distance - Correction)
