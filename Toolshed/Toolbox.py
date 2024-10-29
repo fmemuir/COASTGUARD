@@ -2732,7 +2732,8 @@ def BeachTideLoc(settings, TideSeries=None):
     '''
     
     if TideSeries is None:
-        tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv')
+        tidefilepath = os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+
+                                    '_tides_'+settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
         tide_data = pd.read_csv(tidefilepath, parse_dates=['date'])
         tides_ts = np.array(tide_data['tide'])
     else:
