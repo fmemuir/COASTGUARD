@@ -752,7 +752,7 @@ def VegWaterSeasonality(sitename, TransectInterGDF, TransectIDs, Titles=None, He
             polysat = np.poly1d([m, c])
             xx = np.linspace(numx.min(), numx.max(), 100)
             dd = mpl.dates.num2date(xx)
-            twin_TS.plot(dd, polysat(xx), '--', color=clr, lw=1, label=twin_lab+r' $\Delta Y$ = '+str(round(m*365.25,2))+' m/yr', zorder=1)
+            twin_TS.plot(dd, polysat(xx), '--', color=clr, lw=1, label=r'$\Delta$'+twin_lab+' = '+str(round(m*365.25,2))+' m/yr', zorder=1)
             twin_TS.set_ylim(np.nanmin(y)-(np.nanmin(y)/10), np.nanmax(y)+(np.nanmax(y)/10))
             twin_TS_lim.append(twin_TS.get_ylim())
 
@@ -3100,7 +3100,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
             polysat = np.poly1d([m, c])
             xx = np.linspace(x.min(), x.max(), 100)
             dd = mpl.dates.num2date(xx)
-            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1.5, zorder=10, label=r'$\Delta Y$ = '+str(round(m*365.25,2))+' m/yr')
+            pltax.plot(dd, polysat(xx), '--', color=clr, lw=1.5, zorder=10, label=r'$\Delta VE$ = '+str(round(m*365.25,2))+' m/yr')
     
         # Vertical lines marking storm events
         for Storm in range(len(StormsDF)):
