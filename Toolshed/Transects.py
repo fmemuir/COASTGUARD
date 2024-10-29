@@ -1038,6 +1038,7 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename):
     TransectInterShp = TransectInterGDFWater.copy()
 
     # reformat fields with lists to strings
+    # get only the columns that are made of lists
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
         # round any floating points numbers before export
