@@ -524,8 +524,8 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     AllIntersects = AllIntersects.merge(TransectGDF[['TransectID','geometry']], on='TransectID')
     AllIntersects = AllIntersects.drop('pntgeometry',axis=1)
     
-    # calculate distances of intersections 
     # START of faster code
+    # calculate distances of intersections 
     AllIntersects['wldists'] = AllIntersects.apply(
         lambda row: row['wlinterpnt'].distance(Point(row['geometry'].coords[0])) 
         if row['wlinterpnt'] 
@@ -540,11 +540,13 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     Tr_Ind = {Tr: idx for idx, Tr in enumerate(TransectInterGDFWater['TransectID'])}
 
     # Populate WLData only for TransectIDs with intersections
-    for TrID, group in AllIntersects.groupby('TransectID'):
+    for TrID, TrGroup in AllIntersects.groupby('TransectID'):
+        # Sort the wldists lists to maintain temporal order
+        TrGroup_sort = TrGroup.sort_values(by='wldates')
         idx = Tr_Ind[TrID]  # Get the index in TransectInterGDF for this TransectID
-        WLData['wldates'][idx] = group['wldates'].tolist()
-        WLData['wldists'][idx] = group['wldists'].tolist()
-        WLData['wlinterpnt'][idx] = group['wlinterpnt'].tolist()
+        WLData['wldates'][idx] = TrGroup_sort['wldates'].tolist()
+        WLData['wldists'][idx] = TrGroup_sort['wldists'].tolist()
+        WLData['wlinterpnt'][idx] = TrGroup_sort['wlinterpnt'].tolist()
 
     # Assign now-filled lists to the corresponding TransectInterGDFWater columns
     for key, data in WLData.items():
@@ -552,15 +554,15 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         
     # END of faster code
 
-    # Create beach width attribute
-    # must initialise with list of same length as waterline dates
-    TransectInterGDFWater['beachwidth'] = TransectInterGDFWater['wldates'].copy()
     print('calculating tidally corrected cross-shore distances...')
     # Tidal correction to get corrected distances along transects
     TransectInterGDFWater = TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope)
     
+    # Create beach width and attributes
+    # must initialise with list of same length as waterline dates
+    TransectInterGDFWater['beachwidth'] = TransectInterGDFWater['wldates'].copy()
     TideSteps = Toolbox.BeachTideLoc(settings)
-    TransectInterGDFWater['tidezone'] = TransectInterGDFWater['TransectID'].copy()
+    TransectInterGDFWater['tidezone'] = TransectInterGDFWater['tideelev'].copy()
     # for each transect    
     for Tr in range(len(TransectGDF['TransectID'])):
         
@@ -599,7 +601,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         TransectInterGDFWater['beachwidth'].iloc[Tr] = VLSLDists
         
         
-    print("TransectDict with beach width and waterline intersections created.")
+    print("\nTransectDict with beach width and waterline intersections created.")
         
     return TransectInterGDFWater
 
