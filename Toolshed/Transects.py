@@ -559,11 +559,12 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     # Tidal correction to get corrected distances along transects
     TransectInterGDFWater = TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope)
     
+    TideSteps = Toolbox.BeachTideLoc(settings)
+    TransectInterGDFWater['tidezone'] = TransectInterGDFWater['TransectID'].copy()
     # for each transect    
     for Tr in range(len(TransectGDF['TransectID'])):
         
         # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
-        TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=TransectInterGDFWater['waterelev'])
         ShoreLevels = []
         # for each water elevation obs in each transect
         for welev in TransectInterGDFWater['waterelev'].iloc[Tr]:
@@ -576,8 +577,6 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
 
         TransectInterGDFWater['tidezone'].iloc[Tr] = ShoreLevels
         
-        
-        print('calculating distances between veg and water lines...')
         # dates into transect-specific list
         WLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDFWater['wldates'].iloc[Tr]]
         VLDateList = [datetime.strptime(date, '%Y-%m-%d') for date in TransectInterGDFWater['dates'].iloc[Tr]]
@@ -767,7 +766,7 @@ def TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope=None)
     
     # Process each transect
     for Tr, transect in TransectInterGDFWater.iterrows():
-        print(f"\r{Tr} / {len(TransectInterGDFWater)}", end='\r')        
+        print(f"\r{Tr} / {len(TransectInterGDFWater)}", end='')       
         # Gather and match dates for each transect's observations
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in transect['wldates']]
         dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
@@ -1010,7 +1009,7 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename):
             youngdate.append(DateRange[-1]) # youngest date in timeseries
             oldyoungT.append(FullDateTime) # time difference in years between oldest and youngest date
             oldyoungRt.append(Slopes[0]) # rate of change from oldest to youngest veg edge in m/yr
-            oldyoungME.append(MoEs[0]) # margin or error (plus or minus) on old to young rate in m/yr
+            oldyoungME.append(MoEs[0]) # margin of error (plus or minus) on old to young rate in m/yr
             recentT.append(RecentDateTime) # time difference in years between second youngest and youngest date
             recentRt.append(Slopes[1]) # rate of change from second youngest to youngest veg edge in m/yr
             recentME.append(MoEs[1]) # margin or error (plus or minus) on second youngest to youngest rate in m/yr
@@ -1020,14 +1019,16 @@ def SaveWaterIntersections(TransectInterGDFWater, LinesGDF, BasePath, sitename):
             youngdate.append(np.nan) # youngest date in timeseries
             oldyoungT.append(np.nan) # time difference in years between oldest and youngest date
             oldyoungRt.append(np.nan) # rate of change from oldest to youngest veg edge in m/yr
+            oldyoungME.append(np.nan) # margin of error (plus or minus) on old to young rate in m/yr
             recentT.append(np.nan) # time difference in years between second youngest and youngest date
             recentRt.append(np.nan) # rate of change from second youngest to youngest veg edge in m/yr
+            recentME.append(np.nan) # margin or error (plus or minus) on second youngest to youngest rate in m/yr
     
     TransectInterGDFWater['olddateW'] = olddate # oldest date in timeseries
     TransectInterGDFWater['youngdateW'] = youngdate # youngest date in timeseries
     TransectInterGDFWater['oldyoungTW'] = oldyoungT # time difference in years between oldest and youngest date
     TransectInterGDFWater['oldyungRtW'] = oldyoungRt # rate of change from oldest to youngest veg edge in m/yr
-    TransectInterGDFWater['oldyungMEW'] = oldyoungME # margin or error (plus or minus) on old to young rate in m/yr
+    TransectInterGDFWater['oldyungMEW'] = oldyoungME # margin of error (plus or minus) on old to young rate in m/yr
     TransectInterGDFWater['recentTW'] = recentT # time difference in years between second youngest and youngest date
     TransectInterGDFWater['recentRtW'] = recentRt # rate of change from second youngest to youngest veg edge in m/yr
     TransectInterGDFWater['recentMEW'] = recentME # margin or error (plus or minus) on second youngest to youngest rate in m/yr
