@@ -251,9 +251,9 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Title
     for TransectID, ax, Title in zip(TransectIDs,axs, Titles):
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
-        plotsatdistFull = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         # remove and interpolate outliers
-        plotsatdist = InterpNaN(plotsatdistFull)
+        plotsatdistinterp = InterpNaN(plotsatdist)
         
         if len(plotdate) == 0:
             print('Transect %s is empty! No values to plot.' % (TransectID))
@@ -289,7 +289,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Title
             ax.add_patch(rect)
           
         # plot trendlines
-        vegav = MovingAverage(plotsatdist, 3)
+        vegav = MovingAverage(plotsatdistinterp, 3)
         if len(plotdate) >= 3:
             ax.plot(plotdate, vegav, color='#81A739', lw=1.5, label='3pt Mov. Av. VegEdge')
     
@@ -308,7 +308,7 @@ def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Title
         # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
         # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
         # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
-        ax.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+20)
+        ax.set_ylim(np.nanmin(plotsatdistinterp)-10, np.nanmax(plotsatdistinterp)+20)
         ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
         
         leg1 = ax.legend(loc=2, ncol=3, handlelength=2., handletextpad=0.5, columnspacing=1.5)
@@ -399,9 +399,9 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
     for TransectID, ax in zip(TransectIDs,axs):
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
-        plotsatdistFull = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         # remove and interpolate outliers
-        plotsatdist = InterpNaN(plotsatdistFull)
+        plotsatdistinterp = InterpNaN(plotsatdist)
         
         if len(plotdate) == 0:
             print('Transect %s is empty! No values to plot.' % (TransectID))
@@ -437,7 +437,7 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
             # ax.add_patch(rect)
           
         # plot trendlines
-        vegav = MovingAverage(plotsatdist, 3)
+        vegav = MovingAverage(plotsatdistinterp, 3)
         if len(plotdate) >= 3:
             neonplot(plotdate, vegav, colour='#24FC0E',ax=ax)
     
@@ -456,7 +456,7 @@ def VegTimeseriesNeon(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', S
         # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
         # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
         # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
-        ax.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
+        ax.set_ylim(np.nanmin(plotsatdistinterp)-10, np.nanmax(plotsatdistinterp)+30)
         ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
         
         leg1 = ax.legend(loc=2)
@@ -540,11 +540,11 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
         plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID][daterange[0]:daterange[1]]]
-        plotsatdistFull = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
-        plotwldistFull = TransectInterGDF['wlcorrdist'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID][daterange[0]:daterange[1]]
         # remove and interpolate outliers
-        plotsatdist = InterpNaN(plotsatdistFull)
-        plotwldist = InterpNaN(plotwldistFull)
+        plotsatdistinterp = InterpNaN(plotsatdist)
+        plotwldistinterp = InterpNaN(plotwldist)
         
         if len(plotdate) == 0:
             print('no intersections on Transect',TransectID)
@@ -583,8 +583,8 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
             ax.add_patch(rect)
           
         # plot trendlines
-        vegav = MovingAverage(plotsatdist, 3)
-        wlav = MovingAverage(plotwldist, 3)
+        vegav = MovingAverage(plotsatdistinterp, 3)
+        wlav = MovingAverage(plotwldistinterp, 3)
         if len(plotwldate) != len(wlav):
             print('inconsistent number of plot dates to water level moving average (3pts), Transect', TransectID)
             return
@@ -606,8 +606,8 @@ def VegWaterTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', 
         ax.title.set_text('Transect '+str(TransectID))
             
 
-        ax2.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
-        ax.set_ylim(np.nanmin(plotwldist)-10, np.nanmax(plotwldist)+30)
+        ax2.set_ylim(np.nanmin(plotsatdistinterp)-10, np.nanmax(plotsatdistinterp)+30)
+        ax.set_ylim(np.nanmin(plotwldistinterp)-10, np.nanmax(plotwldistinterp)+30)
         if len(plotdate) > len(plotwldate): # set axis limits to longer timeframe
             ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
         else:
@@ -1094,9 +1094,9 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
     for TransectID, ax in zip(TransectIDs,axs):
         daterange = [0,len(TransectInterGDFTopo['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFTopo['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
-        plotsatdistFull = TransectInterGDFTopo['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotsatdist = TransectInterGDFTopo['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         # remove and interpolate outliers
-        plotsatdist = InterpNaN(plotsatdistFull)
+        plotsatdistinterp = InterpNaN(plotsatdist)
         plotTZ = TransectInterGDFTopo['TZwidth'].iloc[TransectID][daterange[0]:daterange[1]]
         plotTZMn = TransectInterGDFTopo['TZwidthMn'].iloc[TransectID]
                 
@@ -1137,7 +1137,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
             # ax.add_patch(rect)
           
         # plot trendlines
-        vegav = MovingAverage(plotsatdist, 3)
+        vegav = MovingAverage(plotsatdistinterp, 3)
         if len(plotdate) >= 3:
             movavPl, = ax.plot(plotdate, vegav, color='#81A739', lw=2, label='3pt Mov. Av. VegEdge')
     
@@ -1156,7 +1156,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
         # ax2.set_ylabel('Cross-shore distance (veg) (m)', color='#81A739')
         # ax.set_ylabel('Cross-shore distance (water) (m)', color='#4056F4')
         # plt.xlim(plotdate[0]-10, plotdate[-1]+10)
-        ax.set_ylim(np.nanmin(plotsatdist)-10, np.nanmax(plotsatdist)+30)
+        ax.set_ylim(np.nanmin(plotsatdistinterp)-10, np.nanmax(plotsatdistinterp)+30)
         ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
         
         leg1 = ax.legend(handles=[satPl, movavPl, ltPl], loc=2)
