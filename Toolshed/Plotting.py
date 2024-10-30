@@ -872,9 +872,9 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
         
         # Process plot data
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID]]
-        plotsatdist = TransectInterGDF['distances'].iloc[TransectID]
+        plotsatdist = [x-np.mean(TransectInterGDF['distances'].iloc[TransectID]) for x in TransectInterGDF['distances'].iloc[TransectID]]
         plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID]]
-        plotwldist = TransectInterGDF['wlcorrdist'].iloc[TransectID]
+        plotwldist = [x-np.mean(TransectInterGDF['wlcorrdist'].iloc[TransectID]) for x in TransectInterGDF['wlcorrdist'].iloc[TransectID]]
     
         plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         
@@ -888,7 +888,7 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
         
         # Set up common subplot design
         for ax in [ax_TS,ax_Season]: 
-            ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
+            # ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
             
             # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
             for i in range(plotdate[0].year-1, plotdate[-1].year):
@@ -913,7 +913,8 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             # ax_TS2.plot(plotdate, vegav, color='#81A739', lw=1, label='3pt Moving Average veg edge')
         twin_TS_lim = []
         twin_Trend_lim = []
-        twin_Season_lim = []        
+        twin_Season_minlim = []    
+        twin_Season_maxlim = []
         for twin_TS, twin_Season, twin_lab, x, y, clr in zip([ax_TS, ax_TS_veg],
                                                             [ax_Season, ax_Season_veg],
                                                             ['WL', 'VE'],
@@ -935,6 +936,7 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             
             print('Transect '+str(TransectID)+' '+twin_lab+' seasonality index: '+str(SSI))
             
+            twin_TS.axhline(y=0, color=clr, lw=0.6,alpha=0.3, zorder=0)
             # PLOT 1: timeseries scatter plot     
             twin_TS.scatter(x, y, marker='o', c=clr, s=2, alpha=0.5, edgecolors='none', zorder=1)
             # linear regression lines
@@ -944,32 +946,52 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             xx = np.linspace(numx.min(), numx.max(), 100)
             # dd = mpl.dates.num2date(xx)
             # twin_TS.plot(dd, polysat(xx), '--', color=clr, lw=1, label=r'$\Delta$'+twin_lab+' = '+str(round(m*365.25,2))+' m/yr', zorder=1)
-            twin_TS.set_ylim(np.nanmin(y)-(np.nanmin(y)/100), np.nanmax(y)+(np.nanmax(y)/100))
-            twin_TS_lim.append(twin_TS.get_ylim())
 
-            # PLOT 2: De-seasonalised trend 
+            # get 5th smallest and largest as limits to avoid outliers
+            if twin_lab == 'WL':
+                twin_TS.set_ylim( np.sort(y)[-6]*-1,
+                                  np.sort(y)[5]*-1 )
+            else:
+                twin_TS.set_ylim( np.sort(y)[15],
+                                  np.sort(y)[-2] )
+
+            # twin_TS.set_ylim(0,1000)
+            # twin_TS_lim.append(twin_TS.get_ylim())
+
             twin_TS.plot(Seasonality.trend, '--', color=clr, lw=1.2, label=r'$\Delta$'+twin_lab+' = '+str(round(m*365.25,2))+' m/yr')
-            # twin_TS.set_ylim(np.nanmin(Seasonality.trend)-50, np.nanmax(Seasonality.trend)+50)
             # twin_TS_lim.append(twin_TS.get_ylim())
             
-            # PLOT 3: Seasonality line (moving average) with residuals as error window
+            # PLOT 2: Seasonality line (moving average) with residuals as error window
             # twin_Season.plot(Seasonality.resid, color=clr, lw=0, marker='x', ms=4, alpha=0.3)
             # plot residuals as vertical lines
-            # twin_Season.vlines(Seasonality.resid.index,0,np.array(Seasonality.resid),color=clr,lw=0.4,alpha=0.1,label=twin_lab+' Resid.')
+            twin_Season.vlines(Seasonality.resid.index, 0, np.array(Seasonality.resid),
+                               color=clr,lw=0.3,alpha=0.05,
+                               label=twin_lab+' $\sigma^{2}_{resid.}$ = '+str(round(np.var(Resid),2)))
             # plot seasonal signal over top of residuals 
-            twin_Season.plot(Seasonality.seasonal, color=clr, lw=0.5, label=twin_lab+' SSI = '+str(round(SSI,2)))
-            twin_Season.set_ylim(-1*np.nanmax(Seasonality.resid), np.nanmax(Seasonality.resid))
+            twin_Season.plot(Seasonality.seasonal, color=clr, lw=0.5, alpha=1,
+                             label=twin_lab+' SSI = '+str(round(SSI,2)))
             # horizontal line marking 0
             twin_Season.axhline(0,0,1,color=[0.7,0.7,0.7], lw=0.5, zorder=3, alpha=0.7)
-            twin_Season_lim.append(twin_Season.get_ylim())
+            if TransectID == 1325:
+                if twin_lab == 'WL':
+                    twin_Season.set_ylim(-120, 120)
+                else:
+                    twin_Season.set_ylim(-40, 40)
+            elif TransectID == 271:
+                if twin_lab == 'WL':
+                    twin_Season.set_ylim(-120, 120)
+                else:
+                    twin_Season.set_ylim(-40, 40)
+            else:
+                twin_Season.set_ylim(np.min(Seasonality.resid), np.min(Seasonality.resid)*-1)
             
             # twin_TS.set_ylabel('Cross-shore dist (m)', color=clr)
             # twin_Trend.set_ylabel('Overall trend (m)', color=clr) 
             # twin_Season.set_ylabel('Seasonal signal (m)', color=clr)
 
-            if Normal:
-                twin_TS.set_ylim(np.min(twin_TS_lim),np.max(twin_TS_lim))
-                twin_Season.set_ylim(np.min(twin_Season_lim),np.max(twin_Season_lim))
+            # if Normal:
+                # twin_TS.set_ylim(np.min(twin_TS_lim),np.max(twin_TS_lim))
+                # twin_Season.set_ylim(np.min(twin_Season_lim),np.max(twin_Season_lim))
             
             
         ax_TS.title.set_text('Transect '+str(TransectID)+' - '+Title)
@@ -990,7 +1012,7 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
     axticklabs = ['Cross-shore dist (m)','Cross-shore dist (m)',
                   'Seasonal signal (m)','Seasonal signal (m)']
     for ax, axID, lab, axticklab in zip(axs.flat, range(len(axs.flat)), ax_labels, axticklabs):
-        ax.text(0.011, 0.97, '('+lab+')', transform=ax.transAxes,
+        ax.text(0.011, 0.98, '('+lab+')', transform=ax.transAxes,
                 fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
         if axID % 2 == 0: # if ID is even i.e. on left hand side
             ax.set_ylabel(axticklab, color='#0A1DAE')
@@ -3236,9 +3258,9 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     for TransectID, Title, ax in zip(TransectIDs, Titles, axs):
         daterange = [0,len(TransectInterGDF['dates'].iloc[TransectID])]
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
-        plotsatdistFull = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotsatdist = TransectInterGDF['distances'].iloc[TransectID][daterange[0]:daterange[1]]
         # remove and interpolate outliers
-        plotsatdist = InterpNaN(plotsatdistFull)
+        plotsatdistinterp = InterpNaN(plotsatdist)
         
         if len(plotdate) == 0:
             return
@@ -3278,17 +3300,17 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
             ax.add_patch(rect)
         winter = mpatches.Patch(fc=[0.3,0.3,0.3], ec=None, alpha=0.2, label='UK Winter')
           
-        # plot trendlines
-        vegav = MovingAverage(plotsatdist, 3)
+        # plot trendlines (use interpolated version)
+        vegav = MovingAverage(plotsatdistinterp, 3)
         if len(plotdate) >= 3:
             ax2.plot(plotdate, vegav, color='#81A739', lw=1.5, label='3pt Mov. Av. VegEdge')
     
         # linear regression lines
-        x = mpl.dates.date2num(plotdate)
+        numx = mpl.dates.date2num(plotdate)
         for y, pltax, clr in zip([plotsatdist], [ax2], ['#3A4C1A']):
-            m, c = np.polyfit(x,y,1)
+            m, c = np.polyfit(numx,y,1)
             polysat = np.poly1d([m, c])
-            xx = np.linspace(x.min(), x.max(), 100)
+            xx = np.linspace(numx.min(), numx.max(), 100)
             dd = mpl.dates.num2date(xx)
             pltax.plot(dd, polysat(xx), '--', color=clr, lw=1.5, zorder=10, label=r'$\Delta VE$ = '+str(round(m*365.25,2))+' m/yr')
     
@@ -3299,7 +3321,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     
         ax2.title.set_text('Transect '+str(TransectID)+' - '+Title)
             
-        ax2.set_ylim(min(plotsatdist)-10, max(plotsatdist)+30)
+        ax2.set_ylim(min(plotsatdistinterp)-10, max(plotsatdistinterp)+30)
         ax2.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
         
         leg1 = ax2.legend(loc=2, ncol=3)
