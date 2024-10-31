@@ -417,6 +417,64 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     return WaveDiffusivity, WaveStability
 
 
+def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
+    """
+    Calculate indicators of wave climate per transect, following equations of
+    Ashton & Murray (2006). 
+    - Diffusivity (mu) varies with wave angle and represents the wave climate 
+      that leads to either shoreline smoothing (+ve diffusivity, stability) or
+      or growth of shoreline perturbations (-ve diffusivity, Stability)
+    - Stability index (Gamma) represents wave angle with respect to shoreline
+      orientation, with 1 = low-angle climate and -1 = high-angle climate
+    Simplified version of WaveClimate() with angles in radians instead.
+      
+    FM Oct 2024
+
+    Parameters
+    ----------
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+
+    Returns
+    -------
+    WaveDiffusivity : float
+        Wave climate indicating perturbation growth or smoothing.
+    WaveStability : float
+        Dimensionless measure of stability in offshore wave vs shore angles.
+
+    """
+    
+    # for each transect in run
+    # for Tr in range(len(TransectInterGDF)):
+    K2 = 0.15 # Ashton & Murray (2006) value for significant wave heights
+    D = 10. # average estimated depth of closure
+    
+    TimeStep = np.mean(np.diff(WaveTime)).seconds
+    
+    # Convert shore angle and wave directions to radians
+    theta_rad = np.radians(ShoreAngle)
+    Phi_0_rad = np.radians(WaveDir)
+    
+    # Calculate the angle difference (Phi_0 - theta) in radians
+    angle_diff = Phi_0_rad - theta_rad
+    
+    # Calculate the diffusivity (mu) for each wave event using the formula
+    mu = (K2 / D) * (WaveTp**(1/3)) * (WaveHs**(12/5)) * \
+         (np.cos(angle_diff)**(1/5)) * \
+         ((6/5) * np.sin(angle_diff)**2 - np.cos(angle_diff)**2)
+    
+    # # Net diffusivity (Mu_net) [m/s-2]
+    # Since each interval should be equal, delta_{t,i} cancels out in the division
+    WaveDiffusivity = mu.mean()  # Equivalent to sum(mu * delta_t) / sum(delta_t) for equal intervals
+
+    # Stability index (Gamma) [dimensionless]
+    Stabil_num = np.sum(mu * TimeStep)
+    Stabil_denom = np.sum(np.abs(mu) * TimeStep)
+    WaveStability = Stabil_num / Stabil_denom
+    
+    return WaveDiffusivity, WaveStability
+
+
 def CalcShoreAngle(TransectInterGDF, Tr):
     """
     Calculate shore angle using the perpendicular of each transect angle,
