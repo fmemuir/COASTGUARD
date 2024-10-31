@@ -252,8 +252,10 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         ShoreAngles.append(ShoreAngle)
         
         # Calculate wave climate indicators per transect over timeframe of provided date range
-        TrWaveDiffusivity, TrWaveStability = WaveClimate(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
-        
+        # TrWaveDiffusivity, TrWaveStability = WaveClimate(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
+        # Above is old version; this one uses radians
+        TrWaveDiffusivity, TrWaveStability = WaveClimateSimple(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
+
         InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # line intersections on each transect
         # if transect intersect is empty i.e. no veg lines intersected, can't grab matching waves per sat image
         if InterPnts == []: 
@@ -449,27 +451,36 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     K2 = 0.15 # Ashton & Murray (2006) value for significant wave heights
     D = 10. # average estimated depth of closure
     
+    # Time interval between wave observations
     TimeStep = np.mean(np.diff(WaveTime)).seconds
     
     # Convert shore angle and wave directions to radians
-    theta_rad = np.radians(ShoreAngle)
-    Phi_0_rad = np.radians(WaveDir)
-    
-    # Calculate the angle difference (Phi_0 - theta) in radians
-    angle_diff = Phi_0_rad - theta_rad
-    
-    # Calculate the diffusivity (mu) for each wave event using the formula
-    mu = (K2 / D) * (WaveTp**(1/3)) * (WaveHs**(12/5)) * \
-         (np.cos(angle_diff)**(1/5)) * \
-         ((6/5) * np.sin(angle_diff)**2 - np.cos(angle_diff)**2)
+    # theta_rad = np.radians(ShoreAngle)
+    # Phi_0_rad = np.radians(WaveDir)
+    # Calculate the angle difference (theta - Phi_0) in degrees
+    angle_diff_deg = (ShoreAngle - WaveDir + 180) % 360 - 180  # Compute angle diff in degrees
+      
+    # Initialize an array to store mu values, applying shadowing condition
+    mu_values = []
+    for i in range(len(WaveDir)):        
+        if angle_diff_deg[i] <= 0:  # Only include waves that are onshore (angle_diff <= 0)
+            # Calculate the diffusivity (mu) using the formula for onshore waves
+            mu = (K2 / D) * (WaveTp[i]**(1/3)) * (WaveHs[i]**(12/5)) * \
+                 (np.cos(np.radians(angle_diff_deg[i]))**(1/5)) * \
+                 ((6/5) * np.sin(np.radians(angle_diff_deg[i]))**2 - np.cos(np.radians(angle_diff_deg[i]))**2)
+            mu_values.append(mu)
+        else:
+            # Set mu to zero for offshore waves (shadowed conditions)
+            mu_values.append(0.0)
+    mu_values = np.array(mu_values)
     
     # # Net diffusivity (Mu_net) [m/s-2]
     # Since each interval should be equal, delta_{t,i} cancels out in the division
-    WaveDiffusivity = mu.mean()  # Equivalent to sum(mu * delta_t) / sum(delta_t) for equal intervals
+    WaveDiffusivity = mu_values.mean()  # Equivalent to sum(mu * delta_t) / sum(delta_t) for equal intervals
 
     # Stability index (Gamma) [dimensionless]
-    Stabil_num = np.sum(mu * TimeStep)
-    Stabil_denom = np.sum(np.abs(mu) * TimeStep)
+    Stabil_num = np.sum(mu_values * TimeStep)
+    Stabil_denom = np.sum(np.abs(mu_values) * TimeStep)
     WaveStability = Stabil_num / Stabil_denom
     
     return WaveDiffusivity, WaveStability
