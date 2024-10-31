@@ -187,6 +187,7 @@ def SatGIF(metadata,settings,output):
 
 
 
+
 def VegTimeseries(sitename, TransectInterGDF, TransectIDs, Hemisphere='N', Titles=None, ShowPlot=True):
     """
     Plot timeseries of cross-shore veg edge change for selected transect(s).
@@ -1178,6 +1179,143 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
     plt.show()
     
     
+def TZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Titles=None, Hemisphere='N', ShowPlot=True):
+    """
+    Plot timeseries of cross-shore veg edge and waterline change for selected transect(s),
+    with TZ widths plotted over top.
+    If more than one transect is supplied in a list, create subplots for comparison.
+    FM Nov 2022
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    TransectIDs : list
+        List of transect IDs to plot.
+    Hemisphere : str, optional
+        Northern (N) or Southern (S) Hemisphere for marking 'winter' season. The default is 'N'.
+    ShowPlot : bool, optional
+        Flag to turn plt.show() on or off (if plotting lots of transects). The default is True.
+
+
+    """
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+    
+    if ShowPlot is False:
+        plt.ioff()
+    
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(2.02,2.91), dpi=300, sharex=True)
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':7})
+        # use 2 subplots with one empty to be able to loop through them
+        fig, axs = plt.subplots(1,1,figsize=(2.02,1.45), dpi=300, sharex=True)
+        axs = [axs] # to be able to loop through
+        
+    # common plot labels
+    # lab = fig.add_subplot(111,frameon=False)
+    # lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
+    fig.text(0.5,-0.16,'Date',ha='center',va='center')
+    fig.text(-0.23,0.5,'Cross-shore distance (m)', ha='center',va='center',rotation='vertical')
+    
+    for TransectID, Title, ax in zip(TransectIDs, Titles, axs):
+        daterange = [0,len(TransectInterGDFTopo['dates'].iloc[TransectID])]
+        plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFTopo['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
+        plotsatdist = [x-np.mean(TransectInterGDFTopo['distances'].iloc[TransectID]) for x in TransectInterGDFTopo['distances'].iloc[TransectID][daterange[0]:daterange[1]]]
+        # remove and interpolate outliers
+        plotsatdistinterp = InterpNaN(plotsatdist)
+        plotTZ = TransectInterGDFTopo['TZwidth'].iloc[TransectID][daterange[0]:daterange[1]]
+        plotTZMn = TransectInterGDFTopo['TZwidthMn'].iloc[TransectID]
+                
+        if len(plotdate) == 0:
+            print('Transect %s is empty! No values to plot.' % (TransectID))
+            return
+        
+        plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
+        ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.2, zorder=0)   
+        ax.axhline(y=0, color=[0.7,0.7,0.7], lw=0.5, zorder=0)
+        ax.tick_params(length=2)
+                        
+        # xaxis ticks as year with interim Julys marked
+        # ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+        # ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+        
+        # create TZ lines to fill between (per-image width as error bar, mean as fill between)
+        yplus = []
+        yneg = []
+        for i in range(len(plotsatdist)):
+            yplus.append(plotsatdist[i] + plotTZMn)
+            yneg.append(plotsatdist[i] - plotTZMn)
+            ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.5, capsize=0, capthick=0.5, label='TZwidth (m)')
+        # single error bar plot for legend
+        TZbar = mlines.Line2D([],[],linestyle='None', marker='|', ms=10, mec='#E7960D', mew=0.7, label='TZwidth (m)')
+        TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.5, edgecolor=None, zorder=0, label=r'$TZwidth_{\eta}$ ('+str(round(plotTZMn))+' m)')
+                   
+        # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
+        for i in range(plotdate[0].year-1, plotdate[-1].year):
+            if Hemisphere == 'N':
+                rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+            elif Hemisphere == 'S':
+                rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
+                rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
+            rectwidth = rectWinterEnd - rectWinterStart
+            rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+            ax.add_patch(rect)
+          
+        # plot trendlines
+        vegav = MovingAverage(plotsatdistinterp, 3)
+        if len(plotdate) >= 3:
+            movavPl, = ax.plot(plotdate, vegav, color='#81A739', lw=1, label='VE 3pt Mov. Av.')
+    
+        # linear regression lines
+        x = mpl.dates.date2num(plotdate)
+        for y, pltax, clr in zip([plotsatdist], [ax], ['#3A4C1A']):
+            m, c = np.polyfit(x,y,1)
+            polysat = np.poly1d([m, c])
+            xx = np.linspace(x.min(), x.max(), 100)
+            dd = mpl.dates.num2date(xx)
+            # ltPl, = pltax.plot(dd, polysat(xx), '--', color=clr, lw=2, label=str(round(m*365.25,2))+' m/yr')
+    
+        ax.set_title('Transect '+str(TransectID)+' - '+Title, pad=1)
+            
+        # ax.set_ylim(np.nanmin(plotsatdistinterp)-10, np.nanmax(plotsatdistinterp)+30)
+        ax.set_ylim(-200,180)
+        ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
+        for tic in ax.xaxis.get_ticklabels()[::2]:
+            tic.set_visible(False)
+        
+        # leg1 = ax.legend(handles=[satPl, movavPl, ltPl], loc=2)
+        # ax.add_artist(leg1)
+        leg2 = ax.legend(handles=[TZfill, TZbar, movavPl], loc=4)
+        
+        figID += '_'+str(TransectID)
+        # plt.tight_layout()
+        # ax.margins(-0.4)
+        
+    figname = os.path.join(outfilepath,sitename + '_TZTimeseries_Transect'+figID+'.png')
+    
+    plt.tight_layout()
+    plt.subplots_adjust(left=-0.05, bottom=-0.08, right=1, top=1.08, wspace=0, hspace=0.1)
+        
+    plt.savefig(figname, bbox_inches='tight', pad_inches=0.05, dpi=300)
+    print('Plot saved under '+figname)
+    
+    plt.show()
+    
+        
+
 
 def ValidTimeseries(sitename, ValidInterGDF, TransectID):
     """
