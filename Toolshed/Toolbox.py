@@ -2600,7 +2600,7 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
     daterange : list
         [start date, end date] to be computed.
     tidelatlon : list
-        [longitude, latitude] of bounding box along seaward edge, halfway between S and N.
+        [latitude, longitude] of centre of bounding box (can be adjusted if not in water).
 
     Returns
     -------
@@ -2633,8 +2633,8 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         dates_np = np.empty((len(dates),), dtype='datetime64[us]')
         for i,date in enumerate(dates):
             dates_np[i] = datetime(date.year,date.month,date.day,date.hour,date.minute,date.second)
-        lons = tidelatlon[0]*np.ones(len(dates))
-        lats = tidelatlon[1]*np.ones(len(dates))
+        lons = tidelatlon[1]*np.ones(len(dates))
+        lats = tidelatlon[0]*np.ones(len(dates))
         
         # compute heights for ocean tide and loadings (both are needed for elastic tide elevations)
         ocean_short, ocean_long, min_points = ocean_tide.calculate(lons, lats, dates_np)
