@@ -122,7 +122,7 @@ settings = {
 
 tidepath = "../aviso-fes/data/fes2014"
 daterange = dates
-tidelatlon = [lonmax,latmax-(2/latmin)] # seaward edge, halfway between S and N
+tidelatlon = [(latmin+latmax)/2, (lonmin+lonmax)/2] # centre of bounding box
 Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
     
 #%% Vegetation Edge Reference Line Load-In
