@@ -2609,13 +2609,31 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
     """
     
     tideoutpath = os.path.join(settings['inputs']['filepath'],
-                               'tides',settings['inputs']['sitename']+'_tides_'+
-                               settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
+                                'tides',settings['inputs']['sitename']+'_tides_'+
+                                settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
     
     if os.path.isfile(tideoutpath) is True: 
         print('Tide data already compiled.')
 
     else:
+        lat = tidelatlon[0]
+        lon = tidelatlon[1]
+        lon_trg = lon + 360 # set from -180 - 180, to 0 - 360
+        # Check if latitude and longitude provided is within grid of unmasked data
+        # Read in first extrapolated netCDF file and get masked data slice from it
+        tide_nc = netCDF4.Dataset(
+            os.path.join(tidepath, 'ocean_tide_extrapolated','2n2.nc'))
+        tide_mask = tide_nc.variables['amplitude'][:,:].mask
+        tide_lats = tide_nc.variables['lat'][:]
+        tide_lons = tide_nc.variables['lon'][:]
+        # Get ID of grid matching the provided lat and lon
+        lat_idx = (np.abs(tide_lats - lat)).argmin()
+        lon_idx = (np.abs(tide_lons - lon_trg)).argmin()
+        # If the provided coords are masked i.e. on land, request new ones
+        if tide_mask[lat_idx, lon_idx] == True:
+            print('Your tidelatlon is on land! Provide a latitude and longitude closer to sea')
+            return
+        
         print('Compiling tide heights for given date range...')
         # add buffer of one day either side
         startdate = datetime.strptime(daterange[0], '%Y-%m-%d') - timedelta(days=1)
@@ -2633,8 +2651,8 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         dates_np = np.empty((len(dates),), dtype='datetime64[us]')
         for i,date in enumerate(dates):
             dates_np[i] = datetime(date.year,date.month,date.day,date.hour,date.minute,date.second)
-        lons = tidelatlon[1]*np.ones(len(dates))
-        lats = tidelatlon[0]*np.ones(len(dates))
+        lons = lon*np.ones(len(dates))
+        lats = lat*np.ones(len(dates))
         
         # compute heights for ocean tide and loadings (both are needed for elastic tide elevations)
         ocean_short, ocean_long, min_points = ocean_tide.calculate(lons, lats, dates_np)
@@ -2649,7 +2667,7 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         # tidesDF.to_csv(os.path.join(settings['inputs']['filepath'],'tides',settings['inputs']['sitename']+'_tides.csv'))
         print('saving computed tides under '+tideoutpath)
         tidesDF.to_csv(tideoutpath)
-        
+    
     return 
 
 
