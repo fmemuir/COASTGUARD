@@ -395,13 +395,12 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     print('calculating tidally corrected cross-shore distances...')
     # Tidal correction to get corrected distances along transects
     TransectInterGDFWater = TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope)
-    
+    # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
+    TideSteps = Toolbox.BeachTideLoc(settings)
     
     # for each transect    
     for Tr in range(len(TransectGDF['TransectID'])):
         
-        # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
-        TideSteps = Toolbox.BeachTideLoc(settings, TideSeries=TransectInterGDFWater['waterelev'].iloc[Tr])
         ShoreLevels = []
         # for each water elevation obs in each transect
         for welev in TransectInterGDFWater['waterelev'].iloc[Tr]:
