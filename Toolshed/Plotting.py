@@ -3519,15 +3519,15 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
     # if more than one Transect ID is to be compared on a single plot
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(11.6,5.9), dpi=300, subplot_kw={'projection':'polar'})
+        mpl.rcParams.update({'font.size':6})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(1.5,1.5), dpi=300, subplot_kw={'projection':'polar'})
         # fig, axs = plt.subplots(1, len(TransectIDs),figsize=(11.6,5.9), dpi=300, subplot_kw={'projection':'polar'})
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':10})
+        mpl.rcParams.update({'font.size':6})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(11.6,5.9), dpi=300, subplot_kw={'projection':'polar'})
+        fig, axs = plt.subplots(1,1,figsize=(1.5,1.5), dpi=300, subplot_kw={'projection':'polar'})
         axs = [axs] # to be able to loop through
         
     for TransectID, ax in zip(TransectIDs,axs):
@@ -3546,7 +3546,7 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
         plotL = {}
         colours = []
         for step in HsStages:
-            lab = str(step[0]) + '-' + str(step[1]) + ' m/s'
+            lab = str(step[0]) + '-' + str(step[1])
             # mask each set of wave directions by the range of wave heights
             mask = [val > step[0] and val <= step[1] for val in plotwavehs]
             plotL[lab] = plotwavedir[mask]
@@ -3559,29 +3559,35 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
             # if i == 0: # first stage starts from 0 
         binsize = np.deg2rad(10)
         binset = np.arange(0,np.deg2rad(360)+binsize,binsize)
-        ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns, edgecolor='0.5', linewidth=0.5)
+        ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns, linewidth=0.5)
             # else: # start each row with previous stage
                 # ax.bar(plotDF[plotDF.columns[i]], color=cmp(c), label=lab, bottom=plotDF[plotDF.columns[i-1]])
             
         ax.set_theta_zero_location('N')
         ax.set_theta_direction(-1)
+        ax.set_xticklabels([])
         ax.set_yticklabels([])
-        ax.grid(linestyle=':')
+        ax.grid(c=[0.5,0.5,0.5], alpha=0.2, lw=0.5)
+        ax.set_axisbelow(True)
+        # Padding on tick labels is too big, N label plotted as text instead
+        # Use max radius value as y loc, and then add 3% buffer on that
+        ax.text(0, ax.get_ylim()[1]+(ax.get_ylim()[1]*0.03), 'N', c='k', ha='center')
         
-        ax.title.set_text('Transect '+str(TransectID)+' Wave Direction\n'+
-                          TransectInterGDFWave['dates'].iloc[TransectID][0]+' to '+
-                          TransectInterGDFWave['dates'].iloc[TransectID][-1])
+        # ax.title.set_text('Transect '+str(TransectID)+' Wave Direction\n'+
+                          # TransectInterGDFWave['dates'].iloc[TransectID][0]+' to '+
+                          # TransectInterGDFWave['dates'].iloc[TransectID][-1])
+        ax.title.set_text('Transect '+str(TransectID)) 
         
         figID += '_'+str(TransectID)
         plt.tight_layout()
         
-        # ax.legend()
+        ax.legend(loc='center left')
         
     figname = os.path.join(outfilepath,sitename + '_SatWaveDir_Transect'+figID+'.png')
     
     plt.tight_layout()
 
-    plt.savefig(figname, bbox_inches='tight')
+    plt.savefig(figname, bbox_inches='tight', dpi=300, transparent=True)
     print('Plot saved under '+figname)
     
     plt.show()
