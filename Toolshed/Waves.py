@@ -421,6 +421,7 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
 
 def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     """
+    IN DEVELOPMENT
     Calculate indicators of wave climate per transect, following equations of
     Ashton & Murray (2006). 
     - Diffusivity (mu) varies with wave angle and represents the wave climate 
