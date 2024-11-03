@@ -1264,3 +1264,84 @@ def PCAHeatmap(pca, MultivarGDF, colnames):
     plt.xlabel('Original Variables')
     plt.ylabel('Principal Components')
     plt.show()
+    
+
+def WaveHeatmap(TransectInterGDFWater, TransectInterGDFWave, TransectIDs):
+    
+    for Tr in TransectIDs:
+        # Convert dates to datetime objects for easier comparison
+        plotdates = [datetime.strptime(date, "%Y-%m-%d") for date in TransectInterGDFWater['dates'].iloc[Tr]]
+        plotwldates = [datetime.strptime(date, "%Y-%m-%d") for date in TransectInterGDFWater['wldates'].iloc[Tr]]       
+        plotwavedates = [datetime.strptime(date, "%Y-%m-%d") for date in TransectInterGDFWave['dates'].iloc[Tr]]
+
+        plotdists = TransectInterGDFWater['distances'].iloc[Tr]
+        plotwldists = TransectInterGDFWater['wlcorrdist'].iloc[Tr]
+        # Calculate wave power [p g^2 / 64pi * H^2 * Tp]
+        plotwaveP = ((1020*(9.8**2))/(64*np.pi)) * \
+                    np.array(TransectInterGDFWave['WaveHs'].iloc[Tr])**2 * \
+                    np.array(TransectInterGDFWave['WaveTp'].iloc[Tr])
+        # Calculate wave energy [1/16 p g H^2]
+        plotwaveE = 0.0625 * 1020 * 9.8 * (np.array(TransectInterGDFWave['WaveHs'].iloc[Tr])**2)
+        
+        # Remove duplicates in plotwldates and plotwldists, keeping the first occurrence
+        plotwldates_uq = []
+        plotwldists_uq = []
+        seen_dates = set()
+        for date, dist in zip(plotwldates, plotwldists):
+            if date not in seen_dates:
+                plotwldates_uq.append(date)
+                plotwldists_uq.append(dist)
+                seen_dates.add(date)
+        # Find common dates
+        common_dates = set(plotdates) & set(plotwldates_uq)
+        # Filter plotdates and plotdists to include only common dates
+        plotdates_f = [date for date, dist in zip(plotdates, plotdists) if date in common_dates]
+        plotdists_f = [dist for date, dist in zip(plotdates, plotdists) if date in common_dates]
+
+        # Filter plotwldates_uq and plotwldists_uq to include only common dates
+        plotwldates_f = [date for date, dist in zip(plotwldates_uq, plotwldists_uq) if date in common_dates]
+        plotwldists_f = [dist for date, dist in zip(plotwldates_uq, plotwldists_uq) if date in common_dates]
+
+        # Filter plotdates and plotdists to include only common dates
+        plotwavedates_f = [date for date, val in zip(plotwavedates, plotwaveP) if date in common_dates]
+        plotwaveP_f = [val for date, val in zip(plotwavedates, plotwaveP) if date in common_dates]
+        plotwaveE_f = [val for date, val in zip(plotwavedates, plotwaveE) if date in common_dates]
+
+        plotDict = {'dates':plotdates_f,'vegdists':plotdists_f,
+                    'wldates':plotwldates_f,'wldists':plotwldists_f,
+                    'wavedates':plotwavedates_f,'wavePower':plotwaveP_f,
+                    'waveEnergy':plotwaveE_f}
+        plotDF = pd.DataFrame(data=plotDict)
+        
+        # Set up the figure and axes for two subplots (one for each heatmap)
+        fig, axs = plt.subplots(2, 1, figsize=(5,10))
+        for ax, clrs, yvals in zip(axs, ['Greens', 'Blues'], [plotDF['vegdists'],plotDF['wldists']]):
+            # 1. Heatmap of Wave Height vs. Waterline Position
+            sns.histplot(
+                x=plotDF['wavePower'], 
+                y=yvals, 
+                bins=50, 
+                cmap=clrs, 
+                cbar=True,
+                ax=ax
+            )
+
+            ax.set_xlabel('Wave Power (kW/m)')
+        plt.tight_layout()
+        plt.show()
+        
+        fig, axs = plt.subplots(2, 1, figsize=(5,10))
+        for ax, clrs, yvals in zip(axs, ['Greens', 'Blues'], [plotDF['vegdists'],plotDF['wldists']]):
+            # 1. Heatmap of Wave Height vs. Waterline Position
+            sns.histplot(
+                x=plotDF['waveEnergy'], 
+                y=yvals, 
+                bins=50, 
+                cmap=clrs, 
+                cbar=True,
+                ax=ax
+            )
+
+            ax.set_xlabel('Wave Energy (J/m$^2$)')
+        plt.tight_layout()
+        plt.show()
