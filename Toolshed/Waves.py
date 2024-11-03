@@ -478,12 +478,14 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     
     # # Net diffusivity (Mu_net) [m/s-2]
     # Since each interval should be equal, delta_{t,i} cancels out in the division
-    WaveDiffusivity = mu_values.mean()  # Equivalent to sum(mu * delta_t) / sum(delta_t) for equal intervals
+    WaveDiffusivity = np.nanmean(mu_values)  # Equivalent to sum(mu * delta_t) / sum(delta_t) for equal intervals
 
     # Stability index (Gamma) [dimensionless]
-    Stabil_num = np.sum(mu_values * TimeStep)
-    Stabil_denom = np.sum(np.abs(mu_values) * TimeStep)
-    WaveStability = Stabil_num / Stabil_denom
+    Stabil_num = np.nansum(mu_values * TimeStep)
+    Stabil_denom = np.nansum(np.abs(mu_values) * TimeStep)
+    # Check to make sure no division by zero; if that happens, return 0 
+    # (low and high angle waves balanced out, no longshore wave effects)
+    WaveStability = Stabil_num / Stabil_denom if Stabil_denom != 0 else 0
     
     return WaveDiffusivity, WaveStability
 
