@@ -1267,7 +1267,23 @@ def PCAHeatmap(pca, MultivarGDF, colnames):
     
 
 def WaveHeatmap(TransectInterGDFWater, TransectInterGDFWave, TransectIDs):
-    
+    """
+    Plot a heatmap of wave power and wave energy against vegetation edge and 
+    waterline positions through time, to identify any relationship between 
+    instantaneous measurements of these metrics across a timeseries.
+    FM Nov 2024
+
+    Parameters
+    ----------
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of transects intersected with waterlines.
+    TransectInterGDFWave : GeoDataFrame
+        GeoDataFrame of transects intersected with wave hindcasts.
+    TransectIDs : list
+        List of desired transect IDs to plot (single plots, not range).
+
+
+    """
     for Tr in TransectIDs:
         # Convert dates to datetime objects for easier comparison
         plotdates = [datetime.strptime(date, "%Y-%m-%d") for date in TransectInterGDFWater['dates'].iloc[Tr]]
