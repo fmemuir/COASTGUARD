@@ -3492,7 +3492,58 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     print('Plot saved under '+figname)
     
     plt.show()
+
+
+def muHist(sitename, muDF_path, Titles):
     
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+
+    # Read in CSV of timesteps and mu values for each transect to be plotted
+    muDF = pd.read_csv(muDF_path)
+    TransectIDs = muDF.columns[1:]
+    # xmin = []
+    # xmax = []
+    # for TransectID in TransectIDs:
+    #     xmin.append(muDF[TransectID].min())
+    #     xmax.append(muDF[TransectID].max())
+    # lims = (np.min(xmin), np.max(xmax))
+        
+    for TransectID, Title in zip(TransectIDs, Titles):
+        # scaling for single column A4 page: (6.55,6)
+        mpl.rcParams.update({'font.size':7})
+        # use 2 subplots with one empty to be able to loop through them
+        fig, ax = plt.subplots(1,1,figsize=(1.65,1.265), dpi=300)
+        
+        # Plot histogram with custom bins and colors
+        cbins = np.arange(-0.03,0.031,0.01)
+        cm = plt.cm.get_cmap('seismic') # red-white-blue
+        norm = mpl.colors.Normalize(vmin=cbins.min(), vmax=cbins.max())
+        colors = [cm(norm(b)) for b in cbins[:-1]]
+        
+        bins = np.arange(-0.1,0.11,0.001)
+        n, bins, patches = ax.hist(muDF[TransectID], bins=bins)
+        
+        for patch in patches:
+            # Calculate the color based on the bin's midpoint
+            bin_mid = (patch.get_x() + patch.get_x() + patch.get_width()) / 2
+            patch.set_facecolor(cm(norm(bin_mid)))  # Set color based on normalized bin position
+
+
+        plt.xlim(-0.02,0.02)
+        plt.xlabel('Wave diffusivity (m/s$^2$)')
+        plt.title('Transect '+str(TransectID)+' - '+Title)
+        
+        figname = os.path.join(outfilepath,sitename + '_WaveDiffusHist_Transect'+str(TransectID)+'.png')
+        
+        plt.tight_layout()
+
+        plt.savefig(figname, bbox_inches='tight', dpi=300, transparent=True)
+        print('Plot saved under '+figname)
+        
+        plt.show()
+        
     
 def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
     """
@@ -3520,14 +3571,14 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':6})
-        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(1.5,1.5), dpi=300, subplot_kw={'projection':'polar'})
+        fig, axs = plt.subplots(len(TransectIDs),1,figsize=(1.6,1.5), dpi=300, subplot_kw={'projection':'polar'})
         # fig, axs = plt.subplots(1, len(TransectIDs),figsize=(11.6,5.9), dpi=300, subplot_kw={'projection':'polar'})
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':6})
         # use 2 subplots with one empty to be able to loop through them
-        fig, axs = plt.subplots(1,1,figsize=(1.5,1.5), dpi=300, subplot_kw={'projection':'polar'})
+        fig, axs = plt.subplots(1,1,figsize=(1.6,1.5), dpi=300, subplot_kw={'projection':'polar'})
         axs = [axs] # to be able to loop through
         
     for TransectID, ax in zip(TransectIDs,axs):
@@ -3545,8 +3596,11 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
         # initialise dict for dataframe
         plotL = {}
         colours = []
-        for step in HsStages:
-            lab = str(step[0]) + '-' + str(step[1])
+        for stepi, step in enumerate(HsStages):
+            if stepi == 4:
+                lab = f"> {step[0]:.2f}"
+            else:
+                lab = f"{step[0]:.2f} to {step[1]:.2f}"
             # mask each set of wave directions by the range of wave heights
             mask = [val > step[0] and val <= step[1] for val in plotwavehs]
             plotL[lab] = plotwavedir[mask]
@@ -3581,7 +3635,16 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
         figID += '_'+str(TransectID)
         plt.tight_layout()
         
-        ax.legend(loc='center left')
+        leg = ax.legend(loc='center left', handlelength=1, handletextpad=0.5)
+        
+        plt.draw()
+        bb = leg.get_bbox_to_anchor().transformed(ax.transAxes.inverted()) 
+
+        # Change to location of the legend. 
+        xOffset = -0.2
+        bb.x0 += xOffset
+        bb.x1 += xOffset
+        leg.set_bbox_to_anchor(bb, transform = ax.transAxes)
         
     figname = os.path.join(outfilepath,sitename + '_SatWaveDir_Transect'+figID+'.png')
     
@@ -3593,7 +3656,7 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
     plt.show()
     
 
-def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
+def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlices=None,YSlices=None):
     """
     FM March 2024
 
@@ -3606,7 +3669,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
     WaveFilePath : str, optional
         Filepath to load specific wave file from. The default is None.
     PlotDates : list, optional
-        List of start and end dates for constraining plot. The default is None.
+        List of start and end datetimes for constraining plot. The default is None.
 
 
     """
@@ -3620,12 +3683,28 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
         WavePath = os.path.join(os.getcwd(), 'Data', 'tides')
         WaveFilePath = glob.glob(WavePath+'/*'+sitename+'*.nc')
     
-    if PlotDates is None:
-        # If no plot start and end dates provided, plot whole timeseries from .nc file
-        PlotDates = [WaveFilePath[0][-30:-20], WaveFilePath[0][-19:-9]] 
     
     WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = Waves.ReadWaveFile(WaveFilePath)
-
+    # Extended wave data so now need to slice back down for plotting
+    if XSlices is not None or YSlices is not None:
+        WaveX = WaveX[XSlices[0]:XSlices[1]]
+        WaveY = WaveY[YSlices[0]:YSlices[1]]
+        # clip down timeseries too
+        if PlotDates is not None: 
+            StartID = WaveTime.index(PlotDates[0])
+            EndID = WaveTime.index(PlotDates[1])+1 # need to add 1 for including in slicing
+            WaveTime = WaveTime[StartID:EndID]
+            SigWaveHeight = SigWaveHeight[StartID:EndID, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            MeanWaveDir = MeanWaveDir[StartID:EndID, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            PeakWavePer = PeakWavePer[StartID:EndID, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            StormEvents = StormEvents[StartID:EndID, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+        # Or just include whole timeseries and only clip down spatially
+        else:
+            SigWaveHeight = SigWaveHeight[:, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            MeanWaveDir = MeanWaveDir[:, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            PeakWavePer = PeakWavePer[:, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            StormEvents = StormEvents[:, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            
     
     # create stages for wave height breaks
     cmp = cm.get_cmap('YlGnBu')
@@ -3644,7 +3723,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
     # scaling for single column A4 page: (6.55,6)
     # use 2 subplots with one empty to be able to loop through them
     fig, axs = plt.subplots(len(WaveY)-1,len(WaveX),figsize=(1.6,4.9), dpi=300, subplot_kw={'projection':'polar'})
-    
+    # TO DO: Currently only works with one column, will need to figure out better way of looping
     for px in range(len(WaveX)):
         for ax, py in zip(axs, range(len(WaveY))):
             # Convert wave dirs to radians
@@ -3655,7 +3734,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None):
             plotL = {}
             colours = []
             for i, step in enumerate(HsStages):
-                lab = "{:.2f}".format(step[0]) + '-' + "{:.2f}".format(step[1])
+                lab = f"{step[0]:.2f} to {step[1]:.2f}"
                 # mask each set of wave directions by the range of wave heights
                 mask = [val > step[0] and val <= step[1] for val in plotwavehs]
                 plotL[lab] = plotwavedir[mask]
