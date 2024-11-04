@@ -3637,10 +3637,9 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
         
         leg = ax.legend(loc='center left', handlelength=1, handletextpad=0.5)
         
+        # Adjust the location of the legend
         plt.draw()
         bb = leg.get_bbox_to_anchor().transformed(ax.transAxes.inverted()) 
-
-        # Change to location of the legend. 
         xOffset = -0.2
         bb.x0 += xOffset
         bb.x1 += xOffset
@@ -3722,7 +3721,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlic
     
     # scaling for single column A4 page: (6.55,6)
     # use 2 subplots with one empty to be able to loop through them
-    fig, axs = plt.subplots(len(WaveY)-1,len(WaveX),figsize=(1.6,4.9), dpi=300, subplot_kw={'projection':'polar'})
+    fig, axs = plt.subplots(len(WaveY)-1,len(WaveX),figsize=(1.8,4.9), dpi=300, subplot_kw={'projection':'polar'})
     # TO DO: Currently only works with one column, will need to figure out better way of looping
     for px in range(len(WaveX)):
         for ax, py in zip(axs, range(len(WaveY))):
@@ -3768,7 +3767,17 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlic
     handles, labels = ax.get_legend_handles_labels()
 
     TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
-    fig.legend(handles, labels, loc='center left', title='Wave H$_s$ (m)', title_fontproperties=TitleFont, prop=TitleFont)
+    leg = fig.legend(handles, labels, loc='center left', title='Wave H$_s$ (m)', title_fontproperties=TitleFont, prop=TitleFont)
+    # Adjust the location of the legend
+    plt.draw()
+    bb = leg.get_bbox_to_anchor().transformed(ax.transAxes.inverted()) 
+    xOffset = -0.3
+    yOffset = -0.05
+    bb.x0 += xOffset
+    bb.x1 += xOffset
+    bb.y0 += yOffset
+    bb.y1 += yOffset
+    leg.set_bbox_to_anchor(bb, transform = ax.transAxes)
     
     mpl.rcParams.update({'font.size':7})
     
