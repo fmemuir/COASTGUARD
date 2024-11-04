@@ -467,7 +467,7 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
         if angle_diff_deg[i] <= 0:  # Only include waves that are onshore (angle_diff <= 0)
             # Calculate the diffusivity (mu) using the formula for onshore waves
             # abs() value used to avoid NaNs from raising a negative number to a decimal power
-            mu = (K2 / D) * (WaveTp[i]**(1/3)) * (WaveDir[i]**(12/5)) * \
+            mu = (K2 / D) * (WaveTp[i]**(1/3)) * (WaveHs[i]**(12/5)) * \
                  (abs(np.cos(np.radians(angle_diff_deg[i])))**(1/5)) * \
                  ((6/5) * np.sin(np.radians(angle_diff_deg[i]))**2 - np.cos(np.radians(angle_diff_deg[i]))**2)
 
