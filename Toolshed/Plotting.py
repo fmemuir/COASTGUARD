@@ -3494,11 +3494,12 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     plt.show()
 
 
-def muHist(sitename, muDF_path, Titles):
+def muHist(sitename, muDF_path, Titles=None):
     
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
         os.mkdir(outfilepath)
+    figID = ''
 
     # Read in CSV of timesteps and mu values for each transect to be plotted
     muDF = pd.read_csv(muDF_path)
@@ -3509,40 +3510,52 @@ def muHist(sitename, muDF_path, Titles):
     #     xmin.append(muDF[TransectID].min())
     #     xmax.append(muDF[TransectID].max())
     # lims = (np.min(xmin), np.max(xmax))
-        
-    for TransectID, Title in zip(TransectIDs, Titles):
-        # scaling for single column A4 page: (6.55,6)
-        mpl.rcParams.update({'font.size':7})
-        # use 2 subplots with one empty to be able to loop through them
-        fig, ax = plt.subplots(1,1,figsize=(1.65,1.265), dpi=300)
+    # scaling for single column A4 page: (6.55,6)
+    mpl.rcParams.update({'font.size':7})
+    # use 2 subplots with one empty to be able to loop through them
+    # fig, axs = plt.subplots(1,1,figsize=(1.68,1.7), dpi=300, sharex=True)
+    fig, axs = plt.subplots(len(TransectIDs),1,figsize=(1.88,3.1), dpi=300, sharex=True)
+    # common x label
+    fig.text(0.5,0.01,'$\mu$ (m/s$^2$)', ha='center', va='center')
+    
+    for ax, (Tr, TransectID) in zip(axs, enumerate(TransectIDs)):
         
         # Plot histogram with custom bins and colors
-        cbins = np.arange(-0.03,0.031,0.01)
-        cm = plt.cm.get_cmap('seismic') # red-white-blue
+        # cbins = np.arange(-0.03,0.031,0.01)
+        cbins=np.arange(-0.01,0.012,0.002)
+        cm = plt.cm.get_cmap('seismic_r') # red-white-blue
         norm = mpl.colors.Normalize(vmin=cbins.min(), vmax=cbins.max())
         colors = [cm(norm(b)) for b in cbins[:-1]]
         
-        bins = np.arange(-0.1,0.11,0.001)
+        # bins = np.arange(-0.02,0.02,0.001)
+        bin_width = 0.001
+        half_range = 0.02
+        # Adjust bins to ensure 0 is in the center
+        bins = np.arange(-half_range, half_range + bin_width, bin_width) - (bin_width / 2)        
         n, bins, patches = ax.hist(muDF[TransectID], bins=bins)
-        
+
         for patch in patches:
-            # Calculate the color based on the bin's midpoint
             bin_mid = (patch.get_x() + patch.get_x() + patch.get_width()) / 2
             patch.set_facecolor(cm(norm(bin_mid)))  # Set color based on normalized bin position
 
-
-        plt.xlim(-0.02,0.02)
-        plt.xlabel('Wave diffusivity (m/s$^2$)')
-        plt.title('Transect '+str(TransectID)+' - '+Title)
+        ax.set_xlim(-0.02,0.02)
+        # ax.set_xlabel('Wave diffusivity (m/s$^2$)')
+        if Titles is not None:
+            ax.set_title('Transect '+str(TransectID)+' - '+Titles[Tr])
+        else:
+            ax.set_title('Transect '+str(TransectID))
+        ax.tick_params(axis='y', which='both', left=False, labelleft=False)
         
-        figname = os.path.join(outfilepath,sitename + '_WaveDiffusHist_Transect'+str(TransectID)+'.png')
+        figID += '_'+str(TransectID)
+    
+    plt.tight_layout()
+    # plt.subplots_adjust(left=0.08,right=0.95, wspace=0, hspace=0.25)
+    
+    figname = os.path.join(outfilepath,sitename + '_WaveDiffusHist_Transect'+figID+'.png')
+    plt.savefig(figname, bbox_inches='tight', dpi=300, transparent=True)
+    print('Plot saved under '+figname)
         
-        plt.tight_layout()
-
-        plt.savefig(figname, bbox_inches='tight', dpi=300, transparent=True)
-        print('Plot saved under '+figname)
-        
-        plt.show()
+    plt.show()
         
     
 def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
@@ -3634,8 +3647,8 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
         
         figID += '_'+str(TransectID)
         plt.tight_layout()
-        
-        leg = ax.legend(loc='center left', handlelength=1, handletextpad=0.5)
+        TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
+        leg = ax.legend(loc='center left', handlelength=1, handletextpad=0.5, title='Wave H$_s$ (m)', title_fontproperties=TitleFont, prop=TitleFont)
         
         # Adjust the location of the legend
         plt.draw()
