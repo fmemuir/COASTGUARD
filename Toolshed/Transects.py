@@ -600,6 +600,8 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
             # use date index to identify matching distance along transect
             # and calculate distance between two intersections (veg - water means +ve is veg measured seaward towards water)
             VLSLDists.append(TransectInterGDFWater['wlcorrdist'].iloc[Tr][D] - TransectInterGDFWater['distances'].iloc[Tr][DateIndex])
+
+
         TransectInterGDFWater['beachwidth'].iloc[Tr] = VLSLDists
         
         
@@ -731,16 +733,15 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     output : dict
         Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
     TransectInterGDFWater : GeoDataFrame
-        AllIntersects GeoDataFrame with information from transect-veg edge intersections extracted.
+        GeoDataFrame with information from transect-veg edge intersections extracted.
     AvBeachSlope : float, optional
         Average tan(Beta) value across the intertidal zone. The default value is None.
 
     Returns
     -------
-    CorrIntDistances : list
-        Corrected cross-shore waterline distances per transect.
-    TidalStages : list
-        Tidal elevations per transect.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame with information from transect-veg edge intersections extracted, updated with
+        corrected WL distances, tidal elevation and beach slopes.
 
     """
     
@@ -775,7 +776,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in transect['wldates']]
         dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
         tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
-        # If wave data is provided (only available per VE date), add runups to tidal correction
+        # If wave data is provided, add runups to tidal correction
         if TransectInterGDFWave is not None and len(TransectInterGDFWave['dates'].iloc[Tr]) > 0:
             TWL = [tides_sat + R2 for tides_sat, R2 in zip(tides_sat_tr, TransectInterGDFWave['Runups'].iloc[Tr])]
         else: # if no runups available (i.e. no VEs on this transect), just use tides
