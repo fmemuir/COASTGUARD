@@ -403,7 +403,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
         
         ShoreLevels = []
         # for each water elevation obs in each transect
-        for welev in TransectInterGDFWater['waterelev'].iloc[Tr]:
+        for welev in TransectInterGDFWater['tideelev'].iloc[Tr]:
             if welev >= TideSteps[0] and welev <= TideSteps[1]:
                 ShoreLevels.append('lower')
             elif welev >= TideSteps[1] and welev <= TideSteps[2]:
@@ -558,7 +558,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
 
     print('calculating tidally corrected cross-shore distances...')
     # Tidal correction to get corrected distances along transects
-    TransectInterGDFWater = TidalCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave, AvBeachSlope)
+    TransectInterGDFWater = WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave, AvBeachSlope)
     
     # Create beach width and attributes
     # must initialise with list of same length as waterline dates
@@ -571,7 +571,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         # Field representing beach zone dependent on tidal height range split into 3 (upper, middle or lower)
         ShoreLevels = []
         # for each water elevation obs in each transect
-        for welev in TransectInterGDFWater['waterelev'].iloc[Tr]:
+        for welev in TransectInterGDFWater['tideelev'].iloc[Tr]:
             if welev >= TideSteps[0] and welev <= TideSteps[1]:
                 ShoreLevels.append('lower')
             elif welev >= TideSteps[1] and welev <= TideSteps[2]:
@@ -705,13 +705,13 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
     
     # Once each transect has been corrected, add finished lists to geodataframe
     TransectInterGDFWater['wlcorrdist'] = CorrectedDists
-    TransectInterGDFWater['waterelev'] = TidalStages
+    TransectInterGDFWater['tideelev'] = TidalStages
     TransectInterGDFWater['beachslope'] = BeachSlopes
     
     return TransectInterGDFWater
 
 
-def TidalCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=None, AvBeachSlope=None):
+def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=None, AvBeachSlope=None):
     """
     IN DEVELOPMENT: This is an attempt to make TidalCorrection() more efficient.
     
@@ -775,10 +775,10 @@ def TidalCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWa
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in transect['wldates']]
         dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
         tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
-        # If wave data is provided, add runups to tidal correction
-        if TransectInterGDFWave is not None:
-            TWL = [tides_sat + R2 for tides_sat, R2 in zip(tides_sat_tr, TransectInterGDFWave['Runup'].iloc[Tr])]
-        else:
+        # If wave data is provided (only available per VE date), add runups to tidal correction
+        if TransectInterGDFWave is not None and len(TransectInterGDFWave['dates'].iloc[0]) > 0:
+            TWL = [tides_sat + R2 for tides_sat, R2 in zip(tides_sat_tr, TransectInterGDFWave['Runups'].iloc[Tr])]
+        else: # if no runups available (i.e. no VEs on this transect), just use tides
             TWL = tides_sat_tr
         
         # Retrieve transect cross distances
@@ -809,7 +809,7 @@ def TidalCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWa
     
     # Add results back to TransectInterGDFWater
     TransectInterGDFWater['wlcorrdist'] = CorrectedDists
-    TransectInterGDFWater['waterelev'] = TidalStages
+    TransectInterGDFWater['tideelev'] = TidalStages
     TransectInterGDFWater['beachslope'] = BeachSlopes
 
     return TransectInterGDFWater
