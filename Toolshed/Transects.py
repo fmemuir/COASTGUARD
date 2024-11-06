@@ -776,7 +776,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
         dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
         tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
         # If wave data is provided (only available per VE date), add runups to tidal correction
-        if TransectInterGDFWave is not None and len(TransectInterGDFWave['dates'].iloc[0]) > 0:
+        if TransectInterGDFWave is not None and len(TransectInterGDFWave['dates'].iloc[Tr]) > 0:
             TWL = [tides_sat + R2 for tides_sat, R2 in zip(tides_sat_tr, TransectInterGDFWave['Runups'].iloc[Tr])]
         else: # if no runups available (i.e. no VEs on this transect), just use tides
             TWL = tides_sat_tr
