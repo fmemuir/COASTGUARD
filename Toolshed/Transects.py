@@ -442,7 +442,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     return TransectInterGDFWater
     
 
-def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, TransectInterGDFWave=None, AvBeachSlope=None):
+def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output):
     """
     IN DEVELOPMENT: This is an attempt to make GetBeachWidth() more efficient.
     
@@ -469,10 +469,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         Dictionary of user-defined settings used for the veg edge/waterline extraction.
     output : dict
         Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
-    TransectInterGDFWave : GeoDataFrame
-        GDF of shore-normal transects, with veg edge and wave data stored.
-    AvBeachSlope : float, optional
-        Average tan(Beta) value across the intertidal zone. The default is None.
+
 
     Returns
     -------
@@ -553,13 +550,12 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     # Assign now-filled lists to the corresponding TransectInterGDFWater columns
     for key, data in WLData.items():
         TransectInterGDFWater[key] = data
-        
     # END of faster code
 
-    print('calculating tidally corrected cross-shore distances...')
-    # Tidal correction to get corrected distances along transects
-    TransectInterGDFWater = WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave, AvBeachSlope)
-    
+    return TransectInterGDFWater
+
+
+def CalcBeachWidth(settings, TransectGDF, TransectInterGDFWater):
     # Create beach width and attributes
     # must initialise with list of same length as waterline dates
     TransectInterGDFWater['beachwidth'] = TransectInterGDFWater['wldates'].copy()
