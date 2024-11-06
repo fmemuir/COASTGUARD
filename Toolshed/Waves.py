@@ -736,16 +736,29 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
         print('number of breaking wave conditions: '+str(Nloop))
 
 
-def CalcRunup(WaveHs):
+def CalcRunup(WaveHs, WaveTp=None, Model="Senechal"):
     """
-    Calculate wave runup using Senechal et al., 2011 and Castelle et al., 2021
-    formula (assuming runup scales directly with offshore wave height).
+    Calculate wave runup using Senechal et al., 2011 formula 
+    (assuming runup scales directly with offshore wave height).
+    Can alternatively use Stockdon  et al., 2006 if wave period is available.
     FM June 2024
 
     Parameters
     ----------
     WaveHs : list
-        Offshore wave heights (from Copernicus hindcast) at each transect in a site.
+        Offshore significant wave heights (from Copernicus hindcast) at each transect in a site.
+    WaveTp : list, optional
+        Offshore peak wave periods (from Copernicus hindcast) at each transect in a site.
+        The default is None (period only needed for Stockdon equation).
+    Model : string, optional
+        Runup equation to be used, from either 'Senechal':
+            Senechal, N., Coco, G., Bryan, K.R., Holman, R.A., 2011. Wave runup during extreme
+            storm conditions. Journal of Geophysical Research 116.
+            https://doi.org/10.1029/2010JC006819
+        or 'Stockdon':
+            Stockdon, H. F., Holman, R. A., Howd, P. A., & Sallenger, A. H. (2006).
+            Empirical  parameterization of setup, swash, and runup. Coastal Engineering,
+            53(7), 573–588. https://doi.org/10.1016/j.coastaleng.2005.12.005
 
     Returns
     -------
@@ -773,9 +786,13 @@ def CalcRunup(WaveHs):
         else:
             RunupTr = []
             # For each wave condition at time of each sat image (at single transect)
-            for Hs in WaveHs[Tr]:
-                # Senechal 2011, Castelle 2021 runup calculation for macrotidal beach
-                runup = 2.14 * np.tanh(0.4*Hs)
+            for i in range(len(WaveHs[Tr])):
+                if Model == 'Senechal':
+                    # Senechal 2011, Castelle 2021 Runup (2% exceedance) calculation for macrotidal beach
+                    runup = 2.14 * np.tanh(0.4 * WaveHs[Tr][i])
+                elif Model == 'Stockdon':
+                    L0 = (9.8 * WaveTp[Tr][i]**2) / (2 * np.pi)
+                    runup = 0.043 * (WaveHs[Tr][i] * L0)**0.5
                 RunupTr.append(runup)
         
         # Add per-transect runup lists (or nan) to full list
