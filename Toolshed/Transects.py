@@ -442,7 +442,7 @@ def GetBeachWidth(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, setting
     return TransectInterGDFWater
     
 
-def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, AvBeachSlope=None):
+def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, TransectInterGDFWave=None, AvBeachSlope=None):
     """
     IN DEVELOPMENT: This is an attempt to make GetBeachWidth() more efficient.
     
@@ -460,14 +460,17 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         Path to shapefiles of transects.
     TransectGDF : GeoDataFrame
         GDF of shore-normal transects created.
-    TransectGDF : GeoDataFrame
-        GDF of shore-normal transects created, with veg edge intersection data stored.
+    TransectInterGDF : GeoDataFrame
+        GDF of shore-normal transects, with veg edge intersection data stored.
+    
     WaterlineGDF : TYPE
         GeoDataFrame of waterlines extracted from satellite images.
     settings : dict
         Dictionary of user-defined settings used for the veg edge/waterline extraction.
     output : dict
         Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
+    TransectInterGDFWave : GeoDataFrame
+        GDF of shore-normal transects, with veg edge and wave data stored.
     AvBeachSlope : float, optional
         Average tan(Beta) value across the intertidal zone. The default is None.
 
@@ -555,7 +558,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
 
     print('calculating tidally corrected cross-shore distances...')
     # Tidal correction to get corrected distances along transects
-    TransectInterGDFWater = TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope)
+    TransectInterGDFWater = TidalCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave, AvBeachSlope)
     
     # Create beach width and attributes
     # must initialise with list of same length as waterline dates
@@ -708,15 +711,15 @@ def TidalCorrection(settings, output, TransectInterGDFWater, AvBeachSlope=None):
     return TransectInterGDFWater
 
 
-def TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope=None):
+def TidalCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=None, AvBeachSlope=None):
     """
     IN DEVELOPMENT: This is an attempt to make TidalCorrection() more efficient.
     
     Correct cross-shore waterline distances to remove the effects of tides. Uses
-    the equation "x_tide = x + ( z_tide / tan(Beta) )", where x is cross-shore
-    distance along transect of waterline intersection, z_tide is the tidal stage
-    at a chosen elevation above sea level, and Beta is the rise/run of the beach
-    between mean sea level and mean high water spring. 
+    the equation "x_corr = x + ( z / tan(beta) )", where x is cross-shore
+    distance along transect of waterline intersection, z is the tidal stage
+    at a chosen elevation above sea level (+ runup if available), and beta is 
+    the rise/run of the beach between mean sea level and mean high water spring. 
     
     FM Nov 2022
     Updated Oct 2024
@@ -727,7 +730,7 @@ def TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope=None)
         Dictionary of user-defined settings used for the veg edge/waterline extraction.
     output : dict
         Dictionary of extracted veg edges (and waterlines) and associated info with each edge.
-    IntersectDF : GeoDataFrame
+    TransectInterGDFWater : GeoDataFrame
         AllIntersects GeoDataFrame with information from transect-veg edge intersections extracted.
     AvBeachSlope : float, optional
         Average tan(Beta) value across the intertidal zone. The default value is None.
@@ -772,7 +775,12 @@ def TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope=None)
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in transect['wldates']]
         dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
         tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
-    
+        # If wave data is provided, add runups to tidal correction
+        if TransectInterGDFWave is not None:
+            TWL = [tides_sat + R2 for tides_sat, R2 in zip(tides_sat_tr, TransectInterGDFWave['Runup'].iloc[Tr])]
+        else:
+            TWL = tides_sat_tr
+        
         # Retrieve transect cross distances
         cross_distances = transect['wldists']
     
@@ -790,8 +798,8 @@ def TidalCorrections(settings, output, TransectInterGDFWater, AvBeachSlope=None)
     
         # Correct each cross-shore distance for tidal elevation
         CorrectedDistsTr = [
-            cross_distance + ((tide_elev - RefElev) / BeachSlope)
-            for cross_distance, tide_elev in zip(cross_distances, tides_sat_tr)
+            cross_distance + ((z - RefElev) / BeachSlope)
+            for cross_distance, z in zip(cross_distances, TWL)
         ]
     
         # Append results for this transect
@@ -1375,8 +1383,8 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
 
     Returns
     -------
-    TransectInterGDF : GeoDataFrame
-        Updated GeoDataFrame with new info attached to each transect.
+    TransectInterGDFWave : GeoDataFrame
+        Updated GeoDataFrame with new wave info attached to each transect.
 
     """
     
@@ -1388,6 +1396,9 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     BBox.to_crs(epsg=4326, inplace=True)
     # lonmin, lonmax, latmin, latmax = 
     
+    # Avoid overwriting anything
+    TransectInterGDFWave = TransectInterGDF.copy()
+    
     # Download wave hindcast for given time frame and location
     WavePath, WaveOutFile = Waves.GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax)
     WaveFilePath = os.path.join(WavePath, WaveOutFile)
@@ -1395,22 +1406,22 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     # Sample waves from CMEMS hindcast
     WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWaves(settings, TransectInterGDF, WaveFilePath)
     WaveAlphas = []
-    for Tr in range(len(TransectInterGDF)):
+    for Tr in range(len(TransectInterGDFWave)):
         WaveAlphas.append(Waves.CalcAlpha(WaveDir, ShoreAngles, Tr))
     
-    TransectInterGDF['WaveHs'] = WaveHs
-    TransectInterGDF['WaveDir'] = WaveDir
-    TransectInterGDF['WaveAlpha'] = WaveAlphas
-    TransectInterGDF['WaveTp'] = WaveTp
-    TransectInterGDF['WaveDiffus'] = WaveDiffusivity
-    TransectInterGDF['WaveStabil'] = WaveStability
-    TransectInterGDF['ShoreAngle'] = ShoreAngles
+    TransectInterGDFWave['WaveHs'] = WaveHs
+    TransectInterGDFWave['WaveDir'] = WaveDir
+    TransectInterGDFWave['WaveAlpha'] = WaveAlphas
+    TransectInterGDFWave['WaveTp'] = WaveTp
+    TransectInterGDFWave['WaveDiffus'] = WaveDiffusivity
+    TransectInterGDFWave['WaveStabil'] = WaveStability
+    TransectInterGDFWave['ShoreAngle'] = ShoreAngles
     
     # Calculate wave runup from extracted wave conditions
     Runups = Waves.CalcRunup(WaveHs)
-    TransectInterGDF['Runups'] = Runups
+    TransectInterGDFWave['Runups'] = Runups
     
-    TransectInterShp = TransectInterGDF.copy()
+    TransectInterShp = TransectInterGDFWave.copy()
     
     # reformat fields with lists to strings
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
@@ -1433,7 +1444,7 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     TransectInterShp.to_file(os.path.join(BasePath,settings['inputs']['sitename']+'_Transects_Intersected_Waves.shp'))
         
     
-    return TransectInterGDF
+    return TransectInterGDFWave
 
 
 
