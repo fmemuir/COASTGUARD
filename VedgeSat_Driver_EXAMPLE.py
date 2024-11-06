@@ -220,7 +220,20 @@ else:
     
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDF, f)
-        
+
+#%% Transect-Waves Intersections (needs to be run before water if using runup in tidal corrections)
+
+if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl')):
+    print('Transect Intersect + Wave GDF exists and was loaded')
+    with open(os.path.join
+              (filepath , sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'rb') as f:
+        TransectInterGDFWave = pickle.load(f)
+else:
+    TransectInterGDFWave = Transects.WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax)
+    
+    with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectInterGDFWave, f)
+     
 #%% Transect-Water Intersections
 
 if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl')):
@@ -253,18 +266,6 @@ else:
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_topo_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDFTopo, f)
 
-#%% Transect-Waves Intersections
-
-if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl')):
-    print('Transect Intersect + Wave GDF exists and was loaded')
-    with open(os.path.join
-              (filepath , sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'rb') as f:
-        TransectInterGDFWave = pickle.load(f)
-else:
-    TransectInterGDFWave = Transects.WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax)
-    
-    with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'wb') as f:
-        pickle.dump(TransectInterGDFWave, f)
 
 #%% Timeseries Plotting
 
