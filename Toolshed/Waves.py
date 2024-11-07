@@ -177,7 +177,7 @@ def ReadWaveFile(WaveFilePath):
     return WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents
 
 
-def SampleWaves(settings, TransectInterGDF, WaveFilePath):
+def SampleWaves(settings, output, TransectInterGDF, WaveFilePath):
     """
     Function to extract wave information from Copernicus NWS data
     
@@ -206,6 +206,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
     # Calculate time step used for interpolating data between
     TimeStep = (WaveTime[1]-WaveTime[0]).total_seconds()/(60*60)    
     
+    WaveDates = []
     WaveHs = []
     WaveDir = []
     WaveTp = []
@@ -256,88 +257,96 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         # Above is old version; this one uses radians
         TrWaveDiffusivity, TrWaveStability = WaveClimateSimple(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
 
-        InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # line intersections on each transect
+        # Don't need below condition if waves are just using the same output['dates'] list each transect
+        # InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # line intersections on each transect
         # if transect intersect is empty i.e. no veg lines intersected, can't grab matching waves per sat image
-        if InterPnts == []: 
-            TrWaveHs, TrWaveDir, TrWaveTp, TrNormWaveHs, TrNormWaveDir,TrNormWaveTp, TrStDevWaveHs, TrStDevWaveDir, TrStDevWaveTp = (np.nan for i in range(9))
+        # if InterPnts == []: 
+            # TrWaveHs, TrWaveDir, TrWaveTp, TrNormWaveHs, TrNormWaveDir,TrNormWaveTp, TrStDevWaveHs, TrStDevWaveDir, TrStDevWaveTp = (np.nan for i in range(9))
         
-        else:                       
+        # else:                       
             # per-transect wave data
-            TrWaveHs = []
-            TrWaveDir = []
-            TrWaveTp = []
-            TrNormWaveHs = []
-            TrNormWaveDir = []
-            TrNormWaveTp = []
-            TrStDevWaveHs = []
-            TrStDevWaveDir = []
-            TrStDevWaveTp = []
+        # TrWaveDates = []
+        TrWaveHs = []
+        TrWaveDir = []
+        TrWaveTp = []
+        TrNormWaveHs = []
+        TrNormWaveDir = []
+        TrNormWaveTp = []
+        TrStDevWaveHs = []
+        TrStDevWaveDir = []
+        TrStDevWaveTp = []
+                
+
+        # for i in range(len(TransectInterGDF['dates'].iloc[Tr])): # for each VE date on each Transect
+        DateTimeSat = [
+            datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f') 
+            for date, time in zip(output['dates'], output['times'])
+        ]
+        for i in range(len(DateTimeSat)):
+            # DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
+            # TrWaveDates.append(DateTimeSat[i]) # should total the same length of output['dates']
+            # Interpolate wave data using number of minutes through the hour the satellite image was captured
+            for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
+                                         [TrWaveHs, TrWaveDir, TrWaveTp]):
+                # if sat image date falls outside wave data window, assign nan
+                if WaveTime[-1] < DateTimeSat[i]:
+                    WaveSat.append(np.nan)
+                else:
+                    # find preceding and following hourly tide levels and times
+                    Time_1 = WaveTime[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat[i]-timedelta(hours=TimeStep)), WaveTime)]                        
+                    Wave_1 = WaveProp[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat[i]-timedelta(hours=TimeStep)), WaveTime)]
                     
-
-            for i in range(len(TransectInterGDF['dates'].iloc[Tr])): # for each date on each Transect
-                DateTimeSat = datetime.strptime(TransectInterGDF['dates'].iloc[Tr][i] + ' ' + TransectInterGDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f')
-
-                # Interpolate wave data using number of minutes through the hour the satellite image was captured
-                for WaveProp, WaveSat in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
-                                             [TrWaveHs, TrWaveDir, TrWaveTp]):
-                    # if sat image date falls outside wave data window, assign nan
-                    if WaveTime[-1] < DateTimeSat:
-                        WaveSat.append(np.nan)
-                    else:
-                        # find preceding and following hourly tide levels and times
-                        Time_1 = WaveTime[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]                        
-                        Wave_1 = WaveProp[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat-timedelta(hours=TimeStep)), WaveTime)]
-                        
-                        Time_2 = WaveTime[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
-                        Wave_2 = WaveProp[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat), WaveTime)]
-                        
-                        # Find time difference of actual satellite timestamp (next wave timestamp minus sat timestamp)
-                        TimeDiff = Time_2 - DateTimeSat
-                        # Get proportion of time back from the next 3-hour timestep
-                        TimeProp = TimeDiff / timedelta(hours=TimeStep)
-                        
-                        # Get proportional difference between the two tidal stages
-                        WaveDiff = (Wave_2 - Wave_1)
-                        WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
-
-                for WaveProp, WaveSat, WaveType in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
-                                                   [TrNormWaveHs, TrNormWaveDir, TrNormWaveTp], ['Hs','Dir','Tp']):
-                    # if sat image date falls outside wave data window, assign nan
-                    if WaveTime[-1] < DateTimeSat:
-                        WaveSat.append(np.nan)
-                    else:
-                        # Smooth over previous 3 month time period and get mean from this range
-                        if Time_1-timedelta(days=90) in WaveTime:
-                            Prev3Month = WaveTime.index(Time_1-timedelta(days=90))
-                         # if timestep doesn't exist for exactly 3 months back, minus an hour
-                        elif Time_1-timedelta(days=90,hours=1) in WaveTime:
-                            Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=1))
-                         # if timestep doesn't exist for exactly 3 months back, add an hour
-                        elif Time_1-timedelta(days=90,hours=-1) in WaveTime:
-                            Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=-1))
-                        
-                        if WaveType == 'Dir':
-                            # if dealing with wave dir, use circular mean (to avoid problems with dirs around N i.e. 0deg)
-                            SmoothWaveProp = Toolbox.CircMean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
-                        else:
-                            SmoothWaveProp = np.mean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
-                        WaveSat.append(SmoothWaveProp)
+                    Time_2 = WaveTime[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat[i]), WaveTime)]
+                    Wave_2 = WaveProp[Toolbox.find(min(item for item in WaveTime if item > DateTimeSat[i]), WaveTime)]
                     
-                for WaveProp, WaveSat, WaveType in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
-                                                   [TrStDevWaveHs, TrStDevWaveDir, TrStDevWaveTp], ['Hs','Dir', 'Tp']):
-                    # if sat image date falls outside wave data window (only updated every 3 months or so), assign nan
-                    if WaveTime[-1] < DateTimeSat:
-                        WaveSat.append(np.nan)
+                    # Find time difference of actual satellite timestamp (next wave timestamp minus sat timestamp)
+                    TimeDiff = Time_2 - DateTimeSat[i]
+                    # Get proportion of time back from the next 3-hour timestep
+                    TimeProp = TimeDiff / timedelta(hours=TimeStep)
+                    
+                    # Get proportional difference between the two tidal stages
+                    WaveDiff = (Wave_2 - Wave_1)
+                    WaveSat.append(Wave_2 - (WaveDiff * TimeProp))
+
+            for WaveProp, WaveSat, WaveType in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
+                                               [TrNormWaveHs, TrNormWaveDir, TrNormWaveTp], ['Hs','Dir','Tp']):
+                # if sat image date falls outside wave data window, assign nan
+                if WaveTime[-1] < DateTimeSat[i]:
+                    WaveSat.append(np.nan)
+                else:
+                    # Smooth over previous 3 month time period and get mean from this range
+                    if Time_1-timedelta(days=90) in WaveTime:
+                        Prev3Month = WaveTime.index(Time_1-timedelta(days=90))
+                     # if timestep doesn't exist for exactly 3 months back, minus an hour
+                    elif Time_1-timedelta(days=90,hours=1) in WaveTime:
+                        Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=1))
+                     # if timestep doesn't exist for exactly 3 months back, add an hour
+                    elif Time_1-timedelta(days=90,hours=-1) in WaveTime:
+                        Prev3Month = WaveTime.index(Time_1-timedelta(days=90,hours=-1))
+                    
+                    if WaveType == 'Dir':
+                        # if dealing with wave dir, use circular mean (to avoid problems with dirs around N i.e. 0deg)
+                        SmoothWaveProp = Toolbox.CircMean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
                     else:
-                        # Smooth over previous 3 month time period and get stdev from this range
-                        if WaveType == 'Dir':
-                            # if dealing with wave dir, use circular std (to avoid problems with dirs around N i.e. 0deg)
-                            StDevWaveProp = Toolbox.CircStd(WaveProp[Prev3Month:WaveTime.index(Time_1)])
-                        else:
-                            StDevWaveProp = np.std(WaveProp[Prev3Month:WaveTime.index(Time_1)])
-                        WaveSat.append(StDevWaveProp)
+                        SmoothWaveProp = np.mean(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                    WaveSat.append(SmoothWaveProp)
+                
+            for WaveProp, WaveSat, WaveType in zip([SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong]], 
+                                               [TrStDevWaveHs, TrStDevWaveDir, TrStDevWaveTp], ['Hs','Dir', 'Tp']):
+                # if sat image date falls outside wave data window (only updated every 3 months or so), assign nan
+                if WaveTime[-1] < DateTimeSat[i]:
+                    WaveSat.append(np.nan)
+                else:
+                    # Smooth over previous 3 month time period and get stdev from this range
+                    if WaveType == 'Dir':
+                        # if dealing with wave dir, use circular std (to avoid problems with dirs around N i.e. 0deg)
+                        StDevWaveProp = Toolbox.CircStd(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                    else:
+                        StDevWaveProp = np.std(WaveProp[Prev3Month:WaveTime.index(Time_1)])
+                    WaveSat.append(StDevWaveProp)
 
         # append per-transect lists
+        WaveDates.append(DateTimeSat)
         WaveHs.append(TrWaveHs)
         WaveDir.append(TrWaveDir)
         WaveTp.append(TrWaveTp)
@@ -350,7 +359,7 @@ def SampleWaves(settings, TransectInterGDF, WaveFilePath):
         WaveDiffusivity.append(TrWaveDiffusivity)
         WaveStability.append(TrWaveStability)
 
-    return WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles
+    return WaveDates, WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles
 
 
 def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
