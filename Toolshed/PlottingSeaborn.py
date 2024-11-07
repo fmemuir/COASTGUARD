@@ -45,6 +45,7 @@ from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 import statsmodels.api as sm
+from scipy.stats import spearmanr
 
 
 
@@ -1307,14 +1308,14 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
                     mn, var, skw, kurt = Toolbox.Moments(Arr[:,row])
                     stdv = np.sqrt(var)
                     moments_label = f'$\gamma_{1}$ = {round(skw,2)}\n$\gamma_{2}$ = {round(kurt,2)}'
-                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5, label=moments_label)
+                    axs[col,row].hist(Arr[:,row], bins, color=colour, alpha=0.5, label=moments_label)
                     # Plot the mean as a vertical line
                     axs[col,row].axvline(x=mn, c=colour, lw=0.5, ls='--')
                     # Plot the variance
                     axs[col,row].axvline(x=mn-stdv, c=colour, lw=0.5, ls=':')
                     axs[col,row].axvline(x=mn+stdv, c=colour, lw=0.5, ls=':')
                     axs[col,row].set_yticks([]) # turns off ticks and tick labels
-                    if col > 1:
+                    if col > 1 and col < 4:
                         legloc = 'upper right'
                     else:
                         legloc = 'upper left'
@@ -1324,21 +1325,22 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
                 
                 # otherwise plot scatter of each variable against one another
                 else:
+                                      
                     scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
-                    
+                    # scatterPl = axs[col,row].scatter(Arr[:,row][0:int(len(Arr[:,row])/2)], Arr[:,col][0:int(len(Arr[:,col])/2)], s=20, alpha=0.4, marker='.', c='C4', edgecolors='none')
+
                     # overall non-parametric reg line
                     Lowess = sm.nonparametric.lowess(list(MultivarArray[:,col]), list(MultivarArray[:,row]), frac=0.2)
                     regLn, = axs[col,row].plot(Lowess[:, 0], Lowess[:, 1], c='k', ls='--', lw=1.5, zorder=3)
- 
-                    # # clustered linear regression lines
-                    # zArr = np.polyfit(list(Arr[:,row]), list(Arr[:,col]), 1)
-                    # polyArr = np.poly1d(zArr)
-                    # orderArr = np.argsort(Arr[:,row])
-                    # # plot clustered linear reg line
-                    # clustBuff, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c='w', ls='-', lw=1.9, alpha=0.8, zorder=1)
-                    # clustLn, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c=colour, ls='--', lw=1.5, zorder=2)
-                    # rArr, pArr = scipy.stats.pearsonr(list(Arr[:,row]), list(Arr[:,col]))
-                    # statstrArr = 'r = %.2f' % (rArr)
+                
+                    # Calculate Spearman correlation
+                    Spearman, _ = spearmanr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
+                    SpearmanLab = f"$r_s$ = {Spearman:.2f}"
+                    SpearmanLeg = Line2D([0], [0], color='none', label=SpearmanLab)
+                    ScatterLeg = axs[col,row].legend(handles=[SpearmanLeg],loc='lower right', 
+                                        prop={'size':5}, edgecolor='none', framealpha=0.5,
+                                        borderpad=0.2, labelspacing=0, handlelength=0, handletextpad=0)
+                    
                 # Horizontal and vertical lines through 0    
                 hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
                 vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
@@ -1351,21 +1353,16 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
                     axs[row,col].set_ylabel(lab[row])
                 else:
                     axs[row,col].tick_params(labelleft=False)
-                    
                 
-                # set veg vs water plots to equal axes to highlight orders of difference
-                # if lab[col] == r'$\Delta$VE (m/yr)' and lab[row] == r'$\Delta$WL (m/yr)' :
-                #     axs[row,col].axis('equal')
-                    
                 # clear plots on RHS of hists, print heatmaps of point density instead
                 for i in range(MultivarArray.shape[1]):
                     if col == i and row > i:
                         # axs[col,row].cla() # clears axis on each loop
-                        for Ln in [regLn, scatterPl, hLn, vLn]:
+                        for Ln in [regLn, scatterPl, hLn, vLn, ScatterLeg]:
                             Ln.remove()
                         # axs[col,row].hexbin(list(MultivarArray[:,col]), list(MultivarArray[:,row]), gridsize=5, cmap='Greys')
-                        bins = 30  # Adjust based on the data density and plot size
-                        hist2D = axs[col,row].hist2d(list(MultivarArray[:,col]), list(MultivarArray[:,row]), bins=bins, cmap='Greys')
+                        bins = 25  # Adjust based on the data density and plot size
+                        axs[col,row].hist2d(list(MultivarArray[:,col]), list(MultivarArray[:,row]), bins=bins, cmap='Greys')
                         axs[col,row].set_xlim(axs[row,col].get_xlim())
                         axs[col,row].set_ylim(axs[row,col].get_ylim())
                         axs[col,row].set_xticks([])
