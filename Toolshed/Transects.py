@@ -747,12 +747,13 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
         datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f') 
         for date, time in zip(output['dates'], output['times'])
     ]
-    tide_dict = dict(zip(dates_sat, Toolbox.GetWaterElevs(settings, dates_sat),))
+    tide_dict = dict(zip(dates_sat, Toolbox.GetWaterElevs(settings, dates_sat)))
     
     # If wave data is provided, add runups to tidal correction
     if TransectInterGDFWave is not None:
         print('using runup as well as tides...')
-        runup_dict = dict(zip(TransectInterGDFWave['WaveDates'].iloc[0], TransectInterGDFWave['Runups'].iloc[0])) # first entry should have all runups
+        # need to set any nans in runup to 0 to avoid setting all operations to nan
+        runup_dict = dict(zip(TransectInterGDFWave['WaveDates'].iloc[0], [0 if np.isnan(x) else x for x in TransectInterGDFWave['Runups'].iloc[0]])) # first entry should have all runups
         TWL_dict = dict(zip(dates_sat, [tide_dict[date] + runup_dict[date] for date in dates_sat]))
     else: # if no runups available, just use tides
         TWL_dict = tide_dict.copy()
@@ -780,6 +781,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
         # Gather and match dates for each transect's observations
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in transect['wldates']]
         dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
+        tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
         TWL_tr = [TWL_dict[date] for date in dates_sat_tr]
         
         # Retrieve transect cross distances
@@ -795,7 +797,8 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
             if len(dates_sat_tr) < 10:
                 BeachSlope = 0.1
             else:
-                BeachSlope = Slope.CoastSatSlope(dates_sat_tr, TWL_tr, cross_distances)
+                # tides needs to be used bc if any nan, then fine_tide_peak fails
+                BeachSlope = Slope.CoastSatSlope(dates_sat_tr, tides_sat_tr, cross_distances)
     
         # Correct each cross-shore distance for tidal elevation
         CorrectedDistsTr = [
