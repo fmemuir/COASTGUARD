@@ -2410,7 +2410,7 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
            r'$\Delta$WL (m/yr)',
            r'TZwidth$_{\eta}$ (m)',
            r'$\theta_{max}$ ($\circ$)',
-           r'$\mu_{net}$ (mm/s$^{2}$)']
+           r'$\mu_{net}$ (m/s$^{2}$)']
            # r'$\Gamma$ (1)']
     
     for row in range(MultivarArray.shape[1]):
@@ -2833,7 +2833,7 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
            r'$\Delta$water (m/yr)',
            r'TZwidth$_{\eta}$ (m)',
            r'slope$_{max}$ ($\circ$)',
-           r'$\mu_{net}$ (mm/s$^{2}$)']
+           r'$\mu_{net}$ (m/s$^{2}$)']
            #r'$\Gamma$ (1)']
     
     for row in range(MultivarArray.shape[1]):

@@ -44,6 +44,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
+import statsmodels.api as sm
 
 
 
@@ -1232,6 +1233,162 @@ def ThresholdViolin(sitename, filepath, sites):
 
     plt.show()
     
+    
+def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None):
+    """
+    Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
+    Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
+    Scatter points are separated into clustered regions (N vs S, eroding vs accreting).
+    This version includes non-parametric regression and density heatmaps.
+    FM Nov 2024
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of transects intersected with waterlines.
+    TransectInterGDFTopo : GeoDataFrame
+        GeoDataFrame of transects intersected with topographic data.
+    Loc1 : list
+        Transect IDs to slice array up for north location
+    Loc2 : list
+        Transect IDs to slice array up for south location
+
+    """
+    filepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(filepath) is False:
+        os.mkdir(filepath)
+    
+    # summer (pale) eroding = #F9C784 
+    # summer (pale) accreting = #9DB4C0
+        
+    # Scale up diffusivity (mu) for nicer labelling
+    MultivarGDF['WaveDiffus'] = MultivarGDF['WaveDiffus']*1000
+    
+    # Extract desired columns to an array for plotting
+    MultivarArray = np.array(MultivarGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus']])#, 'WaveStabil']])
+    
+    fs = 7
+    # fs = 10 # PPT dimensions
+    mpl.rcParams.update({'font.size':fs})
+
+    fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(6.55,6.55), dpi=300)
+    # fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
+
+    # if no location of transects is specified, split array by eroding and accreting
+    if Loc1 is None:
+        Arr1 = MultivarArray[0:int(len(MultivarArray)/2), :]
+        Arr2 = MultivarArray[int(len(MultivarArray)/2):, :]
+    else:   
+        Arr1 = MultivarArray[0:Loc1[1]-Loc1[0], :]
+        Arr2 = MultivarArray[Loc2[1]-Loc2[0]:, :]
+    # Plot matrix of relationships
+    lab = [r'$\Delta$VE (m/yr)',
+           r'$\Delta$WL (m/yr)',
+           r'TZwidth$_{\eta}$ (m)',
+           r'$\theta_{max}$ ($\circ$)',
+           r'$\mu_{net}$ (m/s$^{2}$)']
+           # r'$\Gamma$ (1)']
+    
+    for row in range(MultivarArray.shape[1]):
+        for col in range(MultivarArray.shape[1]): 
+            for Arr, colour, strpos, leglabel in zip(
+                                                    [Arr1, Arr2], 
+                                                    ['#C51B2F','#5499DE'],
+                                                    [0.4, 0.2],
+                                                    ['Eroding ','Accreting ']):
+                # if plot is same var on x and y, change plot to a histogram    
+                if row == col:
+                    binnum = round(np.sqrt(len(MultivarArray)))*2
+                    bins = np.histogram(MultivarArray[:,row],bins=binnum)[1]
+                    mn, var, skw, kurt = Toolbox.Moments(Arr[:,row])
+                    stdv = np.sqrt(var)
+                    moments_label = f'$\gamma_{1}$ = {round(skw,2)}\n$\gamma_{2}$ = {round(kurt,2)}'
+                    axs[col,row].hist(Arr[:,row],bins, color=colour, alpha=0.5, label=moments_label)
+                    # Plot the mean as a vertical line
+                    axs[col,row].axvline(x=mn, c=colour, lw=0.5, ls='--')
+                    # Plot the variance
+                    axs[col,row].axvline(x=mn-stdv, c=colour, lw=0.5, ls=':')
+                    axs[col,row].axvline(x=mn+stdv, c=colour, lw=0.5, ls=':')
+                    axs[col,row].set_yticks([]) # turns off ticks and tick labels
+                    if col > 1:
+                        legloc = 'upper right'
+                    else:
+                        legloc = 'upper left'
+                    axs[col,row].legend(loc=legloc, 
+                                        prop={'size':5}, edgecolor='none', framealpha=0.5,
+                                        borderpad=0.2, labelspacing=0.2, handlelength=0.5, handletextpad=0.2)               
+                
+                # otherwise plot scatter of each variable against one another
+                else:
+                    scatterPl = axs[col,row].scatter(Arr[:,row], Arr[:,col], s=20, alpha=0.4, marker='.', c=colour, edgecolors='none')
+                    
+                    # overall non-parametric reg line
+                    Lowess = sm.nonparametric.lowess(list(MultivarArray[:,col]), list(MultivarArray[:,row]), frac=0.2)
+                    regLn, = axs[col,row].plot(Lowess[:, 0], Lowess[:, 1], c='k', ls='--', lw=1.5, zorder=3)
+ 
+                    # # clustered linear regression lines
+                    # zArr = np.polyfit(list(Arr[:,row]), list(Arr[:,col]), 1)
+                    # polyArr = np.poly1d(zArr)
+                    # orderArr = np.argsort(Arr[:,row])
+                    # # plot clustered linear reg line
+                    # clustBuff, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c='w', ls='-', lw=1.9, alpha=0.8, zorder=1)
+                    # clustLn, = axs[col,row].plot(Arr[:,row][orderArr], polyArr(Arr[:,row][orderArr]), c=colour, ls='--', lw=1.5, zorder=2)
+                    # rArr, pArr = scipy.stats.pearsonr(list(Arr[:,row]), list(Arr[:,col]))
+                    # statstrArr = 'r = %.2f' % (rArr)
+                # Horizontal and vertical lines through 0    
+                hLn = axs[col,row].axvline(x=0, c=[0.5,0.5,0.5], lw=0.5)
+                vLn = axs[col,row].axhline(y=0, c=[0.5,0.5,0.5], lw=0.5)
+                
+                if row == MultivarArray.shape[1]-1: # set x axis labels on last row
+                    axs[row,col].set_xlabel(lab[col])
+                else:
+                    axs[row,col].tick_params(labelbottom=False)
+                if col == 0: # set y axis labels on first column
+                    axs[row,col].set_ylabel(lab[row])
+                else:
+                    axs[row,col].tick_params(labelleft=False)
+                    
+                
+                # set veg vs water plots to equal axes to highlight orders of difference
+                # if lab[col] == r'$\Delta$VE (m/yr)' and lab[row] == r'$\Delta$WL (m/yr)' :
+                #     axs[row,col].axis('equal')
+                    
+                # clear plots on RHS of hists, print heatmaps of point density instead
+                for i in range(MultivarArray.shape[1]):
+                    if col == i and row > i:
+                        # axs[col,row].cla() # clears axis on each loop
+                        for Ln in [regLn, scatterPl, hLn, vLn]:
+                            Ln.remove()
+                        # axs[col,row].hexbin(list(MultivarArray[:,col]), list(MultivarArray[:,row]), gridsize=5, cmap='Greys')
+                        bins = 30  # Adjust based on the data density and plot size
+                        hist2D = axs[col,row].hist2d(list(MultivarArray[:,col]), list(MultivarArray[:,row]), bins=bins, cmap='Greys')
+                        axs[col,row].set_xlim(axs[row,col].get_xlim())
+                        axs[col,row].set_ylim(axs[row,col].get_ylim())
+                        axs[col,row].set_xticks([])
+                        axs[col,row].set_yticks([])
+
+            
+    # align all yaxis labels in first column
+    fig.align_ylabels(axs[:,0])
+    
+    plt.tight_layout()
+    # plt.subplots_adjust(wspace=0.6, hspace=0.5)
+    if Loc1 is None:
+        figpath = os.path.join(filepath,sitename+'_MultivariateClustered_VegWaterTopoWaves_Heatmaps_AutoSplit.png')
+    else:
+        figpath = os.path.join(filepath,sitename+'_MultivariateClustered_VegWaterTopoWaves_Heatmaps_%s-%s_%s-%s.png' % 
+                               (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    
+    plt.show()
+    
+    return
+
 
 
 def PCAHeatmap(pca, MultivarGDF, colnames):
