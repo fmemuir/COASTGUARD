@@ -1401,7 +1401,8 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     WaveFilePath = os.path.join(WavePath, WaveOutFile)
     
     # Sample waves from CMEMS hindcast
-    WaveDates, WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWaves(settings, output, TransectInterGDF, WaveFilePath)
+    # WaveDates, WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWaves(settings, output, TransectInterGDF, WaveFilePath)
+    WaveDates, WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath)
     WaveAlphas = []
     for Tr in range(len(TransectInterGDFWave)):
         WaveAlphas.append(Waves.CalcAlpha(WaveDir, ShoreAngles, Tr))
@@ -1416,8 +1417,6 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     TransectInterGDFWave['ShoreAngle'] = ShoreAngles
     
     # Calculate wave runup from extracted wave conditions
-    import pdb
-    pdb.set_trace
     Runups = Waves.CalcRunup(WaveHs)
     TransectInterGDFWave['Runups'] = Runups
     

@@ -362,6 +362,186 @@ def SampleWaves(settings, output, TransectInterGDF, WaveFilePath):
     return WaveDates, WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles
 
 
+def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
+    """
+    Optimized function to extract wave information from Copernicus NWS data.
+    """
+
+    print('Loading wave data for extraction ...')
+
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = ReadWaveFile(WaveFilePath)
+    TimeStep = (WaveTime[1] - WaveTime[0]).total_seconds() / 3600  # in hours
+
+    DateTimeSat = [
+        datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f')
+        for date, time in zip(output['dates'], output['times'])
+    ]
+
+    # Caching and output lists
+    Centroids = TransectInterGDF.to_crs('4326').centroid
+    cache_results = {}
+    
+    # Prepare lists for all transects
+    output_results = {
+        'WaveDates': [],
+        'WaveHs': [],
+        'WaveDir': [],
+        'WaveTp': [],
+        'NormWaveHs': [],
+        'NormWaveDir': [],
+        'NormWaveTp': [],
+        'StDevWaveHs': [],
+        'StDevWaveDir': [],
+        'StDevWaveTp': [],
+        'WaveDiffusivity': [],
+        'WaveStability': [],
+        'ShoreAngles': []
+    }
+    
+    for Tr in range(len(TransectInterGDF)):
+        print('\r %i / %i transects processed' % (Tr, len(TransectInterGDF)), end='')
+
+        MidPnt = Centroids.iloc[Tr].coords[0]
+        IDLat = (np.abs(WaveY - MidPnt[1])).argmin()
+        IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
+        grid_cell = (IDLat, IDLong)
+
+        if grid_cell not in cache_results:
+            ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
+            TrWaveDiffusivity, TrWaveStability = WaveClimateSimple(
+                ShoreAngle,
+                SigWaveHeight[:, IDLat, IDLong],
+                MeanWaveDir[:, IDLat, IDLong],
+                PeakWavePer[:, IDLat, IDLong],
+                WaveTime
+            )
+
+            cache_results[grid_cell] = {
+                'ShoreAngle': ShoreAngle,
+                'WaveDiffusivity': TrWaveDiffusivity,
+                'WaveStability': TrWaveStability,
+                'InterpolatedWaves': {
+                    'TrWaveDates':[],
+                    'TrWaveHs': [],
+                    'TrWaveDir': [],
+                    'TrWaveTp': [],
+                    'TrNormWaveHs': [],
+                    'TrNormWaveDir': [],
+                    'TrNormWaveTp': [],
+                    'TrStDevWaveHs': [],
+                    'TrStDevWaveDir': [],
+                    'TrStDevWaveTp': []
+                }
+            }
+
+            for dt in DateTimeSat:
+                if WaveTime[-1] < dt:
+                    # Outside wave data range
+                    for key in cache_results[grid_cell]['InterpolatedWaves']:
+                        cache_results[grid_cell]['InterpolatedWaves'][key].append(np.nan)
+                else:
+                    # Append list of datetimes to match wave observations
+                    cache_results[grid_cell]['InterpolatedWaves']['TrWaveDates'].append(dt)
+                    
+                    for WaveProp, interp_list in zip(
+                        [SigWaveHeight[:, IDLat, IDLong], MeanWaveDir[:, IDLat, IDLong], PeakWavePer[:, IDLat, IDLong]],
+                        ['TrWaveHs', 'TrWaveDir', 'TrWaveTp']):
+                        # Interpolate wave data for timestamp dt
+                        interp_value = SampleWavesSimple_interp(dt, WaveTime, WaveProp, TimeStep)
+                        cache_results[grid_cell]['InterpolatedWaves'][interp_list].append(interp_value)
+                    
+                    # Calculate normalized and standard deviation
+                    for WaveProp, norm_list, stdev_list, WaveType in zip(
+                        [SigWaveHeight[:, IDLat, IDLong], MeanWaveDir[:, IDLat, IDLong], PeakWavePer[:, IDLat, IDLong]],
+                        ['TrNormWaveHs', 'TrNormWaveDir', 'TrNormWaveTp'],
+                        ['TrStDevWaveHs', 'TrStDevWaveDir', 'TrStDevWaveTp'],
+                        ['Hs', 'Dir', 'Tp']):
+                        norm_value = SampleWavesSimple_norm(WaveProp, WaveTime, dt, WaveType, TimeStep)
+                        stdev_value = SampleWavesSimple_stdev(WaveProp, WaveTime, dt, WaveType, TimeStep)
+                        cache_results[grid_cell]['InterpolatedWaves'][norm_list].append(norm_value)
+                        cache_results[grid_cell]['InterpolatedWaves'][stdev_list].append(stdev_value)
+
+        # Retrieve and store results
+        grid_data = cache_results[grid_cell]
+        output_results['ShoreAngles'].append(grid_data['ShoreAngle'])
+        output_results['WaveDiffusivity'].append(grid_data['WaveDiffusivity'])
+        output_results['WaveStability'].append(grid_data['WaveStability'])
+
+        for key in output_results.keys():
+            if 'Tr'+key in grid_data['InterpolatedWaves'].keys():
+                output_results[key].append(grid_data['InterpolatedWaves']['Tr'+key])
+
+    print("\nExtraction complete.")
+    return tuple(output_results[key] for key in output_results)
+
+
+def SampleWavesSimple_interp(dt, WaveTime, WaveProp, TimeStep):
+    # If `dt` is out of bounds of `WaveTime`, return NaN
+    if dt < WaveTime[0] or dt > WaveTime[-1]:
+        return np.nan
+    
+    # Find surrounding time indices for interpolation
+    idx1 = Toolbox.find(min(item for item in WaveTime if item > dt - timedelta(hours=TimeStep)), WaveTime)
+    idx2 = Toolbox.find(min(item for item in WaveTime if item > dt), WaveTime)
+    
+    Time_1 = WaveTime[idx1]
+    Wave_1 = WaveProp[idx1]
+    
+    Time_2 = WaveTime[idx2]
+    Wave_2 = WaveProp[idx2]
+
+    # Calculate time proportion for linear interpolation
+    TimeDiff = (Time_2 - dt).total_seconds() / 3600  # in hours
+    TimeProp = TimeDiff / TimeStep
+    
+    # Interpolate between the two wave property values
+    return Wave_2 - (Wave_2 - Wave_1) * TimeProp
+
+
+def SampleWavesSimple_norm(WaveProp, WaveTime, dt, WaveType, TimeStep):
+    # Attempt to find the closest index to `dt` in WaveTime for `end_idx`
+    try:
+        # Use the closest time if `dt` is not exactly in `WaveTime`
+        end_idx = min(range(len(WaveTime)), key=lambda i: abs(WaveTime[i] - dt))
+        
+        # Find the start index for the 3-month window (90 days before `dt`)
+        start_time = dt - timedelta(days=90)
+        start_idx = min(range(len(WaveTime)), key=lambda i: abs(WaveTime[i] - start_time))
+        
+    except (ValueError, IndexError):
+        # If no valid indices can be found, return NaN
+        return np.nan
+
+    # Compute the mean based on the type of wave property
+    if WaveType == 'Dir':
+        # Use circular mean for wave direction
+        return Toolbox.CircMean(WaveProp[start_idx:end_idx+1])
+    else:
+        return np.mean(WaveProp[start_idx:end_idx+1])
+    
+
+def SampleWavesSimple_stdev(WaveProp, WaveTime, dt, WaveType, TimeStep):
+    # Attempt to find the closest index to `dt` in WaveTime for `end_idx`
+    try:
+        # Use the closest time if `dt` is not exactly in `WaveTime`
+        end_idx = min(range(len(WaveTime)), key=lambda i: abs(WaveTime[i] - dt))
+        
+        # Find the start index for the 3-month window (90 days before `dt`)
+        start_time = dt - timedelta(days=90)
+        start_idx = min(range(len(WaveTime)), key=lambda i: abs(WaveTime[i] - start_time))
+        
+    except (ValueError, IndexError):
+        # If no valid indices can be found, return NaN
+        return np.nan
+    
+    # Compute the standard deviation based on the type of wave property
+    if WaveType == 'Dir':
+        return Toolbox.CircStd(WaveProp[start_idx:end_idx])
+    else:
+        return np.std(WaveProp[start_idx:end_idx])
+
+
+
 def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     """
     Calculate indicators of wave climate per transect, following equations of
