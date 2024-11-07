@@ -371,7 +371,7 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     
     # Read in wave data (and interpolate empty cells in rasters if need be)
     WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = ReadWaveFile(WaveFilePath)
-    TimeStep = (WaveTime[1] - WaveTime[0]).total_seconds() / 3600  # in hours
+
     # Extract unique satellite image dates list
     DateTimeSat = [
         datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f')
@@ -381,7 +381,7 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     Centroids = TransectInterGDF.to_crs('4326').centroid
     
     # Initialise caching and output dicts
-    cache_results = {}
+    Cached = {}
     ResultsDict = {'WaveDates': [], 
                    'WaveHs': [],
                    'WaveDir': [],
@@ -403,19 +403,19 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
         MidPnt = Centroids.iloc[Tr].coords[0]
         IDLat = (np.abs(WaveY - MidPnt[1])).argmin()
         IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
-        grid_cell = (IDLat, IDLong)
+        GridCell = (IDLat, IDLong)
 
         # Calculate the angle of the shoreline at each transect (clockwise from north)
         ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
         ResultsDict['ShoreAngles'].append(ShoreAngle)
         
-        if grid_cell in cache_results:
+        if GridCell in Cached:
             # If wave data for this grid cell has already been computed, reuse it
-            grid_data = cache_results[grid_cell]
+            GridData = Cached[GridCell]
         else:
             # Otherwise, compute wave data for this grid cell
-            IDLat, IDLong = grid_cell
-            grid_data = {
+            IDLat, IDLong = GridCell
+            GridData = {
                 'TrWaveDates': DateTimeSat,
                 'TrWaveHs': SampleWavesSimple_interp(SigWaveHeight[:, IDLat, IDLong], WaveTime, DateTimeSat),
                 'TrWaveDir': SampleWavesSimple_interp(MeanWaveDir[:, IDLat, IDLong], WaveTime, DateTimeSat),
@@ -428,11 +428,11 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
                 'TrStDevWaveTp': SampleWavesSimple_stdev(PeakWavePer[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Tp')
             }
             # Cache the results for this grid cell to avoid redundant calculations
-            cache_results[grid_cell] = grid_data
+            Cached[GridCell] = GridData
         
         # Calculate unique WaveDiffusivity and WaveStability for each transect based on its ShoreAngle
         TrWaveDiffusivity, TrWaveStability = WaveClimateSimple(
-            ShoreAngle, grid_data['TrWaveHs'], grid_data['TrWaveDir'], grid_data['TrWaveTp'], WaveTime
+            ShoreAngle, GridData['TrWaveHs'], GridData['TrWaveDir'], GridData['TrWaveTp'], WaveTime
         )
         
         ResultsDict['WaveDiffusivity'].append(TrWaveDiffusivity)
@@ -441,8 +441,8 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
         # Append grid data results to output_results with the ShoreAngle-specific adjustments
         for key in ResultsDict:
             gridkey = 'Tr' + key
-            if gridkey in grid_data:
-                ResultsDict[key].append(grid_data[gridkey])
+            if gridkey in GridData:
+                ResultsDict[key].append(GridData[gridkey])
 
     return tuple(ResultsDict[key] for key in ResultsDict)
 

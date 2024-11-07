@@ -753,7 +753,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     if TransectInterGDFWave is not None:
         print('using runup as well as tides...')
         runup_dict = dict(zip(TransectInterGDFWave['WaveDates'].iloc[0], TransectInterGDFWave['Runups'].iloc[0])) # first entry should have all runups
-        TWL_dict = dict(dates_sat, [tide_dict[date] + runup_dict[date] for date in dates_sat])
+        TWL_dict = dict(zip(dates_sat, [tide_dict[date] + runup_dict[date] for date in dates_sat]))
     else: # if no runups available, just use tides
         TWL_dict = tide_dict.copy()
     
