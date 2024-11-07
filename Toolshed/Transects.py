@@ -741,7 +741,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
 
     """
     
-    
+    print('Correcting waterline positions for tides and runup ...')
     # Parse satellite acquisition datetime and create lookup dictionary
     dates_sat = [
         datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f') 
@@ -760,6 +760,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     
     # Precomputed beach slope if available
     if os.path.exists(DEMpath):
+        print('beach slope being derived from provided DEM ...')
         MSL, MHWS = 1.0, 0.1
         BeachSlopeDEM = GetBeachSlopesDEM(MSL, MHWS, DEMpath)
     else:
@@ -767,13 +768,13 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     
     # Process each transect
     for Tr, transect in TransectInterGDFWater.iterrows():
-        print(f"\r{Tr} / {len(TransectInterGDFWater)}", end='')       
+        print(f"\r{Tr} / {len(TransectInterGDFWater)} transects", end='')       
         # Gather and match dates for each transect's observations
         dates_dt_tr = [datetime.strptime(date_str, '%Y-%m-%d').date() for date_str in transect['wldates']]
         dates_sat_tr = [datetime.combine(date, next(dt.time() for dt in dates_sat if dt.date() == date)) for date in dates_dt_tr]
         tides_sat_tr = [tide_dict[date] for date in dates_sat_tr]
         # If wave data is provided, add runups to tidal correction
-        if TransectInterGDFWave is not None and len(TransectInterGDFWave['dates'].iloc[Tr]) > 0:
+        if TransectInterGDFWave is not None:
             TWL = [tides_sat + R2 for tides_sat, R2 in zip(tides_sat_tr, TransectInterGDFWave['Runups'].iloc[Tr])]
         else: # if no runups available (i.e. no VEs on this transect), just use tides
             TWL = tides_sat_tr
