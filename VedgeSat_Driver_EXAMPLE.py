@@ -135,7 +135,10 @@ settings['ref_epsg'] = ref_epsg
 settings['max_dist_ref'] = max_dist_ref
 
 # Reference Image (path to TIF) for Coregistration
-settings['reference_coreg_im'] = None # if no coreg to be performed
+settings['reference_coreg_im'] = os.path.join(filepath, sitename, 'jpg_files',
+                                              '20180507T110621_20180507T110835_T31UDU_RGB_georef.tif' )
+# if no coreg to be performed
+# settings['reference_coreg_im'] = None
 
 
 #%% Vegetation Line Extraction
