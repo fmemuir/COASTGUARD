@@ -892,7 +892,7 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             # ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
             
             # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
-            for i in range(plotdate[0].year-1, plotdate[-1].year):
+            for i in range(plotdate[0].year-1, plotdate[-1].year+1):
                 if Hemisphere == 'N':
                     rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
                     rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
@@ -996,7 +996,7 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             
             
         ax_TS.title.set_text('Transect '+str(TransectID)+' - '+Title)
-        ax_TS.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
+        ax_TS.set_xlim(min(plotdate)-timedelta(days=20),max(plotdate)+timedelta(days=40))
 
         for axleg in [[ax_TS, ax_TS_veg], [ax_Season,ax_Season_veg]]:
             leg1 = axleg[0].legend(loc=3, handlelength=1.5, handletextpad=0.1)
