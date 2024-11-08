@@ -187,15 +187,54 @@ def SampleWaves(settings, output, TransectInterGDF, WaveFilePath):
     ----------
     settings : dict
         Veg edge extraction tool settings (including user inputs).
+    output : dict
+        Output veg edges (and waterlines) produced by VedgeSat.
     TransectInterGDF : GeoDataFrame
         GeoDataFrame of transects with veg edge intersection info assigned.
-    WaveFilePath : TYPE
-        DESCRIPTION.
+    WaveFilePath : str
+        Path to wave timeseries NetCDF file.
 
     Returns
     -------
-    TYPE
-        DESCRIPTION.
+    WaveDates : list of lists
+        Datetimes of wave data observations (matched with unique satellite capture
+        dates from output['dates']).
+    WaveHs : list of lists
+        Significant wave height at the time of each satellite image processed in run 
+        (in metres).
+    WaveDir : list of lists
+        Mean wave direction (from) at the time of each satellite image processed in run 
+        (in degrees clockwise from N).
+    WaveTp : list of lists
+        Peak wave period at the time of each satellite image processed in run 
+        (in seconds).
+    NormWaveHs : list of lists
+        Mean/normalised significant wave height at the time of each satellite image processed in run
+        (in metres).
+    NormWaveDir : list of lists
+        Mean/normalised wave direction (from) at the time of each satellite image processed in run
+        (in degrees clockwise from N).
+    NormWaveTp : list of lists
+        Mean/normalised wave period at the time of each satellite image processed in run
+        (in seconds).
+    StDevWaveHs : list of lists
+        Standard deviation of significant wave height at the time of each satellite image processed in run
+        (in metres).
+    StDevWaveDir : list of lists
+        Standard deviation of mean wave direction (from) at the time of each satellite image processed in run
+        (in degrees clockwise from N).
+    StDevWaveTp : list of lists
+        Standard deviation of peak wave period at the time of each satellite image processed in run
+        (in seconds).
+    WaveDiffusivity : list of floats
+        Wave diffusivity calculated from entire wave timeseries available (in m/s^2). 
+        From Ashton and Murray 2006: https://doi.org/10.1029/2005JF000423
+    WaveStability : list of floats
+        Wave stability calculated from entire wave timeseries available (dimensionless). 
+        From Ashton and Murray 2006: https://doi.org/10.1029/2005JF000423
+    ShoreAngles : list of floats
+        Angle of shoreline at particular cross-shore transect 
+        (in degrees clockwise from N).
 
     """
     
@@ -364,7 +403,67 @@ def SampleWaves(settings, output, TransectInterGDF, WaveFilePath):
 
 def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     """
-    Optimized function to extract wave information from Copernicus NWS data.
+    Function to extract wave information from Copernicus NWS data. Faster than
+    SampleWaves() because once a grid cell of data from the Copernicus NetCDF is 
+    processed (interpolated between timesteps to find exact value, mean and st dev calculated),
+    the results are cached and just loaded in for the next transect that falls within
+    that grid cell. 
+    
+    FM Nov 2024
+
+    Parameters
+    ----------
+    settings : dict
+        Veg edge extraction tool settings (including user inputs).
+    output : dict
+        Output veg edges (and waterlines) produced by VedgeSat.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    WaveFilePath : str
+        Path to wave timeseries NetCDF file.
+
+    Returns
+    -------
+    WaveDates : list of lists
+        Datetimes of wave data observations (matched with unique satellite capture
+        dates from output['dates']).
+    WaveHs : list of lists
+        Significant wave height at the time of each satellite image processed in run 
+        (in metres).
+    WaveDir : list of lists
+        Mean wave direction (from) at the time of each satellite image processed in run 
+        (in degrees clockwise from N).
+    WaveTp : list of lists
+        Peak wave period at the time of each satellite image processed in run 
+        (in seconds).
+    NormWaveHs : list of lists
+        Mean/normalised significant wave height at the time of each satellite image processed in run
+        (in metres).
+    NormWaveDir : list of lists
+        Mean/normalised wave direction (from) at the time of each satellite image processed in run
+        (in degrees clockwise from N).
+    NormWaveTp : list of lists
+        Mean/normalised wave period at the time of each satellite image processed in run
+        (in seconds).
+    StDevWaveHs : list of lists
+        Standard deviation of significant wave height at the time of each satellite image processed in run
+        (in metres).
+    StDevWaveDir : list of lists
+        Standard deviation of mean wave direction (from) at the time of each satellite image processed in run
+        (in degrees clockwise from N).
+    StDevWaveTp : list of lists
+        Standard deviation of peak wave period at the time of each satellite image processed in run
+        (in seconds).
+    WaveDiffusivity : list of floats
+        Wave diffusivity calculated from entire wave timeseries available (in m/s^2). 
+        From Ashton and Murray 2006: https://doi.org/10.1029/2005JF000423
+    WaveStability : list of floats
+        Wave stability calculated from entire wave timeseries available (dimensionless). 
+        From Ashton and Murray 2006: https://doi.org/10.1029/2005JF000423
+    ShoreAngles : list of floats
+        Angle of shoreline at particular cross-shore transect 
+        (in degrees clockwise from N).
+
     """
 
     print('Loading wave data for extraction ...')
@@ -399,22 +498,36 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     
     for Tr in range(len(TransectInterGDF)):
         print('\r %i / %i transects processed' % (Tr, len(TransectInterGDF)), end='')
-
+        
+        # Clculate the midpoint of each cross-shore transect geometry
         MidPnt = Centroids.iloc[Tr].coords[0]
         IDLat = (np.abs(WaveY - MidPnt[1])).argmin()
         IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
+        # Feed the matching wave grid lat and long IDs to be used as a key in the cached data dict
         GridCell = (IDLat, IDLong)
 
         # Calculate the angle of the shoreline at each transect (clockwise from north)
         ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
         ResultsDict['ShoreAngles'].append(ShoreAngle)
         
+        # Calculate WaveDiffusivity and WaveStability for each transect based on transect-specific ShoreAngle
+        # Uses full wave timeseries rather than just sat obs
+        TrWaveDiffusivity, TrWaveStability = WaveClimateSimple(ShoreAngle, 
+                                                               SigWaveHeight[:, IDLat, IDLong], 
+                                                               MeanWaveDir[:, IDLat, IDLong], 
+                                                               PeakWavePer[:, IDLat, IDLong], 
+                                                               WaveTime)
+        # Append single values per-transect to results dictionary
+        ResultsDict['WaveDiffusivity'].append(TrWaveDiffusivity)
+        ResultsDict['WaveStability'].append(TrWaveStability)
+        
+        # If the grid cell is already present in the cached data file, 
+        # don't re-calculate anything and just load in the wave values for that grid cell
         if GridCell in Cached:
-            # If wave data for this grid cell has already been computed, reuse it
             GridData = Cached[GridCell]
         else:
             # Otherwise, compute wave data for this grid cell
-            IDLat, IDLong = GridCell
+            # IDLat, IDLong = GridCell
             GridData = {
                 'TrWaveDates': DateTimeSat,
                 'TrWaveHs': SampleWavesSimple_interp(SigWaveHeight[:, IDLat, IDLong], WaveTime, DateTimeSat),
@@ -425,25 +538,21 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
                 'TrNormWaveTp': SampleWavesSimple_norm(PeakWavePer[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Tp'),
                 'TrStDevWaveHs': SampleWavesSimple_stdev(SigWaveHeight[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Hs'),
                 'TrStDevWaveDir': SampleWavesSimple_stdev(MeanWaveDir[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Dir'),
-                'TrStDevWaveTp': SampleWavesSimple_stdev(PeakWavePer[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Tp')
-            }
+                'TrStDevWaveTp': SampleWavesSimple_stdev(PeakWavePer[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Tp')}
+            
             # Cache the results for this grid cell to avoid redundant calculations
             Cached[GridCell] = GridData
-        
-        # Calculate unique WaveDiffusivity and WaveStability for each transect based on its ShoreAngle
-        TrWaveDiffusivity, TrWaveStability = WaveClimateSimple(
-            ShoreAngle, GridData['TrWaveHs'], GridData['TrWaveDir'], GridData['TrWaveTp'], WaveTime
-        )
-        
-        ResultsDict['WaveDiffusivity'].append(TrWaveDiffusivity)
-        ResultsDict['WaveStability'].append(TrWaveStability)
-        
+            
         # Append grid data results to output_results with the ShoreAngle-specific adjustments
         for key in ResultsDict:
             gridkey = 'Tr' + key
             if gridkey in GridData:
                 ResultsDict[key].append(GridData[gridkey])
-
+    
+    # Return WaveDates, WaveHs, WaveDir, WaveTp, 
+           # NormWaveHs, NormWaveDir, NormWaveTp, 
+           # StDevWaveHs, StDevWaveDir, StDevWaveTp, 
+           # WaveDiffusivity, WaveStability, ShoreAngles
     return tuple(ResultsDict[key] for key in ResultsDict)
 
 
