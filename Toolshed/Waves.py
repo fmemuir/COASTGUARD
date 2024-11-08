@@ -1055,7 +1055,7 @@ def CalcRunup(WaveHs, WaveTp=None, beta=None, Model="Senechal"):
                 
                 elif Model == 'Stockdon':
                     # Stockdon 2006 runup depending on Iribarren measure of dissipative vs reflective
-                    L0 = (9.8 * WaveTp[Tr][i]**2) / (2 * np.pi)
+                    L0 = (9.81 * WaveTp[Tr][i]**2) / (2 * np.pi)
                     zeta = beta / (WaveHs[Tr][i] * L0) # dynamic beach steepness
                     if zeta < 0.3: # dissipative
                         R2 = 0.043 * (WaveHs[Tr][i] * L0)**0.5
