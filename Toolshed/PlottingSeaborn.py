@@ -1267,7 +1267,7 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
     # summer (pale) accreting = #9DB4C0
         
     # Scale up diffusivity (mu) for nicer labelling
-    MultivarGDF['WaveDiffus'] = MultivarGDF['WaveDiffus']*1000
+    # MultivarGDF['WaveDiffus'] = MultivarGDF['WaveDiffus']*1000
     
     # Extract desired columns to an array for plotting
     MultivarArray = np.array(MultivarGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveDiffus']])#, 'WaveStabil']])
