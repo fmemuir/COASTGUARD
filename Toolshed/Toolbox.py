@@ -10,9 +10,11 @@ COASTGUARD edits and updates: Freya Muir, University of Glasgow
 import os
 import subprocess
 import numpy as np
-import matplotlib.pyplot as plt
-import pdb
 import glob
+import pickle
+import math
+from datetime import datetime, timedelta
+from IPython.display import clear_output
 
 # other modules
 from osgeo import gdal, osr
@@ -23,6 +25,8 @@ from shapely import geometry, affinity
 from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
 from shapely.ops import linemerge
 import folium
+from pyproj import Proj
+from pyproj import transform as Transf
 
 import skimage.transform as transform
 import sklearn
@@ -31,14 +35,10 @@ from scipy import interpolate
 from scipy.stats import circmean, circstd, skew, kurtosis
 from statsmodels.tsa.seasonal import seasonal_decompose
 from astropy.convolution import convolve
-from datetime import datetime, timedelta
-from IPython.display import clear_output
+
 import ee
 import geemap
 import copernicusmarine as cms
-
-import pickle
-import math
 
 import rasterio
 from rasterio.plot import show
@@ -1743,6 +1743,44 @@ def GetImageEPSG(inputs, metadata):
     else:
         image_epsg = metadata[inputs['sat_list'][0]]['epsg'][0]
     return image_epsg
+
+
+def CalcGeoref(raw_georef, settings):
+    """
+    Generate a georeferencing list for affine transformations, using the 
+    bounding box at the start of a run. The layout is fed in from the first image
+    in an ImageCollection, and then transformation happens on the X and Y limit
+    to get coordinates in the desired projection before rearranging.
+        
+    FM Nov 2024
+    
+    Parameters
+    ----------
+    raw_georef : list
+        Georeferencing info from satellite band (can be RGB or panchromatic if
+        downsampling later) [Xscale, Xshear, Xtrans, Yshear, Yscale, Ytrans].
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
+
+    Returns
+    -------
+    georef : TYPE
+        Transformed georef coordinates and scales in the order
+        [Xtrans, Xscale, Xshear, Ytrans, Yshear, Yscale].
+
+    """
+    
+    # Define x and y as the top left corner of the AOI bounding box
+    x, y = settings['inputs']['polygon'][0][3]
+    # Set input and output projection systems
+    inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+    outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
+    # Transform x and y to new projection
+    im_x, im_y = Transf(inProj, outProj, x, y)
+    # Set georef values in new order
+    georef = [round(im_x),raw_georef[0],raw_georef[1],round(im_y),raw_georef[3],raw_georef[4]] # rearrange
+    
+    return georef
 
 
 def NearestDates(surveys,metadata,sat_list):
