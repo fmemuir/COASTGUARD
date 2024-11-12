@@ -1008,10 +1008,10 @@ def CreateFileStructure(sitename, sat_list):
     return filepath
 
 
-def metadata_collection(inputs, Sat):
+def metadata_collection(inputs, Sat, ):
     """
     Compile Google Earth Engine metadata together to create a collection of image properties. 
-    FM 2022
+    FM 2022 (updated Nov 2024)
 
     Parameters
     ----------
@@ -1079,15 +1079,18 @@ def metadata_collection(inputs, Sat):
 
 
         
-def image_retrieval(inputs):
+def image_retrieval(inputs, SLC=True):
     """
     Grab image metadata from Google Earth Engine and compile into list of image names.
-    FM 2022
+    FM 2022 (updated Nov 2024)
 
     Parameters
     ----------
     inputs : dict
         Dictionary of input parameters from user.
+    SLC : bool
+        Decide whether to include Landsat 7 images after scan line corrector failure
+        (31st May 2003).
 
     Returns
     -------
@@ -1109,7 +1112,10 @@ def image_retrieval(inputs):
         Landsat5 = ee.ImageCollection("LANDSAT/LT05/C02/T1_TOA").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1])
         Sat.append(Landsat5)
     if 'L7' in inputs['sat_list']:
-        Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
+        if SLC is True: # if flag is True, include the Scan Line Correcter affected images
+            Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
+        else:
+            Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], '2003-05-31').filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
         Sat.append(Landsat7)
     if 'L8' in inputs['sat_list']:
         Landsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
