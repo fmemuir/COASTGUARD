@@ -688,8 +688,8 @@ def InitialiseImgs(metadata, settings, satname, imgs):
         # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
         init_georef[1] = init_georef[1]/2 # xscale = 15m
         init_georef[5] = init_georef[5]/2 # yscale = -15m
-        init_georef[0] = init_georef[0] + init_georef[1]/2 # xtrans = back by half of 15m
-        init_georef[3] = init_georef[3] - init_georef[5]/2 # ytrans = up by half of 15m
+        # init_georef[0] = init_georef[0] + init_georef[1]/2 # xtrans = back by half of 15m
+        # init_georef[3] = init_georef[3] - init_georef[5]/2 # ytrans = up by half of 15m
         print(f"Using initial georef: {init_georef}")
         
     elif satname == 'L7':
