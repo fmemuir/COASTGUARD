@@ -127,12 +127,12 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # adjust georeferencing vector to the new image size
             
             raw_georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform'] # get georef layout from first img Red band
-            georef = Toolbox.CalcGeoref(raw_georef, settings)
+            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
             # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
-            georef[1] = georef[1]/2 # xscale = 15m
-            georef[5] = georef[5]/2 # yscale = -15m
-            georef[0] = georef[0] + georef[1]/2 # xtrans = back by half of 15m
-            georef[3] = georef[3] - georef[5]/2 # ytrans = up by half of 15m
+            init_georef[1] = init_georef[1]/2 # xscale = 15m
+            init_georef[5] = init_georef[5]/2 # yscale = -15m
+            init_georef[0] = init_georef[0] + init_georef[1]/2 # xtrans = back by half of 15m
+            init_georef[3] = init_georef[3] - init_georef[5]/2 # ytrans = up by half of 15m
             
         elif satname == 'L7':
             pixel_size = 15
@@ -142,7 +142,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
             raw_georef = ImgColl.getInfo().get('features')[0]['bands'][8]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            georef = Toolbox.CalcGeoref(raw_georef, settings)
+            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         elif satname == 'L8':
             pixel_size = 15
@@ -152,7 +152,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
             raw_georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            georef = Toolbox.CalcGeoref(raw_georef, settings)
+            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         elif satname == 'L9':
             pixel_size = 15
@@ -162,7 +162,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
             raw_georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            georef = Toolbox.CalcGeoref(raw_georef, settings)
+            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         elif satname == 'S2':
             pixel_size = 10
@@ -172,12 +172,12 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
             raw_georef = ImgColl.getInfo().get('features')[0]['bands'][3]['crs_transform'] # get transform info from Band4
-            georef = Toolbox.CalcGeoref(raw_georef, settings)
+            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         else: # Planet or local
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
             clf_model = 'MLPClassifier_Veg_PSScene.pkl' 
-            georef = [] # georef gets set by each local image
+            init_georef = [] # georef gets set by each local image
             
         # clf_model = settings['clf_model']
         # load in trained classifier pkl file
@@ -197,7 +197,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # Image acqusition date
             acqdate = metadata[satname]['dates'][fn]
             # preprocess image (cloud mask + pansharpening/downsampling)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, georef, fn, datelist, filenames, satname, settings, polygon, dates, skipped)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, init_georef, fn, datelist, filenames, satname, settings, polygon, dates, skipped)
 
             if im_ms is None:
                 continue
