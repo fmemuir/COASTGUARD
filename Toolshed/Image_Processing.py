@@ -736,6 +736,7 @@ def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
         Updated/shifted georeference information for affine transforms.
     """
     
+    newbuff = False
     # reference image to coregister to (given as filepath)
     refArr = GeoArray(settings['reference_coreg_im'])
     
@@ -766,22 +767,22 @@ def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
         CR.calculate_spatial_shifts()
     except: # RuntimeError for caculated shifts being abnormally large
         print('\nCoreg: calculated shift is too large to be valid (>100m). georef has not changed.')
-        return georef
+        return georef, newbuff
     # DOn't perform shift if calculation reliability is lower than 40%
     if CR.shift_reliability < 40:
         print('\nCoreg: calculated shift reliability is too low (%0.1f%%). georef has not changed.' % CR.shift_reliability)
-        return georef
+        return georef, newbuff
     # Correct georeferencing info based on calculated shifts
     corrCR = CR.correct_shifts()
     print('\nCoreg: X shift = %0.3fm | Y shift = %0.3fm | Reliability = %0.1f%%' % (CR.x_shift_map, CR.y_shift_map, CR.shift_reliability))
-    
+    newbuff = True
     # Reset georef info to newly shifted georef
     newgeoref = list(corrCR['updated geotransform'])
     # use original pixel sizes
     newgeoref[1] = georef[1]
     newgeoref[5] = georef[5]
 
-    return newgeoref
+    return newgeoref, newbuff
 
 
 def ClipIndexVec(cloud_mask, im_ndi, im_labels, im_ref_buffer):

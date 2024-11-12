@@ -209,7 +209,10 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # Uses GeoArray(array, geotransform, projection)
             # Read in provided reference image (if it has been provided)
             if settings['reference_coreg_im'] is not None:                
-                georef = Image_Processing.Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef)
+                georef, newbuff = Image_Processing.Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef)
+                if newbuff is True:
+                    # recalculate buffer based on new georef
+                    im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
             
             if savetifs == True:
                 Image_Processing.save_RGB_NDVI(im_ms, cloud_mask, georef, filenames[fn], settings)
