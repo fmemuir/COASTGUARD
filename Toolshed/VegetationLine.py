@@ -193,12 +193,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
                 continue
 
             # calculate a buffer around the reference shoreline
-            im_ref_buffer_og = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
-            if fn == 0: # if the first image in a sat set, use the ref shoreline
-                im_ref_buffer = im_ref_buffer_og
-            else:
-                im_ref_buffer = im_ref_buffer_og
-            # otherwise use the most recent shoreline found, so buffer updates through time
+            im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
+
             # TO DO: figure out way to update refline ONLY if no gaps in previous line exist (length-based? based on number of coords?)
             # elif output_shoreline[-1].length < im_ref_buffer_og: 
             #     output_shorelineArr = Toolbox.GStoArr(output_shoreline[-1])
