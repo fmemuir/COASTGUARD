@@ -501,15 +501,15 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         Matches = WaterlineGDF.iloc[MatchesID]
         # for each row/feature shoreline
         for WL_row in Matches.itertuples():
-            _, dates, _, _, _, _, _, _, _, _, SGeom = WL_row
+            _, dates, times, _, _, _, _, _, _, _, SGeom = WL_row
             Intersects = TrGeom.intersection(SGeom)
             # ignore any rows with no intersections
             if not Intersects.is_empty:
-                ColumnData.append((ID, dates))
+                ColumnData.append((ID, dates, times))
                 Geoms.append(Intersects)
     
     # Create GeoDataFrame of intersections and filter empty intersections
-    AllIntersects = gpd.GeoDataFrame(ColumnData, geometry=Geoms, columns=['TransectID', 'wldates'])
+    AllIntersects = gpd.GeoDataFrame(ColumnData, geometry=Geoms, columns=['TransectID', 'wldates', 'wltimes'])
     
     # take only first point on any transects which intersected a single shoreline more than once
     AllIntersects['wlinterpnt'] = AllIntersects['geometry'].apply(
@@ -533,7 +533,7 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
     print("formatting into GeoDataFrame...")
     TransectInterGDFWater = TransectInterGDF.copy()
     # Initialise dictionary with empty lists for each TransectID in TransectInterGDFWater
-    WLData = {name: [[] for _ in range(len(TransectInterGDFWater))] for name in ['wldates', 'wldists', 'wlinterpnt']}
+    WLData = {name: [[] for _ in range(len(TransectInterGDFWater))] for name in ['wldates', 'wltimes', 'wldists', 'wlinterpnt']}
 
     # Create a mapping of TransectID to index for quick assignment
     Tr_Ind = {Tr: idx for idx, Tr in enumerate(TransectInterGDFWater['TransectID'])}
@@ -543,9 +543,8 @@ def GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF,
         # Sort the wldists lists to maintain temporal order
         TrGroup_sort = TrGroup.sort_values(by='wldates')
         idx = Tr_Ind[TrID]  # Get the index in TransectInterGDF for this TransectID
-        WLData['wldates'][idx] = TrGroup_sort['wldates'].tolist()
-        WLData['wldists'][idx] = TrGroup_sort['wldists'].tolist()
-        WLData['wlinterpnt'][idx] = TrGroup_sort['wlinterpnt'].tolist()
+        for datakey in ['wldates','wltimes','wldists','wlinterpnt']:
+            WLData[datakey][idx] = TrGroup_sort[datakey].tolist()
 
     # Assign now-filled lists to the corresponding TransectInterGDFWater columns
     for key, data in WLData.items():
