@@ -5,8 +5,6 @@ Freya Muir, University of Glasgow
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import pdb
-import scipy
 
 # image processing modules
 import ee
@@ -15,9 +13,7 @@ import skimage.measure as measure
 import skimage.morphology as morphology
 from shapely import geometry
 from shapely.geometry import Point, LineString, Polygon
-import pandas as pd
 import geopandas as gpd
-import rasterio
 from rasterio import features
 
 # machine learning modules
@@ -26,9 +22,6 @@ if sklearn.__version__[:4] == '0.20':
     from sklearn.externals import joblib
 else:
     import joblib
-from shapely.geometry import LineString
-from pyproj import Proj
-from pyproj import transform as Transf
 
 # other modules
 import matplotlib.patches as mpatches
@@ -132,14 +125,9 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
             ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','QA_PIXEL'])
             # adjust georeferencing vector to the new image size
-            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform'] # get georef layout from first img Red band
-            x, y = polygon[0][3]
-            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-            im_x, im_y = Transf(inProj, outProj, x, y)
-            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            
+            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform'] # get georef layout from first img Red band
+            georef = Toolbox.CalcGeoref(raw_georef, settings)
             # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
             georef[1] = georef[1]/2 # xscale = 15m
             georef[5] = georef[5]/2 # yscale = -15m
@@ -153,13 +141,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # adjust georeferencing vector to the new image size
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            georef = ImgColl.getInfo().get('features')[0]['bands'][8]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            x, y = polygon[0][3]
-            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-            # outProj = Proj(init=Landsat7.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
-            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-            im_x, im_y = Transf(inProj, outProj, x, y)
-            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][8]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+            georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         elif satname == 'L8':
             pixel_size = 15
@@ -168,14 +151,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # adjust georeferencing vector to the new image size
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
-            x, y = polygon[0][3]
-            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-            # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
-            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-            im_x, im_y = Transf(inProj, outProj, x, y)
-            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+            georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         elif satname == 'L9':
             pixel_size = 15
@@ -184,14 +161,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # adjust georeferencing vector to the new image size
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
-            x, y = polygon[0][3]
-            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-            # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
-            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-            im_x, im_y = Transf(inProj, outProj, x, y)
-            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+            georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         elif satname == 'S2':
             pixel_size = 10
@@ -200,13 +171,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # adjust georeferencing vector to the new image size
             # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
             # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            georef = ImgColl.getInfo().get('features')[0]['bands'][3]['crs_transform'] # get transform info from Band4
-            x, y = polygon[0][3]
-            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-            # outProj = Proj(init=img.getInfo()['bands'][3]['crs']) # inconsistent for S Hem EPSGs
-            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-            im_x, im_y = Transf(inProj, outProj, x, y)
-            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][3]['crs_transform'] # get transform info from Band4
+            georef = Toolbox.CalcGeoref(raw_georef, settings)
             
         else: # Planet or local
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
