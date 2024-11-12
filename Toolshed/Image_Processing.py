@@ -108,10 +108,9 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
             
         img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
         
-        acqtime = datetime.utcfromtimestamp(ImgColl.getInfo().get('features')[fn]['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
+        acqtime = datetime.utcfromtimestamp(img.getInfo()['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         acqdate = datelist[fn]
-        
-        cloud_scoree = ImgColl.getInfo().get('features')[fn]['properties']['CLOUD_COVER']/100
+        cloud_scoree = img.getInfo()['properties']['CLOUD_COVER']/100
         if cloud_scoree > settings['cloud_thresh']:
             print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
             skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
@@ -154,7 +153,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         # adjust georeferencing vector to the new image size
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform']
+        georef = img.getInfo()['bands'][0]['crs_transform']
         x, y = polygon[0][3]
         inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
         # outProj = Proj(init=Landsat5.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
@@ -166,10 +165,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         georef[5] = georef[5]/2 # yscale = -15m
         georef[0] = georef[0] + georef[1]/2 # xtrans = back by half of 15m
         georef[3] = georef[3] - georef[5]/2 # ytrans = up by half of 15m
-        
-        # Additional coregistration for validation purposes
-        # if 'StAndrews' in settings['inputs']['sitename']:
-        #     georef = Toolbox.ValCoreg(satname, georef)
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -240,10 +235,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
-        
-        # Additional coregistration for validation purposes
-        # if 'StAndrews' in settings['inputs']['sitename']:
-        #     georef = Toolbox.ValCoreg(satname, georef)    
         
         im_pan = geemap.ee_to_numpy(img, 
                                     bands = ['B8'], 
@@ -347,10 +338,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
-        # Additional coregistration for validation purposes
-        # if 'StAndrews' in settings['inputs']['sitename']:
-        #     georef = Toolbox.ValCoreg(satname, georef)
-            
         im_pan = geemap.ee_to_numpy(img, 
                                     bands = ['B8'], 
                                     region=ee.Geometry.Polygon(polygon),
@@ -452,11 +439,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
-        
-        # Additional coregistration for validation purposes
-        # if 'StAndrews' in settings['inputs']['sitename']:
-        #     georef = Toolbox.ValCoreg(satname, georef)
-            
+  
         im_pan = geemap.ee_to_numpy(img, 
                                     bands = ['B8'], 
                                     region=ee.Geometry.Polygon(polygon),
@@ -561,11 +544,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
         im_x, im_y = Transf(inProj, outProj, x, y)
         georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
-        
-        # Additional coregistration for validation purposes
-        # if 'StAndrews' in settings['inputs']['sitename']:
-        #     georef = Toolbox.ValCoreg(satname, georef)
-        
+
         # size of 10m bands
         nrows = im10.shape[0]
         ncols = im10.shape[1]
@@ -692,11 +671,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         #im_x, im_y = Transf(inProj, outProj, x, y)
         #georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         georef = [round(georef[2]),georef[0],georef[1],round(georef[5]),georef[3],georef[4]] # rearrange
-        
-        # Additional coregistration for validation purposes
-        # if 'StAndrews' in settings['inputs']['sitename']:
-        #     georef = Toolbox.ValCoreg(satname, georef)
-        
+
         datepath = os.path.basename(filenames[fn])[0:8]
         auxpath = os.path.dirname(filenames[fn])+'/cloudmasks/'
         # Use filename date to search for matching cloud mask file in cloudmasks dir
