@@ -27,6 +27,8 @@ if sklearn.__version__[:4] == '0.20':
 else:
     import joblib
 from shapely.geometry import LineString
+from pyproj import Proj
+from pyproj import transform as Transf
 
 # other modules
 import matplotlib.patches as mpatches
@@ -124,30 +126,92 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         output_t_ndvi = []          # NDVI threshold used to map the vegline
         output_t_ndwi = []          # NDWI threshold used to map the vegline
         
-        # get pixel sizes and image collections for each platform
+        # get pixel sizes, image collections and georefs for each platform
         if satname == 'L5':
             pixel_size = 15
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
             ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','QA_PIXEL'])
+            # adjust georeferencing vector to the new image size
+            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
+            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+            georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform'] # get georef layout from first img Red band
+            x, y = polygon[0][3]
+            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
+            im_x, im_y = Transf(inProj, outProj, x, y)
+            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
+            georef[1] = georef[1]/2 # xscale = 15m
+            georef[5] = georef[5]/2 # yscale = -15m
+            georef[0] = georef[0] + georef[1]/2 # xtrans = back by half of 15m
+            georef[3] = georef[3] - georef[5]/2 # ytrans = up by half of 15m
+            
         elif satname == 'L7':
             pixel_size = 15
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
             ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','B8','QA_PIXEL'])
+            # adjust georeferencing vector to the new image size
+            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
+            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+            georef = ImgColl.getInfo().get('features')[0]['bands'][8]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+            x, y = polygon[0][3]
+            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+            # outProj = Proj(init=Landsat7.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
+            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
+            im_x, im_y = Transf(inProj, outProj, x, y)
+            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            
         elif satname == 'L8':
             pixel_size = 15
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
             ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','QA_PIXEL'])
+            # adjust georeferencing vector to the new image size
+            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
+            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+            georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+            #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
+            x, y = polygon[0][3]
+            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+            # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
+            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
+            im_x, im_y = Transf(inProj, outProj, x, y)
+            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            
         elif satname == 'L9':
             pixel_size = 15
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
             ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','QA_PIXEL'])
+            # adjust georeferencing vector to the new image size
+            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
+            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+            georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+            #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
+            x, y = polygon[0][3]
+            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+            # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
+            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
+            im_x, im_y = Transf(inProj, outProj, x, y)
+            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            
         elif satname == 'S2':
             pixel_size = 10
             clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
             ImgColl = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
+            # adjust georeferencing vector to the new image size
+            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
+            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
+            georef = ImgColl.getInfo().get('features')[0]['bands'][3]['crs_transform'] # get transform info from Band4
+            x, y = polygon[0][3]
+            inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
+            # outProj = Proj(init=img.getInfo()['bands'][3]['crs']) # inconsistent for S Hem EPSGs
+            outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
+            im_x, im_y = Transf(inProj, outProj, x, y)
+            georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+            
         else: # Planet or local
             pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
             clf_model = 'MLPClassifier_Veg_PSScene.pkl' 
+            georef = [] # georef gets set by each local image
             
         # clf_model = settings['clf_model']
         # load in trained classifier pkl file
@@ -167,7 +231,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # Image acqusition date
             acqdate = metadata[satname]['dates'][fn]
             # preprocess image (cloud mask + pansharpening/downsampling)
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polygon, dates, skipped)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, georef, fn, datelist, filenames, satname, settings, polygon, dates, skipped)
 
             if im_ms is None:
                 continue

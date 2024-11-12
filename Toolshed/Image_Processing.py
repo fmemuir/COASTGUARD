@@ -36,13 +36,11 @@ from datetime import datetime
 # CoastSat modules
 from Toolshed import Toolbox
 
-from pyproj import Proj
-from pyproj import transform as Transf
 
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 # Main function to preprocess a satellite image
-def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polygon, dates, skipped):
+def preprocess_single(ImgColl, georef, fn, datelist, filenames, satname, settings, polygon, dates, skipped):
     """
     Main function to preprocess a satellite image
     Updated FM Apr 2022
@@ -62,6 +60,8 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
     ----------
     ImgColl : 
         GEE image collection, collated for each platform.
+    georef : list
+        List of affine transformation values (defined as the same clipped region for each image)
     fn : int
         Iteration number.
     datelist : list
@@ -149,22 +149,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
             print(" - Skipped: no cloud mask available")
             skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
             return None, None, None, None, None, None, acqtime
-
-        # adjust georeferencing vector to the new image size
-        # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-        # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][0]['crs_transform']
-        x, y = polygon[0][3]
-        inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        # outProj = Proj(init=Landsat5.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
-        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-        im_x, im_y = Transf(inProj, outProj, x, y)
-        georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
-        # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
-        georef[1] = georef[1]/2 # xscale = 15m
-        georef[5] = georef[5]/2 # yscale = -15m
-        georef[0] = georef[0] + georef[1]/2 # xtrans = back by half of 15m
-        georef[3] = georef[3] - georef[5]/2 # ytrans = up by half of 15m
         
         # check if -inf or nan values on any band and eventually add those pixels to cloud mask        
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
@@ -223,18 +207,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
 
         #Apply the mask to the image and display the result.
         masked = img.updateMask(mask);
-        
-        # adjust georeferencing vector to the new image size
-        # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-        # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][8]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-   
-        x, y = polygon[0][3]
-        inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        # outProj = Proj(init=Landsat7.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
-        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-        im_x, im_y = Transf(inProj, outProj, x, y)
-        georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         
         im_pan = geemap.ee_to_numpy(img, 
                                     bands = ['B8'], 
@@ -324,19 +296,7 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         cloud_scored = ee.Algorithms.Landsat.simpleCloudScore(img);
 
         #Create a mask from the cloud score and combine it with the image mask.
-        mask = cloud_scored.select(['cloud']).lte(20);      
-        
-        # adjust georeferencing vector to the new image size
-        # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-        # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-        #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
-        x, y = polygon[0][3]
-        inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
-        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-        im_x, im_y = Transf(inProj, outProj, x, y)
-        georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
+        mask = cloud_scored.select(['cloud']).lte(20);
         
         im_pan = geemap.ee_to_numpy(img, 
                                     bands = ['B8'], 
@@ -427,18 +387,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
 
         #Create a mask from the cloud score and combine it with the image mask.
         mask = cloud_scored.select(['cloud']).lte(20);
-        
-        # adjust georeferencing vector to the new image size
-        # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-        # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-        #georef = Landsat8.getInfo().get('features')[0]['bands'][0]['crs_transform']
-        x, y = polygon[0][3]
-        inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        # outProj = Proj(init=Landsat8.getInfo().get('features')[0]['bands'][0]['crs']) # inconsistent for S Hem EPSGs
-        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-        im_x, im_y = Transf(inProj, outProj, x, y)
-        georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
   
         im_pan = geemap.ee_to_numpy(img, 
                                     bands = ['B8'], 
@@ -533,17 +481,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
             return None, None, None, None, None, None, acqtime
         
         im10 = im10/10000 # TOA scaled to 10000
-        
-        # adjust georeferencing vector to the new image size
-        # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-        # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-        georef = img.getInfo()['bands'][3]['crs_transform'] # get transform info from Band4
-        x, y = polygon[0][3]
-        inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        # outProj = Proj(init=img.getInfo()['bands'][3]['crs']) # inconsistent for S Hem EPSGs
-        outProj = Proj(init='EPSG:'+str(settings['projection_epsg']))
-        im_x, im_y = Transf(inProj, outProj, x, y)
-        georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
 
         # size of 10m bands
         nrows = im10.shape[0]
@@ -665,11 +602,6 @@ def preprocess_single(ImgColl, fn, datelist, filenames, satname, settings, polyg
         # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
         # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
         georef = list(img.transform)[0:6] # get transform info from rasterio metadata
-        #x, y = polygon[0][3]
-        #inProj = Proj(init='EPSG:'+str(settings['ref_epsg']))
-        #outProj = Proj(init=img.crs)
-        #im_x, im_y = Transf(inProj, outProj, x, y)
-        #georef = [round(im_x),georef[0],georef[1],round(im_y),georef[3],georef[4]] # rearrange
         georef = [round(georef[2]),georef[0],georef[1],round(georef[5]),georef[3],georef[4]] # rearrange
 
         datepath = os.path.basename(filenames[fn])[0:8]
