@@ -120,66 +120,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         output_t_ndwi = []          # NDWI threshold used to map the vegline
         
         # get pixel sizes, image collections and georefs for each platform
-        if satname == 'L5':
-            pixel_size = 15
-            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
-            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','QA_PIXEL'])
-            # adjust georeferencing vector to the new image size
-            
-            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform'] # get georef layout from first img Red band
-            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
-            # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
-            init_georef[1] = init_georef[1]/2 # xscale = 15m
-            init_georef[5] = init_georef[5]/2 # yscale = -15m
-            init_georef[0] = init_georef[0] + init_georef[1]/2 # xtrans = back by half of 15m
-            init_georef[3] = init_georef[3] - init_georef[5]/2 # ytrans = up by half of 15m
-            
-        elif satname == 'L7':
-            pixel_size = 15
-            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
-            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','B8','QA_PIXEL'])
-            # adjust georeferencing vector to the new image size
-            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][8]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
-            
-        elif satname == 'L8':
-            pixel_size = 15
-            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
-            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B7','B10','B11','QA_PIXEL'])
-            # adjust georeferencing vector to the new image size
-            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
-            
-        elif satname == 'L9':
-            pixel_size = 15
-            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
-            ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5', 'B6','B8','B10','B11','QA_PIXEL'])
-            # adjust georeferencing vector to the new image size
-            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][7]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
-            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
-            
-        elif satname == 'S2':
-            pixel_size = 10
-            clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
-            ImgColl = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
-            # adjust georeferencing vector to the new image size
-            # ee transform: [xscale, xshear, xtrans, yshear, yscale, ytrans]
-            # coastsat georef: [Xtr, Xscale, Xshear, Ytr, Yshear, Yscale]
-            raw_georef = ImgColl.getInfo().get('features')[0]['bands'][3]['crs_transform'] # get transform info from Band4
-            init_georef = Toolbox.CalcGeoref(raw_georef, settings)
-            
-        else: # Planet or local
-            pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
-            clf_model = 'MLPClassifier_Veg_PSScene.pkl' 
-            init_georef = [] # georef gets set by each local image
-            
-        # clf_model = settings['clf_model']
+        pixel_size, clf_model, ImgColl, init_georef = Image_Processing.InitialiseImgs(metadata, settings, satname, imgs)
         # load in trained classifier pkl file
         clf = joblib.load(os.path.join(filepath_models, clf_model))
             
@@ -411,6 +352,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             pickle.dump(output_latlon, f)
         with open(os.path.join(filepath_out, sitename + '_output_proj.pkl'), 'wb') as f:
             pickle.dump(output_proj, f)
+        with open(os.path.join(filepath_out, sitename + '_skip_stats.pkl'), 'wb') as f:
+            pickle.dump(skipped, f)
         
     # This is from previous structure where output is saved as one dict;
     # Now done when output is read in with Toolbox.ReadOutput()

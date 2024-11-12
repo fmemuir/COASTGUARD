@@ -1312,6 +1312,7 @@ def ResumeVeglines(filepath_data, filepath_out, sitename, metadata):
         # Load in existing counter for run success rates
         with open(os.path.join(SiteFilepath, sitename + '_skip_stats.pkl'), 'rb') as f:
             skipped = pickle.load(f)
+
         
         print(f"Already found outputs for {', '.join([str(i) for i in satnames_done])}")
         if len(satnames) != 0:

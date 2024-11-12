@@ -649,6 +649,94 @@ def preprocess_single(ImgColl, georef, fn, datelist, filenames, satname, setting
 # AUXILIARY FUNCTIONS
 ###################################################################################################
 
+
+def InitialiseImgs(metadata, settings, satname, imgs):
+    """
+    Set satellite specific parameters before VedgeSat/CoastSat run.
+    FM Nov 2024
+
+    Parameters
+    ----------
+    metadata : dict
+        Dictionary of sat image filenames, georeferencing info, EPSGs and dates of capture.
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge extraction.
+    satname : str
+        Name of current satellite platform in loop (L5, L7, L8, L9, S2 or PS/other).
+    imgs : list
+        GEE image filenames as strings to be processed.
+
+    Returns
+    -------
+    pixel_size : TYPE
+        DESCRIPTION.
+    clf_model : TYPE
+        DESCRIPTION.
+    ImgColl : ImageCollection 
+        GEE ImageCollection of images to be processed.
+    init_georef : list
+        Initial georeferencing info (same per platform unless coregistration updates it).
+
+    """
+    if satname == 'L5':
+        pixel_size = 15
+        clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
+        ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','QA_PIXEL'])
+        # adjust georeferencing vector to the new image size
+        raw_georef = ImgColl.getInfo().get('features')[0]['bands'][0]['crs_transform'] # get georef layout from first img Blue band
+        init_georef = Toolbox.CalcGeoref(raw_georef, settings)
+        # scale becomes pansharpened 15m and the origin is adjusted to the center of new top left pixel
+        init_georef[1] = init_georef[1]/2 # xscale = 15m
+        init_georef[5] = init_georef[5]/2 # yscale = -15m
+        init_georef[0] = init_georef[0] + init_georef[1]/2 # xtrans = back by half of 15m
+        init_georef[3] = init_georef[3] - init_georef[5]/2 # ytrans = up by half of 15m
+        print(f"Using initial georef: {init_georef}")
+        
+    elif satname == 'L7':
+        pixel_size = 15
+        clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
+        ImgColl = ee.ImageCollection.fromImages(imgs).select(['B1','B2','B3','B4','B5','B8','QA_PIXEL'])
+        # adjust georeferencing vector to the new image size
+        raw_georef = ImgColl.getInfo().get('features')[0]['bands'][5]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+        init_georef = Toolbox.CalcGeoref(raw_georef, settings)
+        print(f"Using initial georef: {init_georef}")
+        
+    elif satname == 'L8':
+        pixel_size = 15
+        clf_model = 'MLPClassifier_Veg_L5L8S2.pkl'
+        ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5','B6','B7','B8','QA_PIXEL'])
+        # adjust georeferencing vector to the new image size
+        raw_georef = ImgColl.getInfo().get('features')[0]['bands'][6]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+        init_georef = Toolbox.CalcGeoref(raw_georef, settings)
+        print(f"Using initial georef: {init_georef}")
+        
+    elif satname == 'L9':
+        pixel_size = 15
+        clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
+        ImgColl = ee.ImageCollection.fromImages(imgs).select(['B2','B3','B4','B5','B6','B7','B8','QA_PIXEL'])
+        # adjust georeferencing vector to the new image size
+        raw_georef = ImgColl.getInfo().get('features')[0]['bands'][6]['crs_transform'] # get georef info from panchromatic band (updated to Band 8)
+        init_georef = Toolbox.CalcGeoref(raw_georef, settings)
+        print(f"Using initial georef: {init_georef}")
+        
+    elif satname == 'S2':
+        pixel_size = 10
+        clf_model = 'MLPClassifier_Veg_L5L8S2.pkl' 
+        ImgColl = ee.ImageCollection.fromImages(imgs).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', 98.5))
+        # adjust georeferencing vector to the new image size
+        raw_georef = ImgColl.getInfo().get('features')[0]['bands'][3]['crs_transform'] # get transform info from Band4
+        init_georef = Toolbox.CalcGeoref(raw_georef, settings)
+        print(f"Using initial georef: {init_georef}")
+        
+    else: # Planet or local
+        pixel_size = metadata[settings['inputs']['sat_list'][0]]['acc_georef'][0][0] #pull first image's pixel size from transform matrix
+        clf_model = 'MLPClassifier_Veg_PSScene.pkl' 
+        init_georef = [] # georef gets set by each local image
+        
+    return pixel_size, clf_model, ImgColl, init_georef
+        
+
+
 def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
     """
     Coregister each satellite image to the first one in a list of images. Uses
