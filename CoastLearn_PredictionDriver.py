@@ -41,7 +41,8 @@ filepath = os.path.join(os.getcwd(), 'Data')
 
 # Load in transect data with coastal change variables
 TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave = Predictions.LoadIntersections(filepath, sitename)
-# Compile relevant coastal change metrics into one dataframe
+
+#%% Compile relevant coastal change metrics into one dataframe
 CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
 
 #%% Subset and interpolate timeseries to match up to same dates
@@ -49,7 +50,7 @@ CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWa
 TransectIDs = [1325]
 
 for Tr in TransectIDs:
-    TransectDF = Predictions.InterpWL(CoastalDF, Tr)
+    TransectDF = Predictions.InterpWLWaves(CoastalDF, Tr)
     
     
     
