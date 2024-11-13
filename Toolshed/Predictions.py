@@ -125,7 +125,7 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
     # Merge combined dataframe with wave info
     # TransectInterGDFWave[['TransectID','WaveHs', 'WaveDir', 'WaveTp', 'WaveDiffus']]
     CoastalDF = pd.merge(CoastalDF, 
-                         TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'Runups']],
+                         TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'Runups','Iribarrens']],
                          how='inner', on='TransectID')
     
     print('Converting to datetimes...')
@@ -240,6 +240,8 @@ def InterpWLWaves(CoastalDF, Tr):
     
     # Transpose to get columns of variables and rows of timesteps
     TransectDF = pd.DataFrame({col: pd.Series(val.iloc[0]) for col,val in TransectDF.items()})
+    
+    #
     
     return TransectDF
 
