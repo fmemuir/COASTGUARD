@@ -804,18 +804,43 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
             cross_distance + ((z - RefElev) / BeachSlope)
             for cross_distance, z in zip(cross_distances, TWL_tr)
         ]
-    
+           
         # Append results for this transect
         CorrectedDists.append(CorrectedDistsTr)
         BeachSlopes.append(BeachSlope)
         TidalStages.append(tides_sat_tr)
-    
+        
     # Add results back to TransectInterGDFWater
     TransectInterGDFWater['wlcorrdist'] = CorrectedDists
     TransectInterGDFWater['tideelev'] = TidalStages
     TransectInterGDFWater['beachslope'] = BeachSlopes
 
     return TransectInterGDFWater
+
+
+def CalcIribarrens(TransectInterGDFWave, TransectInterGDFWater):
+    
+    Iribarrens = []
+    for Tr in range(len(TransectInterGDFWave)):
+        WaveHs = TransectInterGDFWave['WaveHs'].iloc[Tr]
+        WaveTp = TransectInterGDFWave['WaveTp'].iloc[Tr]
+        beta = TransectInterGDFWater['beachslope'].iloc[Tr]
+        IribarrenTr = []
+        for i in range(len(WaveHs)):
+            # Deepwater wave length
+            L0 = (9.81 * WaveTp[i]**2) / (2 * np.pi)
+            # Iribarren number (dynamic beach steepness)
+            zeta = beta / (WaveHs[i] * L0) 
+            
+            # Append per-wave value to list
+            IribarrenTr.append(zeta)
+            
+        Iribarrens.append(IribarrenTr)
+            
+    # Add per-transect Iribarrens lists to full list
+    TransectInterGDFWave['Iribarren'] = Iribarrens
+    
+    return TransectInterGDFWave
 
 
 def GetBeachSlopesDEM(MSL, MHWS, DEMpath):
