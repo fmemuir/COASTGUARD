@@ -759,6 +759,7 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     
     return WaveDiffusivity, WaveStability
 
+   
 
 def CalcShoreAngle(TransectInterGDF, Tr):
     """
@@ -822,6 +823,105 @@ def CalcAlpha(WaveDir, ShoreAngle, Tr):
     
     return WaveAlpha
 
+
+def CalcRunup(WaveHs, WaveTp=None, beta=None, Model="Senechal"):
+    """
+    Calculate wave runup using Senechal et al., 2011 formula 
+    (assuming runup scales directly with offshore wave height).
+    Can alternatively use Stockdon  et al., 2006 if wave period is available.
+    FM June 2024
+
+    Parameters
+    ----------
+    WaveHs : list
+        Offshore significant wave heights (from Copernicus hindcast) at each transect in a site.
+    WaveTp : list, optional
+        Offshore peak wave periods (from Copernicus hindcast) at each transect in a site.
+        The default is None (period only needed for Stockdon equation).
+    beta : float, optional
+        Shoreface steepness (single value per transect).
+    Model : string, optional
+        Runup equation to be used, from either 'Senechal':
+            Senechal, N., Coco, G., Bryan, K.R., Holman, R.A., 2011. Wave runup during extreme
+            storm conditions. Journal of Geophysical Research 116.
+            https://doi.org/10.1029/2010JC006819
+        or 'Stockdon':
+            Stockdon, H. F., Holman, R. A., Howd, P. A., & Sallenger, A. H. (2006).
+            Empirical  parameterization of setup, swash, and runup. Coastal Engineering,
+            53(7), 573–588. https://doi.org/10.1016/j.coastaleng.2005.12.005
+
+    Returns
+    -------
+    Runups : list
+        Calculated wave runups list (with same dimensions as input wave heights).
+
+    """
+    
+    Runups = []
+    # For each transect in list
+    for Tr in range(len(WaveHs)):
+        # If empty, add NaN
+        if isinstance(WaveHs[Tr], list) == False:
+            RunupTr = np.nan
+        else:
+            RunupTr = []
+            # For each wave condition at time of each sat image (at single transect)
+            for i in range(len(WaveHs[Tr])):
+                
+                if Model == 'Senechal':
+                    # Senechal 2011, Castelle 2021 Runup (2% exceedance) calculation for macrotidal dissipative beach
+                    R2 = 2.14 * np.tanh(0.4 * WaveHs[Tr][i])
+                
+                elif Model == 'Stockdon':
+                    # Stockdon 2006 runup depending on Iribarren measure of dissipative vs reflective
+                    L0 = (9.81 * WaveTp[Tr][i]**2) / (2 * np.pi)
+                    zeta = beta / (WaveHs[Tr][i] * L0) # dynamic beach steepness
+                    if zeta < 0.3: # dissipative
+                        R2 = 0.043 * (WaveHs[Tr][i] * L0)**0.5
+                    else: # intermediate to reflective
+                        R2 = 1.1 * (0.35 * beta * (WaveHs[Tr][i] * L0) ** 0.5
+                                    + ((WaveHs[Tr][i] * L0 * (0.563 * beta ** 2 + 0.004)) ** 0.5) / 2
+                                    )
+                        
+                RunupTr.append(R2)
+        
+        # Add per-transect runup lists (or nan) to full list
+        Runups.append(RunupTr)
+        
+    return Runups
+
+
+def CalcStorms(WaveTime, SigWaveHeight):
+    """
+    Generate boolean array of same size as wave height timestack, marked 1 where
+    wave heights exceed the 95th percentile for each individual cell's timeseries.
+    FM Aug 2024
+
+    Parameters
+    ----------
+    WaveTime : list
+        List of timesteps matching length of wave height timestack.
+    SigWaveHeight : array
+        3D array of offshore significant wave height rasters (shape=(time, y, x)).
+
+    Returns
+    -------
+    StormEvents : array
+        3D boolean array of storm events, with shape=SigWaveHeight.shape
+
+    """
+ 
+    # Calculate 95th percentile of wave height for 'storm' limit (creates percentile array of shape y,x)
+    pct = np.percentile(SigWaveHeight, 95, axis=0)
+    # Create boolean mask for where wave height exceeds 95th percentile
+    StormMask = SigWaveHeight > pct
+    # Generate boolean array where 1 = storm (exceeded wave height) and 0 = normal conditions
+    StormEvents = np.where(StormMask, 1, 0)
+    
+    return StormEvents
+
+
+#%%
 def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
     """
     IN DEVELOPMENT
@@ -1003,104 +1103,3 @@ def TransformWaves(TransectInterGDF, Hs, Dir, Tp):
                 
 
         print('number of breaking wave conditions: '+str(Nloop))
-
-
-def CalcRunup(WaveHs, WaveTp=None, beta=None, Model="Senechal"):
-    """
-    Calculate wave runup using Senechal et al., 2011 formula 
-    (assuming runup scales directly with offshore wave height).
-    Can alternatively use Stockdon  et al., 2006 if wave period is available.
-    FM June 2024
-
-    Parameters
-    ----------
-    WaveHs : list
-        Offshore significant wave heights (from Copernicus hindcast) at each transect in a site.
-    WaveTp : list, optional
-        Offshore peak wave periods (from Copernicus hindcast) at each transect in a site.
-        The default is None (period only needed for Stockdon equation).
-    beta : float, optional
-        Shoreface steepness (single value per transect).
-    Model : string, optional
-        Runup equation to be used, from either 'Senechal':
-            Senechal, N., Coco, G., Bryan, K.R., Holman, R.A., 2011. Wave runup during extreme
-            storm conditions. Journal of Geophysical Research 116.
-            https://doi.org/10.1029/2010JC006819
-        or 'Stockdon':
-            Stockdon, H. F., Holman, R. A., Howd, P. A., & Sallenger, A. H. (2006).
-            Empirical  parameterization of setup, swash, and runup. Coastal Engineering,
-            53(7), 573–588. https://doi.org/10.1016/j.coastaleng.2005.12.005
-
-    Returns
-    -------
-    Runups : list
-        Calculated wave runups list (with same dimensions as input wave heights).
-
-    """
-    
-    Runups = []
-    # For each transect in list
-    for Tr in range(len(WaveHs)):
-        # If empty, add NaN
-        if isinstance(WaveHs[Tr], list) == False:
-            RunupTr = np.nan
-        else:
-            RunupTr = []
-            # For each wave condition at time of each sat image (at single transect)
-            for i in range(len(WaveHs[Tr])):
-                
-                if Model == 'Senechal':
-                    # Senechal 2011, Castelle 2021 Runup (2% exceedance) calculation for macrotidal dissipative beach
-                    R2 = 2.14 * np.tanh(0.4 * WaveHs[Tr][i])
-                
-                elif Model == 'Stockdon':
-                    # Stockdon 2006 runup depending on Iribarren measure of dissipative vs reflective
-                    L0 = (9.81 * WaveTp[Tr][i]**2) / (2 * np.pi)
-                    zeta = beta / (WaveHs[Tr][i] * L0) # dynamic beach steepness
-                    if zeta < 0.3: # dissipative
-                        R2 = 0.043 * (WaveHs[Tr][i] * L0)**0.5
-                    else: # intermediate to reflective
-                        R2 = 1.1 * (0.35 * beta * (WaveHs[Tr][i] * L0) ** 0.5
-                                    + ((WaveHs[Tr][i] * L0 * (0.563 * beta ** 2 + 0.004)) ** 0.5) / 2
-                                    )
-                        
-                RunupTr.append(R2)
-        
-        # Add per-transect runup lists (or nan) to full list
-        Runups.append(RunupTr)
-        
-        # Simplified versions
-        # RunupsMean.append(np.nanmean(RunupTr))
-        # RunupsMedian.append(np.nanmedian(RunupTr))
-        
-    return Runups
-
-
-def CalcStorms(WaveTime, SigWaveHeight):
-    """
-    Generate boolean array of same size as wave height timestack, marked 1 where
-    wave heights exceed the 95th percentile for each individual cell's timeseries.
-    FM Aug 2024
-
-    Parameters
-    ----------
-    WaveTime : list
-        List of timesteps matching length of wave height timestack.
-    SigWaveHeight : array
-        3D array of offshore significant wave height rasters (shape=(time, y, x)).
-
-    Returns
-    -------
-    StormEvents : array
-        3D boolean array of storm events, with shape=SigWaveHeight.shape
-
-    """
- 
-    # Calculate 95th percentile of wave height for 'storm' limit (creates percentile array of shape y,x)
-    pct = np.percentile(SigWaveHeight, 95, axis=0)
-    # Create boolean mask for where wave height exceeds 95th percentile
-    StormMask = SigWaveHeight > pct
-    # Generate boolean array where 1 = storm (exceeded wave height) and 0 = normal conditions
-    StormEvents = np.where(StormMask, 1, 0)
-    
-    return StormEvents
