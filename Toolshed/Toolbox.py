@@ -1110,22 +1110,40 @@ def image_retrieval(inputs, SLC=True):
         
     if 'L5' in inputs['sat_list']:
         Landsat5 = ee.ImageCollection("LANDSAT/LT05/C02/T1_TOA").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1])
-        Sat.append(Landsat5)
+        if Landsat5.size().getInfo() == 0:
+            inputs['sat_list'].remove('L5')
+        else:
+            Sat.append(Landsat5)
     if 'L7' in inputs['sat_list']:
         if SLC is True: # if flag is True, include the Scan Line Correcter affected images
             Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
         else:
-            Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], '2003-05-31').filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
-        Sat.append(Landsat7)
+            if '2003-05-31' > inputs['dates'][0]: # if first date is before SLC error date
+                Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], '2003-05-31').filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
+            else: # if dates are not within L7 error-free period
+                Landsat7 = ee.ImageCollection('LANDSAT/LE07/C02/T1_TOA').filterBounds(point).filterDate('2003-05-30', '2003-05-31').filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
+        if Landsat7.size().getInfo() == 0:
+            inputs['sat_list'].remove('L7')
+        else:
+            Sat.append(Landsat7)
     if 'L8' in inputs['sat_list']:
         Landsat8 = ee.ImageCollection('LANDSAT/LC08/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
-        Sat.append(Landsat8)
+        if Landsat8.size().getInfo() == 0:
+            inputs['sat_list'].remove('L8')
+        else:
+            Sat.append(Landsat8)
     if 'L9' in inputs['sat_list']:
         Landsat9 = ee.ImageCollection('LANDSAT/LC09/C02/T1_TOA').filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lt('CLOUD_COVER', cloud_thresh))
-        Sat.append(Landsat9)
+        if Landsat9.size().getInfo() == 0:
+            inputs['sat_list'].remove('L9')
+        else:
+            Sat.append(Landsat9)
     if 'S2' in inputs['sat_list']:
         Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
-        Sat.append(Sentinel2)
+        if Sentinel2.size().getInfo() == 0:
+            inputs['sat_list'].remove('S2')
+        else:
+            Sat.append(Sentinel2)
     if 'PSScene4Band' in inputs['sat_list']:
         Sat = LocalImageRetrieval(inputs)
     return Sat
