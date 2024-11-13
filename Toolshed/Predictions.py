@@ -68,6 +68,8 @@ def LoadIntersections(filepath, sitename):
         GeoDataFrame of cross-shore transects, intersected with Copernicus hindcast wave data.
 
     """
+    print('Loading transect intersections...')
+    
     with open(os.path.join
               (filepath , sitename, 'intersections', sitename + '_transect_intersects.pkl'), 'rb') as f:
         TransectInterGDF = pickle.load(f)
@@ -110,9 +112,10 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
         DataFrame process.
 
     """
+    print('Merging transect-based data...')
     # Merge veg edge intersection data with waterline intersection data
     CoastalDF = pd.merge(TransectInterGDF[['TransectID','dates','times','distances']], 
-                         TransectInterGDFWater[['TransectID','wldates','wltimes','wlcorrdist', 'tideelev','beachslope','beachwidth']],
+                         TransectInterGDFWater[['TransectID','wldates','wltimes','wlcorrdist', 'tideelev','beachwidth']],
                          how='inner', on='TransectID')
     # Merge combined dataframe with topographic info
     # TransectInterGDFTopo[['TransectID','TZwidth', 'TZwidthMn', 'SlopeMax', 'SlopeMean']]
@@ -122,25 +125,25 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
     # Merge combined dataframe with wave info
     # TransectInterGDFWave[['TransectID','WaveHs', 'WaveDir', 'WaveTp', 'WaveDiffus']]
     CoastalDF = pd.merge(CoastalDF, 
-                         TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'WaveDiffus', 'WaveStabil', 'Runups']],
+                         TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'Runups']],
                          how='inner', on='TransectID')
     
-    
-    DTs = []
+    print('Converting to datetimes...')
+    veDTs = []
     for Tr in range(len(CoastalDF)):
-        DTs_Tr = []
+        veDTs_Tr = []
         for i in range(len(CoastalDF['dates'].iloc[Tr])):
-            DTs_Tr.append(dt.datetime.strptime(CoastalDF['dates'].iloc[Tr][i]+' '+CoastalDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f'))
-        DTs.append(DTs_Tr)
-    CoastalDF['vegDTs'] = DTs
+            veDTs_Tr.append(dt.datetime.strptime(CoastalDF['dates'].iloc[Tr][i]+' '+CoastalDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f'))
+        veDTs.append(veDTs_Tr)
+    CoastalDF['vegDTs'] = veDTs
     
-    DTs = []
+    wlDTs = []
     for Tr in range(len(CoastalDF)):
-        DTs_Tr = []
+        wlDTs_Tr = []
         for i in range(len(CoastalDF['wldates'].iloc[Tr])):
-            DTs_Tr.append(dt.datetime.strptime(CoastalDF['wldates'].iloc[Tr][i]+' '+CoastalDF['wltimes'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f'))
-        DTs.append(DTs_Tr)
-    CoastalDF['wlDTs'] = DTs
+            wlDTs_Tr.append(dt.datetime.strptime(CoastalDF['wldates'].iloc[Tr][i]+' '+CoastalDF['wltimes'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f'))
+        wlDTs.append(wlDTs_Tr)
+    CoastalDF['wlDTs'] = wlDTs
     
     
     return CoastalDF
@@ -215,20 +218,25 @@ def InterpWLWaves(CoastalDF, Tr):
     TransectDF = CoastalDF.iloc[[Tr],:] # single-row dataframe
     # TransectDF = TransectDF.transpose()
 
-    # Interpolate over waterline associated variables to match dates with veg edge dates
-    wl_numdates = pd.to_datetime(TransectDF['wldates'][Tr]).values.astype(np.int64)
-    ve_numdates = pd.to_datetime(TransectDF['dates'][Tr]).values.astype(np.int64)
-    wl_interp_f = interp1d(wl_numdates, TransectDF['wlcorrdist'][Tr], kind='linear', fill_value='extrapolate')
-    wl_interp = wl_interp_f(ve_numdates).tolist()
-    welev_interp_f = interp1d(wl_numdates, TransectDF['tideelev'][Tr], kind='linear', fill_value='extrapolate')
-    welev_interp = welev_interp_f(ve_numdates).tolist()
-    TransectDF['wlcorrdist'] = [wl_interp]
-    TransectDF['tideelev'] = [welev_interp]
-    # Recalculate beachwidth
+    # Interpolate over waterline and wave associated variables
+    wl_numdates = pd.to_datetime(TransectDF['wlDTs'][Tr]).values.astype(np.int64)
+    ve_numdates = pd.to_datetime(TransectDF['vegDTs'][Tr]).values.astype(np.int64)
+    wv_numdates = pd.to_datetime(TransectDF['WaveDates'][Tr]).values.astype(np.int64)
+    # Match dates with veg edge dates and append back to TransectDF
+    for wlcol in ['wlcorrdist', 'tideelev','beachwidth']:
+        wl_interp_f = interp1d(wl_numdates, TransectDF[wlcol][Tr], kind='linear', fill_value='extrapolate')
+        wl_interp = wl_interp_f(ve_numdates).tolist()
+        TransectDF[wlcol] = [wl_interp]
+    for wvcol in ['WaveHs','WaveDir','WaveTp','Runups', 'Iribarrens']:
+        wv_interp_f = interp1d(wv_numdates, TransectDF[wvcol][Tr], kind='linear', fill_value='extrapolate')
+        wv_interp = wv_interp_f(ve_numdates).tolist()
+        TransectDF[wvcol] = [wv_interp]
+    
+    # Recalculate beachwidth as values will now be mismatched
     beachwidth = [abs(wl_interp[i] - TransectDF['distances'][Tr][i]) for i in range(len(wl_interp))]
     TransectDF['beachwidth'] = [beachwidth]
     
-    TransectDF.drop(columns=['wldates'], inplace=True)
+    TransectDF.drop(columns=['WaveDates','wldates','wltimes', 'wlDTs','dates','times'], inplace=True)
     
     # Transpose to get columns of variables and rows of timesteps
     TransectDF = pd.DataFrame({col: pd.Series(val.iloc[0]) for col,val in TransectDF.items()})
