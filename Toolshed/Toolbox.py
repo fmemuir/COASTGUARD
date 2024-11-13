@@ -1734,6 +1734,57 @@ def ProcessRefline(referenceLineShp,settings):
     
     return referenceLine, ref_epsg
 
+
+def CheckRefOrientation(refGDF):
+    """
+    Check the orientation of a reference shoreline before it goes into transect
+    creation. If the calculated cross product (relative direction between two
+    line segments) is positive, the second segment is to the left of the first
+    AKA the sea is on the left, and the line coordinates are flipped.
+    
+    FM Nov 2024
+
+    Parameters
+    ----------
+    refGDF : GeoDataFrame
+        Reference shoreline dataframe with geometry in relevant UTM.
+
+    Returns
+    -------
+    refGDF : GeoDataFrame
+        Reference shoreline dataframe with reoriented geometry (if needed).
+
+    """
+    
+    # Check orientation and reverse if needed
+    def IsClockwise(line):
+        # Calculate cross product/signed area to determine orientation
+        x_coords, y_coords = line.xy
+        CrossSum = 0
+        for i in range(len(x_coords) - 1):
+            x1, y1 = x_coords[i], y_coords[i]
+            x2, y2 = x_coords[i + 1], y_coords[i + 1]
+            CrossSum += (x2 - x1) * (y2 + y1)  # sum of trapezoidal areas
+        # If the sum is positive, it's clockwise (and should be reoriented)
+        return CrossSum > 0
+        
+    def OrientLine(line):
+        # Clockwise (AKA sea on left) if SignedArea is positive
+        if IsClockwise(line):
+            print('Reference shoreline reorientated\n')
+            # Reverse the line to make it counterclockwise
+            return LineString(line.coords[::-1])
+        # Counterclockwise (AKA sea on right) if negative
+        else:
+            print('Reference shoreline is correctly orientated\n')
+        return line   # already counterclockwise
+
+    # Apply the orientation function to each line in the GeoDataFrame
+    refGDF['geometry'] = refGDF['geometry'].apply(lambda line: OrientLine(line) if isinstance(line, LineString) else line)
+    
+    return refGDF
+
+
 def daterange(date1, date2):
     """
     Get formatted date range for two datetime dates.

@@ -42,7 +42,7 @@ def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, Distanc
     for subdir, dirs, files in os.walk(BasePath):
         for direc in dirs:
             FileSpec = '/' + str(os.path.join(direc)) + '/' + str(os.path.join(direc)) + '.shp'
-            ReprojSpec = '/' + str(os.path.join(direc)) + '/Reproj.shp'
+            ReprojShp = '/' + str(os.path.join(direc)) + '/Reproj.shp'
             TransectSpec = '/' + str(os.path.join(direc)) + '/Transect.shp'
             CoastSpec = '/' + str(os.path.join(direc)) + '/Coast.shp'
             Filename2SaveCoast = '/' + str(os.path.join(direc)) + '/' + "My_Baseline.shp"
@@ -54,10 +54,10 @@ def ProduceTransectsAll(SmoothingWindowSize, NoSmooths, TransectSpacing, Distanc
             # change CRS to epsg 27700
             shape = shape.to_crs(crs=proj,epsg=4326)
             # write shp file
-            shape.to_file(BasePath+ReprojSpec)
+            shape.to_file(BasePath+ReprojShp)
         
             #Creates coast objects
-            CellCoast = Coast(BasePath+ReprojSpec, MinLength=5)
+            CellCoast = Coast(BasePath+ReprojShp, MinLength=5)
 
             if not CellCoast.BuiltTransects:
             
@@ -115,7 +115,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
     """
     
     sitename = settings['inputs']['sitename']
-    ReprojSpec = VegBasePath + '/Baseline_Reproj.shp'
+    ReprojShp = VegBasePath + '/Baseline_Reproj.shp'
     TransectPath = os.path.join(VegBasePath, sitename+'_Transects.shp')
     CoastSpec = VegBasePath + '/Coast.shp'
     Filename2SaveCoast = VegBasePath + '/Coast.pydata'
@@ -126,14 +126,19 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
     
     refGDF = gpd.read_file(os.path.join('Data','referenceLines',referenceLinePath))
     refGDF = gpd.GeoDataFrame(geometry=refGDF['geometry'])
-    # # change CRS to desired projected EPSG
+        
+    # change CRS to desired projected EPSG
     # projection_epsg = settings['projection_epsg']
     refGDF = refGDF.to_crs(epsg=settings['output_epsg'])
+    
+    # Check line orientation to ensure sea is on the right (line should be in UTM of choice)
+    refGDF = Toolbox.CheckRefOrientation(refGDF)
+    
     # write shp file
-    refGDF.to_file(ReprojSpec)
+    refGDF.to_file(ReprojShp)
         
     #Creates coast objects
-    CellCoast = Coast(ReprojSpec, MinLength=10)
+    CellCoast = Coast(ReprojShp, MinLength=10)
 
     if not CellCoast.BuiltTransects:
             
