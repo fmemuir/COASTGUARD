@@ -50,7 +50,7 @@ CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWa
 TransectIDs = [1325]
 
 for Tr in TransectIDs:
-    TransectDF = Predictions.InterpWLWaves(CoastalDF, Tr)
+    TransectDF = Predictions.InterpVEWL(CoastalDF, Tr)
     
     
     

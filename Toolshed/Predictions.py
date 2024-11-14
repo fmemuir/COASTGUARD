@@ -135,7 +135,7 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
         for i in range(len(CoastalDF['dates'].iloc[Tr])):
             veDTs_Tr.append(dt.datetime.strptime(CoastalDF['dates'].iloc[Tr][i]+' '+CoastalDF['times'].iloc[Tr][i], '%Y-%m-%d %H:%M:%S.%f'))
         veDTs.append(veDTs_Tr)
-    CoastalDF['vegDTs'] = veDTs
+    CoastalDF['veDTs'] = veDTs
     
     wlDTs = []
     for Tr in range(len(CoastalDF)):
@@ -220,7 +220,7 @@ def InterpWLWaves(CoastalDF, Tr):
 
     # Interpolate over waterline and wave associated variables
     wl_numdates = pd.to_datetime(TransectDF['wlDTs'][Tr]).values.astype(np.int64)
-    ve_numdates = pd.to_datetime(TransectDF['vegDTs'][Tr]).values.astype(np.int64)
+    ve_numdates = pd.to_datetime(TransectDF['veDTs'][Tr]).values.astype(np.int64)
     wv_numdates = pd.to_datetime(TransectDF['WaveDates'][Tr]).values.astype(np.int64)
     # Match dates with veg edge dates and append back to TransectDF
     for wlcol in ['wlcorrdist', 'tideelev','beachwidth']:
@@ -242,11 +242,64 @@ def InterpWLWaves(CoastalDF, Tr):
     TransectDF = pd.DataFrame({col: pd.Series(val.iloc[0]) for col,val in TransectDF.items()})
     
     # Reset index for timeseries
-    TransectDF.index = TransectDF['vegDTs']
-    TransectDF = TransectDF.drop(columns=['TransectID', 'vegDTs'])
+    TransectDF.index = TransectDF['veDTs']
+    TransectDF = TransectDF.drop(columns=['TransectID', 'veDTs'])
 
     return TransectDF
 
+
+def InterpVEWL(CoastalDF, Tr):
+    """
+    Interpolate over waterline and vegetation associated timeseries so that dates 
+    match wave associated (full timeseries) ones.
+    FM Nov 2024
+
+    Parameters
+    ----------
+    CoastalDF : DataFrame
+        DataFrame of cross-shore transects (rows) and intersected coastal 
+        timeseries/metrics (columns).
+    Tr : int
+        Transect ID of choice.
+
+    Returns
+    -------
+    TransectDF : DataFrame
+        Subset row matching the requested transect ID (Tr), with interpolated
+        values for 'wlcorrdist', 'waterelev' and 'beachwidth'.
+
+    """
+    TransectDF = CoastalDF.iloc[[Tr],:] # single-row dataframe
+    # TransectDF = TransectDF.transpose()
+
+    # Interpolate over waterline and wave associated variables
+    wl_numdates = pd.to_datetime(TransectDF['wlDTs'][Tr]).values.astype(np.int64)
+    ve_numdates = pd.to_datetime(TransectDF['veDTs'][Tr]).values.astype(np.int64)
+    wv_numdates = pd.to_datetime(TransectDF['WaveDates'][Tr]).values.astype(np.int64)
+    # Match dates with veg edge dates and append back to TransectDF
+    for wlcol in ['wlcorrdist', 'tideelev','beachwidth']:
+        wl_interp_f = interp1d(wl_numdates, TransectDF[wlcol][Tr], kind='linear', fill_value='extrapolate')
+        wl_interp = wl_interp_f(wv_numdates).tolist()
+        TransectDF[wlcol] = [wl_interp]
+    for vecol in ['distances','TZwidth']:
+        ve_interp_f = interp1d(ve_numdates, TransectDF[vecol][Tr], kind='linear', fill_value='extrapolate')
+        ve_interp = ve_interp_f(wv_numdates).tolist()
+        TransectDF[vecol] = [ve_interp]
+    
+    # Recalculate beachwidth as values will now be mismatched
+    beachwidth = [abs(wl_interp[i] - TransectDF['distances'][Tr][i]) for i in range(len(wl_interp))]
+    TransectDF['beachwidth'] = [beachwidth]
+    
+    TransectDF.drop(columns=['veDTs','wldates','wltimes', 'wlDTs','dates','times'], inplace=True)
+    
+    # Transpose to get columns of variables and rows of timesteps
+    TransectDF = pd.DataFrame({col: pd.Series(val.iloc[0]) for col,val in TransectDF.items()})
+    
+    # Reset index for timeseries
+    TransectDF.index = TransectDF['WaveDates']
+    TransectDF = TransectDF.drop(columns=['TransectID', 'WaveDates'])
+
+    return TransectDF
 
 
 def PreprocessTraining(CoastalDF):
@@ -478,6 +531,8 @@ def Cluster(TransectDF, ValPlots=False):
     # Fill nans factoring in timesteps for interpolation
     VarDF = TransectDF.interpolate(method='time', axis=0)
     
+    VarDF = VarDF[['distances', 'wlcorrdist','TZwidth','WaveHs']]
+    
     VarDF_scaled = StandardScaler().fit_transform(VarDF)
     
     # Apply PCA to reduce the dimensions to 3D for visualization
@@ -496,7 +551,7 @@ def Cluster(TransectDF, ValPlots=False):
     ClusterCentres = np.array([pca_VarDF[VarDF['Cluster'] == i].mean(axis=0) for i in range(3)])
     
     # Define cluster labels using identified centres
-    HighImpact = np.argmin(ClusterCentres[:, 0])
+    HighImpact = np.argmax(ClusterCentres[:, 0])
     LowImpact = np.argmax(ClusterCentres[:, 1])
     MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
     # Map labels to cluster IDs
