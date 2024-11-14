@@ -1756,34 +1756,38 @@ def CheckRefOrientation(refGDF):
 
     """
     
-    # Check orientation and reverse if needed
-    def IsClockwise(line):
-        # Calculate cross product/signed area to determine orientation
+    def CrossProduct(x1, y1, x2, y2, x3, y3):
+        # Calculate the cross product of vectors (x1, y1)->(x2, y2) and (x2, y2)->(x3, y3)
+        return (x2 - x1) * (y3 - y2) - (y2 - y1) * (x3 - x2)
+    
+    def SeaOnLeft(line):
+        # Determine if the sea is on the correct side by summing cross products along the line
         x_coords, y_coords = line.xy
-        CrossSum = 0
-        for i in range(len(x_coords) - 1):
+        cross_sum = 0
+        # Calculate cross product for each consecutive triplet of points
+        for i in range(len(x_coords) - 2):
             x1, y1 = x_coords[i], y_coords[i]
             x2, y2 = x_coords[i + 1], y_coords[i + 1]
-            CrossSum += (x2 - x1) * (y2 + y1)  # sum of trapezoidal areas
-        # If the sum is positive, it's clockwise (and should be reoriented)
-        return CrossSum > 0
-        
+            x3, y3 = x_coords[i + 2], y_coords[i + 2]
+            cross_sum += CrossProduct(x1, y1, x2, y2, x3, y3)
+        # if cross product is positive, sea is on left and line needs to be flipped
+        return cross_sum > 0
+    
     def OrientLine(line):
-        # Clockwise (AKA sea on left) if SignedArea is positive
-        if IsClockwise(line):
-            print('Reference shoreline reorientated\n')
-            # Reverse the line to make it counterclockwise
-            return LineString(line.coords[::-1])
-        # Counterclockwise (AKA sea on right) if negative
+        # Reverse line if necessary
+        if SeaOnLeft(line):
+            print("Reference shoreline reoriented\n")
+            return LineString(line.coords[::-1])  # Reverse to make sea on the right
         else:
-            print('Reference shoreline is correctly orientated\n')
-        return line   # already counterclockwise
-
+            print("Reference shoreline is correctly oriented\n")
+            return line  # Sea is already on the right
+    
     # Apply the orientation function to each line in the GeoDataFrame
-    refGDF['geometry'] = refGDF['geometry'].apply(lambda line: OrientLine(line) if isinstance(line, LineString) else line)
+    refGDF['geometry'] = refGDF['geometry'].apply(
+        lambda line: OrientLine(line) if isinstance(line, LineString) else line)
     
     return refGDF
-
+    
 
 def daterange(date1, date2):
     """
