@@ -4286,12 +4286,18 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
                     s=10, c=colour, alpha=0.5, label=scatterlab[clusterID])
     # Plot eignevectors of each variable
     for i in range(n_coeffs):
-        ax1.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
+        ax1.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.03, zorder=5)
+        # Use vector math to plot annotations along the direction of each arrow
+        xtext = 0 + (coeffs[i,0] - 0) * 7
+        ytext = 0 + (coeffs[i,1] - 0) * 7
         ax1.annotate(text=MultivarGDFbiplot.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
-                     xytext=(coeffs[i,0]*15,5), textcoords='offset points',
-                     color='k', ha='center', va='center', zorder=5)
+                     xytext=(xtext,ytext), textcoords='offset points',
+                     color='k', ha='right', va='center', zorder=5,
+                     path_effects=[PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.7)])
     ax1.set_xlim(-1,1)
     ax1.set_ylim(-1,1)
+    ax1.yaxis.set_label_position('right')
+    ax1.yaxis.set_ticks_position('right')
     ax1.set_xticks(np.arange(-1,1.5,0.5))
     ax1.set_yticks(np.arange(-1,1.5,0.5))
     # ax1.axis('equal')
@@ -4313,17 +4319,18 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
     ax2.axhline(y=0.95, c='r', ls='--', lw=0.5)
     # plt.axhline(y=0.05, c='r', ls='--', lw=0.5)
     ax2.grid(axis='y', c=[0.5,0.5,0.5], alpha=0.2, lw=0.5)
-    ax2.set_ylabel(r'Explained $\sigma^2$ (%)', labelpad=0.5)
+    ax2.set_ylabel(r'Explained $\sigma^2$ (%)', labelpad=0.5, path_effects=[PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.7)])
     ax2.yaxis.set_label_position('right')
     ax2.yaxis.set_ticks_position('right')
-    ax2.set_yticks(np.arange(0.2,1,0.2))
-    ax2.set_yticklabels([])
+    ax2.set_yticks(np.arange(0,1,0.2))
+    ax2.set_yticklabels(np.arange(0,100,20), path_effects=[PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.7)])
+    ax2.tick_params(axis='y', which='major', length=2, pad=2)
     ax2.set_xticks([])
-    for tic in ax2.yaxis.get_major_ticks():
-        tic.tick1line.set_visible(False)
-        tic.tick2line.set_visible(False)
-        tic.label1.set_visible(False)
-        tic.label2.set_visible(False)
+    # for tic in ax2.yaxis.get_major_ticks():
+    #     tic.tick1line.set_visible(False)
+    #     tic.tick2line.set_visible(False)
+    #     tic.label1.set_visible(False)
+    #     tic.label2.set_visible(False)
     ax2.text(x=5, y=0.85, s='95%', c='r', ha='center')
     ax2.set_ylim(0,1)
     # Save full biplot fig
