@@ -89,7 +89,8 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     print('Mapping veglines:')
 
     imgcount = 0
-    
+    coreg_counter = 0 # counter for images coregistered
+    coreg_stats_full = {'dX': [], 'dY': [], 'Reliability': []}
     # loop through satellite list
     for satname in satnames:
         
@@ -176,8 +177,12 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
             # Uses GeoArray(array, geotransform, projection)
             # Read in provided reference image (if it has been provided)
             if settings['reference_coreg_im'] is not None:                
-                georef, newbuff = Image_Processing.Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef)
+                georef, newbuff, coreg_stats = Image_Processing.Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef)
                 if newbuff is True:
+                    # Update coregistration counter and stats dict
+                    coreg_counter += 1
+                    for key in coreg_stats_full:
+                        coreg_stats_full[key].append(coreg_stats[key])
                     # recalculate buffer based on new georef
                     im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
             
@@ -364,7 +369,13 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     # print statistics of run
     for reason in skipped.keys():
         print(f"Skipped due to {reason}: {len(skipped[reason])} / {imgcount} ({round(len(skipped[reason])/imgcount,4)}%)")
-        
+    
+    # print coregistration statistics
+    print(f"\nNumber of images coregistered: {coreg_counter} / {imgcount}")
+    print("Average coregistration amount: dX = %0.3f m | dY = %0.3f m" % 
+          (np.nanmean(coreg_stats_full['dX']), np.nanmean(coreg_stats_full['dY'])))
+    print("Average reliability of coregistration: %0.1f%%" % np.nanmean(coreg_stats_full['Reliability']))
+    
     # save per-platform output structure as output.pkl
     print('saving output pickle files ...')
     filepath_out = os.path.join(filepath_data, sitename)
