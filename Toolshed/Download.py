@@ -43,6 +43,7 @@ from Toolshed import Image_Processing, Toolbox, gdal_merge
 np.seterr(all='ignore') # raise/ignore divisions by 0 and nans
 
 
+"""VedgeSat functions to obtain metadata from GEE for cloud-based processing"""
 
 def CollectMetadata(inputs, Sat):
     """
