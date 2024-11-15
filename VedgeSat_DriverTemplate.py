@@ -239,24 +239,7 @@ else:
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDF, f)
 
-#%% Transect-Waves Intersections (needs to be run before water if using runup in tidal corrections)
-
-if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl')):
-    print('Transect Intersect + Wave GDF exists and was loaded')
-    with open(os.path.join
-              (filepath , sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'rb') as f:
-        TransectInterGDFWave = pickle.load(f)
-else:
-    TransectInterGDFWave = Transects.WavesIntersect(settings, TransectInterGDF, output, lonmin, lonmax, latmin, latmax)
-    
-    with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'wb') as f:
-        pickle.dump(TransectInterGDFWave, f)
-
-#%% Transect-Water Intersections
-# If you want to include runup in your waterline corrections, add TransectInterGDFWave:
-    # Transects.GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, TransectInterGDFWave, beachslope)
-# If you want to include runup AND calculate slope using CoastSat.slope, exclude beachslope:
-    # Transects.GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, TransectInterGDFWave)
+##%% Transect-Water Intersections
 if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl')):
     print('Transect Intersect + Water GDF exists and was loaded')
     with open(os.path.join
@@ -264,11 +247,47 @@ if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '
         TransectInterGDFWater = pickle.load(f)
 else:        
     if settings['wetdry'] == True:
-        TransectInterGDFWater = Transects.GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, beachslope)  
-        TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  BasePath, sitename)
+        TransectInterGDFWater = Transects.GetWaterIntersections(BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output)  
     
     with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl'), 'wb') as f:
         pickle.dump(TransectInterGDFWater, f)
+
+#%% Transect-Waves Intersections (needs to be before tidal corrections if using runup as well)
+# This is for comparing veg edge positions with nearshore wave conditions at the time the image was taken. 
+# Note: this requires you to have a Copernicus Marine Service (CMEMS) account with access to their hindcast model, 
+# as you will be asked for a username and password.
+
+if os.path.isfile(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl')):
+    print('Transect Intersect + Wave GDF exists and was loaded')
+    with open(os.path.join
+              (filepath , sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'rb') as f:
+        TransectInterGDFWave = pickle.load(f)
+else:
+    TransectInterGDFWave = Transects.WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax, latmin, latmax)
+    
+    with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_wave_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectInterGDFWave, f)
+
+#%% Additional wave-based WL metrics
+# This is for comparing shoreline change with vegetation change, and for quantifying the beach width between the two for each image. If you would like to 
+# include runup in your waterline corrections, add `TransectInterGDFWave` to `GetWaterIntersections()`:
+    # TransectInterGDFWater = Transects.GetWaterIntersections(
+    # BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, TransectInterGDFWave, beachslope)
+
+# If you want to include runup AND calculate slopes using CoastSat.slope (recommended), exclude the `beachslope` variable:
+    # TransectInterGDFWater = Transects.GetWaterIntersections(
+    # BasePath, TransectGDF, TransectInterGDF, WaterlineGDF, settings, output, TransectInterGDFWave)
+
+if 'wlcorrdist' not in TransectInterGDFWater.columns:
+    # Tidal correction to get corrected distances along transects
+    TransectInterGDFWater = Transects.WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave)     
+    # Calculate width between VE and corrected WL
+    TransectInterGDFWater = Transects.CalcBeachWidth(settings, TransectGDF, TransectInterGDFWater)
+    # Calculate rates of change on corrected WL and save as Transects shapefile
+    TransectInterGDFWater = Transects.SaveWaterIntersections(TransectInterGDFWater, WaterlineGDF,  BasePath, sitename)
+    with open(os.path.join(filepath, sitename, 'intersections', sitename + '_transect_water_intersects.pkl'), 'wb') as f:
+        pickle.dump(TransectInterGDFWater, f)
+
 
 #%% Transect-Topo Intersections
 # EDIT ME: Path to slope raster for extracting slope values
