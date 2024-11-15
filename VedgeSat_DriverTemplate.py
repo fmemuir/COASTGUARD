@@ -93,8 +93,9 @@ metadata = Toolbox.metadata_collection(inputs, Sat)
 # and the respective cloud masks into 'Data/YOURSITENAME/local_images/PlanetScope/cloudmasks'.
 # You can move any leftover extra files into 'Data/YOURSITENAME/AuxiliaryImages'
 
-Sat = Toolbox.LocalImageRetrieval(inputs)
-metadata = Toolbox.LocalImageMetadata(inputs, Sat)
+# If you want to include Landsat 7 but DON'T want to include Scan Line Corrector affected images, set SLC=False
+Sat = Download.RetrieveImages(inputs, SLC=True)
+metadata = Download.CollectMetadata(inputs, Sat)
 
 
 #%% Vegetation Edge Settings
