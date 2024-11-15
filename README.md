@@ -55,14 +55,14 @@ https://github.com/fmemuir/COASTGUARD/assets/22475417/cb27e704-f361-4f34-b999-dc
 
 
 ## Enhancements
-Various improvements have been made to the toolkit to address more accurate approaches recently reported on, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the [methods paper](https://doi.org/10.1002/esp.5835), but include:
+Various improvements have been made to the toolkit to address recent advancements in satellite-derived coastal monitoring, and to incorporate new Python packages and tools for more seamlessness. These are detailed further in the [methods paper](https://doi.org/10.1002/esp.5835), but include:
 
-* The use of geemap to download and process satellite imagery from Google Earth Engine entirely from within the cloud server;
-* Improved transect creation based on the Dynamic Coast project's Coastal Mapping Tools;
-* The use of geopandas to handle geospatial data (both loading in and exporting out) and for transect+shoreline intersections;
-* Beach width (the distance between vegetation edge and wet-dry line) extracted for each transect (based on calling of some of the original CoastSat functions to classify the water line);
-* Validation functions to quantify the error between satellite-derived vegetation edges and ground-truthed validation edges (from ground surveys or manual digitisation of aerial imagery);
-* Various plotting functions, such as violin plots for distances between satellite lines and validation lines, and GIFs of extracted edges and their respective satellite images.
+* ⚙️ The use of geemap to download and process satellite imagery from Google Earth Engine entirely from within the cloud server;
+* 📐 Improved transect creation based on the Dynamic Coast project's Coastal Mapping Tools;
+* 🐼 The use of geopandas to handle geospatial data (both loading in and exporting out) and for transect+shoreline intersections;
+* ↔️ Beach width (the distance between vegetation edge and wet-dry line) extracted for each transect (based on calling of some of the original CoastSat functions to classify the water line);
+* ☑️ Validation functions to quantify the error between satellite-derived vegetation edges and ground-truthed validation edges (from ground surveys or manual digitisation of aerial imagery);
+* 📊 Various plotting functions, such as violin plots for distances between satellite lines and validation lines, and GIFs of extracted edges and their respective satellite images.
 
 
 ## Installation
@@ -83,7 +83,7 @@ git clone https://github.com/fmemuir/COASTGUARD.git
 ```
 from a command line (if you have git command line tools installed).
 
-If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads!
+If you downloaded the code zip file manually, it's recommended you extract the files to a new local folder rather than keeping it in your Downloads.
 
 ### 1.2 Create a conda enviroment
 
@@ -97,8 +97,6 @@ and navigate to the folder with the repository files using `cd`.
 
 Navigate to the COASTGUARD repository folder (`cd COASTGUARD`) and then create a new `conda` environment named `coastguard` with all the required packages by entering this command (make sure you're in the repo folder!):
 ```
-
-
 conda update -n base conda
 
 conda env create --file coastguard_env.yml 
@@ -147,7 +145,7 @@ The interactive python notebook [`VedgeSat_DriverTemplate.ipynb`](https://github
 ```
 (coastguard) $ jupyter-notebook VedgeSat_DriverTemplate.ipynb
 ```
-Alternatively, you can customise and run the standard python script [`VedgeSat_DriverTemplate.py`](https://github.com/fmemuir/COASTGUARD/blob/master/VedgeSat_DriverTemplate.py) using a python IDE such as spyder:
+Alternatively, you can customise and run the standard python script [`VedgeSat_DriverTemplate.py`](https://github.com/fmemuir/COASTGUARD/blob/master/VedgeSat_DriverTemplate.py) using a Python IDE such as Spyder:
 ```
 (coastguard) $ spyder VedgeSat_DriverTemplate.py
 ```
@@ -163,7 +161,7 @@ There are 7 main steps to setting up the vegetation extraction tool. These steps
 6. Define a reference shore along which to create a buffer (boundaries will only be extracted along here);
 7. Run the main edge extraction function.
 
-*<sub>This is an update from the original CoastSat toolkit! Raw satellite images will **not** be downloaded, but merely the filenames will be passed to `geemap` and converted from the cloud server straight to `numpy` arrays. This is to save time and bandwidth. TIFs of true colour images and their classified and NDVI counterparts will however be exported throughout the process to be explored in a GIS environment.</sub>
+*<sub>This is an update from the original CoastSat toolkit! Raw satellite images will **not** be downloaded, but merely the filenames will be passed to `geemap` and converted from the cloud server straight to `numpy` arrays. This is to save time and bandwidth. TIFs of true colour images and their classified and NDVI counterparts are exported by default throughout the process to be explored in a GIS environment. To turn this off, run `extract_veglines(metadata, settings, polygon, dates, savetifs=False)`</sub>
 
 The tool takes all the input settings the user has defined, and performs these steps:
 
@@ -190,16 +188,18 @@ When loading in the tidal data in the driver file, you should **change the tidal
 
 ## Roadmap
 This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!
+
 **June 2024:** New functionality is coming to run timeseries predictions based on the vegetation edge and waterline timeseries that are generated from this tool!
 
 ## Contributions
 We welcome any enhancements! Please [open an issue](https://github.com/fmemuir/COASTGUARD/issues/new) if you have any contributions or questions.
 
 ## Authors and acknowledgements
-This tool is based on work by Kilian Vos ([github: kvos](https://github.com/kvos)) at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir, Luke Richardson-Foulger and Martin Hurst, and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger.
+This tool is based on work by Kilian Vos ([kvos](https://github.com/kvos)) at University of New South Wales. The veg adaptation for the tool was originally conceived by Freya Muir ([fmemuir](https://github.com/fmemuir)), Luke Richardson-Foulger ([EkulRF](https://github.com/EkulRF)) and Martin Hurst ([mdhurst1](https://github.com/mdhurst1)), and was executed, tested and refined by Freya Muir and Luke Richardson-Foulger. Recent contributions also from Craig MacDonell ([cmac95](https://github.com/cmac95)) and Idham Nugraha ([IdhamN](https://github.com/IdhamN)).
 
 If you would like to share your use of this toolkit, please cite it as appropriate:
-- Muir, F. M. E., Hurst, M. D., Richardson-Foulger, L., Naylor, L. A., Rennie, A. F. (2024). VedgeSat: An automated, open-source toolkit for coastal change monitoring using satellite-derived vegetation edges. *Earth Surface Processes and Landforms, in press.* [https://doi.org/10.1002/esp.5835](https://doi.org/10.1002/esp.5835)
+- Muir, F. M. E., Hurst, M. D., Richardson-Foulger, L., Naylor, L. A., Rennie, A. F. (2024). VedgeSat: An automated, open-source toolkit for coastal change monitoring using satellite-derived vegetation edges. *Earth Surface Processes and Landforms, 49*(8), 2405–2423. [https://doi.org/10.1002/esp.5835](https://doi.org/10.1002/esp.5835)
 - Muir, F. M. E. (2023). COASTGUARD. GitHub. [https://github.com/fmemuir/COASTGUARD](https://github.com/fmemuir/COASTGUARD)
-Please let us know if you do, we'd love to see COASTGUARD and the VedgeSat tool in use across the world!
+
+Please let us know if you do, we'd love to see COASTGUARD and the VedgeSat tool in use across the world! 
 
