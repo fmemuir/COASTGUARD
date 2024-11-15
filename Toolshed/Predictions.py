@@ -529,6 +529,7 @@ def Cluster(TransectDF, ValPlots=False):
 
     """
     # Fill nans factoring in timesteps for interpolation
+    TransectDF.replace([np.inf, -np.inf], np.nan, inplace=True)
     VarDF = TransectDF.interpolate(method='time', axis=0)
     
     VarDF = VarDF[['distances', 'wlcorrdist','TZwidth','WaveHs']]
