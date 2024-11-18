@@ -532,7 +532,7 @@ def Cluster(TransectDF, ValPlots=False):
     TransectDF.replace([np.inf, -np.inf], np.nan, inplace=True)
     VarDF = TransectDF.interpolate(method='time', axis=0)
     
-    VarDF = VarDF[['distances', 'wlcorrdist','TZwidth','WaveHs']]
+    # VarDF = VarDF[['distances', 'wlcorrdist','TZwidth','WaveHs']]
     
     VarDF_scaled = StandardScaler().fit_transform(VarDF)
     
@@ -540,28 +540,32 @@ def Cluster(TransectDF, ValPlots=False):
     pca = PCA(n_components=3)
     pca_VarDF = pca.fit_transform(VarDF_scaled)
     eigenvectors = pca.components_
+    variances = pca.explained_variance_ratio_
     
     # ClusterMods = {'':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
     # for Mod in ClusterMods.keys():
         
-    ClusterMod = SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)
+    ClusterMod = SpectralClustering(n_clusters=3, 
+                                    eigen_solver='arpack',
+                                    n_components=len(VarDF.columns), 
+                                    random_state=42)
     # Map labels to cluster IDs based on cluster centres and their distance to eigenvectors
     ClusterMod.fit(VarDF_scaled)
     VarDF['Cluster'] = ClusterMod.labels_
     # 
-    ClusterCentres = np.array([pca_VarDF[VarDF['Cluster'] == i].mean(axis=0) for i in range(3)])
+    # ClusterCentres = np.array([pca_VarDF[VarDF['Cluster'] == i].mean(axis=0) for i in range(3)])
     
-    # Define cluster labels using identified centres
-    HighImpact = np.argmax(ClusterCentres[:, 0])
-    LowImpact = np.argmax(ClusterCentres[:, 1])
-    MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
-    # Map labels to cluster IDs
-    ClusterToImpact = {HighImpact:'High',
-                       MediumImpact:'Medium',
-                       LowImpact:'Low'}
-    ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF['Cluster']]
-    VarDFClust = VarDF.copy()
-    VarDFClust['Impact'] = ImpactLabels
+    # # Define cluster labels using identified centres
+    # HighImpact = np.argmax(ClusterCentres[:, 0])
+    # LowImpact = np.argmax(ClusterCentres[:, 1])
+    # MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
+    # # Map labels to cluster IDs
+    # ClusterToImpact = {HighImpact:'High',
+    #                    MediumImpact:'Medium',
+    #                    LowImpact:'Low'}
+    # ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF['Cluster']]
+    # VarDFClust = VarDF.copy()
+    # VarDFClust['Impact'] = ImpactLabels
 
     # Create a DataFrame for PCA results and add cluster labels
     pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
@@ -585,14 +589,15 @@ def Cluster(TransectDF, ValPlots=False):
         ax2.set_ylabel('VE distance (m)')
         plt.show()
     
+    scale_factor = 0.5
     # Plot the clusters in the PCA space
     fig, ax = plt.subplots(figsize=(5, 5))
     clusterDF = []
     for cluster in pca_df['Cluster'].unique():
         cluster_data = pca_df[pca_df['Cluster'] == cluster]
         plt.scatter(
-            cluster_data['PC1'], 
-            cluster_data['PC2'], 
+            cluster_data['PC1']*scale_factor, 
+            cluster_data['PC2']*scale_factor, 
             label=f'Cluster {cluster}', 
             s=40,
             alpha=0.7
@@ -612,14 +617,15 @@ def Cluster(TransectDF, ValPlots=False):
     # 3D scatter plot (to investigate clustering or patterns in PCs)
     fig = plt.figure(figsize=(6,5))
     ax = fig.add_subplot(111, projection='3d')
-    colourdict = {'Low':'green','Medium':'orange','High':'red'}
+    # colourdict = {'Low':'green','Medium':'orange','High':'red'}
     for cluster in pca_df['Cluster'].unique():
         cluster_data = pca_df[pca_df['Cluster'] == cluster]
-        ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'], 
-                   color=colourdict[ClusterToImpact[cluster]], label=ClusterToImpact[cluster])
-    ax.set_xlabel('PC1')
-    ax.set_ylabel('PC2')
-    ax.set_zlabel('PC3')
+    #     ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'], 
+    #                color=colourdict[ClusterToImpact[cluster]], label=ClusterToImpact[cluster])
+        ax.scatter(cluster_data['PC1']*scale_factor,cluster_data['PC2']*scale_factor,cluster_data['PC3']*scale_factor)
+    ax.set_xlabel(rf'PC1 [explains {round(variances[0]*100,1)}% of $\sigma^2$]')
+    ax.set_ylabel(rf'PC2 [explains {round(variances[1]*100,1)}% of $\sigma^2$]')
+    ax.set_zlabel(rf'PC3 [explains {round(variances[2]*100,1)}% of $\sigma^2$]')
     # Plot eigenvectors of each variable        
     coeffs = np.transpose(eigenvectors[0:3, :])*2
     n_coeffs = coeffs.shape[0]
@@ -629,14 +635,14 @@ def Cluster(TransectDF, ValPlots=False):
                   color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
         ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
                 VarDF.columns[i], color='k', ha='center', va='center')
-    legorder = ['Low','Medium','High']
-    handles,labels = plt.gca().get_legend_handles_labels()
-    plt.legend([handles[labels.index(lab)] for lab in legorder],[labels[labels.index(lab)] for lab in legorder])
+    # legorder = ['Low','Medium','High']
+    # handles,labels = plt.gca().get_legend_handles_labels()
+    # plt.legend([handles[labels.index(lab)] for lab in legorder],[labels[labels.index(lab)] for lab in legorder])
     plt.tight_layout()
     plt.show()
         
         
-    return VarDFClust
+    # return VarDFClust
 
 
 
