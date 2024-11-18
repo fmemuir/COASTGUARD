@@ -411,55 +411,56 @@ def CMSDownload(CMScmd):
     
     # If requesting a hindcast, use 'Global Ocean Waves Reanalysis' data from Copernicus
     elif CMScmd['hind_fore'] == 'hind':
-        # Download multiyear data (up to ~1yr prior to present)
-        MYrWavePath = cms.subset(
-            dataset_id = 'cmems_mod_glo_wav_my_0.2deg_PT3H-i', 
-            variables = ['VHM0', 'VMDR','VTPK'],
-            minimum_longitude = CMScmd['lonmin'], 
-            maximum_longitude = CMScmd['lonmax'], 
-            minimum_latitude = CMScmd['latmin'],
-            maximum_latitude = CMScmd['latmax'], 
-            start_datetime = CMScmd['DateMin'], 
-            end_datetime = CMScmd['DateMax'],  
-            output_filename = str(CMScmd['WaveOutFile'][:-3]+'_my.nc'),  
-            output_directory = str(CMScmd['WavePath'])
-            )
-        # Download interim data (up to ~4mo prior to present)
-        IntWavePath = cms.subset(
-            dataset_id = 'cmems_mod_glo_wav_myint_0.2deg_PT3H-i', 
-            variables = ['VHM0', 'VMDR','VTPK'],
-            minimum_longitude = CMScmd['lonmin'], 
-            maximum_longitude = CMScmd['lonmax'], 
-            minimum_latitude = CMScmd['latmin'],
-            maximum_latitude = CMScmd['latmax'], 
-            start_datetime = CMScmd['DateMin'], 
-            end_datetime = CMScmd['DateMax'],  
-            output_filename = str(CMScmd['WaveOutFile'][:-3]+'_int.nc'),  
-            output_directory = str(CMScmd['WavePath'])
-            )
-        
-        # Combine multiyear and interim data into one dataset
-        CombiData = xr.open_mfdataset([MYrWavePath,IntWavePath],combine='nested', concat_dim='time')
-        # Save combined dataset to new netCDF file under desired name
-        CombiData.to_netcdf(os.path.join(CMScmd['WavePath'],CMScmd['WaveOutFile']))
-        # Clean up folder by deleting multiyear and interim files
-        for f in [MYrWavePath,IntWavePath]:
-            os.remove(f)
-    
-    # If using specific region data (NW Atlantic Shelf)
-    else:
-        cms.subset(
-            dataset_id = 'MetO-NWS-WAV-RAN', 
-            variables = ['VHM0', 'VMDR','VTPK'],
-            minimum_longitude = CMScmd['lonmin'], 
-            maximum_longitude = CMScmd['lonmax'], 
-            minimum_latitude = CMScmd['latmin'],
-            maximum_latitude = CMScmd['latmax'], 
-            start_datetime = CMScmd['DateMin'], 
-            end_datetime = CMScmd['DateMax'],  
-            output_filename = str(CMScmd['WaveOutFile']),  
-            output_directory = str(CMScmd['WavePath'])
-            )       
+        # If using specific region data (NW Atlantic Shelf)
+        if CMScmd['lonmin'] > -16 and CMScmd['lonmax'] < 13 and CMScmd['latmin'] > 46 and CMScmd['latmax'] < 63:
+            cms.subset(
+                dataset_id = 'MetO-NWS-WAV-RAN', 
+                variables = ['VHM0', 'VMDR','VTPK'],
+                minimum_longitude = CMScmd['lonmin'], 
+                maximum_longitude = CMScmd['lonmax'], 
+                minimum_latitude = CMScmd['latmin'],
+                maximum_latitude = CMScmd['latmax'], 
+                start_datetime = CMScmd['DateMin'], 
+                end_datetime = CMScmd['DateMax'],  
+                output_filename = str(CMScmd['WaveOutFile']),  
+                output_directory = str(CMScmd['WavePath'])
+                )  
+        else:
+            # Download multiyear data (up to ~1yr prior to present)
+            MYrWavePath = cms.subset(
+                dataset_id = 'cmems_mod_glo_wav_my_0.2deg_PT3H-i', 
+                variables = ['VHM0', 'VMDR','VTPK'],
+                minimum_longitude = CMScmd['lonmin'], 
+                maximum_longitude = CMScmd['lonmax'], 
+                minimum_latitude = CMScmd['latmin'],
+                maximum_latitude = CMScmd['latmax'], 
+                start_datetime = CMScmd['DateMin'], 
+                end_datetime = CMScmd['DateMax'],  
+                output_filename = str(CMScmd['WaveOutFile'][:-3]+'_my.nc'),  
+                output_directory = str(CMScmd['WavePath'])
+                )
+            # Download interim data (up to ~4mo prior to present)
+            IntWavePath = cms.subset(
+                dataset_id = 'cmems_mod_glo_wav_myint_0.2deg_PT3H-i', 
+                variables = ['VHM0', 'VMDR','VTPK'],
+                minimum_longitude = CMScmd['lonmin'], 
+                maximum_longitude = CMScmd['lonmax'], 
+                minimum_latitude = CMScmd['latmin'],
+                maximum_latitude = CMScmd['latmax'], 
+                start_datetime = CMScmd['DateMin'], 
+                end_datetime = CMScmd['DateMax'],  
+                output_filename = str(CMScmd['WaveOutFile'][:-3]+'_int.nc'),  
+                output_directory = str(CMScmd['WavePath'])
+                )
+            
+            # Combine multiyear and interim data into one dataset
+            CombiData = xr.open_mfdataset([MYrWavePath,IntWavePath],combine='nested', concat_dim='time')
+            # Save combined dataset to new netCDF file under desired name
+            CombiData.to_netcdf(os.path.join(CMScmd['WavePath'],CMScmd['WaveOutFile']))
+            # Clean up folder by deleting multiyear and interim files
+            for f in [MYrWavePath,IntWavePath]:
+                os.remove(f)
+     
         
 
     # Grab next cells when downloaded grid cell is empty (fully masked next to coast)

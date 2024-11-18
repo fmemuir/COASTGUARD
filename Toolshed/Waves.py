@@ -61,7 +61,7 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     if os.path.isfile(os.path.join(WavePath,WaveOutFile)):
         print('Wave data file already exists.')
     else:
-        CMScmd = {'hind_fore':'other',
+        CMScmd = {'hind_fore':'hind',
                   'lonmin':lonmin, 'lonmax':lonmax, 'latmin':latmin, 'latmax':latmax, 
                   'DateMin':DateMin, 'DateMax':DateMax,
                   'WavePath':WavePath,'WaveOutFile':WaveOutFile}
