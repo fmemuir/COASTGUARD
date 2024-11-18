@@ -19,7 +19,7 @@ from shapely.ops import linemerge
 
 import netCDF4
 
-from Toolshed import Toolbox
+from Toolshed import Toolbox, Download
 
 
 
@@ -65,7 +65,7 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
                   'lonmin':lonmin, 'lonmax':lonmax, 'latmin':latmin, 'latmax':latmax, 
                   'DateMin':DateMin, 'DateMax':DateMax,
                   'WavePath':WavePath,'WaveOutFile':WaveOutFile}
-        Toolbox.CMSDownload(CMScmd)
+        Download.CMSDownload(CMScmd)
         
     return WavePath, WaveOutFile    
 
@@ -109,7 +109,7 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
                   'lonmin':lonmin, 'lonmax':lonmax, 'latmin':latmin, 'latmax':latmax,
                   'DateMin':DateMin, 'DateMax':DateMax,
                   'WavePath':WavePath,'WaveOutFile':WaveOutFile}
-        Toolbox.CMSDownload(CMScmd)
+        Download.CMSDownload(CMScmd)
         
     return WavePath, WaveOutFile
 
