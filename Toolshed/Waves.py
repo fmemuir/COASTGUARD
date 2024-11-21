@@ -11,11 +11,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
-
-import geopandas as gpd
-from shapely import geometry
-from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
-from shapely.ops import linemerge
+import pickle
 
 import netCDF4
 
@@ -71,7 +67,7 @@ def GetHindcastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
 
 
 
-def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
+def GetForecastWaveData(settings, DateMin, DateMax):
     """
     Download command for CMEMS wave forecast data. User supplies date range, AOI, username and password.
     
@@ -81,26 +77,25 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
     ----------
     settings : dict
         Veg edge extraction tool settings (including user inputs).
-    output : dict
-        Output veg edges produced by model.
-    lonmin, lonmax, latmin, latmax : float
-        Bounding box coords.
 
     """
     
     print('Downloading wave data from CMEMS ...')   
-    WavePath = os.path.join(settings['inputs']['filepath'],'tides')   
+    WavePath = os.path.join(os.getcwd(),'Data','tides')   
     
-    # DateMin = settings['inputs']['dates'][0]
-    # DateMax = settings['inputs']['dates'][1]
-    
-    # Buffer dates from output by 1 day either side
-    DateMin = datetime.strftime(datetime.strptime(min(output['dates']), '%Y-%m-%d')-timedelta(days=1), '%Y-%m-%d %H:%M:%S')
-    DateMax = datetime.strftime(datetime.strptime(max(output['dates']), '%Y-%m-%d')+timedelta(days=1), '%Y-%m-%d %H:%M:%S')
+    # Get metadata from settings file
+    sitename = settings['inputs']['sitename']
+    lons = []
+    for i in range(len(settings['inputs']['polygon'][0])):
+        lons.append(settings['inputs']['polygon'][0][i][0])
+    lats = []
+    for i in range(len(settings['inputs']['polygon'][0])):
+        lats.append(settings['inputs']['polygon'][0][i][1])
+    lonmin, lonmax, latmin, latmax = np.min(lons), np.max(lons), np.min(lats), np.max(lats)
     
     # NetCDF file will be a set of rasters at different times with different wave params
     # params get pulled out further down after downloading
-    WaveOutFile = 'MetO-NWS-WAV-hi_'+settings['inputs']['sitename']+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
+    WaveOutFile = sitename+'_'+DateMin[:10]+'_'+DateMax[:10]+'_waves.nc'
     
     if os.path.isfile(os.path.join(WavePath, WaveOutFile)):
         print('Wave data file already exists.')
@@ -110,7 +105,7 @@ def GetForecastWaveData(settings, output, lonmin, lonmax, latmin, latmax):
                   'DateMin':DateMin, 'DateMax':DateMax,
                   'WavePath':WavePath,'WaveOutFile':WaveOutFile}
         Download.CMSDownload(CMScmd)
-        
+    
     return WavePath, WaveOutFile
 
 
@@ -620,6 +615,135 @@ def SampleWavesSimple_stdev(WaveProp, WaveTime, DateTimeSat, WaveType):
     
     return StDVals
 
+
+def SampleWavesFuture(TransectInterGDF, WaveFilePath):
+    """
+    Function to extract wave prediction information from Copernicus NWS data. Faster than
+    SampleWaves() because once a grid cell of data from the Copernicus NetCDF is 
+    processed (interpolated between timesteps to find exact value, mean and st dev calculated),
+    the results are cached and just loaded in for the next transect that falls within
+    that grid cell. 
+    
+    FM Nov 2024
+
+    Parameters
+    ----------
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of transects with veg edge intersection info assigned.
+    WaveFilePath : str
+        Path to wave timeseries NetCDF file.
+
+    Returns
+    -------
+    WaveDates : list of lists
+        Datetimes of wave data observations
+    WaveHs : list of lists
+        Significant wave height at the time of each satellite image processed in run 
+        (in metres).
+    WaveDir : list of lists
+        Mean wave direction (from) at the time of each satellite image processed in run 
+        (in degrees clockwise from N).
+    WaveTp : list of lists
+        Peak wave period at the time of each satellite image processed in run 
+        (in seconds).
+    NormWaveHs : list of lists
+        Mean/normalised significant wave height at the time of each satellite image processed in run
+        (in metres).
+    NormWaveDir : list of lists
+        Mean/normalised wave direction (from) at the time of each satellite image processed in run
+        (in degrees clockwise from N).
+    NormWaveTp : list of lists
+        Mean/normalised wave period at the time of each satellite image processed in run
+        (in seconds).
+    StDevWaveHs : list of lists
+        Standard deviation of significant wave height at the time of each satellite image processed in run
+        (in metres).
+    StDevWaveDir : list of lists
+        Standard deviation of mean wave direction (from) at the time of each satellite image processed in run
+        (in degrees clockwise from N).
+    StDevWaveTp : list of lists
+        Standard deviation of peak wave period at the time of each satellite image processed in run
+        (in seconds).
+    WaveDiffusivity : list of floats
+        Wave diffusivity calculated from entire wave timeseries available (in m/s^2). 
+        From Ashton and Murray 2006: https://doi.org/10.1029/2005JF000423
+    WaveStability : list of floats
+        Wave stability calculated from entire wave timeseries available (dimensionless). 
+        From Ashton and Murray 2006: https://doi.org/10.1029/2005JF000423
+    ShoreAngles : list of floats
+        Angle of shoreline at particular cross-shore transect 
+        (in degrees clockwise from N).
+
+    """
+
+    print('Loading wave data for extraction ...')
+    
+    # Read in wave data (and interpolate empty cells in rasters if need be)
+    WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = ReadWaveFile(WaveFilePath)
+
+    # Get centroid locations of each transect (in lat long)
+    Centroids = TransectInterGDF.to_crs('4326').centroid
+    
+    # Initialise caching and output dicts
+    Cached = {}
+    ResultsDict = {'FutureWaveDates': [], 
+                   'FutureWaveHs': [],
+                   'FutureWaveDir': [],
+                   'FutureWaveTp': [],
+                   'FutureWaveDiffusivity': [], # transect specific
+                   'FutureWaveStability': [], # transect specific
+                   'ShoreAngles': []} # transect specific
+    
+    
+    for Tr in range(len(TransectInterGDF)):
+        print('\r %i / %i transects processed' % (Tr, len(TransectInterGDF)), end='')
+        
+        # Clculate the midpoint of each cross-shore transect geometry
+        MidPnt = Centroids.iloc[Tr].coords[0]
+        IDLat = (np.abs(WaveY - MidPnt[1])).argmin()
+        IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
+        # Feed the matching wave grid lat and long IDs to be used as a key in the cached data dict
+        GridCell = (IDLat, IDLong)
+
+        # Calculate the angle of the shoreline at each transect (clockwise from north)
+        ShoreAngle = CalcShoreAngle(TransectInterGDF, Tr)
+        ResultsDict['ShoreAngles'].append(ShoreAngle)
+        
+        # Calculate WaveDiffusivity and WaveStability for each transect based on transect-specific ShoreAngle
+        # Uses full wave timeseries rather than just sat obs
+        TrWaveDiffusivity, TrWaveStability = WaveClimateSimple(ShoreAngle, 
+                                                               SigWaveHeight[:, IDLat, IDLong], 
+                                                               MeanWaveDir[:, IDLat, IDLong], 
+                                                               PeakWavePer[:, IDLat, IDLong], 
+                                                               WaveTime)
+        # Append single values per-transect to results dictionary
+        ResultsDict['WaveDiffusivity'].append(TrWaveDiffusivity)
+        ResultsDict['WaveStability'].append(TrWaveStability)
+        
+        # If the grid cell is already present in the cached data file, 
+        # don't re-calculate anything and just load in the wave values for that grid cell
+        if GridCell in Cached:
+            GridData = Cached[GridCell]
+        else:
+            # Otherwise, compute wave data for this grid cell
+            # IDLat, IDLong = GridCell
+            GridData = {
+                'TrWaveDates': WaveTime,
+                'TrWaveHs': SigWaveHeight[:, IDLat, IDLong],
+                'TrWaveDir': MeanWaveDir[:, IDLat, IDLong],
+                'TrWaveTp': PeakWavePer[:, IDLat, IDLong]}
+            # Cache the results for this grid cell to avoid redundant calculations
+            Cached[GridCell] = GridData
+            
+        # Append grid data results to output_results with the ShoreAngle-specific adjustments
+        for key in ResultsDict:
+            gridkey = 'Tr' + key
+            if gridkey in GridData:
+                ResultsDict[key].append(GridData[gridkey])
+    
+    # Return WaveDates, WaveHs, WaveDir, WaveTp, 
+           # WaveDiffusivity, WaveStability, ShoreAngles
+    return tuple(ResultsDict[key] for key in ResultsDict)
 
 
 def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
