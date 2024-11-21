@@ -10,8 +10,6 @@ COASTGUARD edits and updates: Freya Muir, University of Glasgow
 # load basic modules
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-import pdb
 import glob
 from functools import reduce
 import subprocess
@@ -23,7 +21,6 @@ import ee
 # modules to download, unzip and stack the images
 from urllib.request import urlretrieve
 import zipfile
-import copy
 import shutil
 from osgeo import gdal
 from requests.auth import HTTPBasicAuth
@@ -37,7 +34,6 @@ import pickle
 from skimage import morphology, transform
 from scipy import ndimage
 import rasterio
-from rasterio.plot import show
 import xarray as xr
 import netCDF4
 import copernicusmarine as cms

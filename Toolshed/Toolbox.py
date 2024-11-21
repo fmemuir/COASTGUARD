@@ -9,7 +9,6 @@ COASTGUARD edits and updates: Freya Muir, University of Glasgow
 # load modules
 import os
 import numpy as np
-import glob
 import pickle
 import math
 from datetime import datetime, timedelta
@@ -21,8 +20,7 @@ import pandas as pd
 import geopandas as gpd
 import utm
 from shapely import geometry, affinity
-from shapely.geometry import Point, Polygon, LineString, MultiLineString, MultiPoint
-from shapely.ops import linemerge
+from shapely.geometry import Polygon, LineString, MultiPoint
 import folium
 from pyproj import Proj
 from pyproj import transform as Transf
