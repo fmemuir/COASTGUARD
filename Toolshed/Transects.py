@@ -8,6 +8,7 @@ Martin Hurst, Freya Muir - University of Glasgow
 # load modules
 import os
 import glob
+import pickle
 
 import numpy as np
 import pandas as pd
@@ -1481,6 +1482,20 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     
     return TransectInterGDFWave
 
+
+def GetFutureData(sitename, DateMin, DateMax, CoastalDF):
+    
+    with open(os.path.join(os.getcwd(),'Data', sitename, sitename + '_settings.pkl'), 'rb') as f:
+        settings = pickle.load(f)
+    
+
+    # Download wave forecasts from Copernicus Marine
+    WavePath, WaveOutFile = Waves.GetForecastWaveData(settings, DateMin, DateMax)
+    WaveFilePath = os.path.join(WavePath, WaveOutFile)
+    
+    # Sample future waves using coastal DF transects
+    WaveDates, WaveHs, WaveDir, WaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWavesFuture(CoastalDF, WaveFilePath)
+    
 
 
 def ValidateIntersects(ValidationShp, DatesCol, TransectGDF, TransectDict):

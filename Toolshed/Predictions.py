@@ -18,8 +18,6 @@ import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 from scipy.interpolate import interp1d
 
-# from Toolshed import Waves
-
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering, DBSCAN
 from sklearn.metrics import silhouette_score
@@ -715,21 +713,6 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
             
         
     return PredDict
-
-
-def GetFutureData(sitename, DateMin, DateMax, CoastalDF):
-    
-    with open(os.path.join(os.getcwd(),'Data', sitename, sitename + '_settings.pkl'), 'rb') as f:
-        settings = pickle.load(f)
-    
-
-    # Download wave forecasts from Copernicus Marine
-    WavePath, WaveOutFile = Waves.GetForecastWaveData(settings, DateMin, DateMax)
-    WaveFilePath = os.path.join(WavePath, WaveOutFile)
-    
-    # Sample future waves using coastal DF transects
-    WaveDates, WaveHs, WaveDir, WaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWavesFuture(CoastalDF, WaveFilePath)
-    
 
 
 def CompileRNN(PredDict, costsensitive=False):
