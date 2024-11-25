@@ -85,13 +85,7 @@ def GetForecastWaveData(settings, DateMin, DateMax):
     
     # Get metadata from settings file
     sitename = settings['inputs']['sitename']
-    lons = []
-    for i in range(len(settings['inputs']['polygon'][0])):
-        lons.append(settings['inputs']['polygon'][0][i][0])
-    lats = []
-    for i in range(len(settings['inputs']['polygon'][0])):
-        lats.append(settings['inputs']['polygon'][0][i][1])
-    lonmin, lonmax, latmin, latmax = np.min(lons), np.max(lons), np.min(lats), np.max(lats)
+    lonmin, lonmax, latmin, latmax = Toolbox.GetBounds(settings)
     
     # NetCDF file will be a set of rasters at different times with different wave params
     # params get pulled out further down after downloading

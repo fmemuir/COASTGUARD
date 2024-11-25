@@ -1585,6 +1585,40 @@ def CalcGeoref(raw_georef, settings):
     return georef
 
 
+def GetBounds(settings):
+    """
+    Get minimum and maximum longitudes and latitudes of bounding box back out
+    from input polygon stored in settings.
+    FM Nov 2024
+
+    Parameters
+    ----------
+    settings : dict
+        Dictionary of user-defined settings used for the veg edge/waterline extraction.
+
+    Returns
+    -------
+    lonmin : float
+        Minimum longitude.
+    lonmax : float
+        Maximum longitude.
+    latmin : float
+        Minimum latitude.
+    latmax : float
+        Maximum latitude.
+
+    """
+    lons = []
+    for i in range(len(settings['inputs']['polygon'][0])):
+        lons.append(settings['inputs']['polygon'][0][i][0])
+    lats = []
+    for i in range(len(settings['inputs']['polygon'][0])):
+        lats.append(settings['inputs']['polygon'][0][i][1])
+    lonmin, lonmax, latmin, latmax = np.min(lons), np.max(lons), np.min(lats), np.max(lats)
+    
+    return lonmin, lonmax, latmin, latmax
+
+
 def NearestDates(surveys,metadata,sat_list):
     """
     
