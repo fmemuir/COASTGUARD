@@ -52,11 +52,6 @@ TransectIDs = [1325]
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr)
     
-#%% Get future wave conditions for forcing
-# Use the most recent timestep to predict from
-DateMin = TransectDF.iloc[-1].name.strftime('%Y-%m-%d')
-DateMax = (TransectDF.iloc[-1].name + pd.DateOffset(10)).strftime('%Y-%m-%d') # add 10 days onto start date
-CoastalDFFuture = Predictions.GetFutureData(sitename, DateMin, DateMax, CoastalDF)
 
 #%%
 VarDF = Predictions.Cluster(TransectDF, ValPlots=True)
