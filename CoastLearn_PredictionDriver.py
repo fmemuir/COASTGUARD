@@ -40,7 +40,7 @@ PredDict = Predictions.PrepData(TransectDF, MLabels=['test1'], TestSizes=[0.2], 
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
-PredDict = Predictions.CompileRNN(PredDict, epochSizes=[100], batchSizes=[32])
+PredDict = Predictions.CompileRNN(PredDict, epochSizes=[50], batchSizes=[32])
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
