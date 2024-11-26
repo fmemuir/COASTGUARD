@@ -881,13 +881,18 @@ def TrainRNN(PredDict,filepath,sitename):
         
         # Implement early stopping to avoid overditting
         EarlyStop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+        # Save output to tensorboard for analysis
+        logdir = f"{predictpath}_{PredDict['mlabel'][mID]}_{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        TB_callback = TensorBoard(log_dir=logdir)
         
         # Train the model on the training data, setting aside a small split of 
         # this data for validation 
         start=time.time() # start timer
         History = Model.fit(X_train, y_train, 
                             epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
-                            validation_split=0.1, verbose=1)
+                            validation_data=(X_test,y_test),
+                            callbacks=[TB_callback])
+                            #verbose=1)
         end=time.time() # end time        
         # Time taken to train model
         PredDict['train_time'].append(end-start)
@@ -899,9 +904,9 @@ def TrainRNN(PredDict,filepath,sitename):
         PredDict['loss'].append(Mloss)
         PredDict['accuracy'].append(Maccuracy)
         
-        # Save trained models in dictionary for posterity
-        with open(f"{os.path.join(filepath, sitename)}/predictions/{'_'.join(PredDict['mlabel'][mID])}.pkl", 'wb') as f:
-            pickle.dump(PredDict, f)
+    # Save trained models in dictionary for posterity
+    with open(f"{os.path.join(filepath, sitename)}/predictions/{'_'.join(PredDict['mlabel'])}.pkl", 'wb') as f:
+        pickle.dump(PredDict, f)
             
     return PredDict
     
