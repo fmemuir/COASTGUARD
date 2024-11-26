@@ -20,6 +20,8 @@ from scipy.interpolate import interp1d
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering, DBSCAN
+from sklearn.gaussian_process import GaussianProcessRegressor
+from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -125,7 +127,7 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
     # Merge combined dataframe with wave info
     # TransectInterGDFWave[['TransectID','WaveHs', 'WaveDir', 'WaveTp', 'WaveDiffus']]
     CoastalDF = pd.merge(CoastalDF, 
-                         TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'Runups','Iribarrens']],
+                         TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups','Iribarrens']],
                          how='inner', on='TransectID')
     
     print('Converting to datetimes...')
@@ -271,6 +273,10 @@ def InterpVEWL(CoastalDF, Tr):
     """
     TransectDF = CoastalDF.iloc[[Tr],:] # single-row dataframe
     # TransectDF = TransectDF.transpose()
+
+    # Convert all circular metrics to radians
+    for WaveProp in ['WaveDir','WaveAlpha']:
+        TransectDF[WaveProp] = [np.deg2rad(WaveDir) for WaveDir in TransectDF[WaveProp]]
 
     # Interpolate over waterline and wave associated variables
     wl_numdates = pd.to_datetime(TransectDF['wlDTs'][Tr]).values.astype(np.int64)
@@ -645,8 +651,23 @@ def Cluster(TransectDF, ValPlots=False):
     # return VarDFClust
 
 
+def DailyInterp(Ind, yvals, NewInd):
+    X = (Ind - Ind.min()).total_seconds().values.reshape(-1, 1)
+    y = yvals.values
+    mask = ~np.isnan(y)
+    X_train, y_train = X[mask], y[mask]
 
-def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
+    kernel = RBF(length_scale=10) + WhiteKernel(noise_level=1)
+    gpr = GaussianProcessRegressor(kernel=kernel, random_state=42)
+    gpr.fit(X_train, y_train)
+
+    X_new = (NewInd - Ind.min()).total_seconds().values.reshape(-1, 1)
+    y_pred, y_std = gpr.predict(X_new, return_std=True)
+    
+    return y_pred
+
+
+def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     """
     Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.    
     FM Sept 2024
@@ -665,7 +686,41 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
 
     """
     
-    PredDict = {'mlabel':l_mlabel,
+    # Fill nans factoring in timesteps for interpolation
+    TransectDF.replace([np.inf, -np.inf], np.nan, inplace=True)
+    VarDF = TransectDF.interpolate(method='time', axis=0)
+    # Strip time (just set to date timestamps), and take mean if any timesteps duplicated
+    VarDF.index = VarDF.index.normalize()
+    VarDF = VarDF.groupby(VarDF.index).mean()
+    
+    # Interpolate over data gaps to get regular (daily) measurements
+    DailyInd = pd.date_range(start=VarDF.index.min(), end=VarDF.index.max(), freq='D')
+    VarDFDay = VarDF.reindex(DailyInd)
+    
+    for col in VarDFDay.columns:
+        if col == 'WaveDir' or col == 'WaveAlpha':
+            # VarDFDay[col] = VarDFDay[col].interpolate(method='pchip')
+            # Separate into components to allow interp over 0deg threshold
+            # but need to preserve the offset between WaveDir and WaveAlpha
+            VarDFsin = np.sin(VarDFDay[col])
+            VarDFsininterp = VarDFsin.interpolate(method='pchip')
+            VarDFcos = np.cos(VarDFDay[col])
+            VarDFcosinterp = VarDFcos.interpolate(method='pchip')
+            VarDFDay[col] = np.arctan2(VarDFsininterp, VarDFcosinterp) % (2 * np.pi) # keep values 0-2pi
+        else:
+            VarDFDay[col] = VarDFDay[col].interpolate(method='spline',order=1)
+    
+    # Scale vectors to normalise them
+    VarDFDay_scaled = VarDFDay.copy()
+    for col in VarDFDay.columns:
+        VarDFDay_scaled[col] =  StandardScaler().fit_transform(VarDFDay[[col]])
+    
+    # Separate into training features (what will be learned from) and target features (what will be predicted)
+    TrainFeat = VarDFDay_scaled[['distances', 'wlcorrdist', 'WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+    TargFeat = VarDFDay_scaled[['distances', 'wlcorrdist']] # vegetation edge and waterline positions
+    
+    # Define prediction dictionary for multiple runs/hyperparameterisation
+    PredDict = {'mlabel':MLabels,
                 'model':[],
                 'history':[],
                 'loss':[],
@@ -678,24 +733,13 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
                 'epochS':[],
                 'batchS':[]}
     
-    X = VarDF.drop(columns=['Cluster','Impact'])
-    y = VarDF['Cluster']
-    
-    for mlabel, testS, hours in zip(PredDict['mlabel'], l_testS, l_hours):
-        # Normalize the features
-        scaler = StandardScaler()
-        # scaler = MinMaxScaler()
-        X_scaled = scaler.fit_transform(X)
+    for MLabel, TestSize, TStep in zip(PredDict['mlabel'], TestSizes, TSteps):
         
-        testS = testS # proportion of data to use for training vs. testing
-        t_seq = hours # number of timesteps over which to generate sequence (hours)
+        # Create temporal sequences of data based on daily timesteps
+        X, y = CreateSequences(TrainFeat, TargFeat, TStep)
         
-        # Separate test and train data
-        X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=testS, random_state=0, stratify=y)
-        # Create sequences
-        X_train, y_train = CreateSequences(X_train, y_train, t_seq)
-        # Create test sequences
-        X_test, y_test = CreateSequences(X_test, y_test, t_seq)
+        # Separate test and train data and add to prediction dict (can't stratify when y is multicolumn)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TestSize, random_state=0)#, stratify=y)
         PredDict['X_test'].append(X_test)
         PredDict['y_test'].append(y_test)
         
@@ -711,7 +755,6 @@ def PrepData(VarDF, l_mlabel, l_testS, l_hours, UseSMOTE=False):
             PredDict['X_train'].append(X_train)
             PredDict['y_train'].append(y_train)
             
-        
     return PredDict
 
 

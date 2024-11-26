@@ -57,7 +57,7 @@ for Tr in TransectIDs:
 VarDF = Predictions.Cluster(TransectDF, ValPlots=True)
 
 #%%
-PredDict = Predictions.PrepData(VarDF, ['test1','test2'], [0.2,0.2], [1,1])
+PredDict = Predictions.PrepData(TransectDF, ['test1','test2'], [0.2,0.2], [30,90])
 
 #%%
 PredDict = Predictions.CompileRNN(PredDict)
