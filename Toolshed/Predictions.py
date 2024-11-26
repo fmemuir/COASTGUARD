@@ -19,7 +19,7 @@ pd.options.mode.chained_assignment = None # suppress pandas warning about settin
 from scipy.interpolate import interp1d
 
 from sklearn.decomposition import PCA
-from sklearn.cluster import KMeans, SpectralClustering, DBSCAN
+from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from sklearn.metrics import silhouette_score
@@ -651,20 +651,39 @@ def Cluster(TransectDF, ValPlots=False):
     # return VarDFClust
 
 
-def DailyInterp(Ind, yvals, NewInd):
-    X = (Ind - Ind.min()).total_seconds().values.reshape(-1, 1)
-    y = yvals.values
-    mask = ~np.isnan(y)
-    X_train, y_train = X[mask], y[mask]
+def DailyInterp(VarDF):
+    """
+    Reindex and interpolate over timeseries to convert it to daily
+    FM Nov 2024
 
-    kernel = RBF(length_scale=10) + WhiteKernel(noise_level=1)
-    gpr = GaussianProcessRegressor(kernel=kernel, random_state=42)
-    gpr.fit(X_train, y_train)
+    Parameters
+    ----------
+    VarDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in (irregular) timeseries.
 
-    X_new = (NewInd - Ind.min()).total_seconds().values.reshape(-1, 1)
-    y_pred, y_std = gpr.predict(X_new, return_std=True)
+    Returns
+    -------
+    VarDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in daily timesteps.
+    """
     
-    return y_pred
+    DailyInd = pd.date_range(start=VarDF.index.min(), end=VarDF.index.max(), freq='D')
+    VarDFDay = VarDF.reindex(DailyInd)
+    
+    for col in VarDFDay.columns:
+        if col == 'WaveDir' or col == 'WaveAlpha':
+            # VarDFDay[col] = VarDFDay[col].interpolate(method='pchip')
+            # Separate into components to allow interp over 0deg threshold
+            # but need to preserve the offset between WaveDir and WaveAlpha
+            VarDFsin = np.sin(VarDFDay[col])
+            VarDFsininterp = VarDFsin.interpolate(method='pchip')
+            VarDFcos = np.cos(VarDFDay[col])
+            VarDFcosinterp = VarDFcos.interpolate(method='pchip')
+            VarDFDay[col] = np.arctan2(VarDFsininterp, VarDFcosinterp) % (2 * np.pi) # keep values 0-2pi
+        else:
+            VarDFDay[col] = VarDFDay[col].interpolate(method='spline',order=1)
+    
+    return VarDFDay
 
 
 def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
@@ -675,7 +694,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     Parameters
     ----------
     VarDF : DataFrame
-        Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
+        Dataframe of per-transect coastal metrics/variables in timeseries.
     UseSMOTE : bool, optional
         Flag for using SMOTE to oversample imbalanced data. The default is False.
 
@@ -694,21 +713,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     VarDF = VarDF.groupby(VarDF.index).mean()
     
     # Interpolate over data gaps to get regular (daily) measurements
-    DailyInd = pd.date_range(start=VarDF.index.min(), end=VarDF.index.max(), freq='D')
-    VarDFDay = VarDF.reindex(DailyInd)
-    
-    for col in VarDFDay.columns:
-        if col == 'WaveDir' or col == 'WaveAlpha':
-            # VarDFDay[col] = VarDFDay[col].interpolate(method='pchip')
-            # Separate into components to allow interp over 0deg threshold
-            # but need to preserve the offset between WaveDir and WaveAlpha
-            VarDFsin = np.sin(VarDFDay[col])
-            VarDFsininterp = VarDFsin.interpolate(method='pchip')
-            VarDFcos = np.cos(VarDFDay[col])
-            VarDFcosinterp = VarDFcos.interpolate(method='pchip')
-            VarDFDay[col] = np.arctan2(VarDFsininterp, VarDFcosinterp) % (2 * np.pi) # keep values 0-2pi
-        else:
-            VarDFDay[col] = VarDFDay[col].interpolate(method='spline',order=1)
+    VarDFDay = DailyInterp(VarDF)
     
     # Scale vectors to normalise them
     VarDFDay_scaled = VarDFDay.copy()
@@ -758,7 +763,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     return PredDict
 
 
-def CompileRNN(PredDict, costsensitive=False):
+def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
     """
     Compile the NN using the settings and data stored in the NN dictionary.
     FM Sept 2024
@@ -779,6 +784,10 @@ def CompileRNN(PredDict, costsensitive=False):
     for mlabel in PredDict['mlabel']:
         # Index of model setup
         mID = PredDict['mlabel'].index(mlabel)
+        
+        # Append epoch sizes and batch sizes to prediction dict
+        PredDict['epochS'].append(epochSizes[mID])
+        PredDict['batchS'].append(batchSizes[mID])
         
         # inshape = (N_timesteps, N_features)
         inshape = (PredDict['X_train'][mID].shape[0], PredDict['X_train'][mID].shape[2])
@@ -801,14 +810,15 @@ def CompileRNN(PredDict, costsensitive=False):
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models
-        # LSTM() has dimension of (batchsize, timesteps, units) and retains info at each timestep (return_sequences=True)
+        # LSTM() has dimension of (batchsize, timesteps, units) and only retains final timestep (return_sequences=False)
         # Dropout() randomly sets inputs to 0 during training to prevent overfitting
-        # Dense() transforms output into normalised PDF across the 3 categories
+        # Dense() transforms output into 2 metrics (VE and WL)
         Model = Sequential([
                             Input(shape=inshape),
-                            LSTM(units=N_hidden, return_sequences=True),
-                            Dropout(0.2), 
-                            Dense(3, activation='softmax') 
+                            LSTM(units=N_hidden, activation='tanh', return_sequences=False),
+                            Dense(32, activation='relu'),
+                            #Dropout(0.2),
+                            Dense(2) 
                             ])
         
         # Compile model and define loss function and metrics
@@ -821,12 +831,12 @@ def CompileRNN(PredDict, costsensitive=False):
         
             Model.compile(optimizer=Adam(learning_rate=0.001), 
                              loss=LossFn, 
-                             metrics=['accuracy', 'loss'])
+                             metrics=['accuracy','mae'])
         else:
-            # If not cost-sensitive, just use categorical loss fn
+            # If not cost-sensitive, just use MSE loss fn (sparse_categorical_crossentropy for classifying clusters)
             Model.compile(optimizer=Adam(learning_rate=0.001), 
-                             loss='sparse_categorical_crossentropy', 
-                             metrics=['accuracy', 'loss'])
+                             loss='mse', 
+                             metrics=['accuracy', 'mae'])
         
         # Save model infrastructure to dictionary of model sruns
         PredDict['model'].append(Model)
@@ -854,9 +864,13 @@ def TrainRNN(PredDict,filepath,sitename):
         Dictionary to store all the NN model metadata, now with trained NN models.
 
     """
-    for mlabel in PredDict['mlabel']:
+    predictpath = os.path.join(filepath, sitename,'predictions')
+    if os.path.isdir(predictpath) is False:
+        os.mkdir(predictpath)
+        
+    for MLabel in PredDict['mlabel']:
         # Index of model setup
-        mID = PredDict['mlabel'].index(mlabel)
+        mID = PredDict['mlabel'].index(MLabel)
         
         Model = PredDict['model'][mID]
         
@@ -865,24 +879,28 @@ def TrainRNN(PredDict,filepath,sitename):
         X_test = PredDict['X_test'][mID]
         y_test = PredDict['y_test'][mID]
         
+        # Implement early stopping to avoid overditting
+        EarlyStop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+        
         # Train the model on the training data, setting aside a small split of 
         # this data for validation 
         start=time.time() # start timer
-        PredDict['history'].append(Model.fit(X_train, y_train, 
-                                             epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID], 
-                                             validation_split=0.1, verbose=1))
-        end=time.time() # end timer
-        
+        History = Model.fit(X_train, y_train, 
+                            epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
+                            validation_split=0.1, verbose=1)
+        end=time.time() # end time        
         # Time taken to train model
         PredDict['train_time'].append(end-start)
         
+        PredDict['history'].append(History)
+        
         # Evaluate the model
-        loss, accuracy = Model.evaluate(X_test, y_test)
-        PredDict['loss'].append(loss)
-        PredDict['accuracy'].append(accuracy)
+        Mloss, Maccuracy, Mmae = Model.evaluate(X_test, y_test)
+        PredDict['loss'].append(Mloss)
+        PredDict['accuracy'].append(Maccuracy)
         
         # Save trained models in dictionary for posterity
-        with open(f"{os.path.join(filepath, sitename)}/predictions/{'_'.join(PredDict['mlabel'])}.pkl", 'wb') as f:
+        with open(f"{os.path.join(filepath, sitename)}/predictions/{'_'.join(PredDict['mlabel'][mID])}.pkl", 'wb') as f:
             pickle.dump(PredDict, f)
             
     return PredDict
