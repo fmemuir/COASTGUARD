@@ -970,11 +970,16 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         X_test = PredDict['X_test'][mID]
         y_test = PredDict['y_test'][mID]
         
-        # Implement early stopping to avoid overditting
-        ModelCallbacks = [EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)]
-        # Save output to tensorboard for analysis
+        # TensorBoard directory to save log files to
         logdir = f"{predictpath}/{PredDict['mlabel'][mID]}_{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}"
-        TB_callback = TensorBoard(log_dir=logdir)
+
+        if EarlyStop:
+            # Implement early stopping to avoid overfitting
+            ModelCallbacks = [EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
+                              TensorBoard(log_dir=logdir)]
+        else:
+            # If no early stopping, just send log data to TensorBoard for analysis
+            ModelCallbacks = [TensorBoard(log_dir=logdir)]
         
         # Train the model on the training data, setting aside a small split of 
         # this data for validation 
@@ -1000,7 +1005,6 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         pickle.dump(PredDict, f)
             
     return PredDict
-    
     
 
 def FuturePredict(PredDict, ForecastDF):
