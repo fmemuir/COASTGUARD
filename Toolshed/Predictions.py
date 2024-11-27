@@ -307,15 +307,6 @@ def InterpVEWL(CoastalDF, Tr):
 
     return TransectDF
 
-
-def PreprocessTraining(CoastalDF):
-    
-    X = CoastalDF.drop(columns=['TransectID', 'labels'])
-    y = CoastalDF['labels']
-    # Normalize the features
-    scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
-    
     
 def ClusterKMeans(TransectDF, ValPlots=False):
     """
@@ -332,7 +323,7 @@ def ClusterKMeans(TransectDF, ValPlots=False):
 
     Returns
     -------
-    VarDF : DataFrame
+    VarDFClust : DataFrame
         Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
 
     """
@@ -530,7 +521,7 @@ def Cluster(TransectDF, ValPlots=False):
 
     Returns
     -------
-    VarDF : DataFrame
+    VarDFClust : DataFrame
         Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
 
     """
@@ -663,7 +654,7 @@ def DailyInterp(VarDF):
 
     Returns
     -------
-    VarDF : DataFrame
+    VarDFDay : DataFrame
         Dataframe of per-transect coastal metrics/variables in daily timesteps.
     """
     
@@ -686,15 +677,102 @@ def DailyInterp(VarDF):
     return VarDFDay
 
 
+def CreateSequences(X, y, time_steps=1):
+    '''
+    Function to create sequences (important for timeseries data where data point
+    is temporally dependent on the one that came before it). Data sequences are
+    needed for training RNNs, where temporal patterns are learned.
+    FM June 2024
+
+    Parameters
+    ----------
+    X : array
+        Training data as array of feature vectors.
+    y : array
+        Training classes as array of binary labels.
+    time_steps : int, optional
+        Number of time steps over which to generate sequences. The default is 1.
+
+    Returns
+    -------
+    array, array
+        Numpy arrays of sequenced data
+
+    '''
+    Xs = []
+    ys = []
+    if len(X) > time_steps:  # Check if there's enough data
+        for i in range(len(X) - time_steps):
+            # Slice feature set into sequences using moving window of size = number of timesteps
+            Xs.append(X[i:(i + time_steps)]) 
+            ys.append(y.iloc[i + time_steps])
+        return np.array(Xs), np.array(ys)
+    else:
+        # Not enough data to create a sequence
+        print(f"Not enough data to create sequences with time_steps={time_steps}")
+        return np.array([]), np.array([])
+
+
+def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
+    """
+    Create a cost-sensitive loss function to implement within an NN model.compile() step.
+    NN model is penalised based on cost matrix, which helps avoid mispredictions
+    with disproportionate importance (i.e. a missed storm warning is more serious
+    than a false alarm).
+    FM June 2024
+
+    Parameters
+    ----------
+    falsepos_cost : int
+        Proportional weight towards false positive classification.
+    falseneg_cost : int
+        Proportional weight towards false negative classification.
+    binary_thresh : float
+        Value between 0 and 1 representing .
+
+    Returns
+    -------
+    loss : function
+        Calls the loss function when it is set within model.compile(loss=LossFn).
+
+    """
+    def loss(y_true, y_pred):
+        # Flatten the arrays
+        y_true = K.flatten(y_true)
+        y_pred = K.flatten(y_pred)
+        
+        # Convert predictions to binary class predictions
+        y_pred_classes = K.cast(K.greater(y_pred, binary_thresh), tf.float32)
+        
+        # Calculate cost
+        falsepos = K.sum(y_true * (1 - y_pred_classes) * falseneg_cost)
+        falseneg = K.sum((1 - y_true) * y_pred_classes * falsepos_cost)
+        
+        bce = K.binary_crossentropy(y_true, y_pred)
+        
+        return bce + falsepos + falseneg
+    
+    return loss
+
+
 def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     """
-    Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.    
+    Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.
+    Timeseries is expanded and interpolated to get daily timesteps, then scaled across
+    all variables, then split into model inputs and outputs before sequencing these
+    
     FM Sept 2024
     
     Parameters
     ----------
-    VarDF : DataFrame
+    TransectDF : DataFrame
         Dataframe of per-transect coastal metrics/variables in timeseries.
+    MLabels : list
+        List of unique model run names.
+    TestSizes : list, hyperparameter
+        List of different proportions of data to separate out from training to validate model.
+    TSteps : list, hyperparameter
+        Number of timesteps (1 step = 1 day) to sequence training data over.
     UseSMOTE : bool, optional
         Flag for using SMOTE to oversample imbalanced data. The default is False.
 
@@ -716,9 +794,11 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     VarDFDay = DailyInterp(VarDF)
     
     # Scale vectors to normalise them
+    Scalings = {}
     VarDFDay_scaled = VarDFDay.copy()
     for col in VarDFDay.columns:
-        VarDFDay_scaled[col] =  StandardScaler().fit_transform(VarDFDay[[col]])
+        Scalings[col] = StandardScaler()
+        VarDFDay_scaled[col] = Scalings[col].fit_transform(VarDFDay[[col]])
     
     # Separate into training features (what will be learned from) and target features (what will be predicted)
     TrainFeat = VarDFDay_scaled[['distances', 'wlcorrdist', 'WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
@@ -735,10 +815,14 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
                 'y_train':[],
                 'X_test':[],
                 'y_test':[],
+                'scalings':[],
                 'epochS':[],
                 'batchS':[]}
     
     for MLabel, TestSize, TStep in zip(PredDict['mlabel'], TestSizes, TSteps):
+        
+        # Add scaling relationships to dict to convert back later
+        PredDict['scalings'].append(Scalings)
         
         # Create temporal sequences of data based on daily timesteps
         X, y = CreateSequences(TrainFeat, TargFeat, TStep)
@@ -772,13 +856,17 @@ def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
     ----------
     PredDict : dict
         Dictionary to store all the NN model metadata.
+    epochSizes : list, hyperparameter
+        List of different numbers of times a dataset passes through model in training.
+    batchSizes : list, hyperparameter
+        List of different numbers of samples to work through before internal model parameters are updated.
     costsensitive : bool, optional
         Option for including a cost-sensitive loss function. The default is False.
 
     Returns
     -------
     PredDict : dict
-        Dictionary to store all the NN model metadata, now with compiled models added
+        Dictionary to store all the NN model metadata, now with compiled models added.
 
     """
     for mlabel in PredDict['mlabel']:
@@ -844,9 +932,12 @@ def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
     return PredDict
 
 
-def TrainRNN(PredDict,filepath,sitename):
+def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     """
-    Train the compiled NN based on the training data set aside for it.
+    Train the compiled NN based on the training data set aside for it. Results
+    are written to PredDict which is saved to a pickle file. If TensorBoard is
+    used as the callback, the training history is also written to log files for
+    viewing within a TensorBoard dashboard.
     FM Sept 2024
 
     Parameters
@@ -880,9 +971,9 @@ def TrainRNN(PredDict,filepath,sitename):
         y_test = PredDict['y_test'][mID]
         
         # Implement early stopping to avoid overditting
-        EarlyStop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+        ModelCallbacks = [EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)]
         # Save output to tensorboard for analysis
-        logdir = f"{predictpath}_{PredDict['mlabel'][mID]}_{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        logdir = f"{predictpath}/{PredDict['mlabel'][mID]}_{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}"
         TB_callback = TensorBoard(log_dir=logdir)
         
         # Train the model on the training data, setting aside a small split of 
@@ -891,7 +982,7 @@ def TrainRNN(PredDict,filepath,sitename):
         History = Model.fit(X_train, y_train, 
                             epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
                             validation_data=(X_test,y_test),
-                            callbacks=[TB_callback])
+                            callbacks=[ModelCallbacks])
                             #verbose=1)
         end=time.time() # end time        
         # Time taken to train model
@@ -911,73 +1002,19 @@ def TrainRNN(PredDict,filepath,sitename):
     return PredDict
     
     
-def CreateSequences(X, y, time_steps=1):
-    '''
-    Function to create sequences
-    FM June 2024
 
-    Parameters
-    ----------
-    X : array
-        Training data as array of feature vectors.
-    y : array
-        Training classes as array of binary labels.
-    time_steps : int, optional
-        Number of time steps over which to generate sequences. The default is 1.
-
-    Returns
-    -------
-    array, array
-        Numpy arrays of sequenced data
-
-    '''
-    Xs = []
-    ys = []
-    if len(X) > time_steps:  # Check if there's enough data
-        for i in range(len(X) - time_steps):
-            Xs.append(X[i:(i + time_steps)]) # Slice feature set into sequences using moving window of size = number of timesteps
-            ys.append(y.iloc[i + time_steps])
-        return np.array(Xs), np.array(ys)
-    else:
-        # Not enough data to create a sequence
-        print(f"Not enough data to create sequences with time_steps={time_steps}")
-        return np.array([]), np.array([])
-
-
-def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
-    """
-    Create a cost-sensitive loss function to implement within an NN model.compile() step.
-    FM June 2024
-
-    Parameters
-    ----------
-    falsepos_cost : int
-        Proportional weight towards false positive classification.
-    falseneg_cost : int
-        Proportional weight towards false negative classification.
-    binary_thresh : float
-        Value between 0 and 1 representing .
-
-    Returns
-    -------
-    loss : function
-        Calls the loss function when it is set within model.compile(loss=LossFn).
-
-    """
-    def loss(y_true, y_pred):
-        # Flatten the arrays
-        y_true = K.flatten(y_true)
-        y_pred = K.flatten(y_pred)
-        
-        # Convert predictions to binary class predictions
-        y_pred_classes = K.cast(K.greater(y_pred, binary_thresh), tf.float32)
-        
-        # Calculate cost
-        falsepos = K.sum(y_true * (1 - y_pred_classes) * falseneg_cost)
-        falseneg = K.sum((1 - y_true) * y_pred_classes * falsepos_cost)
-        
-        bce = K.binary_crossentropy(y_true, y_pred)
-        
-        return bce + falsepos + falseneg
+def FuturePredict(PredDict, ForecastDF):
     
-    return loss
+    for MLabel in PredDict['mlabel']:
+        # Index of model setup
+        mID = PredDict['mlabel'].index(MLabel)
+        Model = PredDict['model'][mID]
+        
+        # Make prediction based off forecast data and trained model
+        Predictions = Model.predict(ForecastDF)
+        
+        # Reverse scaling to get back to original scale
+        VEPredict = PredDict['scalings'][mID]['distances'].inverse_transform(Predictions[:,0].reshape(-1, 1))
+        WLPredict = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(Predictions[:,1].reshape(-1, 1))
+        
+        return VEPredict, WLPredict
