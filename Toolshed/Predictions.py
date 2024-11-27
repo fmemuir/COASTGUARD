@@ -781,6 +781,8 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     -------
     PredDict : dict
         Dictionary to store all the NN model metadata.
+    VarDFDay : DataFrame
+        DataFrame of past data interpolated to daily timesteps (with temporal index).
 
     """
     
@@ -848,7 +850,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
             PredDict['X_train'].append(X_train)
             PredDict['y_train'].append(y_train)
             
-    return PredDict
+    return PredDict, VarDFDay
 
 
 def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
@@ -1048,7 +1050,7 @@ def FuturePredict(PredDict, ForecastDF):
             ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
         
         # Separate out forecast features
-        ForecastFeat = ForecastDF[['distances', 'wlcorrdist', 'WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+        ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
         
         # Sequence forecast data 
         ForecastArr, _ = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])

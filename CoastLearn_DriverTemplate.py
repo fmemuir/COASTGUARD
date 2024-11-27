@@ -7,6 +7,7 @@ Created on Thu Jun 13 10:51:41 2024
 """
 
 import os
+import matplotlib.pyplot as plt
 from Toolshed import Predictions
 
 # Only use tensorflow in CPU mode
@@ -36,7 +37,7 @@ for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr)
     
 #%% Prepare Training Data
-PredDict = Predictions.PrepData(TransectDF, MLabels=['test1'], TestSizes=[0.2], TSteps=[30])
+PredDict, VarDFDay = Predictions.PrepData(TransectDF, MLabels=['test1'], TestSizes=[0.2], TSteps=[30])
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
@@ -48,7 +49,8 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 
 #%% Make Predictions
 # Using full list of variables from past portion as test/placeholder
-ForecastDF = PredDict['X_test'][0]
+# ForecastDF = PredDict['X_test'][0]
+ForecastDF = VarDFDay[-60:]
 
 VEPredict, WLPredict = Predictions.FuturePredict(PredDict, ForecastDF)
 
