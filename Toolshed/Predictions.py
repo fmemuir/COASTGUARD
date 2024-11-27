@@ -677,7 +677,7 @@ def DailyInterp(VarDF):
     return VarDFDay
 
 
-def CreateSequences(X, y, time_steps=1):
+def CreateSequences(X, y=None, time_steps=1):
     '''
     Function to create sequences (important for timeseries data where data point
     is temporally dependent on the one that came before it). Data sequences are
@@ -704,8 +704,9 @@ def CreateSequences(X, y, time_steps=1):
     if len(X) > time_steps:  # Check if there's enough data
         for i in range(len(X) - time_steps):
             # Slice feature set into sequences using moving window of size = number of timesteps
-            Xs.append(X[i:(i + time_steps)]) 
-            ys.append(y.iloc[i + time_steps])
+            Xs.append(X[i:(i + time_steps)])
+            if y is not None:
+                ys.append(y.iloc[i + time_steps])
         return np.array(Xs), np.array(ys)
     else:
         # Not enough data to create a sequence
@@ -811,6 +812,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
                 'loss':[],
                 'accuracy':[],
                 'train_time':[],
+                'seqlen':[],
                 'X_train':[],
                 'y_train':[],
                 'X_test':[],
@@ -821,11 +823,13 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     
     for MLabel, TestSize, TStep in zip(PredDict['mlabel'], TestSizes, TSteps):
         
-        # Add scaling relationships to dict to convert back later
+        # Add scaling relationships and sequence lengths to dict to convert back later
         PredDict['scalings'].append(Scalings)
+        PredDict['seqlen'].append(TStep)
         
         # Create temporal sequences of data based on daily timesteps
         X, y = CreateSequences(TrainFeat, TargFeat, TStep)
+        
         
         # Separate test and train data and add to prediction dict (can't stratify when y is multicolumn)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TestSize, random_state=0)#, stratify=y)
@@ -1021,7 +1025,7 @@ def FuturePredict(PredDict, ForecastDF):
     PredDict : dict
         Dictionary to store all the NN model metadata, now with trained NN models.
     ForecastDF : DataFrame
-        DESCRIPTION.
+        Per-transect dataframe of future observations, with same columns as past training data.
 
     Returns
     -------
@@ -1032,14 +1036,22 @@ def FuturePredict(PredDict, ForecastDF):
 
     """
     # Convert dataframe to array of shape (samples, sequencelen, variables)
-    ForecastArr = np.array(ForecastDF)
     
-    # 
     # For each trained model/hyperparameter set in PredDict
     for MLabel in PredDict['mlabel']:
         # Index of model setup
         mID = PredDict['mlabel'].index(MLabel)
         Model = PredDict['model'][mID]
+        
+        # Scale forecast data using same relationships as past training data
+        for col in ForecastDF.columns:
+            ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
+        
+        # Separate out forecast features
+        ForecastFeat = ForecastDF[['distances', 'wlcorrdist', 'WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+        
+        # Sequence forecast data 
+        ForecastArr, _ = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
         
         # Make prediction based off forecast data and trained model
         Predictions = Model.predict(ForecastArr)
