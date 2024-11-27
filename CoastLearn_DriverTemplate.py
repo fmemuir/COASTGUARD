@@ -52,16 +52,15 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 # ForecastDF = PredDict['X_test'][0]
 ForecastDF = VarDFDay[-60:]
 
-VEPredict, WLPredict = Predictions.FuturePredict(PredDict, ForecastDF)
+FutureOutputs = Predictions.FuturePredict(PredDict, ForecastDF)
 
 #%%
 mID = 0
-VETest = PredDict['scalings'][mID]['distances'].inverse_transform(PredDict['y_test'][mID][:,0].reshape(-1, 1))
-WLTest = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(PredDict['y_test'][mID][:,1].reshape(-1, 1))
-plt.plot(VETest, 'C2')
-plt.plot(WLTest, 'C0')
-plt.plot(VEPredict, 'C8', alpha=0.5)
-plt.plot(WLPredict, 'C9', alpha=0.5)
+
+plt.plot(VarDFDay['distances'], 'C2')
+plt.plot(VarDFDay['wlcorrdist'], 'C0')
+plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', ls='--')
+plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', ls='--')
 
 
 #%% Cluster Past Observations

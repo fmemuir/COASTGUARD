@@ -701,17 +701,19 @@ def CreateSequences(X, y=None, time_steps=1):
     '''
     Xs = []
     ys = []
+    Ind = []
     if len(X) > time_steps:  # Check if there's enough data
         for i in range(len(X) - time_steps):
             # Slice feature set into sequences using moving window of size = number of timesteps
             Xs.append(X[i:(i + time_steps)])
+            Ind.append(X.index[i + time_steps])
             if y is not None:
                 ys.append(y.iloc[i + time_steps])
-        return np.array(Xs), np.array(ys)
+        return np.array(Xs), np.array(ys), np.array(Ind)
     else:
         # Not enough data to create a sequence
         print(f"Not enough data to create sequences with time_steps={time_steps}")
-        return np.array([]), np.array([])
+        return np.array([]), np.array([]), np.array([])
 
 
 def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
@@ -830,8 +832,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
         PredDict['seqlen'].append(TStep)
         
         # Create temporal sequences of data based on daily timesteps
-        X, y = CreateSequences(TrainFeat, TargFeat, TStep)
-        
+        X, y, TrainInd = CreateSequences(TrainFeat, TargFeat, TStep)
         
         # Separate test and train data and add to prediction dict (can't stratify when y is multicolumn)
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TestSize, random_state=0)#, stratify=y)
@@ -1037,7 +1038,9 @@ def FuturePredict(PredDict, ForecastDF):
         DESCRIPTION.
 
     """
-    # Convert dataframe to array of shape (samples, sequencelen, variables)
+    # Initialise for ulti-run outputs
+    FutureOutputs = {'mlabel':PredDict['mlabel'],
+                     'output':[]}
     
     # For each trained model/hyperparameter set in PredDict
     for MLabel in PredDict['mlabel']:
@@ -1050,10 +1053,10 @@ def FuturePredict(PredDict, ForecastDF):
             ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
         
         # Separate out forecast features
-        ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+        ForecastFeat = ForecastDF[['distances','wlcorrdist','WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
         
-        # Sequence forecast data 
-        ForecastArr, _ = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
+        # Sequence forecast data to shape (samples, sequencelen, variables)
+        ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
         
         # Make prediction based off forecast data and trained model
         Predictions = Model.predict(ForecastArr)
@@ -1062,5 +1065,11 @@ def FuturePredict(PredDict, ForecastDF):
         VEPredict = PredDict['scalings'][mID]['distances'].inverse_transform(Predictions[:,0].reshape(-1, 1))
         WLPredict = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(Predictions[:,1].reshape(-1, 1))
         
+        FutureDF = pd.DataFrame(
+                   {'futureVE': VEPredict.flatten(),
+                    'futureWL': WLPredict.flatten()},
+                   index=ForecastInd)
         
-        return VEPredict, WLPredict
+        FutureOutputs['output'].append(FutureDF)
+        
+    return FutureOutputs
