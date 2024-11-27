@@ -46,6 +46,22 @@ PredDict = Predictions.CompileRNN(PredDict, epochSizes=[50], batchSizes=[32])
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 
+#%% Make Predictions
+# Using full list of variables from past portion as test/placeholder
+ForecastDF = PredDict['X_test'][0]
+
+VEPredict, WLPredict = Predictions.FuturePredict(PredDict, ForecastDF)
+
+#%%
+mID = 0
+VETest = PredDict['scalings'][mID]['distances'].inverse_transform(PredDict['y_test'][mID][:,0].reshape(-1, 1))
+WLTest = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(PredDict['y_test'][mID][:,1].reshape(-1, 1))
+plt.plot(VETest, 'C2')
+plt.plot(WLTest, 'C0')
+plt.plot(VEPredict, 'C8', alpha=0.5)
+plt.plot(WLPredict, 'C9', alpha=0.5)
+
+
 #%% Cluster Past Observations
 # VarDF = Predictions.Cluster(TransectDF, ValPlots=True)
 
