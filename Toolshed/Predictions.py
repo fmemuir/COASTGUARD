@@ -948,6 +948,8 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         Filepath to save the PredDict dictionary to (for reading the trained model back in).
     sitename : str
         Name of the site of interest.
+    EarlyStop : bool, optional
+        Flag to include early stopping to avoid overfitting. The default is False.
 
     Returns
     -------
@@ -1008,17 +1010,43 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     
 
 def FuturePredict(PredDict, ForecastDF):
+    """
+    Make prediction of future vegetation edge and waterline positions for transect
+    of choice, using forecast dataframe as forcing and model pre-trained on past 
+    observations.
+    FM Nov 2024
+
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with trained NN models.
+    ForecastDF : DataFrame
+        DESCRIPTION.
+
+    Returns
+    -------
+    VEPredict : TYPE
+        DESCRIPTION.
+    WLPredict : TYPE
+        DESCRIPTION.
+
+    """
+    # Convert dataframe to array of shape (samples, sequencelen, variables)
+    ForecastArr = np.array(ForecastDF)
     
+    # 
+    # For each trained model/hyperparameter set in PredDict
     for MLabel in PredDict['mlabel']:
         # Index of model setup
         mID = PredDict['mlabel'].index(MLabel)
         Model = PredDict['model'][mID]
         
         # Make prediction based off forecast data and trained model
-        Predictions = Model.predict(ForecastDF)
+        Predictions = Model.predict(ForecastArr)
         
-        # Reverse scaling to get back to original scale
+        # Reverse scaling to get outputs back to their original scale
         VEPredict = PredDict['scalings'][mID]['distances'].inverse_transform(Predictions[:,0].reshape(-1, 1))
         WLPredict = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(Predictions[:,1].reshape(-1, 1))
+        
         
         return VEPredict, WLPredict
