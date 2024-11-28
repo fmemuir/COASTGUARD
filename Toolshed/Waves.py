@@ -846,17 +846,17 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     # theta_rad = np.radians(ShoreAngle)
     # Phi_0_rad = np.radians(WaveDir)
     # Calculate the angle difference (theta - Phi_0) in degrees
-    angle_diff_deg = (ShoreAngle - WaveDir + 180) % 360 - 180  # Compute angle diff in degrees
+    Alpha = (ShoreAngle - WaveDir + 180) % 360 - 180  # Compute angle diff in degrees
       
     # Initialize an array to store mu values, applying shadowing condition
     mu_values = []
     for i in range(len(WaveDir)):        
-        if angle_diff_deg[i] <= 0:  # Only include waves that are onshore (angle_diff <= 0)
+        if Alpha[i] <= 0:  # Only include waves that are onshore (angle_diff <= 0)
             # Calculate the diffusivity (mu) using the formula for onshore waves
             # abs() value used to avoid NaNs from raising a negative number to a decimal power
             mu = (K2 / D) * (WaveTp[i]**(1/3)) * (WaveHs[i]**(12/5)) * \
-                 (abs(np.cos(np.radians(angle_diff_deg[i])))**(1/5)) * \
-                 ((6/5) * np.sin(np.radians(angle_diff_deg[i]))**2 - np.cos(np.radians(angle_diff_deg[i]))**2)
+                 (abs(np.cos(np.radians(Alpha[i])))**(1/5)) * \
+                 ((6/5) * np.sin(np.radians(Alpha[i]))**2 - np.cos(np.radians(Alpha[i]))**2)
 
             mu_values.append(mu)
         else:
