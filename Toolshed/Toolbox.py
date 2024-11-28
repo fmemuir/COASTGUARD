@@ -2746,11 +2746,12 @@ def GetSeasonalityIndex(x,y, P=365):
     Timeseries = pd.Series(y, index=x)
     # if any duplicates exist, take the mean of those duplicates
     Timeseries = Timeseries.groupby(Timeseries.index).mean()
-    Timeseries = Timeseries.resample('1D')
-    Timeseries = Timeseries.interpolate(method='time')
+    Timeseries.index = Timeseries.index.normalize()
+    TimeseriesDay = Timeseries.resample('1D')
+    TimeseriesDay = TimeseriesDay.interpolate(method='time')
     
     # Calculate seasonal .trend, .seasonal and .resid, using a year as the detrending period
-    Seasonality = seasonal_decompose(Timeseries, model='additive', period=P)
+    Seasonality = seasonal_decompose(TimeseriesDay, model='additive', period=P)
     Season = Seasonality.seasonal
     Resid = Seasonality.resid
     # Calculate Seasonal Strength Index
