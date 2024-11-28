@@ -806,7 +806,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
         VarDFDay_scaled[col] = Scalings[col].fit_transform(VarDFDay[[col]])
     
     # Separate into training features (what will be learned from) and target features (what will be predicted)
-    TrainFeat = VarDFDay_scaled[['distances', 'wlcorrdist', 'WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+    TrainFeat = VarDFDay_scaled[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
     TargFeat = VarDFDay_scaled[['distances', 'wlcorrdist']] # vegetation edge and waterline positions
     
     # Define prediction dictionary for multiple runs/hyperparameterisation
@@ -1053,7 +1053,7 @@ def FuturePredict(PredDict, ForecastDF):
             ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
         
         # Separate out forecast features
-        ForecastFeat = ForecastDF[['distances','wlcorrdist','WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+        ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
         
         # Sequence forecast data to shape (samples, sequencelen, variables)
         ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])

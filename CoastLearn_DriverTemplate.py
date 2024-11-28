@@ -50,7 +50,7 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 #%% Make Predictions
 # Using full list of variables from past portion as test/placeholder
 # ForecastDF = PredDict['X_test'][0]
-ForecastDF = VarDFDay[-60:]
+ForecastDF = VarDFDay[-360:]
 
 FutureOutputs = Predictions.FuturePredict(PredDict, ForecastDF)
 
