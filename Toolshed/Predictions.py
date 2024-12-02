@@ -941,8 +941,88 @@ def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
     
     return PredDict
   
-   
 
+def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
+    """
+    Train the compiled NN based on the training data set aside for it. Results
+    are written to PredDict which is saved to a pickle file. If TensorBoard is
+    used as the callback, the training history is also written to log files for
+    viewing within a TensorBoard dashboard.
+    FM Sept 2024
+
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata.
+    filepath : str
+        Filepath to save the PredDict dictionary to (for reading the trained model back in).
+    sitename : str
+        Name of the site of interest.
+    EarlyStop : bool, optional
+        Flag to include early stopping to avoid overfitting. The default is False.
+
+    Returns
+    -------
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with trained NN models.
+
+    """
+    predictpath = os.path.join(filepath, sitename,'predictions')
+    if os.path.isdir(predictpath) is False:
+        os.mkdir(predictpath)
+    predictdir = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
+    if os.path.isdir(predictdir) is False:
+        os.mkdir(predictdir)
+        
+    for MLabel in PredDict['mlabel']:
+        # Index of model setup
+        mID = PredDict['mlabel'].index(MLabel)
+        
+        Model = PredDict['model'][mID]
+        
+        X_train = PredDict['X_train'][mID]
+        y_train = PredDict['y_train'][mID]
+        X_val = PredDict['X_val'][mID]
+        y_val = PredDict['y_val'][mID]
+        
+        # TensorBoard directory to save log files to
+        logdir = f"{predictpath}/{predictdir}/{PredDict['mlabel'][mID]}"
+
+        if EarlyStop:
+            # Implement early stopping to avoid overfitting
+            ModelCallbacks = [EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
+                              TensorBoard(log_dir=logdir)]
+        else:
+            # If no early stopping, just send log data to TensorBoard for analysis
+            ModelCallbacks = [TensorBoard(log_dir=logdir)]
+        
+        # Train the model on the training data, setting aside a small split of 
+        # this data for validation 
+        start=time.time() # start timer
+        History = Model.fit(X_train, y_train, 
+                            epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
+                            validation_data=(X_val,y_val),
+                            callbacks=[ModelCallbacks])
+                            #verbose=1)
+        end=time.time() # end time        
+        # Time taken to train model
+        PredDict['train_time'].append(end-start)
+        
+        PredDict['history'].append(History)
+        
+        # Evaluate the model
+        Mloss, Maccuracy, Mmae = Model.evaluate(X_val, y_val)
+        PredDict['loss'].append(Mloss)
+        PredDict['accuracy'].append(Maccuracy)
+        
+    # Save trained models in dictionary for posterity
+    with open(f"{os.path.join(filepath, sitename)}/predictions/{predictdir+'_'+'_'.join(PredDict['mlabel'])}.pkl", 'wb') as f:
+        pickle.dump(PredDict, f)
+            
+    return PredDict
+
+    
+ 
 def TrainRNN_Optuna(PredDict, mlabel):
     # Custom RMSE metric function
     def root_mean_squared_error(y_true, y_pred):
@@ -1057,82 +1137,6 @@ def TrainRNN_Optuna(PredDict, mlabel):
     return study
 
 
-def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
-    """
-    Train the compiled NN based on the training data set aside for it. Results
-    are written to PredDict which is saved to a pickle file. If TensorBoard is
-    used as the callback, the training history is also written to log files for
-    viewing within a TensorBoard dashboard.
-    FM Sept 2024
-
-    Parameters
-    ----------
-    PredDict : dict
-        Dictionary to store all the NN model metadata.
-    filepath : str
-        Filepath to save the PredDict dictionary to (for reading the trained model back in).
-    sitename : str
-        Name of the site of interest.
-    EarlyStop : bool, optional
-        Flag to include early stopping to avoid overfitting. The default is False.
-
-    Returns
-    -------
-    PredDict : dict
-        Dictionary to store all the NN model metadata, now with trained NN models.
-
-    """
-    predictpath = os.path.join(filepath, sitename,'predictions')
-    if os.path.isdir(predictpath) is False:
-        os.mkdir(predictpath)
-        
-    for MLabel in PredDict['mlabel']:
-        # Index of model setup
-        mID = PredDict['mlabel'].index(MLabel)
-        
-        Model = PredDict['model'][mID]
-        
-        X_train = PredDict['X_train'][mID]
-        y_train = PredDict['y_train'][mID]
-        X_val = PredDict['X_val'][mID]
-        y_val = PredDict['y_val'][mID]
-        
-        # TensorBoard directory to save log files to
-        logdir = f"{predictpath}/{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}/{PredDict['mlabel'][mID]}"
-
-        if EarlyStop:
-            # Implement early stopping to avoid overfitting
-            ModelCallbacks = [EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
-                              TensorBoard(log_dir=logdir)]
-        else:
-            # If no early stopping, just send log data to TensorBoard for analysis
-            ModelCallbacks = [TensorBoard(log_dir=logdir)]
-        
-        # Train the model on the training data, setting aside a small split of 
-        # this data for validation 
-        start=time.time() # start timer
-        History = Model.fit(X_train, y_train, 
-                            epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
-                            validation_data=(X_val,y_val),
-                            callbacks=[ModelCallbacks])
-                            #verbose=1)
-        end=time.time() # end time        
-        # Time taken to train model
-        PredDict['train_time'].append(end-start)
-        
-        PredDict['history'].append(History)
-        
-        # Evaluate the model
-        Mloss, Maccuracy, Mmae = Model.evaluate(X_val, y_val)
-        PredDict['loss'].append(Mloss)
-        PredDict['accuracy'].append(Maccuracy)
-        
-    # Save trained models in dictionary for posterity
-    with open(f"{os.path.join(filepath, sitename)}/predictions/{'_'.join(PredDict['mlabel'])}.pkl", 'wb') as f:
-        pickle.dump(PredDict, f)
-            
-    return PredDict
-    
 
 def FuturePredict(PredDict, ForecastDF):
     """
