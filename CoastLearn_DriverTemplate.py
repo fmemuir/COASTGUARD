@@ -36,23 +36,37 @@ TransectIDs = [1325]
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr)
     
+#%% Separate Training and Validation
+TransectDFTrain = TransectDF.iloc[:271]
+TransectDFTest = TransectDF.iloc[270:]
+
+VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
+
 #%% Prepare Training Data
-PredDict, VarDFDay = Predictions.PrepData(TransectDF, MLabels=['test1'], TestSizes=[0.2], TSteps=[30])
+PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
+                                          MLabels=['batch24', 'batch32', 'batch64', 'batch92'], 
+                                          TestSizes=[0.2, 0.2, 0.2, 0.2], 
+                                          TSteps=[12, 12, 12, 12])
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
-PredDict = Predictions.CompileRNN(PredDict, epochSizes=[50], batchSizes=[32])
+PredDict = Predictions.CompileRNN(PredDict, 
+                                  epochSizes=[10, 10, 10, 10], 
+                                  batchSizes=[24, 32, 64, 92])
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 
+#%%
+OptStudy = Predictions.TrainRNN_Optuna(PredDict, 'test1')
+
 #%% Make Predictions
 # Using full list of variables from past portion as test/placeholder
 # ForecastDF = PredDict['X_test'][0]
-ForecastDF = VarDFDay[-360:]
+# VarDFDayTest = VarDFDay[-360:]
 
-FutureOutputs = Predictions.FuturePredict(PredDict, ForecastDF)
+FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 
 #%%
 mID = 0
