@@ -12,6 +12,7 @@ import pickle
 import datetime as dt
 import time
 import numpy as np
+import random
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import pandas as pd
@@ -35,6 +36,8 @@ from tensorflow.keras.layers import GRU, LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from imblearn.over_sampling import SMOTE
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
+import optuna
+
 
 # Only use tensorflow in CPU mode
 import tensorflow as tf
@@ -819,8 +822,8 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
                 'seqlen':[],
                 'X_train':[],
                 'y_train':[],
-                'X_test':[],
-                'y_test':[],
+                'X_val':[],
+                'y_val':[],
                 'scalings':[],
                 'epochS':[],
                 'batchS':[]}
@@ -835,9 +838,9 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
         X, y, TrainInd = CreateSequences(TrainFeat, TargFeat, TStep)
         
         # Separate test and train data and add to prediction dict (can't stratify when y is multicolumn)
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TestSize, random_state=0)#, stratify=y)
-        PredDict['X_test'].append(X_test)
-        PredDict['y_test'].append(y_test)
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=TestSize, random_state=0)#, stratify=y)
+        PredDict['X_val'].append(X_val)
+        PredDict['y_val'].append(y_val)
         
         # Use SMOTE for oversampling when dealing with imbalanced classification
         if UseSMOTE is True:
@@ -937,6 +940,121 @@ def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
         PredDict['model'].append(Model)
     
     return PredDict
+  
+   
+
+def TrainRNN_Optuna(PredDict, mlabel):
+    # Custom RMSE metric function
+    def root_mean_squared_error(y_true, y_pred):
+        return K.sqrt(K.mean(K.square(y_pred - y_true)))
+
+    def set_seed(seed):
+        tf.random.set_seed(seed)
+        os.environ['PYTHONHASHSEED'] = str(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+
+    # Index of model setup
+    mID = PredDict['mlabel'].index(mlabel)
+    # inshape = (N_timesteps, N_features)
+    inshape = (PredDict['X_train'][mID].shape[0], PredDict['X_train'][mID].shape[2])    
+
+    # Define the LSTM model (Input No of layers should be atleast 2, including Dense layer, the inputs are initial values only)
+    def CreateModel(learning_rate, batch_size, num_layers, num_nodes, dropout_rate, epochs, xtrain, ytrain, xtest, ytest):
+        set_seed(42)
+        min_delta = 0.001
+
+        model = Sequential()
+        model.add(Input(inshape))
+        model.add(LSTM(num_nodes, activation='relu', return_sequences=True))
+        model.add(Dropout(dropout_rate))
+        
+        for _ in range(num_layers-2):
+            model.add(LSTM(num_nodes, return_sequences=True))
+            model.add(Dropout(dropout_rate))
+            
+        model.add(LSTM(num_nodes))
+        model.add(Dropout(dropout_rate)) 
+        model.add(Dense(1))
+                
+        model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate), metrics=[root_mean_squared_error])
+        
+        # Train model with early stopping callback
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, min_delta=min_delta, restore_best_weights=True)
+        
+        history = model.fit(xtrain, ytrain, epochs=epochs, batch_size=batch_size, 
+                            validation_data=(xtest, ytest), verbose=1, shuffle = False, callbacks=[early_stopping_callback])
+    
+        return model, history
+
+    # Set to store unique hyperparameter configurations
+    hyperparameter_set = set()
+
+    # For Optuna, it is required to specify a Objective function which it tries to minimise (finding the global(?) minima). Here it is loss (RMSE) on validation set
+    def objective(trial):
+        # Define hyperparameters to optimize with Optuna
+        # Set seed for os env
+        os.environ['PYTHONHASHSEED'] = str(42)
+        # Set random seed for Python
+        random.seed(42)
+        # Set random seed for NumPy
+        np.random.seed(42)
+        # Set random seed for TensorFlow
+        tf.random.set_seed(42)
+        
+        ## If you want to use a parameter space and pickup hyperpameter combos randomly. Bit time consuming
+        # learning_rate = trial.suggest_float('learning_rate', 1e-4, 2e-3, log=True)
+        # num_layers = trial.suggest_int('num_layers', 2, 4)
+        # dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.4)
+        # num_nodes = trial.suggest_int('num_nodes', 100, 300)
+        # batch_size = trial.suggest_int('batch_size', 24, 92)
+        # epochs = trial.suggest_int('epochs', 20, 100)
+    
+        # If you want to specify certain values of parameters and provide as a grid of hyperparameters (optuna samplers will pickup hyperpameter combos randomly from the grid). Bit time consuming
+        learning_rate = trial.suggest_categorical('learning_rate', [0.001, 0.005, 0.01])
+        num_layers = trial.suggest_categorical('num_layers', [2, 3, 4])
+        dropout_rate = trial.suggest_categorical('dropout_rate', [0.1, 0.2, 0.4])
+        num_nodes = trial.suggest_categorical('num_nodes', [50, 100, 200, 300])
+        batch_size = trial.suggest_categorical('batch_size', [24, 32, 64, 92])
+        epochs = trial.suggest_categorical('epochs', [50, 80, 100, 200])
+        
+        # Create a tuple of the hyperparameters
+        hyperparameters = (learning_rate, num_layers, dropout_rate, num_nodes, batch_size, epochs)
+    
+        # Check if this set of hyperparameters has already been tried
+        if hyperparameters in hyperparameter_set:
+            raise optuna.exceptions.TrialPruned()  # Skip this trial and suggest a new set of hyperparameters
+    
+        # Add the hyperparameters to the set
+        hyperparameter_set.add(hyperparameters)
+    
+        # Make a prediction using the LSTM model for the validation set
+        optimized_model, history_HPO = CreateModel(learning_rate, batch_size, num_layers, num_nodes, dropout_rate, epochs, 
+                                                   PredDict['X_train'][mID], PredDict['y_train'][mID], 
+                                                   PredDict['X_val'][mID], PredDict['y_val'][mID])
+
+        ypredict = optimized_model.predict(PredDict['X_val'][mID])
+        val_loss = root_mean_squared_error(PredDict['y_val'][mID], ypredict)
+        
+        return val_loss # Returning the Objective function value. This will be used to optimise, through creating a surrogate model for the number of trial runs
+        
+    # Define the pruning callback
+    pruner = optuna.pruners.MedianPruner()
+    
+    # Create Optuna study with Bayesian optimization (TPE) and trial pruning. There is Gausian sampler (and so many other sampling options too)
+    study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(), pruner=pruner)
+    
+    # Optimize hyperparameters
+    study.optimize(objective, n_trials=50)
+    
+    # Retrieve best hyperparameters
+    print("Best Hyperparameters:", study.best_params)
+    
+    # Save the study object (If required. So that it can be loaded as in the next cell without needing to re-run this whole HPO)
+    # filename = f'optuna_study_SLP_H_weekly-HsTp-LSTM{n_steps}.pkl'
+    # joblib.dump(study, filename)
+
+    return study
 
 
 def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
@@ -976,11 +1094,11 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         
         X_train = PredDict['X_train'][mID]
         y_train = PredDict['y_train'][mID]
-        X_test = PredDict['X_test'][mID]
-        y_test = PredDict['y_test'][mID]
+        X_val = PredDict['X_val'][mID]
+        y_val = PredDict['y_val'][mID]
         
         # TensorBoard directory to save log files to
-        logdir = f"{predictpath}/{PredDict['mlabel'][mID]}_{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}"
+        logdir = f"{predictpath}/{dt.datetime.now().strftime('%Y%m%d-%H%M%S')}/{PredDict['mlabel'][mID]}"
 
         if EarlyStop:
             # Implement early stopping to avoid overfitting
@@ -995,7 +1113,7 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         start=time.time() # start timer
         History = Model.fit(X_train, y_train, 
                             epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
-                            validation_data=(X_test,y_test),
+                            validation_data=(X_val,y_val),
                             callbacks=[ModelCallbacks])
                             #verbose=1)
         end=time.time() # end time        
@@ -1005,7 +1123,7 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         PredDict['history'].append(History)
         
         # Evaluate the model
-        Mloss, Maccuracy, Mmae = Model.evaluate(X_test, y_test)
+        Mloss, Maccuracy, Mmae = Model.evaluate(X_val, y_val)
         PredDict['loss'].append(Mloss)
         PredDict['accuracy'].append(Maccuracy)
         
