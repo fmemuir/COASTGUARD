@@ -642,7 +642,7 @@ def Cluster(TransectDF, ValPlots=False):
     # return VarDFClust
 
 
-def DailyInterp(VarDF):
+def DailyInterp(TransectDF):
     """
     Reindex and interpolate over timeseries to convert it to daily
     FM Nov 2024
@@ -657,6 +657,13 @@ def DailyInterp(VarDF):
     VarDFDay : DataFrame
         Dataframe of per-transect coastal metrics/variables in daily timesteps.
     """
+    
+    # Fill nans factoring in timesteps for interpolation
+    TransectDF.replace([np.inf, -np.inf], np.nan, inplace=True)
+    VarDF = TransectDF.interpolate(method='time', axis=0)
+    # Strip time (just set to date timestamps), and take mean if any timesteps duplicated
+    VarDF.index = VarDF.index.normalize()
+    VarDF = VarDF.groupby(VarDF.index).mean()
     
     DailyInd = pd.date_range(start=VarDF.index.min(), end=VarDF.index.max(), freq='D')
     VarDFDay = VarDF.reindex(DailyInd)
@@ -788,15 +795,8 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
 
     """
     
-    # Fill nans factoring in timesteps for interpolation
-    TransectDF.replace([np.inf, -np.inf], np.nan, inplace=True)
-    VarDF = TransectDF.interpolate(method='time', axis=0)
-    # Strip time (just set to date timestamps), and take mean if any timesteps duplicated
-    VarDF.index = VarDF.index.normalize()
-    VarDF = VarDF.groupby(VarDF.index).mean()
-    
     # Interpolate over data gaps to get regular (daily) measurements
-    VarDFDay = DailyInterp(VarDF)
+    VarDFDay = DailyInterp(TransectDF)
     
     # Scale vectors to normalise them
     Scalings = {}
