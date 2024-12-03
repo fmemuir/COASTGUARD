@@ -814,20 +814,22 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     TargFeat = VarDFDay_scaled[['distances', 'wlcorrdist']] # vegetation edge and waterline positions
     
     # Define prediction dictionary for multiple runs/hyperparameterisation
-    PredDict = {'mlabel':MLabels,
-                'model':[],
-                'history':[],
-                'loss':[],
-                'accuracy':[],
-                'train_time':[],
-                'seqlen':[],
-                'X_train':[],
-                'y_train':[],
-                'X_val':[],
-                'y_val':[],
-                'scalings':[],
-                'epochS':[],
-                'batchS':[]}
+    PredDict = {'mlabel':MLabels,   # name of the model run
+                'model':[],         # compiled model (Sequential object)
+                'history':[],       # training history to be written to later
+                'loss':[],          # final loss value of run
+                'accuracy':[],      # final accuracy value of run
+                'train_time':[],    # time taken to train
+                'seqlen':[],        # length of temporal sequence in timesteps to break data up into
+                'X_train':[],       # training features/cross-shore values (scaled and filled to daily)
+                'y_train':[],       # training target/cross-shore VE and WL (scaled and filled to daily)
+                'X_val':[],         # validation features/cross-shore values
+                'y_val':[],         # validation target/cross-shore VE and WL
+                'scalings':[],      # scaling to use on each feature (to transform them back to real values)
+                'epochN':[],        # number of epochs to use in training
+                'batchS':[],        # batch size to use in training
+                'denselayers':[],   # number of dense layers in model construction
+                'dropoutr':[]}      # rate of dropout in training
     
     for MLabel, TestSize, TStep in zip(PredDict['mlabel'], TestSizes, TSteps):
         
@@ -858,7 +860,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     return PredDict, VarDFDay
 
 
-def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
+def CompileRNN(PredDict, epochNums, batchSizes, costsensitive=False):
     """
     Compile the NN using the settings and data stored in the NN dictionary.
     FM Sept 2024
@@ -867,7 +869,7 @@ def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
     ----------
     PredDict : dict
         Dictionary to store all the NN model metadata.
-    epochSizes : list, hyperparameter
+    epochNums : list, hyperparameter
         List of different numbers of times a dataset passes through model in training.
     batchSizes : list, hyperparameter
         List of different numbers of samples to work through before internal model parameters are updated.
@@ -885,7 +887,7 @@ def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
         mID = PredDict['mlabel'].index(mlabel)
         
         # Append epoch sizes and batch sizes to prediction dict
-        PredDict['epochS'].append(epochSizes[mID])
+        PredDict['epochN'].append(epochNums[mID])
         PredDict['batchS'].append(batchSizes[mID])
         
         # inshape = (N_timesteps, N_features)
@@ -915,8 +917,8 @@ def CompileRNN(PredDict, epochSizes, batchSizes, costsensitive=False):
         Model = Sequential([
                             Input(shape=inshape),
                             LSTM(units=N_hidden, activation='tanh', return_sequences=False),
-                            Dense(32, activation='relu'),
-                            #Dropout(0.2),
+                            Dense(PredDict['denselayers'][mID], activation='relu'),
+                            Dropout(PredDict['dropoutr'][mID]),
                             Dense(2) 
                             ])
         
@@ -978,8 +980,10 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     logdir = os.path.join(predictpath,predictdir)
     
     # Define hyperparameters to log
-    HP_EPOCHS = hp.HParam('epochs', hp.Discrete(PredDict['epochS']))
+    HP_EPOCHS = hp.HParam('epochs', hp.Discrete(PredDict['epochN']))
     HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete(PredDict['batchS']))
+    HP_DENSE_LAYERS = hp.HParam('dense_layers')
+    HP_DROPOUT = hp.HParam('dropout', hp.Discrete(PredDict['dropoutr']))
 
     metric_loss = 'val_loss'
     metric_accuracy = 'val_accuracy'
@@ -1006,7 +1010,7 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         start=time.time() # start timer
         # Train the model on the training data, writing results to TensorBoard
         History = Model.fit(PredDict['X_train'][mID], PredDict['y_train'][mID], 
-                            epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
+                            epochs=PredDict['epochN'][mID], batch_size=PredDict['batchS'][mID],
                             validation_data=(PredDict['X_val'][mID],PredDict['y_val'][mID]),
                             callbacks=[ModelCallbacks],
                             verbose=0)
@@ -1028,8 +1032,9 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         # Log hyperparameters and metrics to TensorBoard
         with HPWriter.as_default():
             hp.hparams({
-                HP_EPOCHS: PredDict['epochS'][mID],
-                HP_BATCH_SIZE: PredDict['batchS'][mID]
+                HP_EPOCHS: PredDict['epochN'][mID],
+                HP_BATCH_SIZE: PredDict['batchS'][mID],
+                HP_DROPOUT: PredDict['dropoutr'][mID]
             })
             tf.summary.scalar(metric_loss, FinalLoss, step=1)
             tf.summary.scalar(metric_accuracy, FinalAccuracy, step=1)
