@@ -36,6 +36,7 @@ from tensorflow.keras.layers import GRU, LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from imblearn.over_sampling import SMOTE
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
+from tensorboard.plugins.hparams import api as hp
 import optuna
 
 
@@ -974,49 +975,68 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     if os.path.isdir(predictdir) is False:
         os.mkdir(predictdir)
         
+    logdir = os.path.join(predictpath,predictdir)
+    
+    # Define hyperparameters to log
+    HP_EPOCHS = hp.HParam('epochs', hp.Discrete(PredDict['epochS']))
+    HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete(PredDict['batchS']))
+
+    metric_loss = 'val_loss'
+    metric_accuracy = 'val_accuracy'
+    
     for MLabel in PredDict['mlabel']:
+        print(f"Run: {MLabel}")
         # Index of model setup
         mID = PredDict['mlabel'].index(MLabel)
-        
         Model = PredDict['model'][mID]
-        
-        X_train = PredDict['X_train'][mID]
-        y_train = PredDict['y_train'][mID]
-        X_val = PredDict['X_val'][mID]
-        y_val = PredDict['y_val'][mID]
-        
+    
         # TensorBoard directory to save log files to
-        logdir = f"{predictpath}/{predictdir}/{PredDict['mlabel'][mID]}"
+        rundir = os.path.join(logdir, MLabel)
+        
+        HPWriter = tf.summary.create_file_writer(rundir)
 
         if EarlyStop:
             # Implement early stopping to avoid overfitting
             ModelCallbacks = [EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True),
-                              TensorBoard(log_dir=logdir)]
+                              TensorBoard(log_dir=rundir)]
         else:
             # If no early stopping, just send log data to TensorBoard for analysis
-            ModelCallbacks = [TensorBoard(log_dir=logdir)]
-        
-        # Train the model on the training data, setting aside a small split of 
-        # this data for validation 
+            ModelCallbacks = [TensorBoard(log_dir=rundir)]
+            
         start=time.time() # start timer
-        History = Model.fit(X_train, y_train, 
+        # Train the model on the training data, writing results to TensorBoard
+        History = Model.fit(PredDict['X_train'][mID], PredDict['y_train'][mID], 
                             epochs=PredDict['epochS'][mID], batch_size=PredDict['batchS'][mID],
-                            validation_data=(X_val,y_val),
-                            callbacks=[ModelCallbacks])
-                            #verbose=1)
-        end=time.time() # end time        
+                            validation_data=(PredDict['X_val'][mID],PredDict['y_val'][mID]),
+                            callbacks=[ModelCallbacks],
+                            verbose=0)
+        end=time.time() # end time
+        
+        # Write evaluation metrics to TensorBoard for hyperparam tuning
+        FinalLoss, FinalAccuracy, FinalMAE = Model.evaluate(PredDict['X_val'][mID], PredDict['y_val'][mID],verbose=0)
+
+        PredDict['loss'].append(FinalLoss)
+        PredDict['accuracy'].append(FinalAccuracy)
+        
+        print(f"Accuracy: {FinalAccuracy}")
         # Time taken to train model
         PredDict['train_time'].append(end-start)
+        print(f"Train time: {end-start} seconds")
         
         PredDict['history'].append(History)
         
-        # Evaluate the model
-        Mloss, Maccuracy, Mmae = Model.evaluate(X_val, y_val)
-        PredDict['loss'].append(Mloss)
-        PredDict['accuracy'].append(Maccuracy)
-        
+        # Log hyperparameters and metrics to TensorBoard
+        with HPWriter.as_default():
+            hp.hparams({
+                HP_EPOCHS: PredDict['epochS'][mID],
+                HP_BATCH_SIZE: PredDict['batchS'][mID]
+            })
+            tf.summary.scalar(metric_loss, FinalLoss, step=1)
+            tf.summary.scalar(metric_accuracy, FinalAccuracy, step=1)
+    
     # Save trained models in dictionary for posterity
-    with open(f"{os.path.join(filepath, sitename)}/predictions/{predictdir+'_'+'_'.join(PredDict['mlabel'])}.pkl", 'wb') as f:
+    pklpath = os.path.join(predictpath, f"{predictdir+'_'+'_'.join(PredDict['mlabel'])}.pkl")
+    with open(pklpath, 'wb') as f:
         pickle.dump(PredDict, f)
             
     return PredDict

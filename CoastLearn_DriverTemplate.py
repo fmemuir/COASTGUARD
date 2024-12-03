@@ -51,7 +51,7 @@ PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain,
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
 PredDict = Predictions.CompileRNN(PredDict, 
-                                  epochSizes=[10, 10, 10, 10], 
+                                  epochSizes=[5, 5, 5, 5], 
                                   batchSizes=[24, 32, 64, 92])
 
 #%% Train Neural Network
