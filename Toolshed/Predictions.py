@@ -980,7 +980,8 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     tuningpath = os.path.join(predictpath,'tuning')
     if os.path.isdir(tuningpath) is False:
         os.mkdir(tuningpath)
-    tuningdir = os.path.join(tuningpath, dt.datetime.now().strftime('%Y%m%d-%H%M%S'))
+    filedt = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
+    tuningdir = os.path.join(tuningpath, filedt)
     if os.path.isdir(tuningdir) is False:
         os.mkdir(tuningdir)
             
@@ -1048,7 +1049,7 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
             tf.summary.scalar(metric_accuracy, FinalAccuracy, step=1)
     
     # Save trained models in dictionary for posterity
-    pklpath = f"{tuningdir+'_'+'_'.join(PredDict['mlabel'])}.pkl"
+    pklpath = os.path.join(predictpath, f"{filedt+'_'+'_'.join(PredDict['mlabel'])}.pkl")
     with open(pklpath, 'wb') as f:
         pickle.dump(PredDict, f)
             
