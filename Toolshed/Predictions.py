@@ -825,11 +825,12 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
                 'y_train':[],       # training target/cross-shore VE and WL (scaled and filled to daily)
                 'X_val':[],         # validation features/cross-shore values
                 'y_val':[],         # validation target/cross-shore VE and WL
-                'scalings':[],      # scaling to use on each feature (to transform them back to real values)
-                'epochN':[],        # number of epochs to use in training
-                'batchS':[],        # batch size to use in training
+                'scalings':[],      # scaling used on each feature (to transform them back to real values)
+                'epochN':[],        # number of times the full training set is passed through the model
+                'batchS':[],        # number of samples to use in one iteration of training
                 'denselayers':[],   # number of dense layers in model construction
-                'dropoutr':[]}      # rate of dropout in training
+                'dropoutRt':[],     # percentage of nodes to randomly drop in training (avoids overfitting)
+                'learnRt':[]}       # size of steps to adjust parameters by on each iteration
     
     for MLabel, TestSize, TStep in zip(PredDict['mlabel'], TestSizes, TSteps):
         
@@ -860,7 +861,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     return PredDict, VarDFDay
 
 
-def CompileRNN(PredDict, epochNums, batchSizes, costsensitive=False):
+def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, costsensitive=False):
     """
     Compile the NN using the settings and data stored in the NN dictionary.
     FM Sept 2024
@@ -886,9 +887,12 @@ def CompileRNN(PredDict, epochNums, batchSizes, costsensitive=False):
         # Index of model setup
         mID = PredDict['mlabel'].index(mlabel)
         
-        # Append epoch sizes and batch sizes to prediction dict
+        # Append hyperparameters to prediction dict
         PredDict['epochN'].append(epochNums[mID])
         PredDict['batchS'].append(batchSizes[mID])
+        PredDict['denselayers'].append(denseLayers[mID])
+        PredDict['dropoutRt'].append(dropoutRt[mID])
+        PredDict['learnRt'].append(learnRt[mID])
         
         # inshape = (N_timesteps, N_features)
         inshape = (PredDict['X_train'][mID].shape[0], PredDict['X_train'][mID].shape[2])
@@ -918,7 +922,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, costsensitive=False):
                             Input(shape=inshape),
                             LSTM(units=N_hidden, activation='tanh', return_sequences=False),
                             Dense(PredDict['denselayers'][mID], activation='relu'),
-                            Dropout(PredDict['dropoutr'][mID]),
+                            Dropout(PredDict['dropoutRt'][mID]),
                             Dense(2) 
                             ])
         
@@ -930,12 +934,12 @@ def CompileRNN(PredDict, epochNums, batchSizes, costsensitive=False):
             binary_thresh = 0.5
             LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
         
-            Model.compile(optimizer=Adam(learning_rate=0.001), 
+            Model.compile(optimizer=Adam(learning_rate=PredDict['learnRt'][mID]), 
                              loss=LossFn, 
                              metrics=['accuracy','mae'])
         else:
             # If not cost-sensitive, just use MSE loss fn (sparse_categorical_crossentropy for classifying clusters)
-            Model.compile(optimizer=Adam(learning_rate=0.001), 
+            Model.compile(optimizer=Adam(learning_rate=PredDict['learnRt'][mID]), 
                              loss='mse', 
                              metrics=['accuracy', 'mae'])
         
@@ -973,17 +977,19 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     predictpath = os.path.join(filepath, sitename,'predictions')
     if os.path.isdir(predictpath) is False:
         os.mkdir(predictpath)
-    predictdir = dt.datetime.now().strftime('%Y%m%d-%H%M%S')
-    if os.path.isdir(predictdir) is False:
-        os.mkdir(predictdir)
-        
-    logdir = os.path.join(predictpath,predictdir)
-    
+    tuningpath = os.path.join(predictpath,'tuning')
+    if os.path.isdir(tuningpath) is False:
+        os.mkdir(tuningpath)
+    tuningdir = os.path.join(tuningpath, dt.datetime.now().strftime('%Y%m%d-%H%M%S'))
+    if os.path.isdir(tuningdir) is False:
+        os.mkdir(tuningdir)
+            
     # Define hyperparameters to log
     HP_EPOCHS = hp.HParam('epochs', hp.Discrete(PredDict['epochN']))
     HP_BATCH_SIZE = hp.HParam('batch_size', hp.Discrete(PredDict['batchS']))
-    HP_DENSE_LAYERS = hp.HParam('dense_layers')
-    HP_DROPOUT = hp.HParam('dropout', hp.Discrete(PredDict['dropoutr']))
+    HP_DENSE_LAYERS = hp.HParam('dense_layers', hp.Discrete(PredDict['denselayers']))
+    HP_DROPOUT = hp.HParam('dropout', hp.Discrete(PredDict['dropoutRt']))
+    HP_LEARNRT = hp.HParam('learn_rate', hp.Discrete(PredDict['learnRt']))
 
     metric_loss = 'val_loss'
     metric_accuracy = 'val_accuracy'
@@ -995,7 +1001,7 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         Model = PredDict['model'][mID]
     
         # TensorBoard directory to save log files to
-        rundir = os.path.join(logdir, MLabel)
+        rundir = os.path.join(tuningdir, MLabel)
         
         HPWriter = tf.summary.create_file_writer(rundir)
 
@@ -1034,13 +1040,15 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
             hp.hparams({
                 HP_EPOCHS: PredDict['epochN'][mID],
                 HP_BATCH_SIZE: PredDict['batchS'][mID],
-                HP_DROPOUT: PredDict['dropoutr'][mID]
+                HP_DENSE_LAYERS:PredDict['denselayers'][mID],
+                HP_DROPOUT: PredDict['dropoutRt'][mID],
+                HP_LEARNRT: PredDict['learnRt'][mID]
             })
             tf.summary.scalar(metric_loss, FinalLoss, step=1)
             tf.summary.scalar(metric_accuracy, FinalAccuracy, step=1)
     
     # Save trained models in dictionary for posterity
-    pklpath = os.path.join(predictpath, f"{predictdir+'_'+'_'.join(PredDict['mlabel'])}.pkl")
+    pklpath = f"{tuningdir+'_'+'_'.join(PredDict['mlabel'])}.pkl"
     with open(pklpath, 'wb') as f:
         pickle.dump(PredDict, f)
             
@@ -1080,7 +1088,7 @@ def TrainRNN_Optuna(PredDict, mlabel):
             
         model.add(LSTM(num_nodes))
         model.add(Dropout(dropout_rate)) 
-        model.add(Dense(1))
+        model.add(Dense(2))
                 
         model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate), metrics=[root_mean_squared_error])
         

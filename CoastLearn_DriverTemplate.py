@@ -44,15 +44,18 @@ VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['batch24', 'batch32', 'batch64', 'batch92'], 
-                                          TestSizes=[0.2, 0.2, 0.2, 0.2], 
-                                          TSteps=[12, 12, 12, 12])
+                                          MLabels=['epoch25', 'epoch50', 'epoch100', 'epoch150','epoch200'], 
+                                          TestSizes=[0.2, 0.2, 0.2, 0.2, 0.2], 
+                                          TSteps=[12, 12, 12, 12, 12])
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
 PredDict = Predictions.CompileRNN(PredDict, 
-                                  epochSizes=[5, 5, 5, 5], 
-                                  batchSizes=[24, 32, 64, 92])
+                                  epochNums=[150, 150, 150, 150, 150], 
+                                  batchSizes=[32, 32, 32, 32, 32],
+                                  denseLayers=[32, 32, 32, 32, 32],
+                                  dropoutRt=[0.2, 0.2, 0.2, 0.2, 0.2],
+                                  learnRt=[0.001, 0.001, 0.001, 0.001, 0.001])
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
