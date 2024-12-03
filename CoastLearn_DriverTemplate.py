@@ -44,7 +44,7 @@ VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['epoch25', 'epoch50', 'epoch100', 'epoch150','epoch200'], 
+                                          MLabels=['dense4', 'dense8', 'dense16', 'dense32','dense64'], 
                                           TestSizes=[0.2, 0.2, 0.2, 0.2, 0.2], 
                                           TSteps=[12, 12, 12, 12, 12])
 
@@ -53,7 +53,7 @@ PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain,
 PredDict = Predictions.CompileRNN(PredDict, 
                                   epochNums=[150, 150, 150, 150, 150], 
                                   batchSizes=[32, 32, 32, 32, 32],
-                                  denseLayers=[32, 32, 32, 32, 32],
+                                  denseLayers=[4, 8, 16, 32, 64],
                                   dropoutRt=[0.2, 0.2, 0.2, 0.2, 0.2],
                                   learnRt=[0.001, 0.001, 0.001, 0.001, 0.001])
 
