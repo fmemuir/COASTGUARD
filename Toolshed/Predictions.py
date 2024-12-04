@@ -34,6 +34,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras import Input
 from tensorflow.keras.layers import GRU, LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.optimizers.schedules import ExponentialDecay
 from imblearn.over_sampling import SMOTE
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from tensorboard.plugins.hparams import api as hp
@@ -861,7 +862,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     return PredDict, VarDFDay
 
 
-def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, costsensitive=False):
+def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, CostSensitive=False, DynamicLR=False):
     """
     Compile the NN using the settings and data stored in the NN dictionary.
     FM Sept 2024
@@ -874,8 +875,10 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         List of different numbers of times a dataset passes through model in training.
     batchSizes : list, hyperparameter
         List of different numbers of samples to work through before internal model parameters are updated.
-    costsensitive : bool, optional
+    CostSensitive : bool, optional
         Option for including a cost-sensitive loss function. The default is False.
+    DynamicLR : bool, optional
+        Option for including a dynamic learning rate in the model. The default is False.
 
     Returns
     -------
@@ -927,22 +930,28 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
                             ])
         
         # Compile model and define loss function and metrics
-        if costsensitive:
+        if DynamicLR:
+            print('Using dynamic learning rate...')
+            # Use a dynamic (exponentially decreasing) learning rate
+            LRschedule = ExponentialDecay(initial_learning_rate=0.1, decay_steps=10000, decay_rate=0.96)
+            Opt = tf.keras.optimizers.Adam(learning_rate=LRschedule)
+        else:
+            Opt = Adam(learning_rate=float(PredDict['learnRt'][mID]))
+                       
+        if CostSensitive:
+            print('Using cost sensitive loss function...')
             # Define values for false +ve and -ve and create matrix
             falsepos_cost = 1   # Inconvenience of incorrect classification
             falseneg_cost = 100 # Risk to infrastructure by incorrect classification
             binary_thresh = 0.5
             LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
-        
-            Model.compile(optimizer=Adam(learning_rate=PredDict['learnRt'][mID]), 
-                             loss=LossFn, 
-                             metrics=['accuracy','mae'])
         else:
-            # If not cost-sensitive, just use MSE loss fn (sparse_categorical_crossentropy for classifying clusters)
-            Model.compile(optimizer=Adam(learning_rate=PredDict['learnRt'][mID]), 
-                             loss='mse', 
-                             metrics=['accuracy', 'mae'])
+            # Just use MSE loss fn and static learning rates
+            LossFn = 'mse'
         
+        Model.compile(optimizer=Opt, 
+                         loss=LossFn, 
+                         metrics=['accuracy','mae'])
         # Save model infrastructure to dictionary of model sruns
         PredDict['model'].append(Model)
     
