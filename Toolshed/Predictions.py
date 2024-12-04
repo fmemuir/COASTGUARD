@@ -37,6 +37,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers.schedules import ExponentialDecay
 from imblearn.over_sampling import SMOTE
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
+from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 from tensorboard.plugins.hparams import api as hp
 import optuna
 
@@ -1063,6 +1064,79 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         pickle.dump(PredDict, f)
             
     return PredDict
+
+
+def RunsToCSV(tuningdir,outputCSV):
+    
+    AllData = []
+    
+    # Iterate through all subdirectories (each subdirectory corresponds to a run)
+    for rundir in os.listdir(tuningdir):
+        run_path = os.path.join(tuningdir, rundir, 'validation')
+        if os.path.isdir(run_path):
+            # Load the TensorBoard event data
+            event_acc = EventAccumulator(run_path)
+            event_acc.Reload()
+            
+            # Extract scalar data for each metric
+            for tag in event_acc.Tags()["scalars"]:
+                scalar_events = event_acc.Scalars(tag)
+                for event in scalar_events:
+                    AllData.append({
+                        "run": rundir,
+                        "tag": tag,
+                        "step": event.step,
+                        "value": event.value,
+                        "wall_time": event.wall_time
+                    })
+    
+    # Convert all collected data into a single DataFrame
+    df = pd.DataFrame(AllData)
+    
+    outputPath = os.path.join(tuningdir, outputCSV)
+    # Extract and save to CSV
+    df.to_csv(outputPath, index=False)
+    print(f"Data saved to {outputPath}")
+    
+
+def PlotAccuracy(CSVdir, FigPath):
+    # List to store each CSV's DataFrame
+    dfs = []
+    
+    # Loop through all files in the folder
+    for filename in os.listdir(CSVdir):
+        if filename.endswith('.csv'):
+            # Full path to the CSV
+            file_path = os.path.join(CSVdir, filename)
+            
+            # Read the CSV into a DataFrame
+            df = pd.read_csv(file_path)
+            df.drop(['Wall time'], axis=1, inplace=True)
+            
+            # Rename columns to standardize (x and y for this script)
+            df.columns = ['x', 'y']
+            # Set x as the index
+            df.set_index('x', inplace=True)
+            
+            # Rename the y column to the filename (without extension)
+            column_name = os.path.splitext(filename)[0]
+            df.rename(columns={'y': column_name}, inplace=True)
+            # Add the DataFrame to the list
+            dfs.append(df)
+    
+    # Merge all DataFrames on the x-values index
+    # This will align rows by index and fill missing values with NaN
+    AccuracyDF = pd.concat(dfs, axis=1)
+    
+    plt.figure(figsize=(3.22,1.72))
+    plt.plot(AccuracyDF, c='w', alpha=0.5)
+    plt.plot(AccuracyDF['dense64_validation'], c='#283252')
+    plt.xlabel('epoch')
+    plt.ylabel('accuracy')
+    plt.show()
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
+    
+    return AccuracyDF
 
 
 def FuturePredict(PredDict, ForecastDF):

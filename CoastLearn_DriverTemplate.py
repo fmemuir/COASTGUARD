@@ -44,22 +44,30 @@ VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['LR10-4', 'LR10-3', 'LR10-2', 'LR10-1','LR10-0'], 
-                                          TestSizes=[0.2, 0.2, 0.2, 0.2, 0.2], 
-                                          TSteps=[12, 12, 12, 12, 12])
+                                          MLabels=['optimised'], 
+                                          TestSizes=[0.2], 
+                                          TSteps=[10])
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
 PredDict = Predictions.CompileRNN(PredDict, 
-                                  epochNums=[150, 150, 150, 150, 150], 
-                                  batchSizes=[32, 32, 32, 32, 32],
-                                  denseLayers=[64, 64, 64, 64, 64],
-                                  dropoutRt=[0.2, 0.2, 0.2, 0.2, 0.2],
-                                  learnRt=[0.0001, 0.001, 0.01, 0.1, 1.0])
+                                  epochNums=[150], 
+                                  batchSizes=[32],
+                                  denseLayers=[64],
+                                  dropoutRt=[0.2],
+                                  learnRt=[0.001])
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
+
+#%% Export Hyperparameter Test Data
+Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
+                      'combi_history.csv')
+#%%
+AccuracyPath = os.path.join(filepath, sitename,'predictions','tuning','combi_CSVs')
+FigPath = os.path.join(filepath, sitename, 'plots', sitename+'_tuning_accuracy.png')
+AccuracyDF = Predictions.PlotAccuracy(AccuracyPath, FigPath)
 
 #%%
 OptStudy = Predictions.TrainRNN_Optuna(PredDict, 'test1')
