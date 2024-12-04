@@ -44,7 +44,7 @@ VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['dense4', 'dense8', 'dense16', 'dense32','dense64'], 
+                                          MLabels=['LR10-4', 'LR10-3', 'LR10-2', 'LR10-1','LR10-0'], 
                                           TestSizes=[0.2, 0.2, 0.2, 0.2, 0.2], 
                                           TSteps=[12, 12, 12, 12, 12])
 
@@ -53,9 +53,9 @@ PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain,
 PredDict = Predictions.CompileRNN(PredDict, 
                                   epochNums=[150, 150, 150, 150, 150], 
                                   batchSizes=[32, 32, 32, 32, 32],
-                                  denseLayers=[4, 8, 16, 32, 64],
+                                  denseLayers=[64, 64, 64, 64, 64],
                                   dropoutRt=[0.2, 0.2, 0.2, 0.2, 0.2],
-                                  learnRt=[0.001, 0.001, 0.001, 0.001, 0.001])
+                                  learnRt=[0.0001, 0.001, 0.01, 0.1, 1.0])
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
