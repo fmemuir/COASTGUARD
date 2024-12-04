@@ -1064,7 +1064,67 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
             
     return PredDict
 
+
+def FuturePredict(PredDict, ForecastDF):
+    """
+    Make prediction of future vegetation edge and waterline positions for transect
+    of choice, using forecast dataframe as forcing and model pre-trained on past 
+    observations.
+    FM Nov 2024
+
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with trained NN models.
+    ForecastDF : DataFrame
+        Per-transect dataframe of future observations, with same columns as past training data.
+
+    Returns
+    -------
+    VEPredict : TYPE
+        DESCRIPTION.
+    WLPredict : TYPE
+        DESCRIPTION.
+
+    """
+    # Initialise for ulti-run outputs
+    FutureOutputs = {'mlabel':PredDict['mlabel'],
+                     'output':[]}
     
+    # For each trained model/hyperparameter set in PredDict
+    for MLabel in PredDict['mlabel']:
+        # Index of model setup
+        mID = PredDict['mlabel'].index(MLabel)
+        Model = PredDict['model'][mID]
+        
+        # Scale forecast data using same relationships as past training data
+        for col in ForecastDF.columns:
+            ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
+        
+        # Separate out forecast features
+        ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+        
+        # Sequence forecast data to shape (samples, sequencelen, variables)
+        ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
+        
+        # Make prediction based off forecast data and trained model
+        Predictions = Model.predict(ForecastArr)
+        
+        # Reverse scaling to get outputs back to their original scale
+        VEPredict = PredDict['scalings'][mID]['distances'].inverse_transform(Predictions[:,0].reshape(-1, 1))
+        WLPredict = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(Predictions[:,1].reshape(-1, 1))
+        
+        FutureDF = pd.DataFrame(
+                   {'futureVE': VEPredict.flatten(),
+                    'futureWL': WLPredict.flatten()},
+                   index=ForecastInd)
+        
+        FutureOutputs['output'].append(FutureDF)
+        
+    return FutureOutputs
+
+
+
  
 def TrainRNN_Optuna(PredDict, mlabel):
     # Custom RMSE metric function
@@ -1179,62 +1239,3 @@ def TrainRNN_Optuna(PredDict, mlabel):
 
     return study
 
-
-
-def FuturePredict(PredDict, ForecastDF):
-    """
-    Make prediction of future vegetation edge and waterline positions for transect
-    of choice, using forecast dataframe as forcing and model pre-trained on past 
-    observations.
-    FM Nov 2024
-
-    Parameters
-    ----------
-    PredDict : dict
-        Dictionary to store all the NN model metadata, now with trained NN models.
-    ForecastDF : DataFrame
-        Per-transect dataframe of future observations, with same columns as past training data.
-
-    Returns
-    -------
-    VEPredict : TYPE
-        DESCRIPTION.
-    WLPredict : TYPE
-        DESCRIPTION.
-
-    """
-    # Initialise for ulti-run outputs
-    FutureOutputs = {'mlabel':PredDict['mlabel'],
-                     'output':[]}
-    
-    # For each trained model/hyperparameter set in PredDict
-    for MLabel in PredDict['mlabel']:
-        # Index of model setup
-        mID = PredDict['mlabel'].index(MLabel)
-        Model = PredDict['model'][mID]
-        
-        # Scale forecast data using same relationships as past training data
-        for col in ForecastDF.columns:
-            ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
-        
-        # Separate out forecast features
-        ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
-        
-        # Sequence forecast data to shape (samples, sequencelen, variables)
-        ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
-        
-        # Make prediction based off forecast data and trained model
-        Predictions = Model.predict(ForecastArr)
-        
-        # Reverse scaling to get outputs back to their original scale
-        VEPredict = PredDict['scalings'][mID]['distances'].inverse_transform(Predictions[:,0].reshape(-1, 1))
-        WLPredict = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(Predictions[:,1].reshape(-1, 1))
-        
-        FutureDF = pd.DataFrame(
-                   {'futureVE': VEPredict.flatten(),
-                    'futureWL': WLPredict.flatten()},
-                   index=ForecastInd)
-        
-        FutureOutputs['output'].append(FutureDF)
-        
-    return FutureOutputs
