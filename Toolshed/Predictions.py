@@ -540,7 +540,7 @@ def Cluster(TransectDF, ValPlots=False):
     VarDF_scaled = StandardScaler().fit_transform(VarDF)
     
     # Apply PCA to reduce the dimensions to 3D for visualization
-    pca = PCA(n_components=3)
+    pca = PCA(n_components=2)
     pca_VarDF = pca.fit_transform(VarDF_scaled)
     eigenvectors = pca.components_
     variances = pca.explained_variance_ratio_
@@ -571,38 +571,39 @@ def Cluster(TransectDF, ValPlots=False):
     # VarDFClust['Impact'] = ImpactLabels
 
     # Create a DataFrame for PCA results and add cluster labels
-    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
+    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2'])
     pca_df['Cluster'] = ClusterMod.labels_
 
     # Visualization of clusters
     # Example clustered timeseries using one or two variables
-    if ValPlots is True:
-        fig, ax = plt.subplots(figsize=(10, 5))
-        bluecm = cm.get_cmap('cool')
-        greencm = cm.get_cmap('summer')
-        ax.scatter(VarDF.index, 
-                   VarDF['WaveHs'], 
-                   c=VarDF['Cluster'], marker='X', cmap=bluecm)
-        ax2 = ax.twinx()
-        ax2.scatter(VarDF.index, 
-                   VarDF['distances'], 
-                   c=VarDF['Cluster'], marker='^', cmap=greencm)  
-        ax.set_xlabel('Time')
-        ax.set_ylabel('Significant wave height (m)')
-        ax2.set_ylabel('VE distance (m)')
-        plt.show()
+    # if ValPlots is True:
+    #     fig, ax = plt.subplots(figsize=(10, 5))
+    #     bluecm = cm.get_cmap('cool')
+    #     greencm = cm.get_cmap('summer')
+    #     ax.scatter(VarDF.index, 
+    #                VarDF['WaveHs'], 
+    #                c=VarDF['Cluster'], marker='X', cmap=bluecm)
+    #     ax2 = ax.twinx()
+    #     ax2.scatter(VarDF.index, 
+    #                VarDF['distances'], 
+    #                c=VarDF['Cluster'], marker='^', cmap=greencm)  
+    #     ax.set_xlabel('Time')
+    #     ax.set_ylabel('Significant wave height (m)')
+    #     ax2.set_ylabel('VE distance (m)')
+    #     plt.show()
     
     scale_factor = 0.5
     # Plot the clusters in the PCA space
     fig, ax = plt.subplots(figsize=(5, 5))
     clusterDF = []
-    for cluster in pca_df['Cluster'].unique():
+    for cluster, clustc in zip(pca_df['Cluster'].unique(), ['#BEE4A8','#FF8183','#F6C999']):
         cluster_data = pca_df[pca_df['Cluster'] == cluster]
         plt.scatter(
             cluster_data['PC1']*scale_factor, 
             cluster_data['PC2']*scale_factor, 
             label=f'Cluster {cluster}', 
             s=40,
+            c=clustc,
             alpha=0.7
         )
         clusterDF.append(cluster_data)
@@ -618,34 +619,35 @@ def Cluster(TransectDF, ValPlots=False):
     plt.show()
         
     # 3D scatter plot (to investigate clustering or patterns in PCs)
-    fig = plt.figure(figsize=(6,5))
-    ax = fig.add_subplot(111, projection='3d')
-    # colourdict = {'Low':'green','Medium':'orange','High':'red'}
-    for cluster in pca_df['Cluster'].unique():
-        cluster_data = pca_df[pca_df['Cluster'] == cluster]
-    #     ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'], 
-    #                color=colourdict[ClusterToImpact[cluster]], label=ClusterToImpact[cluster])
-        ax.scatter(cluster_data['PC1']*scale_factor,cluster_data['PC2']*scale_factor,cluster_data['PC3']*scale_factor)
-    ax.set_xlabel(rf'PC1 [explains {round(variances[0]*100,1)}% of $\sigma^2$]')
-    ax.set_ylabel(rf'PC2 [explains {round(variances[1]*100,1)}% of $\sigma^2$]')
-    ax.set_zlabel(rf'PC3 [explains {round(variances[2]*100,1)}% of $\sigma^2$]')
-    # Plot eigenvectors of each variable        
-    coeffs = np.transpose(eigenvectors[0:3, :])*2
-    n_coeffs = coeffs.shape[0]
-    for i in range(n_coeffs):
-        ax.quiver(0,0,0, 
-                  coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
-                  color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
-        ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
-                VarDF.columns[i], color='k', ha='center', va='center')
-    # legorder = ['Low','Medium','High']
-    # handles,labels = plt.gca().get_legend_handles_labels()
-    # plt.legend([handles[labels.index(lab)] for lab in legorder],[labels[labels.index(lab)] for lab in legorder])
-    plt.tight_layout()
-    plt.show()
+    if 'PC3' in cluster_data.columns:
+        fig = plt.figure(figsize=(6,5))
+        ax = fig.add_subplot(111, projection='3d')
+        # colourdict = {'Low':'green','Medium':'orange','High':'red'}
+        for cluster in pca_df['Cluster'].unique():
+            cluster_data = pca_df[pca_df['Cluster'] == cluster]
+        #     ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'], 
+        #                color=colourdict[ClusterToImpact[cluster]], label=ClusterToImpact[cluster])
+            ax.scatter(cluster_data['PC1']*scale_factor,cluster_data['PC2']*scale_factor,cluster_data['PC3']*scale_factor)
+        ax.set_xlabel(rf'PC1 [explains {round(variances[0]*100,1)}% of $\sigma^2$]')
+        ax.set_ylabel(rf'PC2 [explains {round(variances[1]*100,1)}% of $\sigma^2$]')
+        ax.set_zlabel(rf'PC3 [explains {round(variances[2]*100,1)}% of $\sigma^2$]')
+        # Plot eigenvectors of each variable        
+        coeffs = np.transpose(eigenvectors[0:3, :])*2
+        n_coeffs = coeffs.shape[0]
+        for i in range(n_coeffs):
+            ax.quiver(0,0,0, 
+                      coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
+                      color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
+            ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
+                    VarDF.columns[i], color='k', ha='center', va='center')
+        # legorder = ['Low','Medium','High']
+        # handles,labels = plt.gca().get_legend_handles_labels()
+        # plt.legend([handles[labels.index(lab)] for lab in legorder],[labels[labels.index(lab)] for lab in legorder])
+        plt.tight_layout()
+        plt.show()
         
         
-    # return VarDFClust
+    return VarDF
 
 
 def DailyInterp(TransectDF):
@@ -915,7 +917,8 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         
         # Number  of hidden layers can be decided by rule of thumb:
             # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
-        N_hidden = round(inshape[0] / (2 * (inshape[1] + 3)))
+        N_out = 2
+        N_hidden = round(inshape[0] / (4 * (inshape[1] + 3)))
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models
@@ -927,14 +930,14 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
                             LSTM(units=N_hidden, activation='tanh', return_sequences=False),
                             Dense(PredDict['denselayers'][mID], activation='relu'),
                             Dropout(PredDict['dropoutRt'][mID]),
-                            Dense(2) 
+                            Dense(N_out) 
                             ])
         
         # Compile model and define loss function and metrics
         if DynamicLR:
             print('Using dynamic learning rate...')
             # Use a dynamic (exponentially decreasing) learning rate
-            LRschedule = ExponentialDecay(initial_learning_rate=0.1, decay_steps=10000, decay_rate=0.96)
+            LRschedule = ExponentialDecay(initial_learning_rate=0.001, decay_steps=10000, decay_rate=0.0001)
             Opt = tf.keras.optimizers.Adam(learning_rate=LRschedule)
         else:
             Opt = Adam(learning_rate=float(PredDict['learnRt'][mID]))
