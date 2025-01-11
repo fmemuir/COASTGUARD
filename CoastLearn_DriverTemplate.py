@@ -46,7 +46,7 @@ VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['optimised'], 
+                                          MLabels=['optimised_hiddenlayerscale5'], 
                                           TestSizes=[0.2], 
                                           TSteps=[10])
 
@@ -71,8 +71,6 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250111-165139_optim
 
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
-# ForecastDF = PredDict['X_test'][0]
-# VarDFDayTest = VarDFDay[-360:]
 
 FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 
