@@ -918,7 +918,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         # Number  of hidden layers can be decided by rule of thumb:
             # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
         N_out = 2
-        N_hidden = round(inshape[0] / (4 * (inshape[1] + 3)))
+        N_hidden = round(inshape[0] / (1 * (inshape[1] + N_out)))
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models
@@ -1199,7 +1199,7 @@ def FuturePredict(PredDict, ForecastDF):
     return FutureOutputs
 
 
-def PlotFuture(mID, VarDFDay, VarDFDayTest, FutureOutputs, filepath, sitename):
+def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -1211,8 +1211,8 @@ def PlotFuture(mID, VarDFDay, VarDFDayTest, FutureOutputs, filepath, sitename):
         ID of the chosen model run stored in FutureOutputs.
     VarDFDay : DataFrame
         DataFrame of past data interpolated to daily timesteps (with temporal index).
-    VarDFDayTest : DataFrame
-        DataFrame of past data sliced from most recent end of VarDFDay to use for testing the model.
+    TransectDFTest : DataFrame
+        DataFrame of past data sliced from most recent end of TransectDF to use for testing the model.
     FutureOutputs : dict
         Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
     filepath : str
@@ -1222,15 +1222,16 @@ def PlotFuture(mID, VarDFDay, VarDFDayTest, FutureOutputs, filepath, sitename):
 
 
     """
-    plt.figure(figsize=(4.8,2))
+    plt.figure(figsize=(4.8,2), dpi=300)
+    lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
-    plt.plot(VarDFDay['distances'], 'C2')
-    plt.plot(VarDFDay['wlcorrdist'], 'C0')
+    plt.plot(VarDFDay['distances'], 'C2', lw=lw)
+    plt.plot(VarDFDay['wlcorrdist'], 'C0', lw=lw)
     # Plot cross-shore distances through time for test data
-    plt.plot(VarDFDayTest['distances'], 'C2', ls='--')
-    plt.plot(VarDFDayTest['wlcorrdist'], 'C0', ls='--')
-    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', ls='--')
-    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', ls='--')
+    plt.plot(TransectDFTest['distances'], 'C2', alpha=0.5, lw=lw)
+    plt.plot(TransectDFTest['wlcorrdist'], 'C0', alpha=0.5, lw=lw)
+    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', ls='--', lw=lw)
+    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', ls='--', lw=lw)
 
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')

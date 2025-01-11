@@ -42,6 +42,7 @@ TransectDFTrain = TransectDF.iloc[:263]
 TransectDFTest = TransectDF.iloc[262:]
 
 VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
+# Why is this returned scaled?
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
@@ -76,7 +77,7 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250111-165139_optim
 FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 
 #%% Plot Future WL and VE
-Predictions.PlotFuture(0, VarDFDay, VarDFDayTest, FutureOutputs, filepath, sitename)
+Predictions.PlotFuture(0, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
 
 
 #%% Export Hyperparameter Test Data
