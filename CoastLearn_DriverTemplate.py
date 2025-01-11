@@ -7,6 +7,7 @@ Created on Thu Jun 13 10:51:41 2024
 """
 
 import os
+import pickle
 import matplotlib.pyplot as plt
 from Toolshed import Predictions
 
@@ -63,6 +64,10 @@ PredDict = Predictions.CompileRNN(PredDict,
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 
 
+#%% Load In Pre-trained Model
+with open(os.path.join(filepath, sitename, 'predictions', '20250111-165139_optimised.pkl'), 'rb') as f:
+    PredDict = pickle.load(f)
+
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
 # ForecastDF = PredDict['X_test'][0]
@@ -72,6 +77,7 @@ FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 
 #%% Plot Future WL and VE
 Predictions.PlotFuture(0, VarDFDay, VarDFDayTest, FutureOutputs, filepath, sitename)
+
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
