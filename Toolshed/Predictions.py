@@ -1158,10 +1158,8 @@ def FuturePredict(PredDict, ForecastDF):
 
     Returns
     -------
-    VEPredict : TYPE
-        DESCRIPTION.
-    WLPredict : TYPE
-        DESCRIPTION.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions
 
     """
     # Initialise for ulti-run outputs
@@ -1201,6 +1199,48 @@ def FuturePredict(PredDict, ForecastDF):
     return FutureOutputs
 
 
+def PlotFuture(mID, VarDFDay, VarDFDayTest, FutureOutputs, filepath, sitename):
+    """
+    Plot future waterline (WL) and vegetation edge (VE) predictions for the 
+    chosen cross-shore transect.
+    FM Jan 2025
+
+    Parameters
+    ----------
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    VarDFDay : DataFrame
+        DataFrame of past data interpolated to daily timesteps (with temporal index).
+    VarDFDayTest : DataFrame
+        DataFrame of past data sliced from most recent end of VarDFDay to use for testing the model.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+
+
+    """
+    plt.figure(figsize=(4.8,2))
+    # Plot cross-shore distances through time for WL and VE past
+    plt.plot(VarDFDay['distances'], 'C2')
+    plt.plot(VarDFDay['wlcorrdist'], 'C0')
+    # Plot cross-shore distances through time for test data
+    plt.plot(VarDFDayTest['distances'], 'C2', ls='--')
+    plt.plot(VarDFDayTest['wlcorrdist'], 'C0', ls='--')
+    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', ls='--')
+    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', ls='--')
+
+    plt.xlabel('Date (yyyy)')
+    plt.ylabel('Cross-shore distance (m)')
+    plt.show()
+    
+    StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
+    EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
 
  
 def TrainRNN_Optuna(PredDict, mlabel):

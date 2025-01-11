@@ -37,8 +37,8 @@ for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr)
     
 #%% Separate Training and Validation
-TransectDFTrain = TransectDF.iloc[:271]
-TransectDFTest = TransectDF.iloc[270:]
+TransectDFTrain = TransectDF.iloc[:263]
+TransectDFTest = TransectDF.iloc[262:]
 
 VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
@@ -62,6 +62,17 @@ PredDict = Predictions.CompileRNN(PredDict,
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 
+
+#%% Make WL and VE Predictions
+# Using full list of variables from past portion as test/placeholder
+# ForecastDF = PredDict['X_test'][0]
+# VarDFDayTest = VarDFDay[-360:]
+
+FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
+
+#%% Plot Future WL and VE
+Predictions.PlotFuture(0, VarDFDay, VarDFDayTest, FutureOutputs, filepath, sitename)
+
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
                       'combi_history.csv')
@@ -72,24 +83,6 @@ AccuracyDF = Predictions.PlotAccuracy(AccuracyPath, FigPath)
 
 #%% Train Using Optuna Hyperparameterisation
 OptStudy = Predictions.TrainRNN_Optuna(PredDict, 'test1')
-
-#%% Make WL and VE Predictions
-# Using full list of variables from past portion as test/placeholder
-# ForecastDF = PredDict['X_test'][0]
-# VarDFDayTest = VarDFDay[-360:]
-
-FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
-
-#%% Plot Future WL and VE
-mID = 0
-
-plt.plot(VarDFDay['distances'], 'C2')
-plt.plot(VarDFDay['wlcorrdist'], 'C0')
-plt.plot(VarDFDayTest['distances'], 'C2', ls='--')
-plt.plot(VarDFDayTest['wlcorrdist'], 'C0', ls='--')
-plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', ls='--')
-plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', ls='--')
-
 
 #%% Cluster Past Observations
 ClusterDF = Predictions.Cluster(TransectDFTrain[['distances','wlcorrdist']], ValPlots=True)
