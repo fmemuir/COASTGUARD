@@ -55,7 +55,8 @@ PredDict = Predictions.CompileRNN(PredDict,
                                   batchSizes=[32],
                                   denseLayers=[64],
                                   dropoutRt=[0.2],
-                                  learnRt=[0.001])
+                                  learnRt=[0.001],
+                                  DynamicLR=False)
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
@@ -64,30 +65,32 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
                       'combi_history.csv')
-#%%
+#%% Plot Accuracy Over Epochs (for all training runs)
 AccuracyPath = os.path.join(filepath, sitename,'predictions','tuning','combi_CSVs')
 FigPath = os.path.join(filepath, sitename, 'plots', sitename+'_tuning_accuracy.png')
 AccuracyDF = Predictions.PlotAccuracy(AccuracyPath, FigPath)
 
-#%%
+#%% Train Using Optuna Hyperparameterisation
 OptStudy = Predictions.TrainRNN_Optuna(PredDict, 'test1')
 
-#%% Make Predictions
+#%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
 # ForecastDF = PredDict['X_test'][0]
 # VarDFDayTest = VarDFDay[-360:]
 
 FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 
-#%%
+#%% Plot Future WL and VE
 mID = 0
 
 plt.plot(VarDFDay['distances'], 'C2')
 plt.plot(VarDFDay['wlcorrdist'], 'C0')
+plt.plot(VarDFDayTest['distances'], 'C2', ls='--')
+plt.plot(VarDFDayTest['wlcorrdist'], 'C0', ls='--')
 plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', ls='--')
 plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', ls='--')
 
 
 #%% Cluster Past Observations
-# VarDF = Predictions.Cluster(TransectDF, ValPlots=True)
+ClusterDF = Predictions.Cluster(TransectDFTrain[['distances','wlcorrdist']], ValPlots=True)
 
