@@ -2516,10 +2516,17 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         dates = np.arange(startdate, enddate, timedelta(hours=1)).astype(datetime) 
         
         # pass configuration files to pyfes handler to gather up tidal constituents
+        # Will need changed for FES2022
+        # if '2022' not in tidepath:
         config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
         ocean_tide = pyfes.Handler("ocean", "io", config_ocean)
         config_load = os.path.join(tidepath,"load_tide.ini")
         load_tide = pyfes.Handler("radial", "io", config_load)
+        # else:
+            # config =  os.path.join(tidepath, 'fes2022.yaml')
+            # handlers = pyfes.load_config(config)
+            # ocean_tide = handlers['tide']
+            # load_tide = handlers['radial']
         
         # format dates and latlon
         dates_np = np.empty((len(dates),), dtype='datetime64[us]')
