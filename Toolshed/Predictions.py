@@ -918,7 +918,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         # Number  of hidden layers can be decided by rule of thumb:
             # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
         N_out = 2
-        N_hidden = round(inshape[0] / (5 * (inshape[1] + N_out)))
+        N_hidden = round(inshape[0] / (1 * (inshape[1] + N_out)))
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models

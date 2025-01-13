@@ -46,9 +46,10 @@ VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['optimised_hiddenlayerscale5'], 
+                                          MLabels=['optimised_hiddenlayerscale1'], 
                                           TestSizes=[0.2], 
                                           TSteps=[10])
+# Needs additional lines for TransectID
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
