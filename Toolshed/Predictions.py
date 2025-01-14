@@ -13,6 +13,7 @@ import datetime as dt
 import time
 import numpy as np
 import random
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import pandas as pd
@@ -41,6 +42,9 @@ from tensorboard.backend.event_processing.event_accumulator import EventAccumula
 from tensorboard.plugins.hparams import api as hp
 import optuna
 
+mpl.rcParams.update(mpl.rcParamsDefault)
+mpl.rcParams['font.sans-serif'] = 'Arial'
+mpl.rcParams.update({'font.size':7})
 
 # Only use tensorflow in CPU mode
 import tensorflow as tf
@@ -814,7 +818,8 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
         VarDFDay_scaled[col] = Scalings[col].fit_transform(VarDFDay[[col]])
     
     # Separate into training features (what will be learned from) and target features (what will be predicted)
-    TrainFeat = VarDFDay_scaled[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+    # TrainFeat = VarDFDay_scaled[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+    TrainFeat = VarDFDay_scaled[['WaveDir', 'Runups', 'Iribarrens']]
     TargFeat = VarDFDay_scaled[['distances', 'wlcorrdist']] # vegetation edge and waterline positions
     
     # Define prediction dictionary for multiple runs/hyperparameterisation
@@ -1222,19 +1227,20 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
 
 
     """
-    plt.figure(figsize=(4.8,2), dpi=300)
+    plt.figure(figsize=(4.8,3), dpi=300)
     lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
-    plt.plot(VarDFDay['distances'], 'C2', lw=lw)
-    plt.plot(VarDFDay['wlcorrdist'], 'C0', lw=lw)
+    plt.plot(VarDFDay['distances'], 'C2', lw=lw, label='Past VE')
+    plt.plot(VarDFDay['wlcorrdist'], 'C0', lw=lw, label='Past WL')
     # Plot cross-shore distances through time for test data
-    plt.plot(TransectDFTest['distances'], 'C2', alpha=0.5, lw=lw)
-    plt.plot(TransectDFTest['wlcorrdist'], 'C0', alpha=0.5, lw=lw)
-    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', ls='--', lw=lw)
-    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', ls='--', lw=lw)
+    plt.plot(TransectDFTest['distances'], 'C2', alpha=0.5, lw=lw, label='Test VE')
+    plt.plot(TransectDFTest['wlcorrdist'], 'C0', alpha=0.5, lw=lw, label='Test WL')
+    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', lw=lw, label='Pred. VE')
+    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', lw=lw, label='Pred. WL')
 
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')
+    plt.legend(loc='upper left', ncols=3)
     plt.show()
     
     StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
