@@ -923,7 +923,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         # Number  of hidden layers can be decided by rule of thumb:
             # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
         N_out = 2
-        N_hidden = round(inshape[0] / (1 * (inshape[1] + N_out)))
+        N_hidden = round(inshape[0] / (5 * (inshape[1] + N_out)))
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models
@@ -1182,7 +1182,8 @@ def FuturePredict(PredDict, ForecastDF):
             ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
         
         # Separate out forecast features
-        ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+        # ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
+        ForecastFeat = ForecastDF[['WaveDir', 'Runups', 'Iribarrens']]
         
         # Sequence forecast data to shape (samples, sequencelen, variables)
         ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
@@ -1233,10 +1234,10 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     plt.plot(VarDFDay['distances'], 'C2', lw=lw, label='Past VE')
     plt.plot(VarDFDay['wlcorrdist'], 'C0', lw=lw, label='Past WL')
     # Plot cross-shore distances through time for test data
-    plt.plot(TransectDFTest['distances'], 'C2', alpha=0.5, lw=lw, label='Test VE')
-    plt.plot(TransectDFTest['wlcorrdist'], 'C0', alpha=0.5, lw=lw, label='Test WL')
-    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', lw=lw, label='Pred. VE')
-    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', lw=lw, label='Pred. WL')
+    plt.plot(TransectDFTest['distances'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
+    plt.plot(TransectDFTest['wlcorrdist'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
+    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
+    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
 
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')
@@ -1246,8 +1247,8 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
     EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'.png')
-    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
  
 def TrainRNN_Optuna(PredDict, mlabel):

@@ -46,7 +46,7 @@ VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['optimised_hiddenlayerscale1'], 
+                                          MLabels=['dir_runup_iri'], 
                                           TestSizes=[0.2], 
                                           TSteps=[10])
 # Needs additional lines for TransectID
@@ -63,7 +63,7 @@ PredDict = Predictions.CompileRNN(PredDict,
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
-PredDict = Predictions.TrainRNN(PredDict,filepath,sitename)
+PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
 
 #%% Load In Pre-trained Model
