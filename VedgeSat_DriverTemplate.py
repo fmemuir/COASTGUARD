@@ -128,8 +128,11 @@ settings = {
 
 
 #%% Compute Tides from FES2014 
-# (ONLY RUN IF YOU HAVE pyFES INSTALLED AND WANT TIDAL INFO SAVED)
-tidepath = "/path/to/your/FES2014/files/aviso-fes/data/fes2014"
+# Compute tides from FES2014 or FES2022 data which is downloaded from the pyFES server. Only relevant for shoreline processing 
+# (as it is used to correct for the effects of tides on the cross-shore waterline position). 
+# (ONLY RUN IF YOU HAVE `pyfes` INSTALLED AND WANT TIDAL INFO SAVED. If you do, change `tidepath` to the path to your `aviso-fes` folder, see the README for details)
+# Note: FES2022 is more accurate than FES2014 but takes several minutes longer to compute.
+tidepath = "/path/to/your/aviso-fes/data/fes2014"
 daterange = dates
 tidelatlon = [(latmin+latmax)/2, (lonmin+lonmax)/2] # centre of bounding box
 Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
