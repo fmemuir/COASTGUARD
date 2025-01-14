@@ -177,7 +177,11 @@ The tool takes all the input settings the user has defined, and performs these s
 5. Export boundaries and relevant metadata to a `.pkl` file and a shapefile of lines.
 
 ### Extracting Waterlines Alongside Vegetation Edges
-As this tool is built from the original CoastSat toolkit, it is possible to extract instantaneous waterlines as well as vegetation edges from each satellite image. To do this, change the `wetdry` flag in the user requirements to `True`. Any tidal correction on the extracted waterlines is performed using the FES2014/FES2022 tidal model. You will need to use pyFES and the Aviso FES repo for this. To get the tide data set up for the newer version FES2022, follow [this helpful CoastSat guide](https://github.com/kvos/CoastSat/blob/master/doc/FES2022_setup.md). To set up the older FES2014 model, follow these steps:
+As this tool is built from the original CoastSat toolkit, it is possible to extract instantaneous waterlines as well as vegetation edges from each satellite image. To do this, change the `wetdry` flag in the user requirements to `True`. Any tidal correction on the extracted waterlines is performed using the FES2014/FES2022 tidal model. You will need to use pyFES and the Aviso FES repo for this. 
+
+To get the tide data set up for the newer version FES2022, follow [this helpful CoastSat guide](https://github.com/kvos/CoastSat/blob/master/doc/FES2022_setup.md). **Note: you don't need to change the filepaths in the .yaml file as is listed in these steps! The function `ChangeYAMLPaths()` in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/blob/master/Toolshed/Toolbox.py) does this for you the first time you run `ComputeTides()`.**
+
+To set up the older FES2014 model, follow these steps:
 1. **Clone** the repo from [the aviso-fes github](https://github.com/CNES/aviso-fes). 
 2. You will notice the folders in */aviso-fes/data/fes2014* are empty. You need to get the actual tide data from the AVISO file transfer service by signing up to their [FTP subscription here](https://www.aviso.altimetry.fr/en/data/data-access/registration-form.html) and ticking "FES2014 / FES2012 (Oceanic Tides Heights)" under the *Auxiliary products* requested.
 3. Once you have been approved and given access to their file transfer service, you can use whichever file transfer program (we like FileZilla, or you can use `ftp` at the command line) to download the files below:
@@ -189,7 +193,7 @@ As this tool is built from the original CoastSat toolkit, it is possible to extr
 You'll find these in the AVISO Altimetry database under */auxiliary/tide_model/fes2014_elevations_and_load/*
 4. Decompress the archives (using 7zip or alternatives) and move them into the relevant folders in your local */aviso-fes/data/fes2014* directory (that you cloned in Step 1).
 
-When loading in the tidal data in the driver file, you should **change the tidal files path to wherever you have cloned the FES2014 repo to on your machine.**
+When loading in the tidal data in the COASTGUARD driver file, you should **change the tidal files path `tidepath` to wherever you have cloned the aviso-fes repo to on your machine.**
 
 ## Roadmap
 This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!

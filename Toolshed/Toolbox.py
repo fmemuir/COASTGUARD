@@ -8,6 +8,7 @@ COASTGUARD edits and updates: Freya Muir, University of Glasgow
 
 # load modules
 import os
+import glob
 import numpy as np
 import pickle
 import math
@@ -2489,14 +2490,16 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
     if os.path.isfile(tideoutpath) is True: 
         print('Tide data already compiled.')
 
-    else:
+    # else:
         lat = tidelatlon[0]
         lon = tidelatlon[1]
         lon_trg = lon + 360 # set from -180 - 180, to 0 - 360
         # Check if latitude and longitude provided is within grid of unmasked data
         # Read in first extrapolated netCDF file and get masked data slice from it
-        tide_nc = netCDF4.Dataset(
-            os.path.join(tidepath, 'ocean_tide_extrapolated','2n2.nc'))
+        try: # try finding the first extrapolated netCDF
+            tide_nc = netCDF4.Dataset(glob.glob(tidepath+'/ocean_tide_extrapolated/2n2*.nc')[0])
+        except:
+            print('No extrapolated netCDFs found! Check your filepath and ocean_tide_extrapolated folder.')
         tide_mask = tide_nc.variables['amplitude'][:,:].mask
         tide_lats = tide_nc.variables['lat'][:]
         tide_lons = tide_nc.variables['lon'][:]
@@ -2505,7 +2508,7 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         lon_idx = (np.abs(tide_lons - lon_trg)).argmin()
         # If the provided coords are masked i.e. on land, request new ones
         if tide_mask[lat_idx, lon_idx] == True:
-            print('Your tidelatlon is on land! Provide a latitude and longitude closer to sea')
+            print('Your tidelatlon is on land! Provide a latitude and longitude closer to sea.')
             return
         
         print('Compiling tide heights for given date range...')
@@ -2515,19 +2518,6 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         # create array of hourly timesteps between dates
         dates = np.arange(startdate, enddate, timedelta(hours=1)).astype(datetime) 
         
-        # pass configuration files to pyfes handler to gather up tidal constituents
-        # Will need changed for FES2022
-        # if '2022' not in tidepath:
-        config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
-        ocean_tide = pyfes.Handler("ocean", "io", config_ocean)
-        config_load = os.path.join(tidepath,"load_tide.ini")
-        load_tide = pyfes.Handler("radial", "io", config_load)
-        # else:
-            # config =  os.path.join(tidepath, 'fes2022.yaml')
-            # handlers = pyfes.load_config(config)
-            # ocean_tide = handlers['tide']
-            # load_tide = handlers['radial']
-        
         # format dates and latlon
         dates_np = np.empty((len(dates),), dtype='datetime64[us]')
         for i,date in enumerate(dates):
@@ -2535,11 +2525,38 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         lons = lon*np.ones(len(dates))
         lats = lat*np.ones(len(dates))
         
-        # compute heights for ocean tide and loadings (both are needed for elastic tide elevations)
-        ocean_short, ocean_long, min_points = ocean_tide.calculate(lons, lats, dates_np)
-        load_short, load_long, min_points = load_tide.calculate(lons, lats, dates_np)
+        # pass configuration files to pyfes handler to gather up tidal constituents
+        if '2022' not in tidepath: # for FES2014
+            config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
+            ocean_tide = pyfes.Handler("ocean", "io", config_ocean)
+            config_load = os.path.join(tidepath,"load_tide.ini")
+            load_tide = pyfes.Handler("radial", "io", config_load)
+            # compute heights for ocean tide and loadings (both are needed for elastic tide elevations)
+            short, short_lp, _ = ocean_tide.calculate(lons, lats, dates_np)
+            load, load_lp, _ = load_tide.calculate(lons, lats, dates_np)
+            
+        else: # for FES2022
+            config =  os.path.join(tidepath, 'fes2022.yaml')
+            try:
+                handlers = pyfes.load_config(config)
+            except:
+                print("Can't find the tidal constituent netCDFs listed in your .yaml file. Changing your paths for you...")
+                ChangeYAMLPaths(config, tidepath)
+                # try loading in again after changing global filepaths to constituents in .yaml file using tidepath
+                handlers = pyfes.load_config(config)
+            ocean_tide = handlers['tide']
+            load_tide = handlers['radial']
+            short, short_lp, _ = pyfes.evaluate_tide(ocean_tide, dates_np, lons, lats)
+            load,  load_lp,  _ = pyfes.evaluate_tide(load_tide, dates_np, lons, lats)
+        
+        # make sure no NaNs
+        short[np.isnan(short)] = 0 
+        short_lp[np.isnan(short_lp)] = 0
+        load[np.isnan(load)] = 0
+        
         # sum up all components and convert from cm to m
-        tide_level = (ocean_short + ocean_long + load_short + load_long)/100
+        # tide_level = (short + short_lp + load + load_lp)/100 # old way
+        tide_level = (short + short_lp + load) * 0.01
         
         # export as csv to tides folder
         tidesDF = pd.DataFrame([dates, tide_level]).transpose()
@@ -2550,6 +2567,29 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
         tidesDF.to_csv(tideoutpath)
     
     return 
+
+
+def ChangeYAMLPaths(configfile, tidepath):
+    """
+    Short function to change filepaths in FES2022b .yaml file to match the global
+    location of the files using the tidepath provided
+    (e.g. './load_tide/2n2_fes2022.nc' to ''../aviso-fes/data/fes2022b/load_tide/2n2_fes2022.nc')
+
+    Parameters
+    ----------
+    configfile : str
+        Path to configuration file (.yaml) for loading FES tidal constituents.
+    tidepath : str
+        Global filepath to tidal data on user's machine.
+    """    
+    
+    with open(configfile, 'r') as file:
+        filedata = file.read()
+        
+    filedata = filedata.replace('./', tidepath+'/')
+        
+    with open(configfile, 'w') as file:
+        file.write(filedata)
 
 
 def GetWaterElevs(settings, Dates_Sat):
