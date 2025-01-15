@@ -44,9 +44,14 @@ TransectDFTest = TransectDF.iloc[262:]
 VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
 # Why is this returned scaled?
 
+
+#%% Load In Pre-trained Model
+with open(os.path.join(filepath, sitename, 'predictions', '20250114-150253_dir_iri.pkl'), 'rb') as f:
+    PredDict = pickle.load(f)
+    
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['dir_runup_iri'], 
+                                          MLabels=['dir_runup_iri_20240115'], 
                                           TestSizes=[0.2], 
                                           TSteps=[10])
 # Needs additional lines for TransectID
@@ -64,11 +69,6 @@ PredDict = Predictions.CompileRNN(PredDict,
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
-
-
-#%% Load In Pre-trained Model
-with open(os.path.join(filepath, sitename, 'predictions', '20250111-165139_optimised.pkl'), 'rb') as f:
-    PredDict = pickle.load(f)
 
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder

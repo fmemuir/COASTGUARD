@@ -1231,7 +1231,7 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
 
 
     """
-    fig, ax = plt.subplots(1,1, figsize=(3.3,3), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(3.3,3.35), dpi=300)
     
     TrainStart = mdates.date2num(VarDFDay.index[0])
     TrainEnd = mdates.date2num(VarDFDay.index[round(len(VarDFDay)-(len(VarDFDay)*0.2))])
@@ -1256,6 +1256,11 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     plt.ylabel('Cross-shore distance (m)')
     plt.legend(loc='upper left', ncols=3)
     plt.ylim(0,600)
+    ax.tick_params(axis='both',which='major',pad=2)
+    ax.xaxis.labelpad=2
+    ax.yaxis.labelpad=2
+
+    plt.tight_layout()
     plt.show()
     
     StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
