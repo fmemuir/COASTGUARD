@@ -15,6 +15,9 @@ import numpy as np
 import random
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+from matplotlib.patches import Patch, Rectangle
+import matplotlib.dates as mdates
 from matplotlib import cm
 import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
@@ -923,7 +926,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         # Number  of hidden layers can be decided by rule of thumb:
             # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
         N_out = 2
-        N_hidden = round(inshape[0] / (5 * (inshape[1] + N_out)))
+        N_hidden = round(inshape[0] / (4 * (inshape[1] + N_out)))
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models
@@ -955,8 +958,8 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
             binary_thresh = 0.5
             LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
         else:
-            # Just use MSE loss fn and static learning rates
-            LossFn = 'mse'
+            # Just use MAE loss fn and static learning rates
+            LossFn = 'mae'
         
         Model.compile(optimizer=Opt, 
                          loss=LossFn, 
@@ -1228,7 +1231,17 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
 
 
     """
-    plt.figure(figsize=(4.8,3), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(3.3,3), dpi=300)
+    
+    TrainStart = mdates.date2num(VarDFDay.index[0])
+    TrainEnd = mdates.date2num(VarDFDay.index[round(len(VarDFDay)-(len(VarDFDay)*0.2))])
+    ValEnd = mdates.date2num(VarDFDay.index[-1])
+    TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+    ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+    # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
+    ax.add_patch(TrainT) 
+    ax.add_patch(ValT)
+    
     lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
     plt.plot(VarDFDay['distances'], 'C2', lw=lw, label='Past VE')
@@ -1242,6 +1255,7 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')
     plt.legend(loc='upper left', ncols=3)
+    plt.ylim(0,600)
     plt.show()
     
     StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
