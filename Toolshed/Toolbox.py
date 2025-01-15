@@ -2490,7 +2490,7 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
     if os.path.isfile(tideoutpath) is True: 
         print('Tide data already compiled.')
 
-    # else:
+    else:
         lat = tidelatlon[0]
         lon = tidelatlon[1]
         lon_trg = lon + 360 # set from -180 - 180, to 0 - 360
