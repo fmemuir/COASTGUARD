@@ -926,7 +926,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         # Number  of hidden layers can be decided by rule of thumb:
             # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
         N_out = 2
-        N_hidden = round(inshape[0] / (4 * (inshape[1] + N_out)))
+        N_hidden = round(inshape[0] / (5 * (inshape[1] + N_out)))
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models
@@ -958,8 +958,8 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
             binary_thresh = 0.5
             LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
         else:
-            # Just use MAE loss fn and static learning rates
-            LossFn = 'mae'
+            # Just use MSE loss fn and static learning rates
+            LossFn = 'mse'
         
         Model.compile(optimizer=Opt, 
                          loss=LossFn, 
@@ -1236,11 +1236,16 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     TrainStart = mdates.date2num(VarDFDay.index[0])
     TrainEnd = mdates.date2num(VarDFDay.index[round(len(VarDFDay)-(len(VarDFDay)*0.2))])
     ValEnd = mdates.date2num(VarDFDay.index[-1])
+    TestEnd = mdates.date2num(TransectDFTest.index[-1])
     TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
     ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
     # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
     ax.add_patch(TrainT) 
     ax.add_patch(ValT)
+    
+    plt.text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
+    plt.text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
+    plt.text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
     
     lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
@@ -1270,6 +1275,85 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
  
+def PlotFutureVars(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename):
+    """
+    Plot future waterline (WL) and vegetation edge (VE) predictions for the 
+    chosen cross-shore transect, alongside timeseries of training variables used.
+    FM Jan 2025
+
+    Parameters
+    ----------
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    VarDFDay : DataFrame
+        DataFrame of past data interpolated to daily timesteps (with temporal index).
+    TransectDFTest : DataFrame
+        DataFrame of past data sliced from most recent end of TransectDF to use for testing the model.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+
+
+    """
+    fig, axs = plt.subplots(5,1, figsize=(6.55,6), dpi=300)
+    plt.subplots_adjust(wspace=None,hspace=None)
+    lw = 1 # line width
+    
+    for i, ax, yvar, c, ylabel in zip(range(len(axs)), axs, 
+                                      [VarDFDay['WaveDir'],
+                                       VarDFDay['Runups'],
+                                       VarDFDay['Iribarrens'],
+                                       VarDFDay['distances'],
+                                       VarDFDay['wlcorrdist']],
+                                      ['cornflowerblue',
+                                       'darkorchid',
+                                       'orange',
+                                       'forestgreen',
+                                       'blue'],
+                                      ['Wave direction (deg)',
+                                       'Runup (m)',
+                                       'Iribarren (1)',
+                                       'Cross-shore distance (m)',
+                                       'Cross-shore distance (m)']):
+        TrainStart = mdates.date2num(VarDFDay.index[0])
+        TrainEnd = mdates.date2num(VarDFDay.index[round(len(VarDFDay)-(len(VarDFDay)*0.2))])
+        ValEnd = mdates.date2num(VarDFDay.index[-1])
+        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+        
+        ax.add_patch(TrainT) 
+        ax.add_patch(ValT)
+    
+        ax.plot(yvar, c=c, lw=lw)
+        
+        if i == 3:
+            ax.plot(TransectDFTest['distances'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
+            ax.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
+        if i == 4:
+            ax.plot(TransectDFTest['wlcorrdist'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
+            ax.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
+            
+        ax.legend(loc='upper left', ncols=3)
+        ax.set_ylabel(ylabel)
+        ax.set_ylim(min(yvar)-(min(yvar)*0.2), max(yvar)+(min(yvar)*0.2))
+        ax.tick_params(axis='both',which='major',pad=2)
+        ax.xaxis.labelpad=2
+        ax.yaxis.labelpad=2
+    
+    plt.xlabel('Date (yyyy)')       
+    plt.tight_layout()
+    plt.show()
+    
+    StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
+    EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_predictedVars_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+
+
 def TrainRNN_Optuna(PredDict, mlabel):
     # Custom RMSE metric function
     def root_mean_squared_error(y_true, y_pred):

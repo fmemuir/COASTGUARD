@@ -51,7 +51,7 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250114-150253_dir_i
     
 #%% Prepare Training Data
 PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['dir_runup_iri_20240115'], 
+                                          MLabels=['dir_runup_iri_20240115_mse'], 
                                           TestSizes=[0.2], 
                                           TSteps=[10])
 # Needs additional lines for TransectID
@@ -78,6 +78,8 @@ FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 #%% Plot Future WL and VE
 Predictions.PlotFuture(0, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
 
+#%%
+Predictions.PlotFutureVars(0, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
