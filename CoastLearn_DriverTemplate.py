@@ -76,10 +76,10 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 
 #%% Plot Future WL and VE
-Predictions.PlotFuture(0, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
+Predictions.PlotFuture(0, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename)
 
 #%%
-Predictions.PlotFutureVars(0, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
+Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),

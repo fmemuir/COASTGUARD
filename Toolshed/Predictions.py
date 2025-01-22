@@ -1275,7 +1275,7 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
  
-def PlotFutureVars(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename):
+def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect, alongside timeseries of training variables used.
@@ -1285,10 +1285,12 @@ def PlotFutureVars(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, siten
     ----------
     mID : int
         ID of the chosen model run stored in FutureOutputs.
-    VarDFDay : DataFrame
-        DataFrame of past data interpolated to daily timesteps (with temporal index).
+    TransectDFTest : DataFrame
+        DataFrame of past data (not interpolated) to use for training the model.
     TransectDFTest : DataFrame
         DataFrame of past data sliced from most recent end of TransectDF to use for testing the model.
+    VarDFDay : DataFrame
+        DataFrame of past data interpolated to daily timesteps (with temporal index).
     FutureOutputs : dict
         Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
     filepath : str
@@ -1298,16 +1300,16 @@ def PlotFutureVars(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, siten
 
 
     """
-    fig, axs = plt.subplots(5,1, figsize=(6.55,6), dpi=300)
+    fig, axs = plt.subplots(5,1, sharex=True, figsize=(6.55,6), dpi=150)
     plt.subplots_adjust(wspace=None,hspace=None)
     lw = 1 # line width
     
     for i, ax, yvar, c, ylabel in zip(range(len(axs)), axs, 
-                                      [VarDFDay['WaveDir'],
-                                       VarDFDay['Runups'],
-                                       VarDFDay['Iribarrens'],
-                                       VarDFDay['distances'],
-                                       VarDFDay['wlcorrdist']],
+                                      ['WaveDir',
+                                       'Runups',
+                                       'Iribarrens',
+                                       'distances',
+                                       'wlcorrdist'],
                                       ['cornflowerblue',
                                        'darkorchid',
                                        'orange',
@@ -1318,27 +1320,31 @@ def PlotFutureVars(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, siten
                                        'Iribarren (1)',
                                        'Cross-shore distance (m)',
                                        'Cross-shore distance (m)']):
-        TrainStart = mdates.date2num(VarDFDay.index[0])
-        TrainEnd = mdates.date2num(VarDFDay.index[round(len(VarDFDay)-(len(VarDFDay)*0.2))])
-        ValEnd = mdates.date2num(VarDFDay.index[-1])
+        TrainStart = mdates.date2num(TransectDFTrain.index[0])
+        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+        ValEnd = mdates.date2num(TransectDFTrain.index[-1])
         TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
         ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
         
         ax.add_patch(TrainT) 
         ax.add_patch(ValT)
     
-        ax.plot(yvar, c=c, lw=lw)
+        ax.plot(TransectDFTrain[yvar], c=c, lw=lw)
+        ax.plot(VarDFDay[yvar], c=c, lw=lw, alpha=0.3)
         
         if i == 3:
             ax.plot(TransectDFTest['distances'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
             ax.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
-        if i == 4:
+            ax.legend(loc='upper left', ncols=3)
+        elif i == 4:
             ax.plot(TransectDFTest['wlcorrdist'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
             ax.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
-            
-        ax.legend(loc='upper left', ncols=3)
+            ax.legend(loc='upper left', ncols=3)
+        else:
+            ax.plot(TransectDFTest[yvar], c=c, lw=lw)
+
         ax.set_ylabel(ylabel)
-        ax.set_ylim(min(yvar)-(min(yvar)*0.2), max(yvar)+(min(yvar)*0.2))
+        ax.set_ylim(min(VarDFDay[yvar])-(min(VarDFDay[yvar])*0.2), max(VarDFDay[yvar])+(min(VarDFDay[yvar])*0.2))
         ax.tick_params(axis='both',which='major',pad=2)
         ax.xaxis.labelpad=2
         ax.yaxis.labelpad=2
