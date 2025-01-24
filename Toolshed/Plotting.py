@@ -3279,8 +3279,8 @@ def StormsTimelineSimple(figpath, sitename, CSVpath, StormsLim=None):
     # StormYears = round(StormDiff.total_seconds()/(365.2425*24*60*60))
     # for i in range(StormYears):
     #     colours.append(cmp(i/StormYears))
-    for i in range(10):
-        colours.append(cmp(i/10))
+    for i in range(11):
+        colours.append(cmp(i/11))
     colours = colours[1:]
         
     # Plot boxplot style rectangles over top of storm events, where:
@@ -4119,15 +4119,15 @@ def ImageDateHist(OutFilePath, settings, sitename, output, metadata, satname='S2
     ax.bar_label(cloudbar, labels=cloudlabels, label_type='center', color=[0.4,0.4,0.45], zorder=10)
     
     # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
-    rect1 = mpatches.Rectangle((10.5,0), 2, 100, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1)
-    rect2 = mpatches.Rectangle((0.5,0), 2, 100, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1, label='UK Winter')
+    rect1 = mpatches.Rectangle((10.5,0), 2, max(fullcounts.values)+5, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1)
+    rect2 = mpatches.Rectangle((0.5,0), 2, max(fullcounts.values)+5, fc=[0.3,0.3,0.3], ec=None, alpha=0.2, zorder=1, label='UK Winter')
     ax.add_patch(rect1)
     ax.add_patch(rect2)
     
     ax.set_xticks(range(1,13))
     ax.set_xticklabels([calendar.month_abbr[i] for i in np.arange(1,13)])
     ax.set_xlim(0,13)
-    ax.set_ylim(0,95)
+    ax.set_ylim(0,max(fullcounts.values)+5)
     ax.set_ylabel('Number of satellite images')
     
     ax.legend()
