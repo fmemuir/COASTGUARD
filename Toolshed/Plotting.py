@@ -7,6 +7,7 @@ Created on Thu Apr 20 16:51:37 2023
 """
 import os
 import glob
+import pickle
 import numpy as np
 import string
 import warnings
@@ -4052,7 +4053,8 @@ def GetSznID(Date, SznCount):
     return SznID
 
 
-def ImageDateHist(OutFilePath, sitename, output, metadata, satname='S2'):
+def ImageDateHist(OutFilePath, settings, sitename, output, metadata, satname='S2'):
+     
     
     # Compile output dates into months
     DatesDF = pd.DataFrame(output['dates'], columns=['dates'])
@@ -4065,8 +4067,28 @@ def ImageDateHist(OutFilePath, sitename, output, metadata, satname='S2'):
     FullDatesDF['month'] = FullDatesDF['dates_dt'].dt.month
     
     # Counts of unsuccessful images due to cloud
-    CloudDF = pd.DataFrame({'dates':metadata[satname]['dates'], 'cloud_exceed':metadata[satname]['cloud_exceed']})
-    ExceedDF = CloudDF[CloudDF['cloud_exceed']==1]
+    # Check for skipstats file
+    if os.path.isfile(os.path.join(settings['inputs']['filepath'], sitename, sitename+'_skip_stats.pkl')):
+        # if exists, get list of datetimes from cloudy key in pkl file
+        with open(os.path.join(settings['inputs']['filepath'], sitename, sitename+'_skip_stats.pkl'),'rb',) as f:
+            skipstats = pickle.load(f)
+        cloudydates = [] 
+        for cloudim in skipstats['cloudy']:
+            cloudydates.append(cloudim[2][:10])
+        ExceedDF = pd.DataFrame({'dates':cloudydates})
+    else:
+        # if no skipstats file exists, generate binary labels in metadata to 
+        # mark whether cloud threshold was exceeded
+        cloud_exceeded, cloud_score, empty_file = Toolbox.PercentageCloudy(metadata, settings)
+        # Re-save metadata with cloud exceedance attached
+        for satn in settings['satname']:
+            metadata[satn]['cloud_exceed'] = cloud_exceeded
+        with open(os.path.join(settings['inputs']['filepath'], sitename + '_metadata.pkl'), 'wb') as f:
+            pickle.dump(metadata, f)
+        CloudDF = pd.DataFrame({'dates':metadata[satname]['dates'], 
+                                'cloud_exceed':metadata[satname]['cloud_exceed']})
+        ExceedDF = CloudDF[CloudDF['cloud_exceed']==1]
+        
     ExceedDF['dates_dt'] = [datetime.strptime(x, '%Y-%m-%d') for x in ExceedDF['dates']]
     ExceedDF['month'] = ExceedDF['dates_dt'].dt.month
     
