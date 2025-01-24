@@ -174,7 +174,7 @@ def ProduceTransects(settings, SmoothingWindowSize, NoSmooths, TransectSpacing, 
     # take only first point if any multipoint intersections
     for inter in range(len(allintersection)):
         if allintersection['geometry'][inter].geom_type == 'MultiPoint':
-            allintersection['geometry'][inter] = list(allintersection['geometry'][inter])[0]
+            allintersection['geometry'][inter] = list(allintersection['geometry'][inter].geoms)[0]
     
     TransectGDF['reflinepnt'] = allintersection['geometry']
     
