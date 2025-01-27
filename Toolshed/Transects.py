@@ -1457,6 +1457,13 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     Runups = Waves.CalcRunup(WaveHs)
     TransectInterGDFWave['Runups'] = Runups
     
+    # If any directions (and WaveAlphas) are still masked, set to nan
+    for Key in TransectInterGDFWave.select_dtypes(include='object').columns:
+        for Tr in range(len(TransectInterGDFWave[Key])):
+            data = TransectInterGDFWave[Key].iloc[Tr]
+            if isinstance(data,list):
+                TransectInterGDFWave.at[Tr, Key] = [np.nan if str(x) == 'masked' or str(x) == '--' else x for x in data]
+    
     TransectInterShp = TransectInterGDFWave.copy()
     
     # reformat fields with lists to strings
@@ -1468,11 +1475,11 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
         if type(TransectInterShp[Key][realInd]) == list: # for lists of intersected values
             if type(TransectInterShp[Key][realInd][0]) == np.float64:  
                 for Tr in range(len(TransectInterShp[Key])):
-                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
+                    TransectInterShp[Key][Tr] = [round(i,3) for i in TransectInterShp[Key][Tr]]
         else: # for singular values
             if type(TransectInterShp[Key][realInd]) == np.float64: 
                 for Tr in range(len(TransectInterShp[Key])):
-                    TransectInterShp[Key][Tr] = [round(i,2) for i in TransectInterShp[Key][Tr]]
+                    TransectInterShp[Key][Tr] = [round(i,3) for i in TransectInterShp[Key][Tr]]
         
         TransectInterShp[Key] = TransectInterShp[Key].astype(str)
                     
