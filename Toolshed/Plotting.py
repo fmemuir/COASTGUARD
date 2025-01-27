@@ -878,7 +878,7 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
         plotwldate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['wldates'].iloc[TransectID]]
         plotwldist = [x-np.mean(TransectInterGDF['wlcorrdist'].iloc[TransectID]) for x in TransectInterGDF['wlcorrdist'].iloc[TransectID]]
     
-        plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
+        # plotdate, plotwldate, plotsatdist, plotwldist = [list(d) for d in zip(*sorted(zip(plotdate, plotwldate, plotsatdist, plotwldist), key=lambda x: x[0]))]    
         
         # Calculate period (observations per cycle) to use for seasonality
         # DateDiff = []
@@ -1264,7 +1264,7 @@ def TZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Titles=None, Hemis
         TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.5, edgecolor=None, zorder=0, label=r'$TZwidth_{\eta}$ ('+str(round(plotTZMn))+' m)')
                    
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
-        for i in range(plotdate[0].year-1, plotdate[-1].year):
+        for i in range(plotdate[0].year-1, plotdate[-1].year+1):
             if Hemisphere == 'N':
                 rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
                 rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
@@ -1293,7 +1293,8 @@ def TZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Titles=None, Hemis
             
         # ax.set_ylim(np.nanmin(plotsatdistinterp)-10, np.nanmax(plotsatdistinterp)+30)
         ax.set_ylim(-200,180)
-        ax.set_xlim(np.nanmin(plotdate)-timedelta(days=100),np.nanmax(plotdate)+timedelta(days=100))
+        ax.set_xlim(np.nanmin(plotdate)-timedelta(days=50),np.nanmax(plotdate)+timedelta(days=50))
+        # ax.set_xlim(np.nanmin(plotdate),np.nanmax(plotdate))
         for tic in ax.xaxis.get_ticklabels()[::2]:
             tic.set_visible(False)
         
@@ -3426,7 +3427,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         
         
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
-        for i in range(plotdate[0].year-1, plotdate[-1].year):
+        for i in range(plotdate[0].year-1, plotdate[-1].year+1):
             if Hemisphere == 'N':
                 rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
                 rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
@@ -3735,10 +3736,12 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlic
     
     # scaling for single column A4 page: (6.55,6)
     # use 2 subplots with one empty to be able to loop through them
-    fig, axs = plt.subplots(len(WaveY)-1,len(WaveX),figsize=(1.8,4.9), dpi=300, subplot_kw={'projection':'polar'})
+    fig, axs = plt.subplots(len(WaveY) - 1, len(WaveX), figsize=(1.8, 4.9), dpi=300, 
+                            subplot_kw={'projection': 'polar'})
     # TO DO: Currently only works with one column, will need to figure out better way of looping
     for px in range(len(WaveX)):
         for ax, py in zip(axs, range(len(WaveY))):
+
             # Convert wave dirs to radians
             plotwavedir = np.deg2rad(MeanWaveDir[:,py,px])
             plotwavehs = np.array(SigWaveHeight[:,py,px])
@@ -3766,7 +3769,7 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlic
                 
             ax.set_theta_zero_location('N')
             ax.set_theta_direction(-1)
-            # ax.set_facecolor('#666666')
+            ax.set_facecolor((1, 1, 1, 0.3))            
             ax.tick_params(axis='x',which='major', colors='w')
             ax.set_xticklabels([])
             ax.set_yticklabels([])
@@ -3780,8 +3783,8 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlic
                 
     handles, labels = ax.get_legend_handles_labels()
 
-    TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
-    leg = fig.legend(handles, labels, loc='center left', title='Wave H$_s$ (m)', title_fontproperties=TitleFont, prop=TitleFont)
+    # TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
+    leg = fig.legend(handles, labels, loc='center left', title='Wave H$_s$ (m)', title_fontproperties={'weight':'bold'})#, prop=TitleFont)
     # Adjust the location of the legend
     plt.draw()
     bb = leg.get_bbox_to_anchor().transformed(ax.transAxes.inverted()) 
@@ -3798,8 +3801,10 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlic
     figname = os.path.join(outfilepath, sitename + '_CMEMSWaveDir_'+str(round(WaveY[0],3))+'_'+str(round(WaveX[0],3))+'.png')
     
     plt.tight_layout()
-
-    plt.savefig(figname, bbox_inches='tight', transparent=True)
+    # Set the figure background to fully transparent
+    fig.patch.set_alpha(0)
+    
+    fig.savefig(figname, bbox_inches='tight')
     print('Plot saved under '+figname)
     
     plt.show()
