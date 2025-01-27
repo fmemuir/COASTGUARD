@@ -3649,8 +3649,8 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
         
         figID += '_'+str(TransectID)
         plt.tight_layout()
-        TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
-        leg = ax.legend(loc='center left', handlelength=1, handletextpad=0.5, title='Wave H$_s$ (m)', title_fontproperties=TitleFont, prop=TitleFont)
+        # TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
+        leg = ax.legend(loc='center left', handlelength=1, handletextpad=0.5, title='Wave H$_s$ (m)', title_fontproperties={'weight':'bold'})
         
         # Adjust the location of the legend
         plt.draw()
