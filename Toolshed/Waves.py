@@ -149,8 +149,10 @@ def ReadWaveFile(WaveFilePath):
         for t in range(SigWaveHeight.shape[0]):
             SigWaveHeight[t] = Toolbox.InterpolateRaster(SigWaveHeight[t])
             PeakWavePer[t] = Toolbox.InterpolateRaster(PeakWavePer[t])
-            MeanWaveDir[t] = Toolbox.InterpolateCircRaster(MeanWaveDir[t]) # Needs circular interpolation instead
-
+            # catch empty wave data and fill with nan
+            if MeanWaveDir[t].count()/MeanWaveDir[t].size > 0:
+                MeanWaveDir[t] = Toolbox.InterpolateCircRaster(MeanWaveDir[t]) # Needs circular interpolation instead
+            
         WaveTime = []
         for i in range(0,len(WaveSeconds)):
             if 'UK' in WaveData.institution:
