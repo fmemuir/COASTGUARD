@@ -2792,17 +2792,21 @@ def GetSeasonalityIndex(x,y, P=365):
     # Extend series and interpolate to create daily observations
     Timeseries = pd.Series(y, index=x)
     # if any duplicates exist, take the mean of those duplicates
-    Timeseries = Timeseries.groupby(Timeseries.index).mean()
-    Timeseries.index = Timeseries.index.normalize()
-    TimeseriesDay = Timeseries.resample('1D')
-    TimeseriesDay = TimeseriesDay.interpolate(method='time')
+    # Timeseries = Timeseries.groupby(Timeseries.index.date).mean()
+    # Timeseries.index = Timeseries.index.normalize()
+    # TimeseriesDay = Timeseries.resample('1D')
+    # TimeseriesDay = TimeseriesDay.interpolate(method='time')
     
     # Calculate seasonal .trend, .seasonal and .resid, using a year as the detrending period
-    Seasonality = seasonal_decompose(TimeseriesDay, model='additive', period=P)
+    Seasonality = seasonal_decompose(Timeseries, model='additive', period=P)
     Season = Seasonality.seasonal
     Resid = Seasonality.resid
     # Calculate Seasonal Strength Index
     SSI = np.var(Season) / (np.var(Season) + np.var(Resid))
+    
+    import matplotlib.pyplot as plt
+    plt.plot(Seasonality.seasonal)
+    plt.show()
     
     return SSI
 
