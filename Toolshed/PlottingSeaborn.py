@@ -1315,7 +1315,7 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
                     axs[col,row].axvline(x=mn-stdv, c=colour, lw=0.5, ls=':')
                     axs[col,row].axvline(x=mn+stdv, c=colour, lw=0.5, ls=':')
                     axs[col,row].set_yticks([]) # turns off ticks and tick labels
-                    if col > 1 and col < 4:
+                    if col < 4:
                         legloc = 'upper right'
                     else:
                         legloc = 'upper left'
