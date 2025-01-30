@@ -879,7 +879,6 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     
     return WaveDiffusivity, WaveStability
 
-   
 
 def CalcShoreAngle(TransectInterGDF, Tr):
     """

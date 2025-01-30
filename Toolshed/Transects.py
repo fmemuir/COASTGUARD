@@ -1490,6 +1490,57 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     return TransectInterGDFWave
 
 
+def PerTrMu(WaveFilePath, TransectInterGDFWave, Trs, OutPath):
+    
+    print('Reading wave file...')
+    WaveX, WaveY, WaveHs, WaveDir, WaveTp, WaveTime, _ = Waves.ReadWaveFile(WaveFilePath)
+    Centroids = TransectInterGDFWave.to_crs('4326').centroid
+    # for each transect in run
+    # for Tr in range(len(TransectInterGDF)):
+    K2 = 0.15 # Ashton & Murray (2006) value for significant wave heights
+    D = 10. # average estimated depth of closure
+    
+    # Initialise DF for each Tr array
+    Mu_Tr = pd.DataFrame(columns=Trs, index=WaveTime)
+    
+    for Tr in Trs:
+        print(f"Calculating Transect {Tr} mu values...",end='\r')
+        
+        # Clculate the midpoint of each cross-shore transect geometry
+        MidPnt = Centroids.iloc[Tr].coords[0]
+        IDLat = (np.abs(WaveY - MidPnt[1])).argmin()
+        IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
+        
+        ShoreAngle = TransectInterGDFWave['ShoreAngle'].iloc[Tr]
+
+        # Convert shore angle and wave directions to radians
+        # theta_rad = np.radians(ShoreAngle)
+        # Phi_0_rad = np.radians(WaveDir)
+        # Calculate the angle difference (theta - Phi_0) in degrees
+        Alpha = (ShoreAngle - WaveDir[:,IDLat, IDLong] + 180) % 360 - 180  # Compute angle diff in degrees
+        
+        # Initialize an array to store mu values, applying shadowing condition
+        mu_values = []
+        for i in range(len(WaveTime)):        
+            if Alpha[i] <= 0:  # Only include waves that are onshore (angle_diff <= 0)
+                # Calculate the diffusivity (mu) using the formula for onshore waves
+                # abs() value used to avoid NaNs from raising a negative number to a decimal power
+                mu = (K2 / D) * (WaveTp[i,IDLat, IDLong]**(1/3)) * (WaveHs[i,IDLat, IDLong]**(12/5)) * \
+                     (abs(np.cos(np.radians(Alpha[i])))**(1/5)) * \
+                     ((6/5) * np.sin(np.radians(Alpha[i]))**2 - np.cos(np.radians(Alpha[i]))**2)
+    
+                mu_values.append(mu)
+            else:
+                # Set mu to zero for offshore waves (shadowed conditions)
+                mu_values.append(0.0)
+        mu_values = np.array(mu_values)
+        Mu_Tr[Tr] = mu_values
+        
+    Mu_Tr.to_csv(OutPath)
+    return Mu_Tr
+     
+
+
 def GetFutureData(sitename, DateMin, DateMax, CoastalDF):
     
     with open(os.path.join(os.getcwd(),'Data', sitename, sitename + '_settings.pkl'), 'rb') as f:
