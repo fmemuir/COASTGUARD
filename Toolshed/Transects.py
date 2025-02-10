@@ -1540,6 +1540,60 @@ def PerTrMu(WaveFilePath, TransectInterGDFWave, Trs, OutPath):
     return Mu_Tr
      
 
+def VEWLWaveCorr(TransectInterGDFWave, TransectInterGDFWater, Prop):
+    """
+    Experimental function for calculating Rsquared values of linear regression
+    between WL distances vs. wave heights and VE distances vs. wave height
+    across all transects at a site.
+    FM Feb 2025
+
+    Parameters
+    ----------
+    TransectInterGDFWave : GeoDataFrame
+        GeoDataFrame with wave info attached to each transect.
+    TransectInterGDFWater : GeoDataFrame
+        GDF of transects with waterline intersection and rates of change info.
+    Prop : str
+        've' or 'wl' depending on desired property to be compared.
+
+    Returns
+    -------
+    TransectInterGDFWave : TYPE
+        Updated GeoDataFrame with wave info attached to each transect, and R^2 values (one per transect).
+
+    """
+    R2s = []
+    
+    for Tr in range(len(TransectInterGDFWave)):
+        WaveDF = pd.DataFrame({'WaveDir':TransectInterGDFWave['WaveDir'].iloc[Tr],
+                               'WaveHs':TransectInterGDFWave['WaveHs'].iloc[Tr],
+                               'WaveTp':TransectInterGDFWave['WaveTp'].iloc[Tr],}, 
+                              index=TransectInterGDFWave['WaveDates'].iloc[Tr])
+        WaveDF.index = WaveDF.index.strftime("%Y-%m-%d")
+        VegDF = pd.DataFrame({'vedist':TransectInterGDFWave['distances'].iloc[Tr]}, 
+                             index=TransectInterGDFWave['dates'].iloc[Tr])
+        WaterDF = pd.DataFrame({'wldist':TransectInterGDFWater['wlcorrdist'].iloc[Tr]}, 
+                               index=TransectInterGDFWater['wldates'].iloc[Tr])
+    
+        # Merge dataframes together
+        MergeDF = WaveDF.merge(VegDF,left_index=True, right_index=True, how='left')
+        MergeDF = MergeDF.merge(WaterDF,left_index=True, right_index=True, how='left')
+        MergeDF = MergeDF.dropna(how='any',subset=['WaveHs',Prop+'dist'])
+        
+        
+        if len(MergeDF) == 0:
+            R2s.append(np.nan)
+        else:
+            # linear regression
+            model = LinearRegression()
+            model.fit(MergeDF[['WaveHs']], MergeDF[Prop+'dist'])
+            R2 = model.score(MergeDF[['WaveHs']], MergeDF[Prop+'dist'])
+            
+            R2s.append(R2)
+            
+    TransectInterGDFWave['WvHs_'+Prop+'_R2'] = R2s
+    return TransectInterGDFWave
+
 
 def GetFutureData(sitename, DateMin, DateMax, CoastalDF):
     
