@@ -22,7 +22,7 @@ mpl.use('Qt5Agg')
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import matplotlib.patches as mpatches
-from matplotlib.patches import Patch, Rectangle
+from matplotlib.patches import Patch, Rectangle, ConnectionPatch
 import matplotlib.lines as mlines
 import matplotlib.dates as mdates
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
@@ -859,18 +859,22 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
     if type(TransectIDs) == list:
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(2,len(TransectIDs),figsize=(6.55,3.5), dpi=300, sharex=True)
+        fig, axs = plt.subplots(3,len(TransectIDs),figsize=(6.55,5.3), dpi=300)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page: (6.55,6)
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(2,1,figsize=(6.55,3.5), dpi=300, sharex=True)
+        fig, axs = plt.subplots(3,1,figsize=(6.55,5.3), dpi=300)
         axs = [axs] # to be able to loop through
-            
+         
+    
+    
     for TransectID, Title, col in zip(TransectIDs, Titles, range(axs.shape[1])):
         # Define variables for each subplot per column/Transect
         ax_TS = axs[0,col]
         ax_Season = axs[1,col]
+        ax_Year = axs[2,col]
+        ax_TS.sharex = ax_Season # only share x-axis of first two rows
         
         # Process plot data
         plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDF['dates'].iloc[TransectID]]
@@ -889,9 +893,8 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
         #     P = round(90 / MeanDateDiff) # 90 days = 3 month cycle
         
         # Set up common subplot design
-        for ax in [ax_TS,ax_Season]: 
-            # ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
-            
+        for ax in [ax_TS,ax_Season,ax_Year]: 
+            # ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)
             # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
             for i in range(plotdate[0].year-1, plotdate[-1].year+1):
                 if Hemisphere == 'N':
@@ -906,6 +909,7 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
         
         ax_TS_veg = ax_TS.twinx()
         ax_Season_veg = ax_Season.twinx()
+        ax_Year_veg = ax_Year.twinx()
                
         # plot trendlines
         # vegav = MovingAverage(plotsatdist, 3)
@@ -917,12 +921,13 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
         twin_Trend_lim = []
         twin_Season_minlim = []    
         twin_Season_maxlim = []
-        for twin_TS, twin_Season, twin_lab, x, y, clr in zip([ax_TS, ax_TS_veg],
-                                                            [ax_Season, ax_Season_veg],
-                                                            ['WL', 'VE'],
-                                                            [plotwldate, plotdate],
-                                                            [plotwldist, plotsatdist],
-                                                            ['#0A1DAE', '#81A739']):
+        for twin_TS, twin_Season, twin_Year, twin_lab, x, y, clr in zip([ax_TS, ax_TS_veg],
+                                                                        [ax_Season, ax_Season_veg],
+                                                                        [ax_Year, ax_Year_veg],
+                                                                        ['WL', 'VE'],
+                                                                        [plotwldate, plotdate],
+                                                                        [plotwldist, plotsatdist],
+                                                                        ['#0A1DAE', '#81A739']):
             
             # Extend and interpolate to create daily observations
             Timeseries = pd.Series(y, index=x)
@@ -938,8 +943,9 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             
             print('Transect '+str(TransectID)+' '+twin_lab+' seasonality index: '+str(SSI))
             
+            
+            # PLOT 1: timeseries scatter plot  
             twin_TS.axhline(y=0, color=clr, lw=0.6,alpha=0.3, zorder=0)
-            # PLOT 1: timeseries scatter plot     
             twin_TS.scatter(x, y, marker='o', c=clr, s=2, alpha=0.5, edgecolors='none', zorder=1)
             # linear regression lines
             numx = mpl.dates.date2num(x)
@@ -962,16 +968,17 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
 
             twin_TS.plot(Seasonality.trend, '--', color=clr, lw=1.2, label=r'$\Delta$'+twin_lab+' = '+str(round(m*365.25,2))+' m/yr')
             # twin_TS_lim.append(twin_TS.get_ylim())
+            twin_TS.tick_params(labelbottom=False)
+            
             
             # PLOT 2: Seasonality line (moving average) with residuals as error window
             # twin_Season.plot(Seasonality.resid, color=clr, lw=0, marker='x', ms=4, alpha=0.3)
             # plot residuals as vertical lines
             twin_Season.vlines(Seasonality.resid.index, 0, np.array(Seasonality.resid),
-                               color=clr,lw=0.3,alpha=0.05,
+                               color=clr,lw=0.1,alpha=0.3,
                                label=twin_lab+' $\sigma^{2}_{resid.}$ = '+str(round(np.var(Resid),2)))
             # plot seasonal signal over top of residuals 
-            twin_Season.plot(Seasonality.seasonal, color=clr, lw=0.5, alpha=1,
-                             label=twin_lab+' SSI = '+str(round(SSI,2)))
+            twin_Season.plot(Seasonality.seasonal, color=clr, lw=0.4, alpha=1)
             # horizontal line marking 0
             twin_Season.axhline(0,0,1,color=[0.7,0.7,0.7], lw=0.5, zorder=3, alpha=0.7)
             if TransectID == 1325:
@@ -987,31 +994,71 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             else:
                 twin_Season.set_ylim(np.min(Seasonality.resid), np.min(Seasonality.resid)*-1)
             
-            # twin_TS.set_ylabel('Cross-shore dist (m)', color=clr)
-            # twin_Trend.set_ylabel('Overall trend (m)', color=clr) 
-            # twin_Season.set_ylabel('Seasonal signal (m)', color=clr)
-
-            # if Normal:
-                # twin_TS.set_ylim(np.min(twin_TS_lim),np.max(twin_TS_lim))
-                # twin_Season.set_ylim(np.min(twin_Season_lim),np.max(twin_Season_lim))
+            
+            # PLOT 3: third row is inset of the second row with just one year of seasonality
+            # get middle year to ensure full year of seasonality is plotted
+            MidYear = Seasonality.resid.index[int(len(Seasonality.resid.index)/2)].year
+            StartInd = np.where(Seasonality.resid.index == datetime(MidYear, 1, 1))[0][0]
+            EndInd = np.where(Seasonality.resid.index == datetime(MidYear+1, 1, 1))[0][0]
+            # twin_Year.vlines(Seasonality.resid.index[StartInd:EndInd], 0, np.array(Seasonality.resid[StartInd:EndInd]),
+                             # color=clr,lw=0.3,alpha=0.05,
+                             # label=twin_lab+' $\sigma^{2}_{resid.}$ = '+str(round(np.var(Resid),2))) 
+            # plot seasonal signal over top of residuals 
+            twin_Year.plot(Seasonality.seasonal[StartInd:EndInd], color=clr, lw=0.7, alpha=1,
+                             label=twin_lab+' SSI = '+str(round(SSI,2)))
+            # horizontal line marking 0
+            twin_Year.axhline(0,0,1,color=[0.7,0.7,0.7], lw=0.5, zorder=3, alpha=0.7)
+            if TransectID == 1325:
+                if twin_lab == 'WL':
+                    twin_Year.set_ylim(-120, 120)
+                else:
+                    twin_Year.set_ylim(-40, 40)
+            elif TransectID == 271:
+                if twin_lab == 'WL':
+                    twin_Year.set_ylim(-120, 120)
+                else:
+                    twin_Year.set_ylim(-40, 40)
+            else:
+                twin_Year.set_ylim(np.min(Seasonality.resid), np.min(Seasonality.resid)*-1)
             
             
+            twin_TS.tick_params(axis='y', colors=clr)
+            twin_Season.tick_params(axis='y', colors=clr)
+            twin_Year.tick_params(axis='y', colors=clr)
+            
+           
         ax_TS.title.set_text('Transect '+str(TransectID)+' - '+Title)
         ax_TS.set_xlim(min(plotdate)-timedelta(days=20),max(plotdate)+timedelta(days=40))
+        ax_Season.set_xlim(min(plotdate)-timedelta(days=20),max(plotdate)+timedelta(days=40))
+        ax_Year.set_xlim(Seasonality.resid.index[StartInd],Seasonality.resid.index[EndInd])
+        # set x axis labels for year plot as month names
+        ax_Year.xaxis.set_major_locator(mdates.MonthLocator())
+        ax_Year.xaxis.set_major_formatter(mdates.DateFormatter('%b'))
 
-        for axleg in [[ax_TS, ax_TS_veg], [ax_Season,ax_Season_veg]]:
+        for axleg in [[ax_TS, ax_TS_veg], [ax_Season,ax_Season_veg], [ax_Year, ax_Year_veg]]:
             leg1 = axleg[0].legend(loc=3, handlelength=1.5, handletextpad=0.1)
             leg2 = axleg[1].legend(loc=4, handlelength=1.5, handletextpad=0.1)
             # weird zorder with twinned axes; remove first axis legend and plot on top of second
             leg1.remove()
             axleg[1].add_artist(leg1)
                     
+        # add connecting lines to inset plot (3)
+        fig.add_artist(ConnectionPatch(
+        xyA=(ax_Year.get_xlim()[0],ax_Season.get_ylim()[0]), coordsA=ax_Season.transData,
+        xyB=(0,1), coordsB=ax_Year.transAxes,
+        color='k', alpha=0.3, linewidth=0.5))      
+        fig.add_artist(ConnectionPatch(
+        xyA=(ax_Year.get_xlim()[1],ax_Season.get_ylim()[0]), coordsA=ax_Season.transData,
+        xyB=(1,1), coordsB=ax_Year.transAxes,
+        color='k', alpha=0.3, linewidth=0.5))   
+        
         figID += '_'+str(TransectID)
         plt.tight_layout()
         
     # Add alphabetical labels to corners of subplots
-    ax_labels = list(string.ascii_lowercase[:2*axs.shape[1]])
-    axticklabs = ['Cross-shore dist (m)','Cross-shore dist (m)',
+    ax_labels = list(string.ascii_lowercase[:3*axs.shape[1]])
+    axticklabs = ['Cross-shore dist. (m)','Cross-shore dist. (m)',
+                  'Seasonal signal (m)','Seasonal signal (m)',
                   'Seasonal signal (m)','Seasonal signal (m)']
     for ax, axID, lab, axticklab in zip(axs.flat, range(len(axs.flat)), ax_labels, axticklabs):
         ax.text(0.011, 0.98, '('+lab+')', transform=ax.transAxes,
@@ -1023,14 +1070,14 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             ax.set_ylabel(axticklab, color='#81A739')
             ax.yaxis.set_label_position('right')
             ax.yaxis.labelpad=25
-            
+    
     
     if Normal:  
         figname = os.path.join(outfilepath,sitename + '_SatVegWaterSeasonalSimpleNormal_Transect'+figID+'.png')
     else:
         figname = os.path.join(outfilepath,sitename + '_SatVegWaterSeasonalSimple_Transect'+figID+'.png')
 
-    
+    plt.subplots_adjust(hspace=0.)
     plt.tight_layout()
             
     plt.savefig(figname, dpi=300, bbox_inches='tight')
