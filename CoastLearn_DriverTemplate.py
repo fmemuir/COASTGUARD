@@ -19,7 +19,7 @@ tf.config.set_visible_devices([],'GPU')
 
 #%% Load Transect Data
 # Name of site to save directory and files under
-sitename = 'StAndrewsEastS2Full'
+sitename = 'StAndrewsEastS2Full2024'
 filepath = os.path.join(os.getcwd(), 'Data')
 
 # Load in transect data with coastal change variables
@@ -42,7 +42,6 @@ TransectDFTrain = TransectDF.iloc[:263]
 TransectDFTest = TransectDF.iloc[262:]
 
 VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
-# Why is this returned scaled?
 
 
 #%% Load In Pre-trained Model
