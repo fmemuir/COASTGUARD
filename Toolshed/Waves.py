@@ -463,10 +463,12 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     WaveX, WaveY, SigWaveHeight, MeanWaveDir, PeakWavePer, WaveTime, StormEvents = ReadWaveFile(WaveFilePath)
 
     # Extract unique satellite image dates list
-    DateTimeSat = [
-        datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f')
-        for date, time in zip(output['dates'], output['times'])
-    ]
+    DateTimeSat = [datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f')
+                   for date, time in zip(output['dates'], output['times'])]
+    # Generate daily timesteps between first and last output dates
+    DateTimeDaily = pd.date_range(start=datetime.strptime(output['dates'][0]+' 00:00:00', '%Y-%m-%d %H:%M:%S'),
+                                  end=datetime.strptime(output['dates'][-1]+' 00:00:00', '%Y-%m-%d %H:%M:%S')+timedelta(days=1),
+                                  freq='D')
     # Get centroid locations of each transect (in lat long)
     Centroids = TransectInterGDF.to_crs('4326').centroid
     
@@ -484,7 +486,11 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
                    'StDevWaveTp': [],
                    'WaveDiffusivity': [], # transect specific
                    'WaveStability': [], # transect specific
-                   'ShoreAngles': []} # transect specific
+                   'ShoreAngles': [], # transect specific
+                   'WaveDatesFD': [], # FD = full timeseries, daily median
+                   'WaveHsFD': [],
+                   'WaveDirFD': [],
+                   'WaveTpFD': []}
     
     
     for Tr in range(len(TransectInterGDF)):
@@ -529,7 +535,12 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
                 'TrNormWaveTp': SampleWavesSimple_norm(PeakWavePer[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Tp'),
                 'TrStDevWaveHs': SampleWavesSimple_stdev(SigWaveHeight[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Hs'),
                 'TrStDevWaveDir': SampleWavesSimple_stdev(MeanWaveDir[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Dir'),
-                'TrStDevWaveTp': SampleWavesSimple_stdev(PeakWavePer[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Tp')}
+                'TrStDevWaveTp': SampleWavesSimple_stdev(PeakWavePer[:, IDLat, IDLong], WaveTime, DateTimeSat, 'Tp'),
+                'TrWaveDatesFD': DateTimeDaily.to_list(),
+                'TrWaveHsFD': SampleWavesSimple_daily(SigWaveHeight[:, IDLat, IDLong], 'Hs', WaveTime, DateTimeDaily),
+                'TrWaveDirFD': SampleWavesSimple_daily(MeanWaveDir[:, IDLat, IDLong], 'Dir', WaveTime, DateTimeDaily),
+                'TrWaveTpFD': SampleWavesSimple_daily(PeakWavePer[:, IDLat, IDLong], 'Tp', WaveTime, DateTimeDaily)
+                }
             
             # Cache the results for this grid cell to avoid redundant calculations
             Cached[GridCell] = GridData
@@ -567,6 +578,22 @@ def SampleWavesSimple_interp(WaveProp, WaveTime, DateTimeSat):
             interpolated_values.append(interpolated_value)
     
     return interpolated_values
+
+
+def SampleWavesSimple_daily(WaveProp, PropName, WaveTime, DateTimeDaily):
+    
+    # Get dataframe of wave property and timestamps
+    WavePropDF = pd.DataFrame({PropName:WaveProp}, index=WaveTime)
+    # Clip down timeseries to just start and end of satellite output dates
+    WavePropDFfilt = WavePropDF[(WavePropDF.index >= DateTimeDaily[0]) & (WavePropDF.index < DateTimeDaily[-1])]        
+    # If wave property is direction, take daily circular mean instead
+    if PropName == 'Dir':
+        daily_values = WavePropDFfilt.resample('D')['WaveProp'].apply(Toolbox.CircMean)
+    # Otherwise calculate daily mean
+    else:
+        daily_values = WavePropDFfilt.resample('D')['WaveProp'].mean()
+    
+    return daily_values.to_list()
 
 
 def SampleWavesSimple_norm(WaveProp, WaveTime, DateTimeSat, WaveType):
