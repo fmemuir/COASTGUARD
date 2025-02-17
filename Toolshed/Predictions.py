@@ -134,9 +134,9 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
                          how='inner', on='TransectID')
     # Merge combined dataframe with topographic info
     # TransectInterGDFTopo[['TransectID','TZwidth', 'TZwidthMn', 'SlopeMax', 'SlopeMean']]
-    CoastalDF = pd.merge(CoastalDF, 
-                         TransectInterGDFTopo[['TransectID','TZwidth']],
-                         how='inner', on='TransectID')
+    # CoastalDF = pd.merge(CoastalDF, 
+    #                       TransectInterGDFTopo[['TransectID','TZwidth']],
+    #                       how='inner', on='TransectID')
     # Merge combined dataframe with wave info
     # TransectInterGDFWave[['TransectID','WaveHs', 'WaveDir', 'WaveTp', 'WaveDiffus']]
     CoastalDF = pd.merge(CoastalDF, 
@@ -300,7 +300,7 @@ def InterpVEWL(CoastalDF, Tr):
         wl_interp_f = interp1d(wl_numdates, TransectDF[wlcol][Tr], kind='linear', fill_value='extrapolate')
         wl_interp = wl_interp_f(wv_numdates).tolist()
         TransectDF[wlcol] = [wl_interp]
-    for vecol in ['distances','TZwidth']:
+    for vecol in ['distances']:#,'TZwidth']:
         ve_interp_f = interp1d(ve_numdates, TransectDF[vecol][Tr], kind='linear', fill_value='extrapolate')
         ve_interp = ve_interp_f(wv_numdates).tolist()
         TransectDF[vecol] = [ve_interp]
