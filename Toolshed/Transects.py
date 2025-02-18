@@ -759,6 +759,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     # Clip tide data down to output dates
     startdt = datetime.strptime(output['dates'][0]+' 00:00:00', '%Y-%m-%d %H:%M:%S')
     enddt = datetime.strptime(output['dates'][-1]+' 00:00:00', '%Y-%m-%d %H:%M:%S')+timedelta(days=1)
+    
     dailymeantides = dailymeantides[(dailymeantides.index >= startdt) 
                                     & (dailymeantides.index < enddt)]
     dailymaxtides = dailymaxtides[(dailymaxtides.index >= startdt) 
