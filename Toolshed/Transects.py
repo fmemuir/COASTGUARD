@@ -752,7 +752,17 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
         datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f') 
         for date, time in zip(output['dates'], output['times'])
     ]
-    tide_dict = dict(zip(dates_sat, Toolbox.GetWaterElevs(settings, dates_sat)))
+    # Generate daily timesteps between first and last output dates
+    hourlytides, dailymeantides, dailymaxtides = Toolbox.GetWaterElevs(settings, dates_sat, Daily=True)
+    tide_dict = dict(zip(dates_sat, hourlytides))
+    
+    # Clip tide data down to output dates
+    startdt = datetime.strptime(output['dates'][0]+' 00:00:00', '%Y-%m-%d %H:%M:%S')
+    enddt = datetime.strptime(output['dates'][-1]+' 00:00:00', '%Y-%m-%d %H:%M:%S')+timedelta(days=1)
+    dailymeantides = dailymeantides[(dailymeantides.index >= startdt) 
+                                    & (dailymeantides.index < enddt)]
+    dailymaxtides = dailymaxtides[(dailymaxtides.index >= startdt) 
+                                    & (dailymaxtides.index < enddt)]
     
     # If wave data is provided, add runups to tidal correction
     if TransectInterGDFWave is not None:
@@ -767,7 +777,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     RefElev = 0
     
     # Initialize lists for each transect's final data
-    BeachSlopes, TidalStages, CorrectedDists = [], [], []
+    BeachSlopes, TidalStages, TidalStagesDailyMean, TidalStagesDailyMax, CorrectedDists = [], [], [], [], []
     
     # Path to DEM file for slope calculation (if available)
     DEMpath = os.path.join(settings['inputs']['filepath'], 'tides', f"{settings['inputs']['sitename']}_DEM.tif")
@@ -815,10 +825,14 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
         CorrectedDists.append(CorrectedDistsTr)
         BeachSlopes.append(BeachSlope)
         TidalStages.append(tides_sat_tr)
+        TidalStagesDailyMean.append(dailymeantides.to_list())
+        TidalStagesDailyMax.append(dailymaxtides.to_list())
         
     # Add results back to TransectInterGDFWater
     TransectInterGDFWater['wlcorrdist'] = CorrectedDists
     TransectInterGDFWater['tideelev'] = TidalStages
+    TransectInterGDFWater['tideelevFD'] = TidalStagesDailyMean
+    TransectInterGDFWater['tideelevMx'] = TidalStagesDailyMean
     TransectInterGDFWater['beachslope'] = BeachSlopes
 
     return TransectInterGDFWater
@@ -1439,16 +1453,29 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     
     # Sample waves from CMEMS hindcast
     # WaveDates, WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWaves(settings, output, TransectInterGDF, WaveFilePath)
-    WaveDates, WaveHs, WaveDir, WaveTp, NormWaveHs, NormWaveDir, NormWaveTp, StDevWaveHs, StDevWaveDir, StDevWaveTp, WaveDiffusivity, WaveStability, ShoreAngles = Waves.SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath)
+    WaveDates, WaveHs, WaveDir, WaveTp,\
+        NormWaveHs, NormWaveDir, NormWaveTp, \
+            StDevWaveHs, StDevWaveDir, StDevWaveTp, \
+                WaveDiffusivity, WaveStability, ShoreAngles,\
+                    WaveDatesFD, WaveHsFD, WaveDirFD, WaveTpFD = Waves.SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath)
     WaveAlphas = []
     for Tr in range(len(TransectInterGDFWave)):
         WaveAlphas.append(Waves.CalcAlpha(WaveDir, ShoreAngles, Tr))
+    WaveAlphasFD = []
+    for Tr in range(len(TransectInterGDFWave)):
+        WaveAlphasFD.append(Waves.CalcAlpha(WaveDirFD, ShoreAngles, Tr))
     
+    # Populate DF (norm and stdev values not currently included) 
     TransectInterGDFWave['WaveDates'] = WaveDates
+    TransectInterGDFWave['WaveDatesFD'] = WaveDatesFD
     TransectInterGDFWave['WaveHs'] = WaveHs
+    TransectInterGDFWave['WaveHsFD'] = WaveHsFD
     TransectInterGDFWave['WaveDir'] = WaveDir
+    TransectInterGDFWave['WaveDirFD'] = WaveDirFD
     TransectInterGDFWave['WaveAlpha'] = WaveAlphas
+    TransectInterGDFWave['WaveAlphaFD'] = WaveAlphasFD
     TransectInterGDFWave['WaveTp'] = WaveTp
+    TransectInterGDFWave['WaveTpFD'] = WaveTpFD
     TransectInterGDFWave['WaveDiffus'] = WaveDiffusivity
     TransectInterGDFWave['WaveStabil'] = WaveStability
     TransectInterGDFWave['ShoreAngle'] = ShoreAngles
