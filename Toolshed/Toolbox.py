@@ -2592,7 +2592,7 @@ def ChangeYAMLPaths(configfile, tidepath):
         file.write(filedata)
 
 
-def GetWaterElevs(settings, Dates_Sat):
+def GetWaterElevs(settings, Dates_Sat, Daily=False):
     '''
     Extracts matching water elevations from formatted CSV of tide heights and times.
     FM Jun 2023
@@ -2648,8 +2648,15 @@ def GetWaterElevs(settings, Dates_Sat):
         
         Tides_Sat.append(Tide_Sat)
     
-    return Tides_Sat
-
+    # if no daily tide data needed, just return interpolated list of tide elevs
+    if Daily==False:
+        return Tides_Sat
+    else:
+        # Otherwise, calculate daily mean and max of tide elevs for whole timeseries
+        Tide_Data.index = Tide_Data['date']
+        Tides_DailyMean = Tide_Data.resample('D')['tide'].mean()
+        Tides_DailyMax = Tide_Data.resample('D')['tide'].max()
+        return Tides_Sat, Tides_DailyMean, Tides_DailyMax
 
 
 def BeachTideLoc(settings, TideSeries=None):
