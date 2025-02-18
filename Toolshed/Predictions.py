@@ -54,6 +54,8 @@ import tensorflow as tf
 tf.config.set_visible_devices([],'GPU')
 
 
+# ----------------------------------------------------------------------------------------
+### DATA PREPPING FUNCTIONS ###
 
 def LoadIntersections(filepath, sitename):
     """
@@ -407,6 +409,10 @@ def CreateSequences(X, y=None, time_steps=1):
         return np.array([]), np.array([]), np.array([])
 
 
+# ----------------------------------------------------------------------------------------
+### MODEL INFRASTRUCTURE FUNCTIONS ###
+
+
 def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
     """
     Create a cost-sensitive loss function to implement within an NN model.compile() step.
@@ -746,6 +752,121 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     return PredDict
 
 
+def TrainRNN_Optuna(PredDict, mlabel):
+    # Custom RMSE metric function
+    def root_mean_squared_error(y_true, y_pred):
+        return K.sqrt(K.mean(K.square(y_pred - y_true)))
+
+    def set_seed(seed):
+        tf.random.set_seed(seed)
+        os.environ['PYTHONHASHSEED'] = str(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+
+    # Index of model setup
+    mID = PredDict['mlabel'].index(mlabel)
+    # inshape = (N_timesteps, N_features)
+    inshape = (PredDict['X_train'][mID].shape[0], PredDict['X_train'][mID].shape[2])    
+
+    # Define the LSTM model (Input No of layers should be atleast 2, including Dense layer, the inputs are initial values only)
+    def CreateModel(learning_rate, batch_size, num_layers, num_nodes, dropout_rate, epochs, xtrain, ytrain, xtest, ytest):
+        set_seed(42)
+        min_delta = 0.001
+
+        model = Sequential()
+        model.add(Input(inshape))
+        model.add(LSTM(num_nodes, activation='relu', return_sequences=True))
+        model.add(Dropout(dropout_rate))
+        
+        for _ in range(num_layers-2):
+            model.add(LSTM(num_nodes, return_sequences=True))
+            model.add(Dropout(dropout_rate))
+            
+        model.add(LSTM(num_nodes))
+        model.add(Dropout(dropout_rate)) 
+        model.add(Dense(2))
+                
+        model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate), metrics=[root_mean_squared_error])
+        
+        # Train model with early stopping callback
+        early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, min_delta=min_delta, restore_best_weights=True)
+        
+        history = model.fit(xtrain, ytrain, epochs=epochs, batch_size=batch_size, 
+                            validation_data=(xtest, ytest), verbose=1, shuffle = False, callbacks=[early_stopping_callback])
+    
+        return model, history
+
+    # Set to store unique hyperparameter configurations
+    hyperparameter_set = set()
+
+    # For Optuna, it is required to specify a Objective function which it tries to minimise (finding the global(?) minima). Here it is loss (RMSE) on validation set
+    def objective(trial):
+        # Define hyperparameters to optimize with Optuna
+        # Set seed for os env
+        os.environ['PYTHONHASHSEED'] = str(42)
+        # Set random seed for Python
+        random.seed(42)
+        # Set random seed for NumPy
+        np.random.seed(42)
+        # Set random seed for TensorFlow
+        tf.random.set_seed(42)
+        
+        ## If you want to use a parameter space and pickup hyperpameter combos randomly. Bit time consuming
+        # learning_rate = trial.suggest_float('learning_rate', 1e-4, 2e-3, log=True)
+        # num_layers = trial.suggest_int('num_layers', 2, 4)
+        # dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.4)
+        # num_nodes = trial.suggest_int('num_nodes', 100, 300)
+        # batch_size = trial.suggest_int('batch_size', 24, 92)
+        # epochs = trial.suggest_int('epochs', 20, 100)
+    
+        # If you want to specify certain values of parameters and provide as a grid of hyperparameters (optuna samplers will pickup hyperpameter combos randomly from the grid). Bit time consuming
+        learning_rate = trial.suggest_categorical('learning_rate', [0.001, 0.005, 0.01])
+        num_layers = trial.suggest_categorical('num_layers', [2, 3, 4])
+        dropout_rate = trial.suggest_categorical('dropout_rate', [0.1, 0.2, 0.4])
+        num_nodes = trial.suggest_categorical('num_nodes', [50, 100, 200, 300])
+        batch_size = trial.suggest_categorical('batch_size', [24, 32, 64, 92])
+        epochs = trial.suggest_categorical('epochs', [50, 80, 100, 200])
+        
+        # Create a tuple of the hyperparameters
+        hyperparameters = (learning_rate, num_layers, dropout_rate, num_nodes, batch_size, epochs)
+    
+        # Check if this set of hyperparameters has already been tried
+        if hyperparameters in hyperparameter_set:
+            raise optuna.exceptions.TrialPruned()  # Skip this trial and suggest a new set of hyperparameters
+    
+        # Add the hyperparameters to the set
+        hyperparameter_set.add(hyperparameters)
+    
+        # Make a prediction using the LSTM model for the validation set
+        optimized_model, history_HPO = CreateModel(learning_rate, batch_size, num_layers, num_nodes, dropout_rate, epochs, 
+                                                   PredDict['X_train'][mID], PredDict['y_train'][mID], 
+                                                   PredDict['X_val'][mID], PredDict['y_val'][mID])
+
+        ypredict = optimized_model.predict(PredDict['X_val'][mID])
+        val_loss = root_mean_squared_error(PredDict['y_val'][mID], ypredict)
+        
+        return val_loss # Returning the Objective function value. This will be used to optimise, through creating a surrogate model for the number of trial runs
+        
+    # Define the pruning callback
+    pruner = optuna.pruners.MedianPruner()
+    
+    # Create Optuna study with Bayesian optimization (TPE) and trial pruning. There is Gausian sampler (and so many other sampling options too)
+    study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(), pruner=pruner)
+    
+    # Optimize hyperparameters
+    study.optimize(objective, n_trials=50)
+    
+    # Retrieve best hyperparameters
+    print("Best Hyperparameters:", study.best_params)
+    
+    # Save the study object (If required. So that it can be loaded as in the next cell without needing to re-run this whole HPO)
+    # filename = f'optuna_study_SLP_H_weekly-HsTp-LSTM{n_steps}.pkl'
+    # joblib.dump(study, filename)
+
+    return study
+
+
+
 def RunsToCSV(tuningdir,outputCSV):
     
     AllData = []
@@ -778,46 +899,6 @@ def RunsToCSV(tuningdir,outputCSV):
     df.to_csv(outputPath, index=False)
     print(f"Data saved to {outputPath}")
     
-
-def PlotAccuracy(CSVdir, FigPath):
-    # List to store each CSV's DataFrame
-    dfs = []
-    
-    # Loop through all files in the folder
-    for filename in os.listdir(CSVdir):
-        if filename.endswith('.csv'):
-            # Full path to the CSV
-            file_path = os.path.join(CSVdir, filename)
-            
-            # Read the CSV into a DataFrame
-            df = pd.read_csv(file_path)
-            df.drop(['Wall time'], axis=1, inplace=True)
-            
-            # Rename columns to standardize (x and y for this script)
-            df.columns = ['x', 'y']
-            # Set x as the index
-            df.set_index('x', inplace=True)
-            
-            # Rename the y column to the filename (without extension)
-            column_name = os.path.splitext(filename)[0]
-            df.rename(columns={'y': column_name}, inplace=True)
-            # Add the DataFrame to the list
-            dfs.append(df)
-    
-    # Merge all DataFrames on the x-values index
-    # This will align rows by index and fill missing values with NaN
-    AccuracyDF = pd.concat(dfs, axis=1)
-    
-    plt.figure(figsize=(3.22,1.72))
-    plt.plot(AccuracyDF, c='w', alpha=0.5)
-    plt.plot(AccuracyDF['dense64_validation'], c='#283252')
-    plt.xlabel('epoch')
-    plt.ylabel('accuracy')
-    plt.show()
-    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
-    
-    return AccuracyDF
-
 
 def FuturePredict(PredDict, ForecastDF):
     """
@@ -875,6 +956,137 @@ def FuturePredict(PredDict, ForecastDF):
         FutureOutputs['output'].append(FutureDF)
         
     return FutureOutputs
+
+
+# ----------------------------------------------------------------------------------------
+### PLOTTING FUNCTIONS ###
+
+
+def PlotAccuracy(CSVdir, FigPath):
+    # List to store each CSV's DataFrame
+    dfs = []
+    
+    # Loop through all files in the folder
+    for filename in os.listdir(CSVdir):
+        if filename.endswith('.csv'):
+            # Full path to the CSV
+            file_path = os.path.join(CSVdir, filename)
+            
+            # Read the CSV into a DataFrame
+            df = pd.read_csv(file_path)
+            df.drop(['Wall time'], axis=1, inplace=True)
+            
+            # Rename columns to standardize (x and y for this script)
+            df.columns = ['x', 'y']
+            # Set x as the index
+            df.set_index('x', inplace=True)
+            
+            # Rename the y column to the filename (without extension)
+            column_name = os.path.splitext(filename)[0]
+            df.rename(columns={'y': column_name}, inplace=True)
+            # Add the DataFrame to the list
+            dfs.append(df)
+    
+    # Merge all DataFrames on the x-values index
+    # This will align rows by index and fill missing values with NaN
+    AccuracyDF = pd.concat(dfs, axis=1)
+    
+    plt.figure(figsize=(3.22,1.72))
+    plt.plot(AccuracyDF, c='w', alpha=0.5)
+    plt.plot(AccuracyDF['dense64_validation'], c='#283252')
+    plt.xlabel('epoch')
+    plt.ylabel('accuracy')
+    plt.show()
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
+    
+    return AccuracyDF
+
+
+def PlotVarTS(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename):
+    """
+    PloT timeseries of training variables used.
+    FM Feb 2025
+
+    Parameters
+    ----------
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    TransectDFTest : DataFrame
+        DataFrame of past data (not interpolated) to use for training the model.
+    TransectDFTest : DataFrame
+        DataFrame of past data sliced from most recent end of TransectDF to use for testing the model.
+    VarDFDay : DataFrame
+        DataFrame of past data interpolated to daily timesteps (with temporal index).
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+
+
+    """
+    fig, axs = plt.subplots(5,1, sharex=True, figsize=(6.55,6), dpi=150)
+    plt.subplots_adjust(wspace=None,hspace=None)
+    lw = 1 # line width
+    
+    for i, ax, yvar, c, ylabel in zip(range(len(axs)), axs, 
+                                      ['WaveDir',
+                                       'Runups',
+                                       'Iribarrens',
+                                       'distances',
+                                       'wlcorrdist'],
+                                      ['cornflowerblue',
+                                       'darkorchid',
+                                       'orange',
+                                       'forestgreen',
+                                       'blue'],
+                                      ['Wave direction (deg)',
+                                       'Runup (m)',
+                                       'Iribarren (1)',
+                                       'Cross-shore distance (m)',
+                                       'Cross-shore distance (m)']):
+        TrainStart = mdates.date2num(TransectDFTrain.index[0])
+        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+        ValEnd = mdates.date2num(TransectDFTrain.index[-1])
+        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+        
+        ax.add_patch(TrainT) 
+        ax.add_patch(ValT)
+    
+        ax.plot(TransectDFTrain[yvar], c=c, lw=lw)
+        ax.plot(VarDFDay[yvar], c=c, lw=lw, alpha=0.3)
+        
+        if i == 3:
+            ax.plot(TransectDFTest['distances'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
+            ax.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
+            ax.legend(loc='upper left', ncols=3)
+        elif i == 4:
+            ax.plot(TransectDFTest['wlcorrdist'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
+            ax.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
+            ax.legend(loc='upper left', ncols=3)
+        else:
+            ax.plot(TransectDFTest[yvar], c=c, lw=lw)
+
+        ax.set_ylabel(ylabel)
+        ax.set_ylim(min(VarDFDay[yvar])-(min(VarDFDay[yvar])*0.2), max(VarDFDay[yvar])+(min(VarDFDay[yvar])*0.2))
+        ax.tick_params(axis='both',which='major',pad=2)
+        ax.xaxis.labelpad=2
+        ax.yaxis.labelpad=2
+    
+    plt.xlabel('Date (yyyy)')       
+    plt.tight_layout()
+    plt.show()
+    
+    StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
+    EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_predictedVars_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+
+
+
 
 
 def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename):
@@ -1029,119 +1241,8 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
-def TrainRNN_Optuna(PredDict, mlabel):
-    # Custom RMSE metric function
-    def root_mean_squared_error(y_true, y_pred):
-        return K.sqrt(K.mean(K.square(y_pred - y_true)))
-
-    def set_seed(seed):
-        tf.random.set_seed(seed)
-        os.environ['PYTHONHASHSEED'] = str(seed)
-        np.random.seed(seed)
-        random.seed(seed)
-
-    # Index of model setup
-    mID = PredDict['mlabel'].index(mlabel)
-    # inshape = (N_timesteps, N_features)
-    inshape = (PredDict['X_train'][mID].shape[0], PredDict['X_train'][mID].shape[2])    
-
-    # Define the LSTM model (Input No of layers should be atleast 2, including Dense layer, the inputs are initial values only)
-    def CreateModel(learning_rate, batch_size, num_layers, num_nodes, dropout_rate, epochs, xtrain, ytrain, xtest, ytest):
-        set_seed(42)
-        min_delta = 0.001
-
-        model = Sequential()
-        model.add(Input(inshape))
-        model.add(LSTM(num_nodes, activation='relu', return_sequences=True))
-        model.add(Dropout(dropout_rate))
-        
-        for _ in range(num_layers-2):
-            model.add(LSTM(num_nodes, return_sequences=True))
-            model.add(Dropout(dropout_rate))
-            
-        model.add(LSTM(num_nodes))
-        model.add(Dropout(dropout_rate)) 
-        model.add(Dense(2))
-                
-        model.compile(loss='mse', optimizer=Adam(learning_rate=learning_rate), metrics=[root_mean_squared_error])
-        
-        # Train model with early stopping callback
-        early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, min_delta=min_delta, restore_best_weights=True)
-        
-        history = model.fit(xtrain, ytrain, epochs=epochs, batch_size=batch_size, 
-                            validation_data=(xtest, ytest), verbose=1, shuffle = False, callbacks=[early_stopping_callback])
-    
-        return model, history
-
-    # Set to store unique hyperparameter configurations
-    hyperparameter_set = set()
-
-    # For Optuna, it is required to specify a Objective function which it tries to minimise (finding the global(?) minima). Here it is loss (RMSE) on validation set
-    def objective(trial):
-        # Define hyperparameters to optimize with Optuna
-        # Set seed for os env
-        os.environ['PYTHONHASHSEED'] = str(42)
-        # Set random seed for Python
-        random.seed(42)
-        # Set random seed for NumPy
-        np.random.seed(42)
-        # Set random seed for TensorFlow
-        tf.random.set_seed(42)
-        
-        ## If you want to use a parameter space and pickup hyperpameter combos randomly. Bit time consuming
-        # learning_rate = trial.suggest_float('learning_rate', 1e-4, 2e-3, log=True)
-        # num_layers = trial.suggest_int('num_layers', 2, 4)
-        # dropout_rate = trial.suggest_float('dropout_rate', 0.1, 0.4)
-        # num_nodes = trial.suggest_int('num_nodes', 100, 300)
-        # batch_size = trial.suggest_int('batch_size', 24, 92)
-        # epochs = trial.suggest_int('epochs', 20, 100)
-    
-        # If you want to specify certain values of parameters and provide as a grid of hyperparameters (optuna samplers will pickup hyperpameter combos randomly from the grid). Bit time consuming
-        learning_rate = trial.suggest_categorical('learning_rate', [0.001, 0.005, 0.01])
-        num_layers = trial.suggest_categorical('num_layers', [2, 3, 4])
-        dropout_rate = trial.suggest_categorical('dropout_rate', [0.1, 0.2, 0.4])
-        num_nodes = trial.suggest_categorical('num_nodes', [50, 100, 200, 300])
-        batch_size = trial.suggest_categorical('batch_size', [24, 32, 64, 92])
-        epochs = trial.suggest_categorical('epochs', [50, 80, 100, 200])
-        
-        # Create a tuple of the hyperparameters
-        hyperparameters = (learning_rate, num_layers, dropout_rate, num_nodes, batch_size, epochs)
-    
-        # Check if this set of hyperparameters has already been tried
-        if hyperparameters in hyperparameter_set:
-            raise optuna.exceptions.TrialPruned()  # Skip this trial and suggest a new set of hyperparameters
-    
-        # Add the hyperparameters to the set
-        hyperparameter_set.add(hyperparameters)
-    
-        # Make a prediction using the LSTM model for the validation set
-        optimized_model, history_HPO = CreateModel(learning_rate, batch_size, num_layers, num_nodes, dropout_rate, epochs, 
-                                                   PredDict['X_train'][mID], PredDict['y_train'][mID], 
-                                                   PredDict['X_val'][mID], PredDict['y_val'][mID])
-
-        ypredict = optimized_model.predict(PredDict['X_val'][mID])
-        val_loss = root_mean_squared_error(PredDict['y_val'][mID], ypredict)
-        
-        return val_loss # Returning the Objective function value. This will be used to optimise, through creating a surrogate model for the number of trial runs
-        
-    # Define the pruning callback
-    pruner = optuna.pruners.MedianPruner()
-    
-    # Create Optuna study with Bayesian optimization (TPE) and trial pruning. There is Gausian sampler (and so many other sampling options too)
-    study = optuna.create_study(direction='minimize', sampler=optuna.samplers.TPESampler(), pruner=pruner)
-    
-    # Optimize hyperparameters
-    study.optimize(objective, n_trials=50)
-    
-    # Retrieve best hyperparameters
-    print("Best Hyperparameters:", study.best_params)
-    
-    # Save the study object (If required. So that it can be loaded as in the next cell without needing to re-run this whole HPO)
-    # filename = f'optuna_study_SLP_H_weekly-HsTp-LSTM{n_steps}.pkl'
-    # joblib.dump(study, filename)
-
-    return study
-
+# ----------------------------------------------------------------------------------------
+### CLUSTERING FUNCTIONS ###
 
 def Cluster(TransectDF, ValPlots=False):
     """
