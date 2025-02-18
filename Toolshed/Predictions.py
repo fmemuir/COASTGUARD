@@ -129,18 +129,23 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
     """
     print('Merging transect-based data...')
     # Merge veg edge intersection data with waterline intersection data
-    CoastalDF = pd.merge(TransectInterGDF[['TransectID','dates','times','distances']], 
-                         TransectInterGDFWater[['TransectID','wldates','wltimes','wlcorrdist', 'tideelev','beachwidth']],
+    CoastalDF = pd.merge(TransectInterGDF[['TransectID',
+                                           'dates','times','distances']], 
+                         TransectInterGDFWater[['TransectID',
+                                                'wldates','wltimes','wlcorrdist', 
+                                                'tideelev','beachwidth',
+                                                'tidedatesFD','tideelevFD', 'tideelevMx']],
                          how='inner', on='TransectID')
-    # Merge combined dataframe with topographic info
-    # TransectInterGDFTopo[['TransectID','TZwidth', 'TZwidthMn', 'SlopeMax', 'SlopeMean']]
-    # CoastalDF = pd.merge(CoastalDF, 
-    #                       TransectInterGDFTopo[['TransectID','TZwidth']],
-    #                       how='inner', on='TransectID')
     # Merge combined dataframe with wave info
     # TransectInterGDFWave[['TransectID','WaveHs', 'WaveDir', 'WaveTp', 'WaveDiffus']]
+    # CoastalDF = pd.merge(CoastalDF, 
+    #                      TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups','Iribarrens']],
+    #                      how='inner', on='TransectID')
     CoastalDF = pd.merge(CoastalDF, 
-                         TransectInterGDFWave[['TransectID','WaveDates','WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups','Iribarrens']],
+                         TransectInterGDFWave[['TransectID',
+                                               'WaveDatesFD',
+                                               'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 
+                                               'Runups', 'Iribarren']],
                          how='inner', on='TransectID')
     
     print('Converting to datetimes...')
