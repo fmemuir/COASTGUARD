@@ -454,6 +454,18 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     ShoreAngles : list of floats
         Angle of shoreline at particular cross-shore transect 
         (in degrees clockwise from N).
+    WaveDatesFD : list of lists
+        Datetimes of wave data observations (defined daily usin start and end
+        dates from output['dates']).
+    WaveHsFD : list of lists
+        Significant wave height for each transect calculated as daily mean 
+        (in metres).
+    WaveDir : list of lists
+        Mean wave direction (from) for each transect calculated as daily circular mean  
+        (in degrees clockwise from N).
+    WaveTp : list of lists
+        Peak wave period for each transect calculated as daily mean  
+        (in seconds).
 
     """
 
@@ -466,9 +478,15 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     DateTimeSat = [datetime.strptime(f"{date} {time}", '%Y-%m-%d %H:%M:%S.%f')
                    for date, time in zip(output['dates'], output['times'])]
     # Generate daily timesteps between first and last output dates
-    DateTimeDaily = pd.date_range(start=datetime.strptime(output['dates'][0]+' 00:00:00', '%Y-%m-%d %H:%M:%S'),
-                                  end=datetime.strptime(output['dates'][-1]+' 00:00:00', '%Y-%m-%d %H:%M:%S')+timedelta(days=1),
+    startDT = datetime.strptime(output['dates'][0]+' 00:00:00', '%Y-%m-%d %H:%M:%S')
+    endDT = datetime.strptime(output['dates'][-1]+' 00:00:00', '%Y-%m-%d %H:%M:%S')+timedelta(days=1)
+    # if wave timeseries is shorter than output date range, use smaller range
+    WaveTimeDF = pd.Series(WaveTime)
+    WaveTimeClip = WaveTimeDF[(WaveTimeDF >= startDT) & (WaveTimeDF < endDT)]
+    DateTimeDaily = pd.date_range(start=WaveTimeClip.iloc[0],
+                                  end=WaveTimeClip.iloc[-1],
                                   freq='D')
+
     # Get centroid locations of each transect (in lat long)
     Centroids = TransectInterGDF.to_crs('4326').centroid
     
@@ -588,10 +606,10 @@ def SampleWavesSimple_daily(WaveProp, PropName, WaveTime, DateTimeDaily):
     WavePropDFfilt = WavePropDF[(WavePropDF.index >= DateTimeDaily[0]) & (WavePropDF.index < DateTimeDaily[-1])]        
     # If wave property is direction, take daily circular mean instead
     if PropName == 'Dir':
-        daily_values = WavePropDFfilt.resample('D')['WaveProp'].apply(Toolbox.CircMean)
+        daily_values = WavePropDFfilt.resample('D')[PropName].apply(Toolbox.CircMean)
     # Otherwise calculate daily mean
     else:
-        daily_values = WavePropDFfilt.resample('D')['WaveProp'].mean()
+        daily_values = WavePropDFfilt.resample('D')[PropName].mean()
     
     return daily_values.to_list()
 
