@@ -835,7 +835,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     TransectInterGDFWater['tideelev'] = TidalStages
     TransectInterGDFWater['tidedatesFD'] = TidalDatesDaily
     TransectInterGDFWater['tideelevFD'] = TidalStagesDailyMean
-    TransectInterGDFWater['tideelevMx'] = TidalStagesDailyMean
+    TransectInterGDFWater['tideelevMx'] = TidalStagesDailyMax
     TransectInterGDFWater['beachslope'] = BeachSlopes
 
     return TransectInterGDFWater
