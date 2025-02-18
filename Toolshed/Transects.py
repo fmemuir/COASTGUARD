@@ -777,7 +777,7 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
     RefElev = 0
     
     # Initialize lists for each transect's final data
-    BeachSlopes, TidalStages, TidalStagesDailyMean, TidalStagesDailyMax, CorrectedDists = [], [], [], [], []
+    BeachSlopes, TidalStages, TidalStagesDailyMean, TidalStagesDailyMax, TidalDatesDaily, CorrectedDists = [], [], [], [], [], []
     
     # Path to DEM file for slope calculation (if available)
     DEMpath = os.path.join(settings['inputs']['filepath'], 'tides', f"{settings['inputs']['sitename']}_DEM.tif")
@@ -825,12 +825,14 @@ def WLCorrections(settings, output, TransectInterGDFWater, TransectInterGDFWave=
         CorrectedDists.append(CorrectedDistsTr)
         BeachSlopes.append(BeachSlope)
         TidalStages.append(tides_sat_tr)
+        TidalDatesDaily.append(dailymeantides.index.to_list())
         TidalStagesDailyMean.append(dailymeantides.to_list())
         TidalStagesDailyMax.append(dailymaxtides.to_list())
         
     # Add results back to TransectInterGDFWater
     TransectInterGDFWater['wlcorrdist'] = CorrectedDists
     TransectInterGDFWater['tideelev'] = TidalStages
+    TransectInterGDFWater['tidedatesFD'] = TidalDatesDaily
     TransectInterGDFWater['tideelevFD'] = TidalStagesDailyMean
     TransectInterGDFWater['tideelevMx'] = TidalStagesDailyMean
     TransectInterGDFWater['beachslope'] = BeachSlopes
