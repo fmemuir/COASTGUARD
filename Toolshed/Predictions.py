@@ -293,13 +293,13 @@ def InterpVEWL(CoastalDF, Tr):
     # TransectDF = TransectDF.transpose()
 
     # Convert all circular metrics to radians
-    for WaveProp in ['WaveDir','WaveAlpha']:
+    for WaveProp in ['WaveDirFD','WaveAlphaFD']:
         TransectDF[WaveProp] = [np.deg2rad(WaveDir) for WaveDir in TransectDF[WaveProp]]
 
     # Interpolate over waterline and wave associated variables
     wl_numdates = pd.to_datetime(TransectDF['wlDTs'][Tr]).values.astype(np.int64)
     ve_numdates = pd.to_datetime(TransectDF['veDTs'][Tr]).values.astype(np.int64)
-    wv_numdates = pd.to_datetime(TransectDF['WaveDates'][Tr]).values.astype(np.int64)
+    wv_numdates = pd.to_datetime(TransectDF['WaveDatesFD'][Tr]).values.astype(np.int64)
     # Match dates with veg edge dates and append back to TransectDF
     for wlcol in ['wlcorrdist', 'tideelev','beachwidth']:
         wl_interp_f = interp1d(wl_numdates, TransectDF[wlcol][Tr], kind='linear', fill_value='extrapolate')
@@ -320,346 +320,10 @@ def InterpVEWL(CoastalDF, Tr):
     TransectDF = pd.DataFrame({col: pd.Series(val.iloc[0]) for col,val in TransectDF.items()})
     
     # Reset index for timeseries
-    TransectDF.index = TransectDF['WaveDates']
-    TransectDF = TransectDF.drop(columns=['TransectID', 'WaveDates'])
+    TransectDF.index = TransectDF['WaveDatesFD']
+    TransectDF = TransectDF.drop(columns=['TransectID', 'WaveDatesFD'])
 
     return TransectDF
-
-    
-def ClusterKMeans(TransectDF, ValPlots=False):
-    """
-    Classify coastal change indicator data into low, medium or high impact from hazards,
-    using a KMeans clustering routine.
-    FM Sept 2024
-
-    Parameters
-    ----------
-    TransectDF : DataFrame
-        Dataframe of single cross-shore transect, with timeseries of satellite-derived metrics attached.
-    ValPlots : bool, optional
-        Plot validation plots of silhouette score and inertia. The default is False.
-
-    Returns
-    -------
-    VarDFClust : DataFrame
-        Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
-
-    """
-    # Define variables dataframe from transect dataframe by removing dates and transposing
-    VarDF = TransectDF.drop(columns=['TransectID', 'dates'])
-    VarDF.interpolate(method='nearest', axis=0, inplace=True) # fill nans using nearest
-    VarDF.interpolate(method='linear', axis=0, inplace=True) # if any nans left over at start or end, fill with linear
-    VarDF_scaled = StandardScaler().fit_transform(VarDF)
-    
-    
-    # Fit k-means clustering to data iteratively over different cluster sizes
-    k_n = range(2,15)
-    # Inertia = compactness of clusters i.e. total variance within a cluster
-    # Silhouette score = how similar object is to its own cluster vs other clusters 
-    inertia = []
-    sil_scores = []
-    
-    for k in k_n:
-        kmeansmod = KMeans(n_clusters=k, random_state=42)
-        kmeansmod.fit(VarDF_scaled)
-        inertia.append(kmeansmod.inertia_)
-        sil_scores.append(silhouette_score(VarDF_scaled, kmeansmod.labels_))
-    
-    # Apply PCA to reduce the dimensions to 3D for visualization
-    pca = PCA(n_components=3)
-    pca_VarDF = pca.fit_transform(VarDF_scaled)
-    eigenvectors = pca.components_
-
-    # Create a DataFrame for PCA results and add cluster labels
-    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
-    pca_df['Cluster'] = kmeansmod.labels_
-    
-    
-    if ValPlots is True:
-        # Optional: Plot an elbow graph to find the optimal number of clusters
-        plt.figure(figsize=(10, 5))
-        plt.plot(k_n, inertia, marker='o')
-        plt.title('Elbow Method For Optimal k')
-        plt.xlabel('Number of Clusters (k)')
-        plt.ylabel('Inertia')
-        plt.show()
-        
-        # Optional: Plot silhouette scores for further cluster evaluation
-        plt.figure(figsize=(10, 5))
-        plt.plot(k_n, sil_scores, marker='o')
-        plt.title('Silhouette Scores For Optimal k')
-        plt.xlabel('Number of Clusters (k)')
-        plt.ylabel('Silhouette Score')
-        plt.show()
-    
-    
-    # # Fit the KMeans model with the chosen number of clusters
-    # # Clusters are informed by 'impact' levels low, medium and high
-    # optimal_k = 3
-    # tic = timeit.default_timer() # start timer
-    # kmeansmod = KMeans(n_clusters=optimal_k, random_state=42)
-    # kmeansmod.fit(VarDF_scaled)
-    # toc = timeit.default_timer() # stop timer
-    
-    # # Analyze the clustering results
-    # VarDF['Cluster'] = kmeansmod.labels_
-    
-    ClusterMods = {'kmeans':KMeans(n_clusters=3, random_state=42),
-                   'spectral':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
-    for Mod in ClusterMods.keys():
-        
-        ClusterMods[Mod].fit(VarDF_scaled)
-        VarDF[Mod+'Cluster'] = ClusterMods[Mod].labels_
-        ClusterMeans = VarDF.groupby(Mod+'Cluster').mean()
-        
-        ClusterCentres = np.array([pca_VarDF[VarDF[Mod+'Cluster'] == i].mean(axis=0) for i in range(3)])
-
-        HighImpact = np.argmax(ClusterCentres[:, 0])
-        LowImpact = np.argmax(ClusterCentres[:, 1])
-        MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
-        
-        ClusterToImpact = {HighImpact:'High',
-                           MediumImpact:'Medium',
-                           LowImpact:'Low'}
-        ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF[Mod+'Cluster']]
-        VarDFClust = VarDF.copy()
-        VarDFClust[Mod+'Impact'] = ImpactLabels
-        
-        # HighImpact = ClusterMeans[(ClusterMeans['distances'] == ClusterMeans['distances'].min()) & # landward VE
-        #                           (ClusterMeans['wlcorrdist'] == ClusterMeans['wlcorrdist'].min()) & # landward WL
-        #                           (ClusterMeans['waterelev'] == ClusterMeans['waterelev'].max()) & # high water
-        #                           (ClusterMeans['beachwidth'] == ClusterMeans['beachwidth'].min()) & # narrow width
-        #                           (ClusterMeans['TZwidth'] == ClusterMeans['TZwidth'].min()) & # narrow TZ
-        #                           (ClusterMeans['WaveHs'] == ClusterMeans['WaveHs'].max()) & # high waves
-        #                           (ClusterMeans['WaveTp'] == ClusterMeans['WaveTp'].max())].index[0] # long period
-        
-        # LowImpact = ClusterMeans[(ClusterMeans['distances'] == ClusterMeans['distances'].max()) & # seaward VE
-        #                           (ClusterMeans['wlcorrdist'] == ClusterMeans['wlcorrdist'].max()) & # seaward WL
-        #                           (ClusterMeans['waterelev'] == ClusterMeans['waterelev'].min()) & # low water
-        #                           (ClusterMeans['beachwidth'] == ClusterMeans['beachwidth'].max()) & # wide width
-        #                           (ClusterMeans['TZwidth'] == ClusterMeans['TZwidth'].max()) & # wide TZ
-        #                           (ClusterMeans['WaveHs'] == ClusterMeans['WaveHs'].min()) & # low waves
-        #                           (ClusterMeans['WaveTp'] == ClusterMeans['WaveTp'].min())].index[0] # short period
-        # AllClusters = set([0,1,2])
-        # MediumImpact = (AllClusters - set([HighImpact, LowImpact])).pop()
-
-        # Cluster to impact
-        # ClusterToImpact = {'High': HighImpact,
-        #                    'Medium':MediumImpact,
-        #                    'Low':LowImpact}
-        # VarDF['Impact'] = VarDF[Mod+'Cluster'].map(ClusterToImpact)
-        
-        # inertia.append(ClusterMods[Mod].inertia_)
-        # sil_scores.append(silhouette_score(VarDF_scaled, ClusterMods[Mod].labels_))
-    
-        # Create a DataFrame for PCA results and add cluster labels
-        pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
-        pca_df['Cluster'] = ClusterMods[Mod].labels_
-    
-        # Optional: Visualization of clusters
-        if ValPlots is True:
-            fig, ax = plt.subplots(figsize=(10, 5))
-            bluecm = cm.get_cmap('cool')
-            greencm = cm.get_cmap('summer')
-            ax.scatter(VarDF.index, 
-                       VarDF['WaveHs'], 
-                       c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
-            ax2 = ax.twinx()
-            ax2.scatter(VarDF.index, 
-                       VarDF['distances'], 
-                       c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  # Example visualization using one variable
-            plt.title(f'Clustering Method: {Mod}')
-            ax.set_xlabel('Time')
-            # ax.set_ylabel('Cross-shore VE position (m)')
-            ax.set_ylabel('Significant wave height (m)')
-            ax2.set_ylabel('VE distance (m)')
-            plt.show()
-        
-        # Plot the clusters in the PCA space
-        fig, ax = plt.subplots(figsize=(5, 5))
-        clusterDF = []
-        for cluster in pca_df['Cluster'].unique():
-            cluster_data = pca_df[pca_df['Cluster'] == cluster]
-            plt.scatter(
-                cluster_data['PC1'], 
-                cluster_data['PC2'], 
-                label=f'Cluster {cluster}', 
-                s=40,
-                alpha=0.7
-            )
-            clusterDF.append(cluster_data)
-        # Plot eignevectors of each variable
-        coeffs = np.transpose(eigenvectors[0:2, :])*2
-        n_coeffs = coeffs.shape[0]
-        for i in range(n_coeffs):
-            plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
-            plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
-                         xytext=(coeffs[i,0]*15,5), textcoords='offset points',
-                         color='k', ha='center', va='center', zorder=5)
-        plt.tight_layout()
-        plt.show()
-            
-        # 3D scatter plot (to investigate clustering or patterns in PCs)
-        fig = plt.figure(figsize=(6,5))
-        ax = fig.add_subplot(111, projection='3d')
-        for cluster in pca_df['Cluster'].unique():
-            cluster_data = pca_df[pca_df['Cluster'] == cluster]
-            ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'])
-            ax.set_xlabel('PC1')
-            ax.set_ylabel('PC2')
-            ax.set_zlabel('PC3')
-        # Plot eignevectors of each variable
-        coeffs = np.transpose(eigenvectors[0:3, :])*2
-        n_coeffs = coeffs.shape[0]
-        for i in range(n_coeffs):
-            ax.quiver(0,0,0, 
-                      coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
-                      color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
-            ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
-                    VarDF.columns[i], color='k', ha='center', va='center')
-        plt.tight_layout()
-        plt.show()
-        
-        
-    return VarDFClust
-
-
-def Cluster(TransectDF, ValPlots=False):
-    """
-    Classify coastal change indicator data into low, medium or high impact from hazards,
-    using a SpectralCluster clustering routine.
-    FM Sept 2024
-
-    Parameters
-    ----------
-    TransectDF : DataFrame
-        Dataframe of single cross-shore transect, with timeseries of satellite-derived metrics attached.
-    ValPlots : bool, optional
-        Plot validation plots of silhouette score and inertia. The default is False.
-
-    Returns
-    -------
-    VarDFClust : DataFrame
-        Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
-
-    """
-    # Fill nans factoring in timesteps for interpolation
-    TransectDF.replace([np.inf, -np.inf], np.nan, inplace=True)
-    VarDF = TransectDF.interpolate(method='time', axis=0)
-    
-    # VarDF = VarDF[['distances', 'wlcorrdist','TZwidth','WaveHs']]
-    
-    VarDF_scaled = StandardScaler().fit_transform(VarDF)
-    
-    # Apply PCA to reduce the dimensions to 3D for visualization
-    pca = PCA(n_components=2)
-    pca_VarDF = pca.fit_transform(VarDF_scaled)
-    eigenvectors = pca.components_
-    variances = pca.explained_variance_ratio_
-    
-    # ClusterMods = {'':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
-    # for Mod in ClusterMods.keys():
-        
-    ClusterMod = SpectralClustering(n_clusters=3, 
-                                    eigen_solver='arpack',
-                                    n_components=len(VarDF.columns), 
-                                    random_state=42)
-    # Map labels to cluster IDs based on cluster centres and their distance to eigenvectors
-    ClusterMod.fit(VarDF_scaled)
-    VarDF['Cluster'] = ClusterMod.labels_
-    # 
-    # ClusterCentres = np.array([pca_VarDF[VarDF['Cluster'] == i].mean(axis=0) for i in range(3)])
-    
-    # # Define cluster labels using identified centres
-    # HighImpact = np.argmax(ClusterCentres[:, 0])
-    # LowImpact = np.argmax(ClusterCentres[:, 1])
-    # MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
-    # # Map labels to cluster IDs
-    # ClusterToImpact = {HighImpact:'High',
-    #                    MediumImpact:'Medium',
-    #                    LowImpact:'Low'}
-    # ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF['Cluster']]
-    # VarDFClust = VarDF.copy()
-    # VarDFClust['Impact'] = ImpactLabels
-
-    # Create a DataFrame for PCA results and add cluster labels
-    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2'])
-    pca_df['Cluster'] = ClusterMod.labels_
-
-    # Visualization of clusters
-    # Example clustered timeseries using one or two variables
-    # if ValPlots is True:
-    #     fig, ax = plt.subplots(figsize=(10, 5))
-    #     bluecm = cm.get_cmap('cool')
-    #     greencm = cm.get_cmap('summer')
-    #     ax.scatter(VarDF.index, 
-    #                VarDF['WaveHs'], 
-    #                c=VarDF['Cluster'], marker='X', cmap=bluecm)
-    #     ax2 = ax.twinx()
-    #     ax2.scatter(VarDF.index, 
-    #                VarDF['distances'], 
-    #                c=VarDF['Cluster'], marker='^', cmap=greencm)  
-    #     ax.set_xlabel('Time')
-    #     ax.set_ylabel('Significant wave height (m)')
-    #     ax2.set_ylabel('VE distance (m)')
-    #     plt.show()
-    
-    scale_factor = 0.5
-    # Plot the clusters in the PCA space
-    fig, ax = plt.subplots(figsize=(5, 5))
-    clusterDF = []
-    for cluster, clustc in zip(pca_df['Cluster'].unique(), ['#BEE4A8','#FF8183','#F6C999']):
-        cluster_data = pca_df[pca_df['Cluster'] == cluster]
-        plt.scatter(
-            cluster_data['PC1']*scale_factor, 
-            cluster_data['PC2']*scale_factor, 
-            label=f'Cluster {cluster}', 
-            s=40,
-            c=clustc,
-            alpha=0.7
-        )
-        clusterDF.append(cluster_data)
-    # Overlay eignevectors of each variable
-    coeffs = np.transpose(eigenvectors[0:2, :])*2
-    n_coeffs = coeffs.shape[0]
-    for i in range(n_coeffs):
-        plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
-        plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
-                     xytext=(coeffs[i,0]*15,5), textcoords='offset points',
-                     color='k', ha='center', va='center', zorder=5)
-    plt.tight_layout()
-    plt.show()
-        
-    # 3D scatter plot (to investigate clustering or patterns in PCs)
-    if 'PC3' in cluster_data.columns:
-        fig = plt.figure(figsize=(6,5))
-        ax = fig.add_subplot(111, projection='3d')
-        # colourdict = {'Low':'green','Medium':'orange','High':'red'}
-        for cluster in pca_df['Cluster'].unique():
-            cluster_data = pca_df[pca_df['Cluster'] == cluster]
-        #     ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'], 
-        #                color=colourdict[ClusterToImpact[cluster]], label=ClusterToImpact[cluster])
-            ax.scatter(cluster_data['PC1']*scale_factor,cluster_data['PC2']*scale_factor,cluster_data['PC3']*scale_factor)
-        ax.set_xlabel(rf'PC1 [explains {round(variances[0]*100,1)}% of $\sigma^2$]')
-        ax.set_ylabel(rf'PC2 [explains {round(variances[1]*100,1)}% of $\sigma^2$]')
-        ax.set_zlabel(rf'PC3 [explains {round(variances[2]*100,1)}% of $\sigma^2$]')
-        # Plot eigenvectors of each variable        
-        coeffs = np.transpose(eigenvectors[0:3, :])*2
-        n_coeffs = coeffs.shape[0]
-        for i in range(n_coeffs):
-            ax.quiver(0,0,0, 
-                      coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
-                      color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
-            ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
-                    VarDF.columns[i], color='k', ha='center', va='center')
-        # legorder = ['Low','Medium','High']
-        # handles,labels = plt.gca().get_legend_handles_labels()
-        # plt.legend([handles[labels.index(lab)] for lab in legorder],[labels[labels.index(lab)] for lab in legorder])
-        plt.tight_layout()
-        plt.show()
-        
-        
-    return VarDF
 
 
 def DailyInterp(TransectDF):
@@ -1478,3 +1142,338 @@ def TrainRNN_Optuna(PredDict, mlabel):
 
     return study
 
+
+def Cluster(TransectDF, ValPlots=False):
+    """
+    Classify coastal change indicator data into low, medium or high impact from hazards,
+    using a SpectralCluster clustering routine.
+    FM Sept 2024
+
+    Parameters
+    ----------
+    TransectDF : DataFrame
+        Dataframe of single cross-shore transect, with timeseries of satellite-derived metrics attached.
+    ValPlots : bool, optional
+        Plot validation plots of silhouette score and inertia. The default is False.
+
+    Returns
+    -------
+    VarDFClust : DataFrame
+        Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
+
+    """
+    # Fill nans factoring in timesteps for interpolation
+    TransectDF.replace([np.inf, -np.inf], np.nan, inplace=True)
+    VarDF = TransectDF.interpolate(method='time', axis=0)
+    
+    # VarDF = VarDF[['distances', 'wlcorrdist','TZwidth','WaveHs']]
+    
+    VarDF_scaled = StandardScaler().fit_transform(VarDF)
+    
+    # Apply PCA to reduce the dimensions to 3D for visualization
+    pca = PCA(n_components=2)
+    pca_VarDF = pca.fit_transform(VarDF_scaled)
+    eigenvectors = pca.components_
+    variances = pca.explained_variance_ratio_
+    
+    # ClusterMods = {'':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
+    # for Mod in ClusterMods.keys():
+        
+    ClusterMod = SpectralClustering(n_clusters=3, 
+                                    eigen_solver='arpack',
+                                    n_components=len(VarDF.columns), 
+                                    random_state=42)
+    # Map labels to cluster IDs based on cluster centres and their distance to eigenvectors
+    ClusterMod.fit(VarDF_scaled)
+    VarDF['Cluster'] = ClusterMod.labels_
+    # 
+    # ClusterCentres = np.array([pca_VarDF[VarDF['Cluster'] == i].mean(axis=0) for i in range(3)])
+    
+    # # Define cluster labels using identified centres
+    # HighImpact = np.argmax(ClusterCentres[:, 0])
+    # LowImpact = np.argmax(ClusterCentres[:, 1])
+    # MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
+    # # Map labels to cluster IDs
+    # ClusterToImpact = {HighImpact:'High',
+    #                    MediumImpact:'Medium',
+    #                    LowImpact:'Low'}
+    # ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF['Cluster']]
+    # VarDFClust = VarDF.copy()
+    # VarDFClust['Impact'] = ImpactLabels
+
+    # Create a DataFrame for PCA results and add cluster labels
+    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2'])
+    pca_df['Cluster'] = ClusterMod.labels_
+
+    # Visualization of clusters
+    # Example clustered timeseries using one or two variables
+    # if ValPlots is True:
+    #     fig, ax = plt.subplots(figsize=(10, 5))
+    #     bluecm = cm.get_cmap('cool')
+    #     greencm = cm.get_cmap('summer')
+    #     ax.scatter(VarDF.index, 
+    #                VarDF['WaveHs'], 
+    #                c=VarDF['Cluster'], marker='X', cmap=bluecm)
+    #     ax2 = ax.twinx()
+    #     ax2.scatter(VarDF.index, 
+    #                VarDF['distances'], 
+    #                c=VarDF['Cluster'], marker='^', cmap=greencm)  
+    #     ax.set_xlabel('Time')
+    #     ax.set_ylabel('Significant wave height (m)')
+    #     ax2.set_ylabel('VE distance (m)')
+    #     plt.show()
+    
+    scale_factor = 0.5
+    # Plot the clusters in the PCA space
+    fig, ax = plt.subplots(figsize=(5, 5))
+    clusterDF = []
+    for cluster, clustc in zip(pca_df['Cluster'].unique(), ['#BEE4A8','#FF8183','#F6C999']):
+        cluster_data = pca_df[pca_df['Cluster'] == cluster]
+        plt.scatter(
+            cluster_data['PC1']*scale_factor, 
+            cluster_data['PC2']*scale_factor, 
+            label=f'Cluster {cluster}', 
+            s=40,
+            c=clustc,
+            alpha=0.7
+        )
+        clusterDF.append(cluster_data)
+    # Overlay eignevectors of each variable
+    coeffs = np.transpose(eigenvectors[0:2, :])*2
+    n_coeffs = coeffs.shape[0]
+    for i in range(n_coeffs):
+        plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
+        plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
+                     xytext=(coeffs[i,0]*15,5), textcoords='offset points',
+                     color='k', ha='center', va='center', zorder=5)
+    plt.tight_layout()
+    plt.show()
+        
+    # 3D scatter plot (to investigate clustering or patterns in PCs)
+    if 'PC3' in cluster_data.columns:
+        fig = plt.figure(figsize=(6,5))
+        ax = fig.add_subplot(111, projection='3d')
+        # colourdict = {'Low':'green','Medium':'orange','High':'red'}
+        for cluster in pca_df['Cluster'].unique():
+            cluster_data = pca_df[pca_df['Cluster'] == cluster]
+        #     ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'], 
+        #                color=colourdict[ClusterToImpact[cluster]], label=ClusterToImpact[cluster])
+            ax.scatter(cluster_data['PC1']*scale_factor,cluster_data['PC2']*scale_factor,cluster_data['PC3']*scale_factor)
+        ax.set_xlabel(rf'PC1 [explains {round(variances[0]*100,1)}% of $\sigma^2$]')
+        ax.set_ylabel(rf'PC2 [explains {round(variances[1]*100,1)}% of $\sigma^2$]')
+        ax.set_zlabel(rf'PC3 [explains {round(variances[2]*100,1)}% of $\sigma^2$]')
+        # Plot eigenvectors of each variable        
+        coeffs = np.transpose(eigenvectors[0:3, :])*2
+        n_coeffs = coeffs.shape[0]
+        for i in range(n_coeffs):
+            ax.quiver(0,0,0, 
+                      coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
+                      color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
+            ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
+                    VarDF.columns[i], color='k', ha='center', va='center')
+        # legorder = ['Low','Medium','High']
+        # handles,labels = plt.gca().get_legend_handles_labels()
+        # plt.legend([handles[labels.index(lab)] for lab in legorder],[labels[labels.index(lab)] for lab in legorder])
+        plt.tight_layout()
+        plt.show()
+        
+        
+    return VarDF
+
+
+def ClusterKMeans(TransectDF, ValPlots=False):
+    """
+    Classify coastal change indicator data into low, medium or high impact from hazards,
+    using a KMeans clustering routine.
+    FM Sept 2024
+
+    Parameters
+    ----------
+    TransectDF : DataFrame
+        Dataframe of single cross-shore transect, with timeseries of satellite-derived metrics attached.
+    ValPlots : bool, optional
+        Plot validation plots of silhouette score and inertia. The default is False.
+
+    Returns
+    -------
+    VarDFClust : DataFrame
+        Dataframe of just coastal metrics/variables in timeseries, with cluster values attached to each timestep.
+
+    """
+    # Define variables dataframe from transect dataframe by removing dates and transposing
+    VarDF = TransectDF.drop(columns=['TransectID', 'dates'])
+    VarDF.interpolate(method='nearest', axis=0, inplace=True) # fill nans using nearest
+    VarDF.interpolate(method='linear', axis=0, inplace=True) # if any nans left over at start or end, fill with linear
+    VarDF_scaled = StandardScaler().fit_transform(VarDF)
+    
+    
+    # Fit k-means clustering to data iteratively over different cluster sizes
+    k_n = range(2,15)
+    # Inertia = compactness of clusters i.e. total variance within a cluster
+    # Silhouette score = how similar object is to its own cluster vs other clusters 
+    inertia = []
+    sil_scores = []
+    
+    for k in k_n:
+        kmeansmod = KMeans(n_clusters=k, random_state=42)
+        kmeansmod.fit(VarDF_scaled)
+        inertia.append(kmeansmod.inertia_)
+        sil_scores.append(silhouette_score(VarDF_scaled, kmeansmod.labels_))
+    
+    # Apply PCA to reduce the dimensions to 3D for visualization
+    pca = PCA(n_components=3)
+    pca_VarDF = pca.fit_transform(VarDF_scaled)
+    eigenvectors = pca.components_
+
+    # Create a DataFrame for PCA results and add cluster labels
+    pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
+    pca_df['Cluster'] = kmeansmod.labels_
+    
+    
+    if ValPlots is True:
+        # Optional: Plot an elbow graph to find the optimal number of clusters
+        plt.figure(figsize=(10, 5))
+        plt.plot(k_n, inertia, marker='o')
+        plt.title('Elbow Method For Optimal k')
+        plt.xlabel('Number of Clusters (k)')
+        plt.ylabel('Inertia')
+        plt.show()
+        
+        # Optional: Plot silhouette scores for further cluster evaluation
+        plt.figure(figsize=(10, 5))
+        plt.plot(k_n, sil_scores, marker='o')
+        plt.title('Silhouette Scores For Optimal k')
+        plt.xlabel('Number of Clusters (k)')
+        plt.ylabel('Silhouette Score')
+        plt.show()
+    
+    
+    # # Fit the KMeans model with the chosen number of clusters
+    # # Clusters are informed by 'impact' levels low, medium and high
+    # optimal_k = 3
+    # tic = timeit.default_timer() # start timer
+    # kmeansmod = KMeans(n_clusters=optimal_k, random_state=42)
+    # kmeansmod.fit(VarDF_scaled)
+    # toc = timeit.default_timer() # stop timer
+    
+    # # Analyze the clustering results
+    # VarDF['Cluster'] = kmeansmod.labels_
+    
+    ClusterMods = {'kmeans':KMeans(n_clusters=3, random_state=42),
+                   'spectral':SpectralClustering(n_clusters=3, eigen_solver='arpack', random_state=42)}
+    for Mod in ClusterMods.keys():
+        
+        ClusterMods[Mod].fit(VarDF_scaled)
+        VarDF[Mod+'Cluster'] = ClusterMods[Mod].labels_
+        ClusterMeans = VarDF.groupby(Mod+'Cluster').mean()
+        
+        ClusterCentres = np.array([pca_VarDF[VarDF[Mod+'Cluster'] == i].mean(axis=0) for i in range(3)])
+
+        HighImpact = np.argmax(ClusterCentres[:, 0])
+        LowImpact = np.argmax(ClusterCentres[:, 1])
+        MediumImpact = (set([0,1,2]) - {HighImpact, LowImpact}).pop()
+        
+        ClusterToImpact = {HighImpact:'High',
+                           MediumImpact:'Medium',
+                           LowImpact:'Low'}
+        ImpactLabels = [ClusterToImpact[Cluster] for Cluster in VarDF[Mod+'Cluster']]
+        VarDFClust = VarDF.copy()
+        VarDFClust[Mod+'Impact'] = ImpactLabels
+        
+        # HighImpact = ClusterMeans[(ClusterMeans['distances'] == ClusterMeans['distances'].min()) & # landward VE
+        #                           (ClusterMeans['wlcorrdist'] == ClusterMeans['wlcorrdist'].min()) & # landward WL
+        #                           (ClusterMeans['waterelev'] == ClusterMeans['waterelev'].max()) & # high water
+        #                           (ClusterMeans['beachwidth'] == ClusterMeans['beachwidth'].min()) & # narrow width
+        #                           (ClusterMeans['TZwidth'] == ClusterMeans['TZwidth'].min()) & # narrow TZ
+        #                           (ClusterMeans['WaveHs'] == ClusterMeans['WaveHs'].max()) & # high waves
+        #                           (ClusterMeans['WaveTp'] == ClusterMeans['WaveTp'].max())].index[0] # long period
+        
+        # LowImpact = ClusterMeans[(ClusterMeans['distances'] == ClusterMeans['distances'].max()) & # seaward VE
+        #                           (ClusterMeans['wlcorrdist'] == ClusterMeans['wlcorrdist'].max()) & # seaward WL
+        #                           (ClusterMeans['waterelev'] == ClusterMeans['waterelev'].min()) & # low water
+        #                           (ClusterMeans['beachwidth'] == ClusterMeans['beachwidth'].max()) & # wide width
+        #                           (ClusterMeans['TZwidth'] == ClusterMeans['TZwidth'].max()) & # wide TZ
+        #                           (ClusterMeans['WaveHs'] == ClusterMeans['WaveHs'].min()) & # low waves
+        #                           (ClusterMeans['WaveTp'] == ClusterMeans['WaveTp'].min())].index[0] # short period
+        # AllClusters = set([0,1,2])
+        # MediumImpact = (AllClusters - set([HighImpact, LowImpact])).pop()
+
+        # Cluster to impact
+        # ClusterToImpact = {'High': HighImpact,
+        #                    'Medium':MediumImpact,
+        #                    'Low':LowImpact}
+        # VarDF['Impact'] = VarDF[Mod+'Cluster'].map(ClusterToImpact)
+        
+        # inertia.append(ClusterMods[Mod].inertia_)
+        # sil_scores.append(silhouette_score(VarDF_scaled, ClusterMods[Mod].labels_))
+    
+        # Create a DataFrame for PCA results and add cluster labels
+        pca_df = pd.DataFrame(data=pca_VarDF, columns=['PC1', 'PC2', 'PC3'])
+        pca_df['Cluster'] = ClusterMods[Mod].labels_
+    
+        # Optional: Visualization of clusters
+        if ValPlots is True:
+            fig, ax = plt.subplots(figsize=(10, 5))
+            bluecm = cm.get_cmap('cool')
+            greencm = cm.get_cmap('summer')
+            ax.scatter(VarDF.index, 
+                       VarDF['WaveHs'], 
+                       c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
+            ax2 = ax.twinx()
+            ax2.scatter(VarDF.index, 
+                       VarDF['distances'], 
+                       c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  # Example visualization using one variable
+            plt.title(f'Clustering Method: {Mod}')
+            ax.set_xlabel('Time')
+            # ax.set_ylabel('Cross-shore VE position (m)')
+            ax.set_ylabel('Significant wave height (m)')
+            ax2.set_ylabel('VE distance (m)')
+            plt.show()
+        
+        # Plot the clusters in the PCA space
+        fig, ax = plt.subplots(figsize=(5, 5))
+        clusterDF = []
+        for cluster in pca_df['Cluster'].unique():
+            cluster_data = pca_df[pca_df['Cluster'] == cluster]
+            plt.scatter(
+                cluster_data['PC1'], 
+                cluster_data['PC2'], 
+                label=f'Cluster {cluster}', 
+                s=40,
+                alpha=0.7
+            )
+            clusterDF.append(cluster_data)
+        # Plot eignevectors of each variable
+        coeffs = np.transpose(eigenvectors[0:2, :])*2
+        n_coeffs = coeffs.shape[0]
+        for i in range(n_coeffs):
+            plt.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.02, zorder=5)
+            plt.annotate(text=VarDF.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
+                         xytext=(coeffs[i,0]*15,5), textcoords='offset points',
+                         color='k', ha='center', va='center', zorder=5)
+        plt.tight_layout()
+        plt.show()
+            
+        # 3D scatter plot (to investigate clustering or patterns in PCs)
+        fig = plt.figure(figsize=(6,5))
+        ax = fig.add_subplot(111, projection='3d')
+        for cluster in pca_df['Cluster'].unique():
+            cluster_data = pca_df[pca_df['Cluster'] == cluster]
+            ax.scatter(cluster_data['PC1'],cluster_data['PC2'],cluster_data['PC3'])
+            ax.set_xlabel('PC1')
+            ax.set_ylabel('PC2')
+            ax.set_zlabel('PC3')
+        # Plot eignevectors of each variable
+        coeffs = np.transpose(eigenvectors[0:3, :])*2
+        n_coeffs = coeffs.shape[0]
+        for i in range(n_coeffs):
+            ax.quiver(0,0,0, 
+                      coeffs[i, 0], coeffs[i, 1], coeffs[i, 2], 
+                      color='k', alpha=0.5, linewidth=2, arrow_length_ratio=0.1)
+            ax.text(coeffs[i, 0] * 1.5, coeffs[i, 1] * 1.5, coeffs[i, 2] * 1.5, 
+                    VarDF.columns[i], color='k', ha='center', va='center')
+        plt.tight_layout()
+        plt.show()
+        
+        
+    return VarDFClust
