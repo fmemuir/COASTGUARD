@@ -29,19 +29,30 @@ TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFW
 # Compile relevant coastal change metrics into one dataframe
 CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
 
+
 #%% Interpolate
 # Subset and interpolate timeseries to match up to same dates
 # TransectIDs = [271]
 TransectIDs = [1325]
 
 for Tr in TransectIDs:
-    TransectDF = Predictions.InterpVEWL(CoastalDF, Tr)
-    
-#%% Separate Training and Validation
-TransectDFTrain = TransectDF.iloc[:263]
-TransectDFTest = TransectDF.iloc[262:]
+    TransectDF = Predictions.InterpVEWL(CoastalDF, Tr, IntpKind='pchip')
 
-VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
+#%%
+Predictions.PlotInterps(TransectDF, '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
+
+
+#%% Separate Training and Validation
+# TransectDFTrain = TransectDF.iloc[:263]
+# TransectDFTest = TransectDF.iloc[262:]
+TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.9)]
+TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
+
+Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
+# Don't need if already interpolated to WaveDatesFD (daily) above
+# VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
+
+VarDFDayTest = TransectDFTest.copy()
 
 
 #%% Load In Pre-trained Model
@@ -49,9 +60,9 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250114-150253_dir_i
     PredDict = pickle.load(f)
     
 #%% Prepare Training Data
-PredDict, VarDFDay = Predictions.PrepData(TransectDFTrain, 
-                                          MLabels=['dir_runup_iri_20240115_mse'], 
-                                          TestSizes=[0.2], 
+PredDict, VarDFDayTrain, VarDFDayTest  = Predictions.PrepData(TransectDFTrain, 
+                                          MLabels=['dailywaves_fullvars'], 
+                                          ValidSizes=[0.2], 
                                           TSteps=[10])
 # Needs additional lines for TransectID
 

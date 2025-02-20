@@ -10,6 +10,7 @@ import os
 import timeit
 import pickle
 import datetime as dt
+from datetime import datetime,timedelta
 import time
 import numpy as np
 import random
@@ -21,7 +22,7 @@ import matplotlib.dates as mdates
 from matplotlib import cm
 import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, PchipInterpolator
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering
@@ -44,6 +45,7 @@ from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 from tensorboard.plugins.hparams import api as hp
 import optuna
+import shap
 
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams['font.sans-serif'] = 'Arial'
@@ -145,7 +147,7 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
     #                      how='inner', on='TransectID')
     CoastalDF = pd.merge(CoastalDF, 
                          TransectInterGDFWave[['TransectID',
-                                               'WaveDatesFD',
+                                               'WaveDates','WaveDatesFD',
                                                'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 
                                                'Runups', 'Iribarren']],
                          how='inner', on='TransectID')
@@ -270,7 +272,7 @@ def InterpWLWaves(CoastalDF, Tr):
     return TransectDF
 
 
-def InterpVEWL(CoastalDF, Tr):
+def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
     """
     Interpolate over waterline and vegetation associated timeseries so that dates 
     match wave associated (full timeseries) ones.
@@ -298,19 +300,100 @@ def InterpVEWL(CoastalDF, Tr):
     for WaveProp in ['WaveDirFD','WaveAlphaFD']:
         TransectDF[WaveProp] = [np.deg2rad(WaveDir) for WaveDir in TransectDF[WaveProp]]
 
+    # Sort and remove duplicate dates
+    def Preprocess(dates, values):
+        df = pd.DataFrame({'dates': dates, 'values': values})
+        # Group by unique dates and take the mean of duplicate values
+        df_grouped = df.groupby('dates', as_index=False).mean()
+        # If any nans still exist, fill them with PCHIP
+        if np.isnan(df_grouped['values']).sum() > 0:
+            df_grouped = df_grouped.interpolate(kind='pchip')
+        # Extract clean dates and values
+        unique_numdates = df_grouped['dates'].values
+        unique_vals = df_grouped['values'].values
+        
+        return unique_numdates, unique_vals
+
+
     # Interpolate over waterline and wave associated variables
     wl_numdates = pd.to_datetime(TransectDF['wlDTs'][Tr]).values.astype(np.int64)
     ve_numdates = pd.to_datetime(TransectDF['veDTs'][Tr]).values.astype(np.int64)
+    td_numdates = pd.to_datetime(TransectDF['tidedatesFD'][Tr]).values.astype(np.int64)
+    wvsat_numdates = pd.to_datetime(TransectDF['WaveDates'][Tr]).values.astype(np.int64)
     wv_numdates = pd.to_datetime(TransectDF['WaveDatesFD'][Tr]).values.astype(np.int64)
+    # Adjacent VE and WL positions (+1 is to the upcoast of current transect, -1 is to downcoast)
+    wl_numdates_up = pd.to_datetime(CoastalDF.iloc[[Tr+1],:]['wlDTs'][Tr+1]).values.astype(np.int64)
+    ve_numdates_up = pd.to_datetime(CoastalDF.iloc[[Tr+1],:]['veDTs'][Tr+1]).values.astype(np.int64)
+    wl_numdates_down = pd.to_datetime(CoastalDF.iloc[[Tr-1],:]['wlDTs'][Tr-1]).values.astype(np.int64)
+    ve_numdates_down = pd.to_datetime(CoastalDF.iloc[[Tr-1],:]['veDTs'][Tr-1]).values.astype(np.int64)
+    
     # Match dates with veg edge dates and append back to TransectDF
     for wlcol in ['wlcorrdist', 'tideelev','beachwidth']:
-        wl_interp_f = interp1d(wl_numdates, TransectDF[wlcol][Tr], kind='linear', fill_value='extrapolate')
+        if IntpKind == 'pchip':
+            wl_numdates_clean, wlcol_clean = Preprocess(wl_numdates, TransectDF[wlcol][Tr])
+            wl_interp_f = PchipInterpolator(wl_numdates_clean, wlcol_clean)
+        else:
+            wl_interp_f = interp1d(wl_numdates, TransectDF[wlcol][Tr], kind=IntpKind, fill_value='extrapolate')
         wl_interp = wl_interp_f(wv_numdates).tolist()
         TransectDF[wlcol] = [wl_interp]
+    for wvsatcol in ['Runups','Iribarren']:
+        if IntpKind == 'pchip':
+            wvsat_numdates_clean, wvsatcol_clean = Preprocess(wvsat_numdates, TransectDF[wvsatcol][Tr])
+            wvsat_interp_f = PchipInterpolator(wvsat_numdates_clean, wvsatcol_clean)
+        else:
+            wvsat_interp_f = interp1d(wvsat_numdates, TransectDF[wvsatcol][Tr], kind=IntpKind, fill_value='extrapolate')
+        wvsat_interp = wvsat_interp_f(wv_numdates).tolist()
+        TransectDF[wvsatcol] = [wvsat_interp]
+    for tdcol in ['tideelevFD','tideelevMx']:
+        if IntpKind == 'pchip':
+            td_numdates_clean, tdcol_clean = Preprocess(td_numdates, TransectDF[tdcol][Tr])
+            td_interp_f = PchipInterpolator(td_numdates_clean, tdcol_clean)
+        else:
+            td_interp_f = interp1d(td_numdates, TransectDF[tdcol][Tr], kind=IntpKind, fill_value='extrapolate')
+        td_interp = td_interp_f(wv_numdates).tolist()
+        TransectDF[tdcol] = [td_interp]
     for vecol in ['distances']:#,'TZwidth']:
-        ve_interp_f = interp1d(ve_numdates, TransectDF[vecol][Tr], kind='linear', fill_value='extrapolate')
+        if IntpKind == 'pchip':
+            ve_numdates_clean, vecol_clean = Preprocess(ve_numdates, TransectDF[vecol][Tr])
+            ve_interp_f = PchipInterpolator(ve_numdates_clean, vecol_clean)
+        else:
+            ve_interp_f = interp1d(ve_numdates, TransectDF[vecol][Tr], kind=IntpKind, fill_value='extrapolate')
         ve_interp = ve_interp_f(wv_numdates).tolist()
         TransectDF[vecol] = [ve_interp]
+    
+    # Adjacent VE and WL interpolation
+    for wlcol in ['wlcorrdist']:
+        if IntpKind == 'pchip':
+            wl_numdates_clean, wlcol_clean = Preprocess(wl_numdates_up, CoastalDF.iloc[[Tr+1],:][wlcol][Tr+1])
+            wl_interp_f = PchipInterpolator(wl_numdates_clean, wlcol_clean)
+        else:
+            wl_interp_f = interp1d(wl_numdates_up, CoastalDF.iloc[[Tr+1],:][wlcol][Tr+1], kind=IntpKind, fill_value='extrapolate')
+        wl_interp = wl_interp_f(wv_numdates).tolist()
+        TransectDF[wlcol+'_u'] = [wl_interp]
+    for vecol in ['distances']:#,'TZwidth']:
+        if IntpKind == 'pchip':
+            ve_numdates_clean, vecol_clean = Preprocess(ve_numdates_up, CoastalDF.iloc[[Tr+1],:][vecol][Tr+1])
+            ve_interp_f = PchipInterpolator(ve_numdates_clean, vecol_clean)
+        else:
+            ve_interp_f = interp1d(ve_numdates_up, CoastalDF.iloc[[Tr+1],:][vecol][Tr+1], kind=IntpKind, fill_value='extrapolate')
+        ve_interp = ve_interp_f(wv_numdates).tolist()
+        TransectDF[vecol+'_u'] = [ve_interp]
+    for wlcol in ['wlcorrdist']:
+        if IntpKind == 'pchip':
+            wl_numdates_clean, wlcol_clean = Preprocess(wl_numdates_down, CoastalDF.iloc[[Tr-1],:][wlcol][Tr-1])
+            wl_interp_f = PchipInterpolator(wl_numdates_clean, wlcol_clean)
+        else:
+            wl_interp_f = interp1d(wl_numdates_down, CoastalDF.iloc[[Tr-1],:][wlcol][Tr-1], kind=IntpKind, fill_value='extrapolate')
+        wl_interp = wl_interp_f(wv_numdates).tolist()
+        TransectDF[wlcol+'_d'] = [wl_interp]
+    for vecol in ['distances']:#,'TZwidth']:
+        if IntpKind == 'pchip':
+            ve_numdates_clean, vecol_clean = Preprocess(ve_numdates_down, CoastalDF.iloc[[Tr-1],:][vecol][Tr-1])
+            ve_interp_f = PchipInterpolator(ve_numdates_clean, vecol_clean)
+        else:
+            ve_interp_f = interp1d(ve_numdates_down, CoastalDF.iloc[[Tr-1],:][vecol][Tr-1], kind=IntpKind, fill_value='extrapolate')
+        ve_interp = ve_interp_f(wv_numdates).tolist()
+        TransectDF[vecol+'_d'] = [ve_interp]
     
     # Recalculate beachwidth as values will now be mismatched
     beachwidth = [abs(wl_interp[i] - TransectDF['distances'][Tr][i]) for i in range(len(wl_interp))]
@@ -323,7 +406,12 @@ def InterpVEWL(CoastalDF, Tr):
     
     # Reset index for timeseries
     TransectDF.index = TransectDF['WaveDatesFD']
-    TransectDF = TransectDF.drop(columns=['TransectID', 'WaveDatesFD'])
+    TransectDF = TransectDF.drop(columns=['TransectID', 'WaveDates','WaveDatesFD', 'tidedatesFD'])
+
+    # If any index rows (i.e. daily wave dates) are empty, remove them
+    TransectDF = TransectDF[~pd.isnull(TransectDF.index)]
+    
+    
 
     return TransectDF
 
@@ -455,7 +543,7 @@ def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
     return loss
 
 
-def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
+def PrepData(TransectDFTrain, MLabels, ValidSizes, TSteps, UseSMOTE=False):
     """
     Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.
     Timeseries is expanded and interpolated to get daily timesteps, then scaled across
@@ -486,18 +574,20 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
     """
     
     # Interpolate over data gaps to get regular (daily) measurements
-    VarDFDay = DailyInterp(TransectDF)
+    # VarDFDay = DailyInterp(TransectDF)
+    VarDFDay = TransectDFTrain.copy()
     
     # Scale vectors to normalise them
     Scalings = {}
-    VarDFDay_scaled = VarDFDay.copy()
-    for col in VarDFDay.columns:
+    VarDFDay_scaled = TransectDFTrain.copy()
+    for col in TransectDFTrain.columns:
         Scalings[col] = StandardScaler()
-        VarDFDay_scaled[col] = Scalings[col].fit_transform(VarDFDay[[col]])
+        VarDFDay_scaled[col] = Scalings[col].fit_transform(TransectDFTrain[[col]])
     
     # Separate into training features (what will be learned from) and target features (what will be predicted)
-    # TrainFeat = VarDFDay_scaled[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
-    TrainFeat = VarDFDay_scaled[['WaveDir', 'Runups', 'Iribarrens']]
+    TrainFeat = VarDFDay_scaled[['tideelev', 'beachwidth', 'tideelevFD','tideelevMx',
+                                 'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups', 'Iribarren']]
+    # TrainFeat = VarDFDay_scaled[['WaveDir', 'Runups', 'Iribarren']]
     TargFeat = VarDFDay_scaled[['distances', 'wlcorrdist']] # vegetation edge and waterline positions
     
     # Define prediction dictionary for multiple runs/hyperparameterisation
@@ -519,7 +609,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
                 'dropoutRt':[],     # percentage of nodes to randomly drop in training (avoids overfitting)
                 'learnRt':[]}       # size of steps to adjust parameters by on each iteration
     
-    for MLabel, TestSize, TStep in zip(PredDict['mlabel'], TestSizes, TSteps):
+    for MLabel, ValidSize, TStep in zip(PredDict['mlabel'], ValidSizes, TSteps):
         
         # Add scaling relationships and sequence lengths to dict to convert back later
         PredDict['scalings'].append(Scalings)
@@ -529,7 +619,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
         X, y, TrainInd = CreateSequences(TrainFeat, TargFeat, TStep)
         
         # Separate test and train data and add to prediction dict (can't stratify when y is multicolumn)
-        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=TestSize, random_state=0)#, stratify=y)
+        X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=ValidSize, random_state=0)#, stratify=y)
         PredDict['X_val'].append(X_val)
         PredDict['y_val'].append(y_val)
         
@@ -545,7 +635,7 @@ def PrepData(TransectDF, MLabels, TestSizes, TSteps, UseSMOTE=False):
             PredDict['X_train'].append(X_train)
             PredDict['y_train'].append(y_train)
             
-    return PredDict, VarDFDay
+    return PredDict, VarDFDay_scaled
 
 
 def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, CostSensitive=False, DynamicLR=False):
@@ -750,6 +840,16 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         pickle.dump(PredDict, f)
             
     return PredDict
+
+
+def SHAPTest(model, X_train, X_test):
+    
+
+    explainer = shap.Explainer(model, X_train)
+    shap_values = explainer(X_test)
+    
+    # Plot summary
+    shap.summary_plot(shap_values, X_test)
 
 
 def TrainRNN_Optuna(PredDict, mlabel):
@@ -962,6 +1062,53 @@ def FuturePredict(PredDict, ForecastDF):
 ### PLOTTING FUNCTIONS ###
 
 
+def PlotInterps(TransectDF, FigPath):
+    """
+    Plot results of different scipy interpolation methods.
+    FM Feb 2025
+
+    Parameters
+    ----------
+    TransectDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in timeseries.
+    FigPath : str
+        Path to save figure to.
+
+    """
+    Mthds = ['nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial', 'piecewise_polynomial', 'spline', 'pchip', 'akima', 'cubicspline', 'from_derivatives']
+    fig, axs = plt.subplots(4,3, sharex=True, figsize=(6.55,5),dpi=300)
+    axs=axs.flatten()
+    for i, Mthd in enumerate(Mthds):
+
+        if Mthd in ['polynomial','spline']:
+            # Ord = pd.isnull(TransectDF['WaveHsFD']).sum() - 1
+            Ord = 5
+            TransectDFInterp = TransectDF.interpolate(method=Mthd, order=Ord, axis=0)
+            axs[i].set_title(Mthd+', order='+str(Ord), pad=1)
+        else:
+            TransectDFInterp = TransectDF.interpolate(method=Mthd, axis=0)
+            axs[i].set_title(Mthd, pad=1)
+
+        axs[i].plot(TransectDFInterp['WaveHsFD'][3280:], c='#46B0E1', lw=1.5)
+        axs[i].plot(TransectDF['WaveHsFD'][3280:], c='#1559A0', lw=1.5)
+        
+        axs[i].xaxis.set_major_locator(mdates.MonthLocator())
+        axs[i].xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+        
+        if Mthd in ['polynomial','akima','cubicspline','quadratic', 'cubic']:
+            axs[i].text(TransectDFInterp['WaveHsFD'][3280:][TransectDFInterp['WaveHsFD'][3280:] == TransectDFInterp['WaveHsFD'][3280:].min()].index-timedelta(days=5),
+                        TransectDFInterp['WaveHsFD'][3280:].min()+0.05, 
+                        'undershooting', color='r', ha='right', va='center')
+        # axs[i].set_ylim((-1,1))
+            
+    fig.supxlabel('Date')
+    fig.supylabel('Wave height (m)')
+    
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)     
+
+
 def PlotAccuracy(CSVdir, FigPath):
     # List to store each CSV's DataFrame
     dfs = []
@@ -1002,19 +1149,17 @@ def PlotAccuracy(CSVdir, FigPath):
     return AccuracyDF
 
 
-def PlotVarTS(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename):
+def PlotVarTS(TransectDF, Tr, filepath, sitename):
     """
-    PloT timeseries of training variables used.
+    Plot timeseries of training variables used.
     FM Feb 2025
 
     Parameters
     ----------
-    mID : int
-        ID of the chosen model run stored in FutureOutputs.
-    TransectDFTest : DataFrame
-        DataFrame of past data (not interpolated) to use for training the model.
-    TransectDFTest : DataFrame
-        DataFrame of past data sliced from most recent end of TransectDF to use for testing the model.
+    Tr : int
+        ID of the chosen cross-shore transect.
+    TransectDF : DataFrame
+        DataFrame of past data to use for training (and validating) the model.
     VarDFDay : DataFrame
         DataFrame of past data interpolated to daily timesteps (with temporal index).
     FutureOutputs : dict
@@ -1026,66 +1171,115 @@ def PlotVarTS(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, fil
 
 
     """
-    fig, axs = plt.subplots(5,1, sharex=True, figsize=(6.55,6), dpi=150)
-    plt.subplots_adjust(wspace=None,hspace=None)
-    lw = 1 # line width
+    mpl.rcParams['font.sans-serif'] = 'Arial'
+    mpl.rcParams.update({'font.size':7})
     
-    for i, ax, yvar, c, ylabel in zip(range(len(axs)), axs, 
-                                      ['WaveDir',
-                                       'Runups',
-                                       'Iribarrens',
-                                       'distances',
-                                       'wlcorrdist'],
-                                      ['cornflowerblue',
-                                       'darkorchid',
-                                       'orange',
-                                       'forestgreen',
-                                       'blue'],
-                                      ['Wave direction (deg)',
-                                       'Runup (m)',
-                                       'Iribarren (1)',
-                                       'Cross-shore distance (m)',
-                                       'Cross-shore distance (m)']):
-        TrainStart = mdates.date2num(TransectDFTrain.index[0])
-        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
-        ValEnd = mdates.date2num(TransectDFTrain.index[-1])
-        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
-        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
-        
-        ax.add_patch(TrainT) 
-        ax.add_patch(ValT)
+    # Scale vectors to normalise them
+    Scalings = {}
+    TransectDF_sc = TransectDF.copy()
+    for col in TransectDF.columns:
+        Scalings[col] = StandardScaler()
+        TransectDF_sc[col] = Scalings[col].fit_transform(TransectDF_sc[[col]])
     
-        ax.plot(TransectDFTrain[yvar], c=c, lw=lw)
-        ax.plot(VarDFDay[yvar], c=c, lw=lw, alpha=0.3)
-        
-        if i == 3:
-            ax.plot(TransectDFTest['distances'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
-            ax.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
-            ax.legend(loc='upper left', ncols=3)
-        elif i == 4:
-            ax.plot(TransectDFTest['wlcorrdist'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
-            ax.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
-            ax.legend(loc='upper left', ncols=3)
-        else:
-            ax.plot(TransectDFTest[yvar], c=c, lw=lw)
-
-        ax.set_ylabel(ylabel)
-        ax.set_ylim(min(VarDFDay[yvar])-(min(VarDFDay[yvar])*0.2), max(VarDFDay[yvar])+(min(VarDFDay[yvar])*0.2))
-        ax.tick_params(axis='both',which='major',pad=2)
-        ax.xaxis.labelpad=2
-        ax.yaxis.labelpad=2
+    TransectDFTrain = TransectDF_sc.iloc[:int(len(TransectDF_sc)*0.9)]
+    TransectDFTest = TransectDF_sc.iloc[int(len(TransectDF_sc)*0.9):]
     
-    plt.xlabel('Date (yyyy)')       
+    # Clip train data down into train and validation (have to do now because it gets done later in PrepData())
+    TransectDFVal = TransectDFTrain[len(TransectDFTrain)-round((len(TransectDFTrain)+len(TransectDFTest))*0.2):]
+    TransectDFTrain = TransectDFTrain[:len(TransectDFTrain)-len(TransectDFVal)]
+    
+    # set subplot spacing with small break between start and end of training
+    gridspec = dict(wspace=0.0, width_ratios=[1, 0.1, 1, 1])
+    fig, axs = plt.subplots(nrows=1, ncols=4, sharey=True, figsize=(4.31, 1.50), dpi=300, gridspec_kw=gridspec)
+    axs[1].set_visible(False)
+    
+    # TRAIN DATA (with split)
+    # plot the same data on both axes
+    axs[0].plot(TransectDFTrain, c='#0E2841', lw=0.5, alpha=0.3)
+    axs[2].plot(TransectDFTrain, c='#0E2841', lw=0.5, alpha=0.3)
+    #pd.concat([TransectDFTrain[:int(len(TransectDFTrain)/2)],TransectDFVal])
+    # zoom-in / limit the view to different portions of the data
+    axs[0].set_xlim(TransectDFTrain.index.min(), TransectDFTrain.index[700])
+    axs[2].set_xlim(TransectDFTrain.index[len(TransectDFTrain)-700],TransectDFTrain.index.max())  # most of the data
+    # set yearly labels and monthly ticks
+    for ax in axs:
+        ax.set_ylim(-2,6)
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_minor_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        # ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b'))
+    # diagonal separator marks
+    axs[0].text(axs[0].get_xlim()[1],axs[0].get_ylim()[0],'/', ha='center', va='center', fontweight='bold')
+    axs[0].text(axs[0].get_xlim()[1],axs[0].get_ylim()[1],'/', ha='center',va='center', fontweight='bold')
+    axs[2].text(axs[2].get_xlim()[0],axs[2].get_ylim()[0],'/', ha='center',va='center', fontweight='bold')
+    axs[2].text(axs[2].get_xlim()[0],axs[2].get_ylim()[1],'/', ha='center',va='center', fontweight='bold')    
+    # hide the spines between ax and ax2
+    axs[0].spines['right'].set_visible(False)
+    axs[2].spines['left'].set_visible(False)
+    axs[0].tick_params(axis='y', which='both',left=False, labelleft=False)  # don't put tick labels
+    axs[2].tick_params(axis='y', which='both',left=False, labelleft=False)  # don't put tick labels
+    
+    # VALIDATION DATA
+    axs[3].plot(TransectDFVal, c='#0E2841', lw=0.5, alpha=0.3)
+    axs[3].tick_params(axis='y', which='both',left=False, labelleft=False)  # don't put tick labels
+    axs[3].set_xlim(TransectDFVal.index.min(), TransectDFVal.index.max())
+    
+    # plt.xlabel('Date (yyyy)')       
     plt.tight_layout()
     plt.show()
-    
-    StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
-    EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_predictedVars_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
-    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
-
-
+                           sitename+'_TrainValVars_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
+    
+    
+    # set subplot spacing with small break between start and end of training
+    gridspec = dict(wspace=0.0, width_ratios=[0.75, 0.1, 0.75, 0.7, 0.35])
+    fig, axs = plt.subplots(nrows=1, ncols=5, sharey=True, figsize=(2.61, 1.50), dpi=300, gridspec_kw=gridspec)
+    axs[1].set_visible(False)
+    
+    SelVars = ['distances', 'wlcorrdist','WaveHsFD', 'WaveDirFD', 'WaveTpFD']
+    # TRAIN DATA (with split)
+    # plot the same data on both axes
+    axs[0].plot(TransectDFTrain[SelVars], c='#0E2841', lw=0.5, alpha=0.3)
+    axs[2].plot(TransectDFTrain[SelVars], c='#0E2841', lw=0.5, alpha=0.3)
+    #pd.concat([TransectDFTrain[:int(len(TransectDFTrain)/2)],TransectDFVal])
+    # zoom-in / limit the view to different portions of the data
+    axs[0].set_xlim(TransectDFTrain.index.min(), TransectDFTrain.index[700])
+    axs[2].set_xlim(TransectDFTrain.index[len(TransectDFTrain)-700],TransectDFTrain.index.max())  # most of the data
+    # set yearly labels and monthly ticks
+    for ax in axs:
+        ax.set_ylim(-2,6)
+        ax.xaxis.set_major_locator(mdates.YearLocator())
+        ax.xaxis.set_minor_locator(mdates.MonthLocator())
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y'))
+        # ax.xaxis.set_minor_formatter(mdates.DateFormatter('%b'))
+    # diagonal separator marks
+    axs[0].text(axs[0].get_xlim()[1],axs[0].get_ylim()[0],'/', ha='center', va='center', fontweight='bold')
+    axs[0].text(axs[0].get_xlim()[1],axs[0].get_ylim()[1],'/', ha='center',va='center', fontweight='bold')
+    axs[2].text(axs[2].get_xlim()[0],axs[2].get_ylim()[0],'/', ha='center',va='center', fontweight='bold')
+    axs[2].text(axs[2].get_xlim()[0],axs[2].get_ylim()[1],'/', ha='center',va='center', fontweight='bold')    
+    # hide the spines between ax and ax2
+    axs[0].spines['right'].set_visible(False)
+    axs[2].spines['left'].set_visible(False)
+    axs[0].tick_params(axis='y', which='both',left=False, labelleft=False)  # don't put tick labels
+    axs[2].tick_params(axis='y', which='both',left=False, labelleft=False)  # don't put tick labels
+    
+    # VALIDATION DATA
+    axs[3].plot(TransectDFVal[SelVars], c='#0E2841', lw=0.5, alpha=0.3)
+    axs[3].tick_params(axis='y', which='both',left=False, labelleft=False)  # don't put tick labels
+    axs[3].set_xlim(TransectDFVal.index.min(), TransectDFVal.index.max())
+    
+    # TEST DATA
+    axs[4].plot(TransectDFTest[SelVars], c='#0E2841', lw=0.5, alpha=0.3)
+    axs[4].tick_params(axis='y', which='both',left=False, labelleft=False)  # don't put tick labels
+    axs[4].set_xlim(TransectDFTest.index.min(), TransectDFTest.index.max())
+    
+    # plt.xlabel('Date (yyyy)')       
+    plt.tight_layout()
+    plt.show()
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_TrainValTestVars_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
 
 
 
