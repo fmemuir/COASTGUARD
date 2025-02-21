@@ -38,7 +38,11 @@ TransectIDs = [1325]
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr, IntpKind='pchip')
 
-#%%
+#%% Load In Pre-trained Model
+with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_dailywaves_fullvars.pkl'), 'rb') as f:
+    PredDict = pickle.load(f)
+    
+#%% Plot Interpolation Methods
 Predictions.PlotInterps(TransectDF, '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
 
 
@@ -49,18 +53,12 @@ TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.9)]
 TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
 
 Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
-# Don't need if already interpolated to WaveDatesFD (daily) above
-# VarDFDayTest = Predictions.DailyInterp(TransectDFTest)
-
-VarDFDayTest = TransectDFTest.copy()
 
 
-#%% Load In Pre-trained Model
-with open(os.path.join(filepath, sitename, 'predictions', '20250114-150253_dir_iri.pkl'), 'rb') as f:
-    PredDict = pickle.load(f)
+
     
 #%% Prepare Training Data
-PredDict, VarDFDayTrain, VarDFDayTest  = Predictions.PrepData(TransectDFTrain, 
+PredDict, VarDFDayTrain, VarDFDayTest  = Predictions.PrepData(TransectDF, 
                                           MLabels=['dailywaves_fullvars'], 
                                           ValidSizes=[0.2], 
                                           TSteps=[10])
@@ -80,6 +78,12 @@ PredDict = Predictions.CompileRNN(PredDict,
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
+
+#%% Feature Importance
+mID = 0
+IntGradAttr = Predictions.FeatImportance(PredDict, mID)
+Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, TransectIDs[0])
+
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
 
@@ -89,7 +93,7 @@ FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 Predictions.PlotFuture(0, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename)
 
 #%%
-Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename)
+Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),

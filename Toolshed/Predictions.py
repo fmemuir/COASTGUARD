@@ -33,7 +33,6 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 # from sklearn.utils.class_weight import compute_class_weight
 # from imblearn.over_sampling import SMOTE
-
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Sequential
 from tensorflow.keras import Input
@@ -44,6 +43,8 @@ from imblearn.over_sampling import SMOTE
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 from tensorboard.plugins.hparams import api as hp
+
+
 import optuna
 import shap
 
@@ -543,7 +544,7 @@ def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
     return loss
 
 
-def PrepData(TransectDFTrain, MLabels, ValidSizes, TSteps, UseSMOTE=False):
+def PrepData(TransectDF, MLabels, ValidSizes, TSteps, UseSMOTE=False):
     """
     Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.
     Timeseries is expanded and interpolated to get daily timesteps, then scaled across
@@ -575,18 +576,23 @@ def PrepData(TransectDFTrain, MLabels, ValidSizes, TSteps, UseSMOTE=False):
     
     # Interpolate over data gaps to get regular (daily) measurements
     # VarDFDay = DailyInterp(TransectDF)
-    VarDFDay = TransectDFTrain.copy()
+    
+    
     
     # Scale vectors to normalise them
     Scalings = {}
-    VarDFDay_scaled = TransectDFTrain.copy()
-    for col in TransectDFTrain.columns:
+    TransectDF_scaled = TransectDF.copy()
+    for col in TransectDF.columns:
         Scalings[col] = StandardScaler()
-        VarDFDay_scaled[col] = Scalings[col].fit_transform(TransectDFTrain[[col]])
+        TransectDF_scaled[col] = Scalings[col].fit_transform(TransectDF[[col]])
+        
+    VarDFDay_scaled = TransectDF_scaled.iloc[:int(len(TransectDF_scaled)*0.9)]
+    VarDFDayTest_scaled = TransectDF_scaled.iloc[int(len(TransectDF_scaled)*0.9):]
     
     # Separate into training features (what will be learned from) and target features (what will be predicted)
     TrainFeat = VarDFDay_scaled[['tideelev', 'beachwidth', 'tideelevFD','tideelevMx',
-                                 'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups', 'Iribarren']]
+                                 'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups', 'Iribarren',
+                                 'wlcorrdist_u', 'distances_u', 'wlcorrdist_d', 'distances_d']]
     # TrainFeat = VarDFDay_scaled[['WaveDir', 'Runups', 'Iribarren']]
     TargFeat = VarDFDay_scaled[['distances', 'wlcorrdist']] # vegetation edge and waterline positions
     
@@ -635,7 +641,7 @@ def PrepData(TransectDFTrain, MLabels, ValidSizes, TSteps, UseSMOTE=False):
             PredDict['X_train'].append(X_train)
             PredDict['y_train'].append(y_train)
             
-    return PredDict, VarDFDay_scaled
+    return PredDict, VarDFDay_scaled, VarDFDayTest_scaled
 
 
 def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, CostSensitive=False, DynamicLR=False):
@@ -842,14 +848,83 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
     return PredDict
 
 
-def SHAPTest(model, X_train, X_test):
-    
+def FeatImportance(PredDict, mID):
 
-    explainer = shap.Explainer(model, X_train)
-    shap_values = explainer(X_test)
+    def IntGrads(model, baseline, input_sample, steps=50):
+        """Computes Integrated Gradients for a single input sample."""
+        alphas = tf.linspace(0.0, 1.0, steps)  # Interpolation steps
     
-    # Plot summary
-    shap.summary_plot(shap_values, X_test)
+        # Compute the interpolated inputs
+        interp_inputs = baseline + alphas[:, tf.newaxis, tf.newaxis] * (input_sample - baseline)
+        # Compute gradients at each interpolation step
+        with tf.GradientTape() as tape:
+            tape.watch(interp_inputs)
+            preds = model(interp_inputs)
+        gradients = tape.gradient(preds, interp_inputs)
+    
+        # Average the gradients and multiply by input difference
+        avg_gradients = tf.reduce_mean(gradients, axis=0)
+        return (input_sample - baseline) * avg_gradients
+    
+    # Define the variables
+    Model = PredDict['model'][mID]
+    # validation data used because goal is to explain what model learned, not robustness of model (yet)
+    X_val = PredDict['X_val'][mID]
+
+    # Define an all-zero baseline to start at
+    Baseline = tf.zeros_like(X_val[-1:], dtype=tf.float32)
+    # Feed the most recent validation data to test
+    InSample = tf.convert_to_tensor(X_val[-1:], dtype=tf.float32)
+    
+    # Compute Integrated Gradients
+    IntGradAttr = IntGrads(Model, Baseline, InSample)
+    # Convert to NumPy for interpretation
+    IntGradAttr = IntGradAttr.numpy()
+
+    return IntGradAttr
+
+
+def SHAPTest(PredDict, mID):
+    """
+    IN DEVELOPMENT
+    FM Feb 2025
+
+    Parameters
+    ----------
+    PredDict : TYPE
+        DESCRIPTION.
+    mID : TYPE
+        DESCRIPTION.
+
+    Returns
+    -------
+    None.
+
+    """
+    from tensorflow import keras
+    
+    
+    model = keras.models.load_model(PredDict['model'][mID])
+    X_train = PredDict['X_train'][mID]
+    X_test = PredDict['X_val'][mID]
+
+    shap.initjs()
+    
+    # # Select a smaller subset of training data for SHAP
+    # sample_idx = np.random.choice(X_train.shape[0], 100, replace=False)  # 100 random samples
+    # X_train_sample = X_train[sample_idx]  
+
+    # Use SHAP's DeepExplainer with the function-wrapped model
+    explainer = shap.GradientExplainer(model, X_train)
+    
+    # Compute SHAP values for the test set
+    shap_values = explainer.shap_values(X_test)
+    
+    # Reshape X_test for SHAP summary plot (flatten time steps)
+    shap.summary_plot(shap_values[0], X_test.reshape((607, -1)))
+
+
+    # return shap_values
 
 
 def TrainRNN_Optuna(PredDict, mlabel):
@@ -1277,6 +1352,59 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     # plt.xlabel('Date (yyyy)')       
     plt.tight_layout()
     plt.show()
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_TrainValTestVars_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
+
+
+def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
+    
+    # Get the date index for the X_train and X_val data
+    ValDates = VarDFDayTrain.index[len(VarDFDayTrain)-len(PredDict['X_val'][0]):]  
+    # Find the start date of the last sequence (most recent)
+    start_idx = len(ValDates) - 10  # Last 10-day sequence starts 10 days before the end
+    ValTimestamps = ValDates[start_idx:]  # Get the last 10 days
+    
+    # Plot importance for each timestep
+    fig, axs = plt.subplots(1,2, figsize=(6.55, 3), dpi=300) 
+    ylimits = (0, 0.5)
+    cmap = plt.get_cmap('PuBuGn')
+    
+    # Create heatmap
+    # Remove batch dimension
+    IntGradAttr_indiv = np.abs(IntGradAttr[0])
+    # Plot heatmap
+    cax = axs[0].imshow(IntGradAttr_indiv.T, aspect='equal', cmap=cmap,
+                        vmin=ylimits[0], vmax=ylimits[1])
+    cbar = fig.colorbar(cax)
+    cbar.set_label('Feature Importance')
+    axs[0].set_title('Individual Integrated Gradients', fontsize=7)
+    axs[0].set_xlabel('Date')
+    axs[0].set_xticks(range(10))
+    axs[0].set_xticklabels([date.strftime("%Y-%m-%d") for date in ValTimestamps], rotation=45, ha="right")
+    # FeatNames = list(VarDFDayTrain.columns[2:])
+    FeatNames = []
+    axs[0].set_yticks(range(len(FeatNames)))
+    axs[0].set_yticklabels(FeatNames)
+    
+    # Create line plot of global importance
+    norm = plt.Normalize(ylimits[0],ylimits[1])
+    linec = cmap(norm(np.mean(np.abs(IntGradAttr),axis=-1).flatten()))
+    # Plot global importance line
+    axs[1].plot(range(IntGradAttr.shape[1]), np.mean(np.abs(IntGradAttr),axis=-1).flatten(), 
+                   c='k', zorder=0)
+    axs[1].scatter(range(IntGradAttr.shape[1]), np.mean(np.abs(IntGradAttr),axis=-1).flatten(), 
+                   c=linec, marker='o', edgecolors='k', zorder=1)
+    axs[1].set_xlabel('Date')
+    axs[1].set_xticks(range(10))
+    axs[1].set_xticklabels([date.strftime("%Y-%m-%d") for date in ValTimestamps], rotation=45, ha="right")
+    axs[1].set_ylim(ylimits)
+    axs[1].set_title('Global Integrated Gradients', fontsize=7)
+    
+    plt.subplots_adjust(wspace=-0.5)
+    plt.tight_layout()
+    plt.show()
+
     FigPath = os.path.join(filepath, sitename, 'plots', 
                            sitename+'_TrainValTestVars_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
