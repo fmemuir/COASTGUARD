@@ -328,6 +328,15 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
     wl_numdates_down = pd.to_datetime(CoastalDF.iloc[[Tr-1],:]['wlDTs'][Tr-1]).values.astype(np.int64)
     ve_numdates_down = pd.to_datetime(CoastalDF.iloc[[Tr-1],:]['veDTs'][Tr-1]).values.astype(np.int64)
     
+    for wvcol in ['WaveDirFD', 'WaveAlphaFD', 'WaveHsFD', 'WaveTpFD']:
+        if IntpKind == 'pchip':
+            wv_numdates_clean, wvcol_clean = Preprocess(wv_numdates, TransectDF[wvcol][Tr])
+            wv_interp_f = PchipInterpolator(wv_numdates_clean, wvcol_clean)
+        else:
+            wv_interp_f = interp1d(wv_numdates, TransectDF[wvcol][Tr], kind=IntpKind, fill_value='extrapolate')
+        wv_interp = wv_interp_f(wv_numdates).tolist()
+        TransectDF[wvcol] = [wv_interp]
+        
     # Match dates with veg edge dates and append back to TransectDF
     for wlcol in ['wlcorrdist', 'tideelev','beachwidth']:
         if IntpKind == 'pchip':
@@ -569,8 +578,12 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, UseSMOTE=False):
     -------
     PredDict : dict
         Dictionary to store all the NN model metadata.
-    VarDFDay : DataFrame
-        DataFrame of past data interpolated to daily timesteps (with temporal index).
+    VarDFDay_scaled : DataFrame
+        Scaled DataFrame of past data interpolated to daily timesteps (with temporal index), 
+        for training and validation.
+    VarDFDayTest_scaled : DataFrame
+        Scaled DataFrame of past data interpolated to daily timesteps (with temporal index), 
+        for testing (unseen by model).
 
     """
     
@@ -849,9 +862,27 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
 
 
 def FeatImportance(PredDict, mID):
+    """
+    Calculate feature importance from trained model, using Integrated Gradients.
+    FM Feb 2025
+    
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with trained NN models.
+    mID : int
+        ID of the chosen model run stored in PredDict.
 
+    Returns
+    -------
+    IntGradAttr : array
+        Array of integrated gradient values for chosen sequence of training features.
+
+    """
+    
     def IntGrads(model, baseline, input_sample, steps=50):
         """Computes Integrated Gradients for a single input sample."""
+        
         alphas = tf.linspace(0.0, 1.0, steps)  # Interpolation steps
     
         # Compute the interpolated inputs
@@ -891,10 +922,10 @@ def SHAPTest(PredDict, mID):
 
     Parameters
     ----------
-    PredDict : TYPE
-        DESCRIPTION.
-    mID : TYPE
-        DESCRIPTION.
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with trained NN models.
+    mID : int
+        ID of the chosen model run stored in PredDict.
 
     Returns
     -------
@@ -1137,7 +1168,7 @@ def FuturePredict(PredDict, ForecastDF):
 ### PLOTTING FUNCTIONS ###
 
 
-def PlotInterps(TransectDF, FigPath):
+def PlotInterps(CoastalDF, Tr, FigPath):
     """
     Plot results of different scipy interpolation methods.
     FM Feb 2025
@@ -1150,6 +1181,11 @@ def PlotInterps(TransectDF, FigPath):
         Path to save figure to.
 
     """
+    
+    TransectDF = pd.DataFrame(CoastalDF['WaveHsFD'].iloc[Tr], 
+                              index=CoastalDF['WaveDatesFD'].iloc[Tr],
+                              columns=['WaveHsFD'])
+    
     Mthds = ['nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial', 'piecewise_polynomial', 'spline', 'pchip', 'akima', 'cubicspline', 'from_derivatives']
     fig, axs = plt.subplots(4,3, sharex=True, figsize=(6.55,5),dpi=300)
     axs=axs.flatten()
@@ -1358,7 +1394,27 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
 
 
 def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
-    
+    """
+    lot integrated gradient values for feature importance analysis.
+    FM Feb 2025
+
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata, now with trained NN models.
+    VarDFDayTrain : DataFrame
+        Scaled DataFrame of past data interpolated to daily timesteps (with temporal index), 
+        for training and validation.
+    IntGradAttr : array
+        Array of integrated gradient values for chosen sequence of training features.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Tr : int
+        Transect ID of interest.
+
+    """
     # Get the date index for the X_train and X_val data
     ValDates = VarDFDayTrain.index[len(VarDFDayTrain)-len(PredDict['X_val'][0]):]  
     # Find the start date of the last sequence (most recent)
