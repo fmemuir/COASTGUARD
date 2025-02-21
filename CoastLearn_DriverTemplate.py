@@ -29,7 +29,6 @@ TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFW
 # Compile relevant coastal change metrics into one dataframe
 CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
 
-
 #%% Interpolate
 # Subset and interpolate timeseries to match up to same dates
 # TransectIDs = [271]
@@ -44,8 +43,6 @@ for Tr in TransectIDs:
 #%% Load In Pre-trained Model
 with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_dailywaves_fullvars.pkl'), 'rb') as f:
     PredDict = pickle.load(f)
-    
-
 
 #%% Separate Training and Validation
 # TransectDFTrain = TransectDF.iloc[:263]
@@ -54,9 +51,6 @@ TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.9)]
 TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
 
 Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
-
-
-
     
 #%% Prepare Training Data
 PredDict, VarDFDayTrain, VarDFDayTest  = Predictions.PrepData(TransectDF, 
@@ -78,7 +72,6 @@ PredDict = Predictions.CompileRNN(PredDict,
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
-
 
 #%% Feature Importance
 mID = 0
