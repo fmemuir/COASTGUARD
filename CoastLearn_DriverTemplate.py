@@ -35,6 +35,9 @@ CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWa
 # TransectIDs = [271]
 TransectIDs = [1325]
 
+#%% Plot Interpolation Methods
+Predictions.PlotInterps(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
+
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr, IntpKind='pchip')
 
@@ -42,8 +45,6 @@ for Tr in TransectIDs:
 with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_dailywaves_fullvars.pkl'), 'rb') as f:
     PredDict = pickle.load(f)
     
-#%% Plot Interpolation Methods
-Predictions.PlotInterps(TransectDF, '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
 
 
 #%% Separate Training and Validation
