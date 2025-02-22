@@ -12,14 +12,16 @@ import pickle
 import datetime as dt
 from datetime import datetime,timedelta
 import time
+import string
 import numpy as np
 import random
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.patches import Patch, Rectangle
+from matplotlib.patches import Patch, Rectangle, ConnectionPatch
 import matplotlib.dates as mdates
 from matplotlib import cm
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 from scipy.interpolate import interp1d, PchipInterpolator
@@ -1422,47 +1424,114 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
     ValTimestamps = ValDates[start_idx:]  # Get the last 10 days
     
     # Plot importance for each timestep
-    fig, axs = plt.subplots(1,2, figsize=(6.55, 3), dpi=300) 
-    ylimits = (0, 0.5)
+    gridspec = dict(width_ratios=[0.6, 1, 0.6])
+    
+    fig, axs = plt.subplots(1,3, figsize=(6.55, 2.6), dpi=300, gridspec_kw=gridspec) 
+    ylimits = (0, 0.45)
     cmap = plt.get_cmap('PuBuGn')
     
     # Create heatmap
     # Remove batch dimension
     IntGradAttr_indiv = np.abs(IntGradAttr[0])
-    # Plot heatmap
-    cax = axs[0].imshow(IntGradAttr_indiv.T, aspect='equal', cmap=cmap,
-                        vmin=ylimits[0], vmax=ylimits[1])
-    cbar = fig.colorbar(cax)
-    cbar.set_label('Feature Importance')
-    axs[0].set_title('Individual Integrated Gradients', fontsize=7)
-    axs[0].set_xlabel('Date')
-    axs[0].set_xticks(range(10))
-    axs[0].set_xticklabels([date.strftime("%Y-%m-%d") for date in ValTimestamps], rotation=45, ha="right")
-    # FeatNames = list(VarDFDayTrain.columns[2:])
-    FeatNames = []
-    axs[0].set_yticks(range(len(FeatNames)))
-    axs[0].set_yticklabels(FeatNames)
+    # Swap position of beachwidth (1 to 10)
+    IntGradAttr_indiv = IntGradAttr_indiv[:, [0,2,3,4,6,5,7,8,9,1,10,11,12,13]]
     
     # Create line plot of global importance
     norm = plt.Normalize(ylimits[0],ylimits[1])
     linec = cmap(norm(np.mean(np.abs(IntGradAttr),axis=-1).flatten()))
     # Plot global importance line
-    axs[1].plot(range(IntGradAttr.shape[1]), np.mean(np.abs(IntGradAttr),axis=-1).flatten(), 
-                   c='k', zorder=0)
-    axs[1].scatter(range(IntGradAttr.shape[1]), np.mean(np.abs(IntGradAttr),axis=-1).flatten(), 
+    axs[0].plot(range(IntGradAttr.shape[1]), np.mean(np.abs(IntGradAttr),axis=-1).flatten(), 
+                  c='k', zorder=0)
+    axs[0].scatter(range(IntGradAttr.shape[1]), np.mean(np.abs(IntGradAttr),axis=-1).flatten(), 
                    c=linec, marker='o', edgecolors='k', zorder=1)
-    axs[1].set_xlabel('Date')
-    axs[1].set_xticks(range(10))
-    axs[1].set_xticklabels([date.strftime("%Y-%m-%d") for date in ValTimestamps], rotation=45, ha="right")
-    axs[1].set_ylim(ylimits)
-    axs[1].set_title('Global Integrated Gradients', fontsize=7)
+    axs[0].set_xlabel(f"{ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'}")
+    axs[0].set_xticks(range(10))
+    axs[0].set_xticklabels([date.day for date in ValTimestamps])
+    axs[0].set_ylim(ylimits)
+    axs[0].yaxis.tick_right()
+    axs[0].set_title('(a) Global Integrated Gradients', fontsize=7)
+    ax0inset = inset_axes(axs[0], width='70%', height='45%', loc='upper left', borderpad=0)
+    ax0inset.plot(range(IntGradAttr.shape[1])[:7], np.mean(np.abs(IntGradAttr),axis=-1).flatten()[:7], 
+                  c='k', zorder=0)
+    ax0inset.scatter(range(IntGradAttr.shape[1])[:7], np.mean(np.abs(IntGradAttr),axis=-1).flatten()[:7], 
+                   c=linec[:7], marker='o', edgecolors='k', zorder=1)
+    ax0inset.set_xticks(range(7))
+    ax0inset.set_xticklabels([date.day for date in ValTimestamps[:7]])
+    ax0inset.set_xlim(ax0inset.get_xlim()[0]-0.2, ax0inset.get_xlim()[1]+0.2)
+    ax0inset.set_ylim(0,0.02)
+    ax0inset.yaxis.tick_right()
+    ax0inset.tick_params(axis='y', which='major', pad=0.2)
+    ax0inset.set_yticks([0, 0.005, 0.01, 0.015, 0.02])
+    ax0inset.set_yticklabels(['{:.2f}'.format(x) for x in ax0inset.get_yticks()])
+    for label in [ax0inset.yaxis.get_ticklabels()[1], ax0inset.yaxis.get_ticklabels()[3], ax0inset.yaxis.get_ticklabels()[4]]:
+        label.set_visible(False)
     
-    plt.subplots_adjust(wspace=-0.5)
+    # Plot heatmap
+    cax = axs[1].imshow(IntGradAttr_indiv.T, aspect='auto', cmap=cmap,
+                        vmin=ylimits[0], vmax=ylimits[1])
+    cbar = fig.colorbar(cax, location='left',pad=0.22)
+    cbar.set_label('Feature Importance')
+    axs[1].set_title('(b) Individual Integrated Gradients', fontsize=7)
+    axs[1].set_xlabel(f"{ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'}")
+    axs[1].set_xticks(range(10))
+    axs[1].set_xticklabels([date.day for date in ValTimestamps])
+    # FeatNames = list(VarDFDayTrain.columns[2:])
+    # sat tides, mean daily tides, max daily tides
+    # wave height, wave period, wave direction, wave alpha,
+    # runup, iribarren, beach width
+    # upcoast WL, upcoast VE, downcoast WL, downcoast VE
+    FeatNames = [r'$z_{tide,sat}$', r'$\bar{z}_{tide}$', r'$z^{*}_{tide}$',
+                 r'$H_{s}$', r'$T_{p}$', r'$\bar\theta$', r'$\alpha$',
+                 r'$R_{2}$', r'$\xi_{0}$', r'$d_{VE,WL}$',
+                 r'$WL_{u}$', r'$VE_{u}$', r'$WL_{d}$', r'$VE_{d}$']
+    axs[1].set_yticks(range(len(FeatNames)))
+    axs[1].set_yticklabels(FeatNames)
+    
+    # Add smaller heatmap of just wave data
+    cax = axs[2].imshow(IntGradAttr_indiv[:,3:8].T, aspect='equal', cmap=cmap,
+                        vmin=0, vmax=0.05)
+    cbar = fig.colorbar(cax, location='bottom', pad=0.2, label='Feature Importance')
+    axs[2].set_title('(c) Wave Integrated Gradients', fontsize=7)
+    axs[2].set_yticks(range(len(FeatNames[3:8])))
+    axs[2].set_yticklabels(FeatNames[3:8])
+    axs[2].set_xlabel(f"{ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'}")
+    axs[2].set_xticks(range(10))
+    axs[2].set_xticklabels([date.day for date in ValTimestamps])
+    # axs[2].set_box_aspect(0.9)
+    pos = axs[2].get_position()  # Get current position
+    axs[2].set_position([pos.x0, pos.y0, pos.width, pos.height])# axs[2].set_position([0.8, 1, 0.1, 0.1])
+    
+    # add connecting lines to inset plot
+    # top line
+    fig.add_artist(ConnectionPatch(
+    xyA=(axs[2].get_xlim()[0], axs[2].get_ylim()[1]), coordsA=axs[2].transData,
+    xyB=(1,11/len(IntGradAttr_indiv.T)), coordsB=axs[1].transAxes,
+    color='k', alpha=0.3, linewidth=0.5))   
+    # bottom line
+    fig.add_artist(ConnectionPatch(
+    xyA=(axs[2].get_xlim()[0], axs[2].get_ylim()[0]), coordsA=axs[2].transData,
+    xyB=(1,6/len(IntGradAttr_indiv.T)), coordsB=axs[1].transAxes,
+    color='k', alpha=0.3, linewidth=0.5))   
+    
+    # ax_labels = list(string.ascii_lowercase[:axs.shape[0]])
+    # for ax, lab in zip(axs.flat, ax_labels):
+    #     if lab == 'c':
+    #         ypos = 1.3
+    #     else:
+    #         ypos = 1.08
+    #     if lab=='a':
+    #         xpos = 1.04
+    #     else:
+    #         xpos=-0.13
+    #     ax.text(xpos, ypos, '('+lab+')', transform=ax.transAxes,
+    #         fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
+    
+    # plt.subplots_adjust(wspace=-0.5)
     plt.tight_layout()
     plt.show()
 
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_TrainValTestVars_Tr'+str(Tr)+'.png')
+                           sitename+'_FeatureImportance_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
 
 
