@@ -39,6 +39,9 @@ Predictions.PlotInterps(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_
 
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr, IntpKind='pchip')
+    
+#%% Plot VE, WL and wave height for storm
+Predictions.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
 
 #%% Load In Pre-trained Model
 with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_dailywaves_fullvars.pkl'), 'rb') as f:

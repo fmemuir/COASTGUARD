@@ -1395,7 +1395,56 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
 
 
-def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
+def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
+    
+    BabetTransect = TransectDF.loc['2023-09-28 00:00:00':'2023-12-05 00:00:00']
+    BabetVEs = pd.DataFrame({'veDTs':CoastalDFTr['veDTs'],
+                             'distances':CoastalDFTr['distances']})
+    BabetWLs = pd.DataFrame({'wlDTs':CoastalDFTr['wlDTs'],
+                             'wlcorrdist':CoastalDFTr['wlcorrdist']})
+    BabetVEs = BabetVEs.groupby('veDTs').mean()
+    BabetWLs = BabetWLs.groupby('wlDTs').mean()
+    
+    fig, ax = plt.subplots(1,1, figsize=(3.35,1.94), dpi=300)
+
+    rectwidth = mdates.date2num(datetime(2023,10,21)) - mdates.date2num(datetime(2023,10,18))
+    rect = mpatches.Rectangle((mdates.date2num(datetime(2023,10,18)), -200), rectwidth, 1000, 
+                              fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+    ax.add_patch(rect)
+    
+    ax.plot(BabetTransect['distances'], c='#79C060', label='VE')
+    ax.scatter(BabetVEs.index, BabetVEs['distances'], s=15, marker='x', c='#79C060')
+    ax.plot(BabetTransect['wlcorrdist'], c='#3E74B3', label='WL')
+    ax.scatter(BabetWLs.index, BabetWLs['wlcorrdist'], s=15, marker='x', c='#3E74B3')
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))
+    ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
+    ax.set_xlabel('Date (2023-mm-dd)')
+    # ax.set_xticklabels([date.day for date in BabetTransect.index])
+    ax.set_xlim(pd.Timestamp('2023-09-28 00:00:00'), pd.Timestamp('2023-12-02 00:00:00'))
+    ax.set_ylim(0, 500)
+    ax.legend(loc='upper left')
+    ax.text(x=mdates.date2num(datetime(2023,10,18)), y=ax.get_ylim()[0]+((ax.get_ylim()[1]-ax.get_ylim()[0])/2),
+            s='Storm Babet', rotation=90, ha='right', va='center', alpha=0.3)
+    
+    ax2 = ax.twinx()
+    ax2.plot(BabetTransect['WaveHsFD']+BabetTransect['tideelevFD'], c='#163E64', label='Significant wave height')
+    ax2.set_ylim(0,4)
+    ax2.legend(loc='upper right')
+    
+    ax.set_ylabel('Cross-shore distance (m)', labelpad=1)
+    ax2.set_ylabel('Wave height (m)')
+    
+    
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_StormWavesVEWL_Tr'+str(CoastalDFTr.name)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
+    
+
+def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr, enddate=None):
     """
     lot integrated gradient values for feature importance analysis.
     FM Feb 2025
@@ -1419,8 +1468,12 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
     """
     # Get the date index for the X_train and X_val data
     ValDates = VarDFDayTrain.index[len(VarDFDayTrain)-len(PredDict['X_val'][0]):]  
-    # Find the start date of the last sequence (most recent)
-    start_idx = len(ValDates) - 10  # Last 10-day sequence starts 10 days before the end
+    if enddate is None:
+        # Find the start date of the last sequence (most recent)
+        start_idx = len(ValDates) - 10  # Last 10-day sequence starts 10 days before the end
+    else:
+        # TO DO: give different dates
+        start_idx = enddate
     ValTimestamps = ValDates[start_idx:]  # Get the last 10 days
     
     # Plot importance for each timestep
@@ -1444,7 +1497,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
                   c='k', zorder=0)
     axs[0].scatter(range(IntGradAttr.shape[1]), np.mean(np.abs(IntGradAttr),axis=-1).flatten(), 
                    c=linec, marker='o', edgecolors='k', zorder=1)
-    axs[0].set_xlabel(f"{ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'}")
+    axs[0].set_xlabel(f"Date ({ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'})")
     axs[0].set_xticks(range(10))
     axs[0].set_xticklabels([date.day for date in ValTimestamps])
     axs[0].set_ylim(ylimits)
@@ -1472,7 +1525,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
     cbar = fig.colorbar(cax, location='left',pad=0.22)
     cbar.set_label('Feature Importance')
     axs[1].set_title('(b) Individual Integrated Gradients', fontsize=7)
-    axs[1].set_xlabel(f"{ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'}")
+    axs[1].set_xlabel(f"Date ({ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'})")
     axs[1].set_xticks(range(10))
     axs[1].set_xticklabels([date.day for date in ValTimestamps])
     # FeatNames = list(VarDFDayTrain.columns[2:])
@@ -1494,7 +1547,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
     axs[2].set_title('(c) Wave Integrated Gradients', fontsize=7)
     axs[2].set_yticks(range(len(FeatNames[3:8])))
     axs[2].set_yticklabels(FeatNames[3:8])
-    axs[2].set_xlabel(f"{ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'}")
+    axs[2].set_xlabel(f"Date ({ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'})")
     axs[2].set_xticks(range(10))
     axs[2].set_xticklabels([date.day for date in ValTimestamps])
     # axs[2].set_box_aspect(0.9)
@@ -1531,7 +1584,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr):
     plt.show()
 
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_FeatureImportance_Tr'+str(Tr)+'.png')
+                           sitename+'_FeatureImportance_Tr'+str(Tr)+'_'+str(ValTimestamps[0].date())+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
 
 
