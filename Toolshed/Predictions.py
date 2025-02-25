@@ -555,7 +555,7 @@ def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
     return loss
 
 
-def PrepData(TransectDF, MLabels, ValidSizes, TSteps, UseSMOTE=False):
+def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCols, UseSMOTE=False):
     """
     Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.
     Timeseries is expanded and interpolated to get daily timesteps, then scaled across
@@ -605,11 +605,9 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, UseSMOTE=False):
     VarDFDayTest_scaled = TransectDF_scaled.iloc[int(len(TransectDF_scaled)*0.9):]
     
     # Separate into training features (what will be learned from) and target features (what will be predicted)
-    TrainFeat = VarDFDay_scaled[['tideelev', 'beachwidth', 'tideelevFD','tideelevMx',
-                                 'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups', 'Iribarren',
-                                 'wlcorrdist_u', 'distances_u', 'wlcorrdist_d', 'distances_d']]
+    TrainFeat = VarDFDay_scaled[TrainFeatCols]
     # TrainFeat = VarDFDay_scaled[['WaveDir', 'Runups', 'Iribarren']]
-    TargFeat = VarDFDay_scaled[['distances', 'wlcorrdist']] # vegetation edge and waterline positions
+    TargFeat = VarDFDay_scaled[TargFeatCols] # vegetation edge and waterline positions
     
     # Define prediction dictionary for multiple runs/hyperparameterisation
     PredDict = {'mlabel':MLabels,   # name of the model run
@@ -619,6 +617,8 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, UseSMOTE=False):
                 'accuracy':[],      # final accuracy value of run
                 'train_time':[],    # time taken to train
                 'seqlen':[],        # length of temporal sequence in timesteps to break data up into
+                'trainfeats':[],    # column names of training features
+                'targfeats':[],     # column names of target features
                 'X_train':[],       # training features/cross-shore values (scaled and filled to daily)
                 'y_train':[],       # training target/cross-shore VE and WL (scaled and filled to daily)
                 'X_val':[],         # validation features/cross-shore values
@@ -635,6 +635,8 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, UseSMOTE=False):
         # Add scaling relationships and sequence lengths to dict to convert back later
         PredDict['scalings'].append(Scalings)
         PredDict['seqlen'].append(TStep)
+        PredDict['trainfeats'].append(TrainFeatCols)
+        PredDict['targfeats'].append(TargFeatCols)
         
         # Create temporal sequences of data based on daily timesteps
         X, y, TrainInd = CreateSequences(TrainFeat, TargFeat, TStep)
@@ -1405,16 +1407,17 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     BabetVEs = BabetVEs.groupby('veDTs').mean()
     BabetWLs = BabetWLs.groupby('wlDTs').mean()
     
-    fig, ax = plt.subplots(1,1, figsize=(3.35,1.94), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(3.3,1.94), dpi=300)
 
     rectwidth = mdates.date2num(datetime(2023,10,21)) - mdates.date2num(datetime(2023,10,18))
     rect = mpatches.Rectangle((mdates.date2num(datetime(2023,10,18)), -200), rectwidth, 1000, 
                               fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
     ax.add_patch(rect)
     
-    ax.plot(BabetTransect['distances'], c='#79C060', label='VE')
+    # Plot with VE and WL change over course of storm
+    ax.plot(BabetTransect['distances'], c='#79C060', label=r'$VE$')
     ax.scatter(BabetVEs.index, BabetVEs['distances'], s=15, marker='x', c='#79C060')
-    ax.plot(BabetTransect['wlcorrdist'], c='#3E74B3', label='WL')
+    ax.plot(BabetTransect['wlcorrdist'], c='#3E74B3', label=r'$WL$')
     ax.scatter(BabetWLs.index, BabetWLs['wlcorrdist'], s=15, marker='x', c='#3E74B3')
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))
     ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
@@ -1422,18 +1425,29 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     ax.set_xlabel('Date (2023-mm-dd)')
     # ax.set_xticklabels([date.day for date in BabetTransect.index])
     ax.set_xlim(pd.Timestamp('2023-09-28 00:00:00'), pd.Timestamp('2023-12-02 00:00:00'))
-    ax.set_ylim(0, 500)
-    ax.legend(loc='upper left')
-    ax.text(x=mdates.date2num(datetime(2023,10,18)), y=ax.get_ylim()[0]+((ax.get_ylim()[1]-ax.get_ylim()[0])/2),
-            s='Storm Babet', rotation=90, ha='right', va='center', alpha=0.3)
+    ax.set_ylim(-50, 550)
+    ax.legend(loc='upper left', handlelength=1, columnspacing=1, handletextpad=0.6)
+    # ax.text(x=mdates.date2num(datetime(2023,10,18)), y=ax.get_ylim()[0]+((ax.get_ylim()[1]-ax.get_ylim()[0])/2),
+    #         s='Storm Babet', rotation=90, ha='right', va='center', alpha=0.3)
+    ax.text(x=mdates.date2num(datetime(2023,10,18)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.23),
+            s='Storm\nBabet', rotation=0, ha='right', va='top', alpha=0.3)
     
+    # Second axis with water elevations
     ax2 = ax.twinx()
-    ax2.plot(BabetTransect['WaveHsFD']+BabetTransect['tideelevFD'], c='#163E64', label='Significant wave height')
-    ax2.set_ylim(0,4)
-    ax2.legend(loc='upper right')
+    ax2.plot(BabetTransect['WaveHsFD'], c='#163E64', lw=1.2, label=r'$H_{s}$')
+    ax2.plot(BabetTransect['tideelevFD'], c='#163E64',lw=1.2,  ls='--', label=r'$\bar{z}_{tide}$')
+    ax2.plot(BabetTransect['tideelevMx'], c='#163E64', lw=1.2, ls=':', label=r'$z^{*}_{tide}$')
+    
+    # Marker where harbour failed
+    ax.axvline(x=mdates.date2num(datetime(2023,10,29)), c=[0.3,0.3,0.3], ls='--', lw=0.8, alpha=0.2)
+    ax.text(x=mdates.date2num(datetime(2023,10,29)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.23),
+            s='slipway lost', ha='left', va='top', alpha=0.3)
+
+    ax2.set_ylim(-0.2,4.)
+    ax2.legend(loc='upper right', ncols=3, handlelength=1.5, columnspacing=0.8, handletextpad=0.6)
     
     ax.set_ylabel('Cross-shore distance (m)', labelpad=1)
-    ax2.set_ylabel('Wave height (m)')
+    ax2.set_ylabel('Water elevation (m)')
     
     
     plt.tight_layout()

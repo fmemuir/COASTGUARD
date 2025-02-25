@@ -35,7 +35,7 @@ CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWa
 TransectIDs = [1325]
 
 #%% Plot Interpolation Methods
-Predictions.PlotInterps(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
+# Predictions.PlotInterps(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
 
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWL(CoastalDF, Tr, IntpKind='pchip')
@@ -56,10 +56,16 @@ TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
 Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-PredDict, VarDFDayTrain, VarDFDayTest  = Predictions.PrepData(TransectDF, 
-                                          MLabels=['dailywaves_fullvars'], 
-                                          ValidSizes=[0.2], 
-                                          TSteps=[10])
+TrainFeats = ['tideelev', 'beachwidth', 'tideelevFD','tideelevMx',
+              'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups', 'Iribarren',
+              'wlcorrdist_u', 'distances_u', 'wlcorrdist_d', 'distances_d']
+TargFeats = ['distances', 'wlcorrdist']
+PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
+                                                             MLabels=['dailywaves_fullvars'], 
+                                                             ValidSizes=[0.2], 
+                                                             TSteps=[10],
+                                                             TrainFeatCols=TrainFeats,
+                                                             TargFeatCols=TargFeats)
 # Needs additional lines for TransectID
 
 #%% Compile the Recurrent Neural Network 
