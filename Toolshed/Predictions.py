@@ -1110,7 +1110,7 @@ def RunsToCSV(tuningdir,outputCSV):
     print(f"Data saved to {outputPath}")
     
 
-def FuturePredict(PredDict, ForecastDF):
+def FuturePredict(PredDict, ForecastDF, TrainFeatCols):
     """
     Make prediction of future vegetation edge and waterline positions for transect
     of choice, using forecast dataframe as forcing and model pre-trained on past 
@@ -1146,7 +1146,7 @@ def FuturePredict(PredDict, ForecastDF):
         
         # Separate out forecast features
         # ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
-        ForecastFeat = ForecastDF[['WaveDir', 'Runups', 'Iribarrens']]
+        ForecastFeat = ForecastDF[TrainFeatCols]
         
         # Sequence forecast data to shape (samples, sequencelen, variables)
         ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
@@ -1626,7 +1626,7 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
 
 
     """
-    fig, ax = plt.subplots(1,1, figsize=(3.3,3.35), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(6.5,3.35), dpi=300)
     
     TrainStart = mdates.date2num(VarDFDay.index[0])
     TrainEnd = mdates.date2num(VarDFDay.index[round(len(VarDFDay)-(len(VarDFDay)*0.2))])
@@ -1644,11 +1644,11 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     
     lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
-    plt.plot(VarDFDay['distances'], 'C2', lw=lw, label='Past VE')
-    plt.plot(VarDFDay['wlcorrdist'], 'C0', lw=lw, label='Past WL')
+    plt.plot(VarDFDay['distances'], '#79C060', lw=lw, label='Past VE')
+    plt.plot(VarDFDay['wlcorrdist'], '#3E74B3', lw=lw, label='Past WL')
     # Plot cross-shore distances through time for test data
-    plt.plot(TransectDFTest['distances'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
-    plt.plot(TransectDFTest['wlcorrdist'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
+    plt.plot(TransectDFTest['distances'], '#79C060', ls=(0, (1, 1)), lw=lw, label='Test VE')
+    plt.plot(TransectDFTest['wlcorrdist'], '#3E74B3', ls=(0, (1, 1)), lw=lw, label='Test WL')
     plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
     plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
 

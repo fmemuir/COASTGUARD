@@ -34,7 +34,8 @@ CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWa
 # TransectIDs = [271]
 TransectIDs = [1325]
 
-#%% Plot Interpolation Methods
+#%% Interpolate variables to daily
+# Plot Interpolation Methods
 # Predictions.PlotInterps(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
 
 for Tr in TransectIDs:
@@ -53,15 +54,14 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_daily
 TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.9)]
 TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
 
-Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
+# Plot timeseries of variables
+# Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-TrainFeats = ['tideelev', 'beachwidth', 'tideelevFD','tideelevMx',
-              'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups', 'Iribarren',
-              'wlcorrdist_u', 'distances_u', 'wlcorrdist_d', 'distances_d']
+TrainFeats = ['WaveAlphaFD', 'WaveTpFD', 'Runups']
 TargFeats = ['distances', 'wlcorrdist']
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                             MLabels=['dailywaves_fullvars'], 
+                                                             MLabels=['dailywaves_wavevars'], 
                                                              ValidSizes=[0.2], 
                                                              TSteps=[10],
                                                              TrainFeatCols=TrainFeats,
@@ -90,7 +90,7 @@ Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitenam
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
 
-FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
+FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest, TrainFeatCols=TrainFeats)
 
 #%% Plot Future WL and VE
 Predictions.PlotFuture(0, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename)
