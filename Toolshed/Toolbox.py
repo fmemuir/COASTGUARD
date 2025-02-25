@@ -2460,7 +2460,7 @@ def CalcDistance(Geom1,Geom2):
     return geom1geom2dist
 
 
-def ComputeTides(settings,tidepath,daterange,tidelatlon):
+def ComputeTides(settings,tidepath,tideoutpath,daterange,tidelatlon):
     """
     Function to compute water elevations from tidal consituents of global tide model FES2014. 
     Uses pyfes package to compute tides at specific lat long and for specified time period.
@@ -2483,9 +2483,9 @@ def ComputeTides(settings,tidepath,daterange,tidelatlon):
 
     """
     
-    tideoutpath = os.path.join(settings['inputs']['filepath'],
-                                'tides',settings['inputs']['sitename']+'_tides_'+
-                                settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
+    # tideoutpath = os.path.join(settings['inputs']['filepath'],
+    #                             'tides',settings['inputs']['sitename']+'_tides_'+
+    #                             settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
     
     if os.path.isfile(tideoutpath) is True: 
         print('Tide data already compiled.')

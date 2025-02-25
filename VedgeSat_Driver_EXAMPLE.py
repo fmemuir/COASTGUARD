@@ -121,9 +121,12 @@ settings = {
 #%% Compute Tides from FES2014
 
 tidepath = "../aviso-fes/data/fes2014"
+tideoutpath = os.path.join(settings['inputs']['filepath'],'tides',
+                           settings['inputs']['sitename']+'_tides_'+
+                           settings['inputs']['dates'][0]+'_'+settings['inputs']['dates'][1]+'.csv')
 daterange = dates
 tidelatlon = [(latmin+latmax)/2, (lonmin+lonmax)/2] # centre of bounding box
-Toolbox.ComputeTides(settings,tidepath,daterange,tidelatlon) 
+Toolbox.ComputeTides(settings,tidepath,tideoutpath,daterange,tidelatlon) 
     
 #%% Vegetation Edge Reference Line Load-In
 
