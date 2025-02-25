@@ -37,6 +37,7 @@ from sklearn.neighbors import KernelDensity
 from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 import scipy.stats
+from scipy.stats import circmean
 from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -3856,6 +3857,135 @@ def FullWaveRose(sitename, outfilepath, WaveFilePath=None, PlotDates=None, XSlic
     
     plt.show()
     
+    
+def MeanWaveRose(sitename, outfilepath, WaveX, WaveY,
+                 SigWaveHeight, MeanWaveDir,
+                 WaveTime, StormEvents,
+                 WaveFilePath=None, PlotDates=None, XSlices=None,YSlices=None):
+    """
+    FM Feb 2025
+
+    Parameters
+    ----------
+    sitename : str
+        Name of site of interest.
+    outfilepath : str
+        Filepath to save fig to.
+    WaveFilePath : str, optional
+        Filepath to load specific wave file from. The default is None.
+    PlotDates : list, optional
+        List of start and end datetimes for constraining plot. The default is None.
+
+
+    """
+    # outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    # if os.path.isdir(outfilepath) is False:
+    #     os.mkdir(outfilepath)
+    mpl.rcParams.update({'font.size':7})
+   
+    
+    # Extended wave data so now need to slice back down for plotting
+    if XSlices is not None or YSlices is not None:
+        WaveX = WaveX[XSlices[0]:XSlices[1]]
+        WaveY = WaveY[YSlices[0]:YSlices[1]]
+        # clip down timeseries too
+        if PlotDates is not None: 
+            StartID = WaveTime.index(PlotDates[0])
+            EndID = WaveTime.index(PlotDates[1])+1 # need to add 1 for including in slicing
+            WaveTime = WaveTime[StartID:EndID]
+            SigWaveHeight = SigWaveHeight[StartID:EndID, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            MeanWaveDir = MeanWaveDir[StartID:EndID, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            StormEvents = StormEvents[StartID:EndID, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+        # Or just include whole timeseries and only clip down spatially
+        else:
+            SigWaveHeight = SigWaveHeight[:, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            MeanWaveDir = MeanWaveDir[:, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+            StormEvents = StormEvents[:, YSlices[0]:YSlices[1], XSlices[0]:XSlices[1]]
+    
+    # Calculate mean values for all wave conds
+    plotwavehs = np.nanmean(SigWaveHeight,axis=(1,2))
+    plotwavedir = circmean(np.deg2rad(MeanWaveDir), axis=(1,2), nan_policy='omit')
+    
+    # create stages for wave height breaks
+    cmp = cm.get_cmap('YlGnBu')
+    HsStages = [[0.00,0.25],
+                [0.25,0.50],
+                [0.50,0.75],
+                [0.75,1.00],
+                [1.00,2.00],
+                [2.00,4.00]]
+    
+    # scaling for single column A4 page: (6.55,6)
+    
+    fig, ax = plt.subplots(1,1, figsize=(1.26, 2.5), dpi=300, 
+                            subplot_kw={'projection': 'polar'})
+    
+    # Convert wave dirs to radians
+    # plotwavedir = np.deg2rad(MeanWaveDir_Mean)
+    # plotwavehs = np.array(SigWaveHeight_Mean)
+
+    # initialise dict for dataframe
+    plotL = {}
+    colours = []
+    for i, step in enumerate(HsStages):
+        lab = f"{step[0]:.2f} to {step[1]:.2f}"
+        # mask each set of wave directions by the range of wave heights
+        mask = [val > step[0] and val <= step[1] for val in plotwavehs]
+        plotL[lab] = plotwavedir[mask]
+        colours.append(cmp(i/(len(HsStages)-1)))
+    # to dataframe for plotting
+    plotDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v, in plotL.items() ]))   
+    
+    # For each wave height break, plot wave direction rose with 5deg bins
+    # for i, c in zip(range(len(plotDF.columns)), np.arange(0,1,0.25)):
+        # if i == 0: # first stage starts from 0 
+    binsize = np.deg2rad(10)
+    binset = np.arange(0,np.deg2rad(360)+binsize,binsize)
+    ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns)
+        # else: # start each row with previous stage
+            # ax.bar(plotDF[plotDF.columns[i]], color=cmp(c), label=lab, bottom=plotDF[plotDF.columns[i-1]])
+        
+    ax.set_theta_zero_location('N')
+    ax.set_theta_direction(-1)
+    ax.set_facecolor((1, 1, 1, 0.3))            
+    ax.tick_params(axis='x',which='major', colors='w')
+    ax.set_xticklabels([])
+    ax.set_yticklabels([])
+    for spine in ax.spines.values():
+        spine.set_edgecolor('w')
+    ax.grid(linestyle='-', lw=0.5, color='w')
+    ax.set_axisbelow(True)
+    # Padding on tick labels is too big, N label plotted as text instead
+    # Use max radius value as y loc, and then add 3% buffer on that
+    ax.text(0, ax.get_ylim()[1]+(ax.get_ylim()[1]*0.03), 'N', c='w', ha='center')    
+                
+    handles, labels = ax.get_legend_handles_labels()
+
+    # TitleFont = mplfm.FontProperties(family='Arial', weight='bold', style='normal')
+    leg = fig.legend(handles, labels, loc='lower center', title='Wave H$_s$ (m)', title_fontproperties={'weight':'bold'})#, prop=TitleFont)
+    # Adjust the location of the legend
+    plt.draw()
+    bb = leg.get_bbox_to_anchor().transformed(ax.transAxes.inverted()) 
+    xOffset = 0
+    yOffset = -1
+    bb.x0 += xOffset
+    bb.x1 += xOffset
+    bb.y0 += yOffset
+    bb.y1 += yOffset
+    leg.set_bbox_to_anchor(bb, transform = ax.transAxes)
+    
+    mpl.rcParams.update({'font.size':7})
+    
+    figname = os.path.join(outfilepath, sitename + '_CMEMSWaveDir_Mean_'+str(round(WaveY[0],3))+'_'+str(round(WaveX[0],3))+'.png')
+    
+    plt.tight_layout()
+    # Set the figure background to fully transparent
+    fig.patch.set_alpha(0)
+    
+    fig.savefig(figname, bbox_inches='tight')
+    print('Plot saved under '+figname)
+    
+    plt.show()
     
     
 def FullWaveHsTimeseries(sitename, PlotDates=None):
