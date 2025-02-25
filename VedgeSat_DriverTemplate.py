@@ -79,8 +79,9 @@ inputs = Download.check_images_available(inputs)
 #%% Image Download
 
 # Make the metadata
-Sat = Toolbox.image_retrieval(inputs)
-metadata = Toolbox.metadata_collection(inputs, Sat)
+# If you want to include Landsat 7 but DON'T want to include Scan Line Corrector affected images, set SLC=False
+Sat = Download.RetrieveImages(inputs, SLC=False)
+metadata = Download.CollectMetadata(inputs, Sat)
 
 
 #%% Local Image Retrieval (Planet)

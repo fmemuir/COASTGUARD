@@ -83,7 +83,7 @@ inputs = Download.check_images_available(inputs)
 #%% Image Download
 
 # If you want to include Landsat 7 but DON'T want to include Scan Line Corrector affected images, set SLC=False
-Sat = Download.RetrieveImages(inputs, SLC=True)
+Sat = Download.RetrieveImages(inputs, SLC=False)
 metadata = Download.CollectMetadata(inputs, Sat)
 
 
