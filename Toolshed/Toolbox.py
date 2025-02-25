@@ -2527,6 +2527,7 @@ def ComputeTides(settings,tidepath,tideoutpath,daterange,tidelatlon):
         
         # pass configuration files to pyfes handler to gather up tidal constituents
         if '2022' not in tidepath: # for FES2014
+            print('Loading AVISO config file...')
             config_ocean = os.path.join(tidepath,"ocean_tide_extrapolated.ini")
             ocean_tide = pyfes.Handler("ocean", "io", config_ocean)
             config_load = os.path.join(tidepath,"load_tide.ini")
@@ -2536,6 +2537,7 @@ def ComputeTides(settings,tidepath,tideoutpath,daterange,tidelatlon):
             load, load_lp, _ = load_tide.calculate(lons, lats, dates_np)
             
         else: # for FES2022
+            print('Loading AVISO config file (might take a while)...')
             config =  os.path.join(tidepath, 'fes2022.yaml')
             try:
                 handlers = pyfes.load_config(config)
