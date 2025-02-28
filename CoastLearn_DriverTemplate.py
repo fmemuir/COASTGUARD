@@ -10,6 +10,7 @@ import os
 import pickle
 import matplotlib.pyplot as plt
 from itertools import combinations
+import pandas as pd
 
 from Toolshed import Predictions
 
@@ -26,6 +27,24 @@ filepath = os.path.join(os.getcwd(), 'Data')
 
 # Load in transect data with coastal change variables
 TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave = Predictions.LoadIntersections(filepath, sitename)
+
+# Define symbol disctionary for labelling
+SymbolDict = {'distances':      r'$VE$',
+              'wlcorrdist':     r'$WL$',
+              'tideelev':       r'$z_{tide,sat}$',
+              'beachwidth':     r'$d_{VE,WL}$',
+              'tideelevFD':     r'$\bar{z}_{tide}$',
+              'tideelevMx':     r'$z^{*}_{tide}$',
+              'WaveHsFD':       r'$H_{s}$',
+              'WaveDirFD':      r'$\bar\theta$',
+              'WaveTpFD':       r'$T_{p}$', 
+              'WaveAlphaFD':    r'$\alpha$',
+              'Runups':         r'$R_{2}$',
+              'Iribarren':      r'$\xi_{0}$', 
+              'wlcorrdist_u':   r'$WL_{u}$',
+              'distances_u':    r'$VE_{u}$', 
+              'wlcorrdist_d':   r'$WL_{d}$',
+              'distances_d':    r'$VE_{d}$'}
 
 #%% Compile Transect Data
 # Compile relevant coastal change metrics into one dataframe
@@ -56,15 +75,17 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_daily
 TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.9)]
 TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
 
-# Plot timeseries of variables
+#%% Plot timeseries of variables
 # Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
+TrainFeatsPlotting = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD', 'tideelev']
+Predictions.PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
+TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD', 'tideelev']
 TargFeats = ['distances', 'wlcorrdist']
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                             MLabels=['dailywaves_wavevars'], 
+                                                             MLabels=['dailywaves_wavetidesat'], 
                                                              ValidSizes=[0.2], 
                                                              TSteps=[10],
                                                              TrainFeatCols=[TrainFeats],
@@ -77,7 +98,7 @@ PredDict = Predictions.CompileRNN(PredDict,
                                   epochNums=[150], 
                                   batchSizes=[32],
                                   denseLayers=[64],
-                                  dropoutRt=[0.2],
+                                  dropoutRt=[0.3],
                                   learnRt=[0.001],
                                   DynamicLR=False)
 
@@ -118,16 +139,17 @@ Predictions.PlotFeatSensitivity(PredDict,filepath, sitename,TransectIDs[0])
 #%% Feature Importance
 mID = 0
 IntGradAttr = Predictions.FeatImportance(PredDict, mID)
-Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, TransectIDs[0])
+Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sitename, TransectIDs[0])
 
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
 
 FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
+FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain, VarDFDayTest]))
 
 #%% Plot Future WL and VE
 for mID in range(len(FutureOutputs['mlabel'])): 
-    Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename)
+    Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
 
 #%%
 Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)

@@ -1168,8 +1168,41 @@ def FuturePredict(PredDict, ForecastDF):
     return FutureOutputs
 
 
+def MovingAverage(series, windowsize):
+    """
+    Generate a moving window average trendline from a timeseries 
+    FM Apr 2023
+
+    Parameters
+    ----------
+    series : list
+        Timeseries to be plotted (yvalues).
+    windowsize : int
+        Number of steps to smooth over.
+
+    Returns
+    -------
+    mvav : list
+        Timeseries of values smoothed over requested interval.
+
+    """
+    # moving average trendline
+    window = np.ones(int(windowsize))/float(windowsize)
+    mvav = np.convolve(series, window, 'same')
+    # Brute force first and last step to match
+    mvav[0] = series[0]
+    mvav[-1] = series[-1]
+    
+    return mvav
+
+
 # ----------------------------------------------------------------------------------------
 ### PLOTTING FUNCTIONS ###
+# SCALING:
+# Journal 2-column width: 224pt or 3.11in
+# Journal 1-column width: 384pt or 5.33in
+# Spacing between: 0.33in
+# Journal 2-column page: 6.55in
 
 
 def PlotInterps(CoastalDF, Tr, FigPath):
@@ -1532,6 +1565,50 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
 
 
+def PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, filepath, sitename):
+    
+    # Append VE and WL to training feats
+    TrainTargFeats = TrainFeatsPlotting.copy()
+    TrainTargFeats.append('distances')
+    TrainTargFeats.append('wlcorrdist')  
+    
+    fig, axs = plt.subplots(len(TrainTargFeats), 1, sharex=True, figsize=(6.55,6), dpi=300)
+    
+    for ax, Feat in zip(axs, TrainTargFeats):
+        # Convert back to deg
+        if Feat == 'WaveDirFD':
+            ax.plot(np.rad2deg(TransectDF[Feat]), c='#163E64', lw=0.7, alpha=0.5)
+        else:
+            ax.plot(TransectDF[Feat], c='#163E64', lw=0.7, alpha=0.5)
+        # Set datetimes for uninterpolated data
+        if Feat == 'wlcorrdist' or Feat == 'tideelev':
+            FeatDT = CoastalDF.iloc[Tr]['wlDTs']
+        elif Feat == 'distances':
+            FeatDT = CoastalDF.iloc[Tr]['veDTs']
+        elif Feat == 'Runups' or Feat == 'Iribarren':
+            FeatDT = CoastalDF.iloc[Tr]['WaveDates']
+        elif 'FD' in Feat:
+            FeatDT = CoastalDF.iloc[Tr]['WaveDatesFD']
+        
+        if Feat == 'WaveDirFD' or Feat == 'WaveAlphaFD':
+            Unit = r' ($\degree$)'
+        elif Feat == 'WaveTpFD':
+            Unit = ' (s)'
+        else:
+            Unit = ' (m)'
+        
+        ax.plot(FeatDT, CoastalDF.iloc[Tr][Feat], c='#163E64', marker='o', ms=0.5, lw=0)
+        ax.set_ylabel(SymbolDict[Feat]+Unit)
+    
+    plt.xlabel('Date (yyyy)')
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_SubsetTimeseries_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+    
+
 def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     
     BabetTransect = TransectDF.loc['2023-09-28 00:00:00':'2023-12-05 00:00:00']
@@ -1593,7 +1670,7 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
     
 
-def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr, enddate=None):
+def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sitename, Tr, enddate=None):
     """
     lot integrated gradient values for feature importance analysis.
     FM Feb 2025
@@ -1682,20 +1759,17 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr, e
     # wave height, wave period, wave direction, wave alpha,
     # runup, iribarren, beach width
     # upcoast WL, upcoast VE, downcoast WL, downcoast VE
-    FeatNames = [r'$z_{tide,sat}$', r'$\bar{z}_{tide}$', r'$z^{*}_{tide}$',
-                 r'$H_{s}$', r'$T_{p}$', r'$\bar\theta$', r'$\alpha$',
-                 r'$R_{2}$', r'$\xi_{0}$', r'$d_{VE,WL}$',
-                 r'$WL_{u}$', r'$VE_{u}$', r'$WL_{d}$', r'$VE_{d}$']
-    axs[1].set_yticks(range(len(FeatNames)))
-    axs[1].set_yticklabels(FeatNames)
+    
+    axs[1].set_yticks(range(len(SymbolDict.keys())))
+    axs[1].set_yticklabels(SymbolDict.values())
     
     # Add smaller heatmap of just wave data
     cax = axs[2].imshow(IntGradAttr_indiv[:,3:8].T, aspect='equal', cmap=cmap,
                         vmin=0, vmax=0.05)
     cbar = fig.colorbar(cax, location='bottom', pad=0.2, label='Feature Importance')
     axs[2].set_title('(c) Wave Integrated Gradients', fontsize=7)
-    axs[2].set_yticks(range(len(FeatNames[3:8])))
-    axs[2].set_yticklabels(FeatNames[3:8])
+    axs[2].set_yticks(range(len(SymbolDict.values()[3:8])))
+    axs[2].set_yticklabels(SymbolDict.values()[3:8])
     axs[2].set_xlabel(f"Date ({ValTimestamps[0].strftime('%Y-%m-%d')[:8]+'dd'})")
     axs[2].set_xticks(range(10))
     axs[2].set_xticklabels([date.day for date in ValTimestamps])
@@ -1738,7 +1812,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitename, Tr, e
 
 
 
-def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename):
+def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -1760,12 +1834,17 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
         Name of site of interest.
 
 
-    """
+    """   
+    
+    # Calculate smoothed version of predictions
+    SmoothVE = MovingAverage(FutureOutputs['output'][mID]['futureVE'], 30)
+    SmoothWL = MovingAverage(FutureOutputs['output'][mID]['futureWL'], 30)    
+    
     fig, ax = plt.subplots(1,1, figsize=(6.5,3.35), dpi=300)
     
-    TrainStart = mdates.date2num(VarDFDay.index[0])
-    TrainEnd = mdates.date2num(VarDFDay.index[round(len(VarDFDay)-(len(VarDFDay)*0.2))])
-    ValEnd = mdates.date2num(VarDFDay.index[-1])
+    TrainStart = mdates.date2num(TransectDFTrain.index[0])
+    TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+    ValEnd = mdates.date2num(TransectDFTrain.index[-1])
     TestEnd = mdates.date2num(TransectDFTest.index[-1])
     TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
     ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
@@ -1779,13 +1858,17 @@ def PlotFuture(mID, VarDFDay, TransectDFTest, FutureOutputs, filepath, sitename)
     
     lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
-    plt.plot(VarDFDay['distances'], '#79C060', lw=lw, label='Past VE')
-    plt.plot(VarDFDay['wlcorrdist'], '#3E74B3', lw=lw, label='Past WL')
+    plt.plot(pd.concat([TransectDFTrain['distances'], TransectDFTest['distances']]), '#79C060', lw=lw, label=r'${y}_{VE}$')
+    plt.plot(pd.concat([TransectDFTrain['wlcorrdist'], TransectDFTest['wlcorrdist']]), '#3E74B3', lw=lw, label=r'${y}_{WL}$')
     # Plot cross-shore distances through time for test data
-    plt.plot(TransectDFTest['distances'], '#79C060', ls=(0, (1, 1)), lw=lw, label='Test VE')
-    plt.plot(TransectDFTest['wlcorrdist'], '#3E74B3', ls=(0, (1, 1)), lw=lw, label='Test WL')
-    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
-    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
+    # plt.plot(TransectDFTest['distances'], '#79C060', ls=(0, (1, 1)), lw=lw, label='Test VE')
+    # plt.plot(TransectDFTest['wlcorrdist'], '#3E74B3', ls=(0, (1, 1)), lw=lw, label='Test WL')
+    # Plot predicted WL and VE
+    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.3, lw=lw, label=r'$\hat{y}_{VE}$')
+    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.3, lw=lw, label=r'$\hat{y}_{WL}$')
+    # Plot smoothed predicted WL and VE
+    plt.plot(FutureOutputs['output'][mID]['futureVE'].index, SmoothVE, 'C8', alpha=1, lw=lw, label=r'$\hat{y}_{VE,t1-t10}$')
+    plt.plot(FutureOutputs['output'][mID]['futureWL'].index, SmoothWL, 'C9', alpha=1, lw=lw, label=r'$\hat{y}_{WL,t1-t10}$')
 
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')
