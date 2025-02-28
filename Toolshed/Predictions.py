@@ -604,11 +604,6 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
     VarDFDay_scaled = TransectDF_scaled.iloc[:int(len(TransectDF_scaled)*0.9)]
     VarDFDayTest_scaled = TransectDF_scaled.iloc[int(len(TransectDF_scaled)*0.9):]
     
-    # Separate into training features (what will be learned from) and target features (what will be predicted)
-    TrainFeat = VarDFDay_scaled[TrainFeatCols]
-    # TrainFeat = VarDFDay_scaled[['WaveDir', 'Runups', 'Iribarren']]
-    TargFeat = VarDFDay_scaled[TargFeatCols] # vegetation edge and waterline positions
-    
     # Define prediction dictionary for multiple runs/hyperparameterisation
     PredDict = {'mlabel':MLabels,   # name of the model run
                 'model':[],         # compiled model (Sequential object)
@@ -630,13 +625,18 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
                 'dropoutRt':[],     # percentage of nodes to randomly drop in training (avoids overfitting)
                 'learnRt':[]}       # size of steps to adjust parameters by on each iteration
     
-    for MLabel, ValidSize, TStep in zip(PredDict['mlabel'], ValidSizes, TSteps):
+    for MLabel, ValidSize, TStep, TrainFeatCol, TargFeatCol in zip(PredDict['mlabel'], ValidSizes, TSteps, TrainFeatCols, TargFeatCols):
+        
+        # Separate into training features (what will be learned from) and target features (what will be predicted)
+        TrainFeat = VarDFDay_scaled[TrainFeatCol]
+        # TrainFeat = VarDFDay_scaled[['WaveDir', 'Runups', 'Iribarren']]
+        TargFeat = VarDFDay_scaled[TargFeatCol] # vegetation edge and waterline positions
         
         # Add scaling relationships and sequence lengths to dict to convert back later
         PredDict['scalings'].append(Scalings)
         PredDict['seqlen'].append(TStep)
-        PredDict['trainfeats'].append(TrainFeatCols)
-        PredDict['targfeats'].append(TargFeatCols)
+        PredDict['trainfeats'].append(TrainFeatCol)
+        PredDict['targfeats'].append(TargFeatCol)
         
         # Create temporal sequences of data based on daily timesteps
         X, y, TrainInd = CreateSequences(TrainFeat, TargFeat, TStep)
@@ -1110,7 +1110,7 @@ def RunsToCSV(tuningdir,outputCSV):
     print(f"Data saved to {outputPath}")
     
 
-def FuturePredict(PredDict, ForecastDF, TrainFeatCols):
+def FuturePredict(PredDict, ForecastDF):
     """
     Make prediction of future vegetation edge and waterline positions for transect
     of choice, using forecast dataframe as forcing and model pre-trained on past 
@@ -1146,7 +1146,7 @@ def FuturePredict(PredDict, ForecastDF, TrainFeatCols):
         
         # Separate out forecast features
         # ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
-        ForecastFeat = ForecastDF[TrainFeatCols]
+        ForecastFeat = ForecastDF[PredDict['trainfeats'][mID]]
         
         # Sequence forecast data to shape (samples, sequencelen, variables)
         ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
@@ -1264,6 +1264,141 @@ def PlotAccuracy(CSVdir, FigPath):
     return AccuracyDF
 
 
+def PlotFeatSensitivity(PredDict, filepath, sitename, Tr):
+    
+    # Grid point size
+    sz = 200
+    
+    # Plot all feature test results
+    gridspecs = dict(wspace=0.0) #width_ratios=[1,0.9])
+    fig, (ax, ax2) = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=(3.11, 9), dpi=300, gridspec_kw=gridspecs)
+    
+    # Matrix of feature combos
+    for r in range(len(PredDict['trainfeats'])):
+        fts = [PredDict['trainfeats'][-1].index(ft) for ft in PredDict['trainfeats'][r]]
+        maxInd = PredDict['accuracy'].index(np.max(PredDict['accuracy']))
+        minInd = PredDict['accuracy'].index(np.min(PredDict['accuracy']))
+        # Plot matrix of feature combinations
+        if r == maxInd or r == minInd:
+            ax.scatter(fts, [r]*len(fts), marker='s', c='#163E64', s=sz)
+        else:
+            ax.scatter(fts, [r]*len(fts), marker='s', c='#B3BADD', s=sz)
+    ax.set_aspect('equal')
+    ax.set_xlim(-0.5,len(PredDict['trainfeats'][-1])-0.5)
+    xticklocs = [i+0.5 for i in range(len(PredDict['trainfeats'][-1]))]
+    ax.set_xticks(ticks=range(len(PredDict['trainfeats'][-1])), 
+                  labels=[r'$H_{s}$',r'$R_{2}$', r'$\bar\theta$', r'$\alpha$', r'$T_{p}$'], minor=True)
+    ax.tick_params(which='minor',top=True, labeltop=True, bottom=False, labelbottom=False)
+    ax.set_xlabel('Train Features')
+    ax.xaxis.set_label_position('top')
+    # Turn off major ticks and labels (only there for grid)
+    ax.set_xticks(ticks=xticklocs, minor=False)
+    ax.xaxis.set_tick_params(which='major', bottom=False, labelbottom=False)
+    # yxis params
+    ax.set_ylim(-0.5,len(PredDict['trainfeats'])-0.5)
+    yticklocs = [i+0.5 for i in range(len(PredDict['trainfeats']))]
+    ax.set_yticks(yticklocs)
+    ax.yaxis.set_tick_params(left=False, labelleft=False)
+    
+    ax.grid(which='major', c=[0.8,0.8,0.8], lw=0.8)
+    
+    # Resulting accuracy of each
+    barlims = (0.5,1)
+    # normc = plt.Normalize(np.min(PredDict['accuracy']), np.max(PredDict['accuracy']))
+    # colours = plt.cm.PuBuGn(normc(PredDict['accuracy']))
+    for r in range(len(PredDict['trainfeats'])):
+        fts = [PredDict['trainfeats'][-1].index(ft) for ft in PredDict['trainfeats'][r]]
+        # Plot matrix of feature combinations
+        if r == maxInd or r == minInd:
+            ax2.barh([r]*len(fts), PredDict['accuracy'][r], color='#163E64')
+            ax2.text(PredDict['accuracy'][r], r, s=f"{round(PredDict['accuracy'][r],2)}",
+                     ha='left', va='center', c='#163E64')
+        else:
+            ax2.barh([r]*len(fts), PredDict['accuracy'][r], color='#B3BADD')#colours[r])
+    ax2.tick_params(which='major', top=True, labeltop=True, bottom=False, labelbottom=False)
+    ax2.set_xticks(ticks=np.arange(0.5, 1.1, 0.1))
+    ax2.tick_params(axis='y', colors=[0.7,0.7,0.7])
+    ax2.set_xlim(barlims)
+    ax2.set_xlabel('Accuracy')
+    ax2.xaxis.set_label_position('top')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_FeatureSensitivityAll_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+    
+    
+    #---------------------------------
+    # Plot just the top and bottom 5
+    Accuracies = pd.DataFrame({'trainfeats':PredDict['trainfeats'], 'accuracy':PredDict['accuracy']})
+    Accuracies.sort_values(by='accuracy', axis=0, ascending=True, inplace=True)
+    Bottom5 = Accuracies.iloc[-5:]
+    Top5 = Accuracies.iloc[0:5]
+    TopBottom = pd.concat([Top5, Bottom5])
+    
+    gridspecs = dict(wspace=0.0) #width_ratios=[1,0.9])
+    fig, (ax, ax2) = plt.subplots(nrows=1, ncols=2, sharey=True, figsize=(3.11, 3.11), dpi=300, gridspec_kw=gridspecs)
+    
+    # Matrix of feature combos
+    for r in range(len(TopBottom)):
+        fts = [PredDict['trainfeats'][-1].index(ft) for ft in TopBottom['trainfeats'].iloc[r]]
+        maxInd = 0
+        minInd = 9
+        # Plot matrix of feature combinations
+        if r == maxInd or r == minInd:
+            ax.scatter(fts, [r]*len(fts), marker='s', c='#163E64', s=sz)
+        else:
+            ax.scatter(fts, [r]*len(fts), marker='s', c='#B3BADD', s=sz)
+    ax.set_aspect('equal')
+    ax.set_xlim(-0.5,len(PredDict['trainfeats'][-1])-0.5)
+    xticklocs = [i+0.5 for i in range(len(PredDict['trainfeats'][-1]))]
+    ax.set_xticks(ticks=range(len(PredDict['trainfeats'][-1])), 
+                  labels=[r'$H_{s}$',r'$R_{2}$', r'$\bar\theta$', r'$\alpha$', r'$T_{p}$'], minor=True)
+    ax.tick_params(which='minor',top=True, labeltop=True, bottom=False, labelbottom=False)
+    ax.set_xlabel('Train Features')
+    ax.xaxis.set_label_position('top')
+    # Turn off major ticks and labels (only there for grid)
+    ax.set_xticks(ticks=xticklocs, minor=False)
+    ax.xaxis.set_tick_params(which='major', bottom=False, labelbottom=False)
+    # yxis params
+    ax.set_ylim(-0.5,len(TopBottom['trainfeats'])-0.5)
+    yticklocs = [i+0.5 for i in range(len(TopBottom['trainfeats']))]
+    ax.set_yticks(yticklocs)
+    ax.yaxis.set_tick_params(left=False, labelleft=False)
+    
+    ax.grid(which='major', c=[0.8,0.8,0.8], lw=0.8)
+    
+    # Resulting accuracy of each
+    barlims = (0.5,1)
+    # normc = plt.Normalize(np.min(PredDict['accuracy']), np.max(PredDict['accuracy']))
+    # colours = plt.cm.PuBuGn(normc(PredDict['accuracy']))
+    for r in range(len(TopBottom['trainfeats'])):
+        fts = [PredDict['trainfeats'][-1].index(ft) for ft in TopBottom['trainfeats'].iloc[r]]
+        # Plot matrix of feature combinations
+        if r == maxInd or r == minInd:
+            ax2.barh([r]*len(fts), TopBottom['accuracy'].iloc[r], color='#163E64')
+            ax2.text(TopBottom['accuracy'].iloc[r], r, s=f"{round(TopBottom['accuracy'].iloc[r],2)}",
+                     ha='left', va='center', c='#163E64')
+        else:
+            ax2.barh([r]*len(fts), TopBottom['accuracy'].iloc[r], color='#B3BADD')#colours[r])
+    ax2.axhline(4.5, c=[0.7,0.7,0.7], lw=1, ls='--')
+    ax2.tick_params(which='major', top=True, labeltop=True, bottom=False, labelbottom=False)
+    ax2.tick_params(axis='y', colors=[0.7,0.7,0.7])
+    ax2.set_xticks(ticks=np.arange(0.5, 1.1, 0.1))
+    ax2.set_xlim(barlims)
+    ax2.set_xlabel('Accuracy')
+    ax2.xaxis.set_label_position('top')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_FeatureSensitivityTopBottom_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+    
+    
 def PlotVarTS(TransectDF, Tr, filepath, sitename):
     """
     Plot timeseries of training variables used.
