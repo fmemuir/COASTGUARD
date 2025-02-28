@@ -9,6 +9,8 @@ Created on Thu Jun 13 10:51:41 2024
 import os
 import pickle
 import matplotlib.pyplot as plt
+from itertools import combinations
+
 from Toolshed import Predictions
 
 # Only use tensorflow in CPU mode
@@ -58,14 +60,15 @@ TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
 # Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-TrainFeats = ['WaveAlphaFD', 'WaveTpFD', 'Runups']
+TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
 TargFeats = ['distances', 'wlcorrdist']
+
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
                                                              MLabels=['dailywaves_wavevars'], 
                                                              ValidSizes=[0.2], 
                                                              TSteps=[10],
-                                                             TrainFeatCols=TrainFeats,
-                                                             TargFeatCols=TargFeats)
+                                                             TrainFeatCols=[TrainFeats],
+                                                             TargFeatCols=[TargFeats])
 # Needs additional lines for TransectID
 
 #%% Compile the Recurrent Neural Network 
@@ -82,6 +85,36 @@ PredDict = Predictions.CompileRNN(PredDict,
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
+
+#%% Looped Feature Testing
+TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']
+TargFeats = ['distances', 'wlcorrdist']
+
+TrainFeatsComb = []
+for r in range(1, len(TrainFeats)+1):
+    comb = combinations(TrainFeats, r)
+    for ft in comb:
+        TrainFeatsComb.append(list(ft))
+        
+PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
+                                                             MLabels=[str(i) for i in range(len(TrainFeatsComb))], 
+                                                             ValidSizes=[0.2]*len(TrainFeatsComb), 
+                                                             TSteps=[10]*len(TrainFeatsComb),
+                                                             TrainFeatCols=TrainFeatsComb,
+                                                             TargFeatCols=[TargFeats]*len(TrainFeatsComb))
+PredDict = Predictions.CompileRNN(PredDict, 
+                                  epochNums=[150]*len(TrainFeatsComb), 
+                                  batchSizes=[32]*len(TrainFeatsComb),
+                                  denseLayers=[64]*len(TrainFeatsComb),
+                                  dropoutRt=[0.2]*len(TrainFeatsComb),
+                                  learnRt=[0.001]*len(TrainFeatsComb),
+                                  DynamicLR=False)
+
+PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
+
+#%% Plot Feature Sensitivity
+Predictions.PlotFeatSensitivity(PredDict,filepath, sitename,TransectIDs[0])
+
 #%% Feature Importance
 mID = 0
 IntGradAttr = Predictions.FeatImportance(PredDict, mID)
@@ -90,10 +123,11 @@ Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, filepath, sitenam
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
 
-FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest, TrainFeatCols=TrainFeats)
+FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 
 #%% Plot Future WL and VE
-Predictions.PlotFuture(0, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename)
+for mID in range(len(FutureOutputs['mlabel'])): 
+    Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename)
 
 #%%
 Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
