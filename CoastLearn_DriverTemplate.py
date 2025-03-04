@@ -71,8 +71,9 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_daily
     PredDict = pickle.load(f)
 
 #%% Separate Training and Validation
+TransectDF = TransectDF.loc[:datetime(2024,7,31)]
 TransectDFTrain = TransectDF.loc[:datetime(2023,8,31)]
-TransectDFTest = TransectDF.loc[datetime(2023,9,1):datetime(2024,7,31)]
+TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
 
 
 
@@ -86,7 +87,7 @@ TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                             MLabels=['dailywaves_wavesat'], 
+                                                             MLabels=['dailywaves_wavesat_nowavegap'], 
                                                              ValidSizes=[0.2], 
                                                              TSteps=[10],
                                                              TrainFeatCols=[TrainFeats],
