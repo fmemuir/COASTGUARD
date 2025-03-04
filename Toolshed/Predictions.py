@@ -421,6 +421,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
     # Reset index for timeseries
     TransectDF.index = TransectDF['WaveDatesFD']
     TransectDF = TransectDF.drop(columns=['TransectID', 'WaveDates','WaveDatesFD', 'tidedatesFD'])
+    TransectDF.rename({'distances':'VE', 'wlcorrdist':'WL'})
 
     # If any index rows (i.e. daily wave dates) are empty, remove them
     TransectDF = TransectDF[~pd.isnull(TransectDF.index)]
@@ -1229,7 +1230,7 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
             Diffdict[SL+'diff'] = ComboDF['future'+SL] - ComboDF[SLcol]
         # Add dict of VE and WL RMSEs back to per-model-run list
         RMSElist.append(RMSEdict)
-        Difflist.append(Diffdict)
+        Difflist.append(pd.DataFrame(Diffdict))
     FutureOutputs['rmse'] = RMSElist
     # Add distances between actual and predicted
     FutureOutputs['XshoreDiff'] = Difflist
@@ -1604,15 +1605,14 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
 
 
-def PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, filepath, sitename):
+def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, filepath, sitename):
     
     # Append VE and WL to training feats
     TrainTargFeats = TrainFeatsPlotting.copy()
     TrainTargFeats.append('distances')
     TrainTargFeats.append('wlcorrdist')
     
-    TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.883)]
-    TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.883):]
+    TransectDFPlot = pd.concat([TransectDFTrain,TransectDFTest])
     
     TrainStart = mdates.date2num(TransectDFTrain.index[0])
     TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
@@ -1626,9 +1626,9 @@ def PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, f
         
         # Convert back to deg
         if Feat == 'WaveDirFD':
-            ax.plot(np.rad2deg(TransectDF[Feat]), c='#163E64', lw=0.7, alpha=0.5)
+            ax.plot(np.rad2deg(TransectDFPlot[Feat]), c='#163E64', lw=0.7, alpha=0.5)
         else:
-            ax.plot(TransectDF[Feat], c='#163E64', lw=0.7, alpha=0.5)
+            ax.plot(TransectDFPlot[Feat], c='#163E64', lw=0.7, alpha=0.5)
         # Set datetimes for uninterpolated data
         if Feat == 'wlcorrdist' or Feat == 'tideelev':
             FeatDT = CoastalDF.iloc[Tr]['wlDTs']
@@ -2052,14 +2052,48 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
-def FutureDiffViolin(FutureOutputs, mID):
+def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
+    
+    fig, axs = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
+    fs = 7
+    
+    # Rename columns so seaborn legend works
+    leglabs = {'VEdiff':None, 'WLdiff':None}
+    for SL, SLreal in zip(leglabs.keys(), ['distances','wlcorrdist']):
+        SLmedian = FutureOutputs['XshoreDiff'][mID][SL].median()
+        SLmedianPcnt = abs(SLmedian / (TransectDF[SLreal].max()-TransectDF[SLreal].min()))*100
+        leglabs[SL] = f"""$\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}$ = {round(SLmedian,1)}m\n$\\frac{{\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}}}{{{SL[:-4]}_{{[min,max]}}}}$ = {round(SLmedianPcnt)}%"""
 
-    sns.violinplot(data = FutureOutputs['XshoreDiff'][mID], 
-                   linewidth=0, orient='h', cut=0, inner='quartile')
+    pltDF = dict((leglabs[key], value) for (key, value) in FutureOutputs['XshoreDiff'][mID].items())
+    
+    ax = sns.violinplot(data = pltDF, 
+                        palette=['#79C060', '#3E74B3'], linewidth=0.0001, orient='h', 
+                        cut=0, inner='quartile', density_norm='count',
+                        legend='full')
+    for l in ax.lines:
+        # l.set_linestyle('--')
+        l.set_linewidth(1)
+        l.set_color('white')
+        
+    ax.set_xlabel(r'Cross-shore $\hat{y}-y$ (m)',fontsize=fs)
+    ax.tick_params(axis='y', left=False, labelleft=False)
+    # ax.set_yticklabels(['VE','WL'], rotation=90, va='center')
+    # ax.tick_params(axis='y', labelrotation=90)
+    ax.tick_params(labelsize=fs)
+    ax.grid(which='major', axis='x', c=[0.8,0.8,0.8], lw=0.5, alpha=0.3)
+    xlims = [round(lim,-1) for lim in ax.get_xlim()]
+    ax.set_xlim(xlims[0],xlims[1])
+    ax.set_xticks(np.arange(xlims[0],xlims[1],10), minor=True)
+    
+    ax.axvline(0, c='#163E64', ls='-', alpha=0.5, lw=0.5)
+        
+    sns.move_legend(ax, 'upper left')
     plt.tight_layout()
     plt.show()
     
-
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_VEWLErrorViolin_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 # ----------------------------------------------------------------------------------------
 #%% CLUSTERING FUNCTIONS ###

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from itertools import combinations
 import pandas as pd
 
-from Toolshed import Predictions, PlottingSeaborn
+from Toolshed import Predictions
 
 # Only use tensorflow in CPU mode
 import tensorflow as tf
@@ -82,7 +82,7 @@ TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
 #%% Plot timeseries of variables
 # Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
 TrainFeatsPlotting = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
-Predictions.PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
+Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
@@ -162,8 +162,8 @@ for mID in range(len(FutureOutputs['mlabel'])):
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
 FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 
-#%%
-PlottingSeaborn.FutureDiffViolin(FutureOutputs, mID)
+#%% Violin plot of distance differences between predicted and actual VEs and WLs
+Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
