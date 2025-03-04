@@ -1796,6 +1796,9 @@ def ValidateSatIntersects(sitename, ValidationShp, DatesCol, TransectGDF, Transe
     else:
         print('No date column found - check your spelling')
         return
+    # Just in case they aren't the same, reproject validation lines to match transect CRS
+    ValidGDF.to_crs(TransectGDF.crs, inplace=True)
+    
     # initialise where each intersection between lines and transects will be saved
     ColumnData = []
     Geoms = []
