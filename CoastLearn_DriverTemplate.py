@@ -30,22 +30,22 @@ filepath = os.path.join(os.getcwd(), 'Data')
 TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave = Predictions.LoadIntersections(filepath, sitename)
 
 # Define symbol disctionary for labelling
-SymbolDict = {'distances':      r'$VE$',
-              'wlcorrdist':     r'$WL$',
-              'tideelev':       r'$z_{tide,sat}$',
-              'beachwidth':     r'$d_{VE,WL}$',
-              'tideelevFD':     r'$\bar{z}_{tide}$',
-              'tideelevMx':     r'$z^{*}_{tide}$',
-              'WaveHsFD':       r'$H_{s}$',
-              'WaveDirFD':      r'$\bar\theta$',
-              'WaveTpFD':       r'$T_{p}$', 
-              'WaveAlphaFD':    r'$\alpha$',
-              'Runups':         r'$R_{2}$',
-              'Iribarren':      r'$\xi_{0}$', 
-              'wlcorrdist_u':   r'$WL_{u}$',
-              'distances_u':    r'$VE_{u}$', 
-              'wlcorrdist_d':   r'$WL_{d}$',
-              'distances_d':    r'$VE_{d}$'}
+SymbolDict = {'VE':          r'$VE$',
+              'WL':          r'$WL$',
+              'tideelev':    r'$z_{tide,sat}$',
+              'beachwidth':  r'$d_{VE,WL}$',
+              'tideelevFD':  r'$\bar{z}_{tide}$',
+              'tideelevMx':  r'$z^{*}_{tide}$',
+              'WaveHsFD':    r'$H_{s}$',
+              'WaveDirFD':   r'$\bar\theta$',
+              'WaveTpFD':    r'$T_{p}$', 
+              'WaveAlphaFD': r'$\alpha$',
+              'Runups':      r'$R_{2}$',
+              'Iribarren':   r'$\xi_{0}$', 
+              'WL_u':        r'$WL_{u}$',
+              'VE_u':        r'$VE_{u}$', 
+              'WL_d':        r'$WL_{d}$',
+              'VE_d':        r'$VE_{d}$'}
 
 #%% Compile Transect Data
 # Compile relevant coastal change metrics into one dataframe
@@ -61,7 +61,7 @@ TransectIDs = [1325]
 # Predictions.PlotInterps(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
 
 for Tr in TransectIDs:
-    TransectDF = Predictions.InterpVEWL(CoastalDF, Tr, IntpKind='pchip')
+    TransectDF = Predictions.InterpVEWLWv(CoastalDF, Tr, IntpKind='pchip')
     
 #%% Plot VE, WL and wave height for storm
 Predictions.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
@@ -71,11 +71,8 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_daily
     PredDict = pickle.load(f)
 
 #%% Separate Training and Validation
-# TransectDFTrain = TransectDF.iloc[:263]
-# TransectDFTest = TransectDF.iloc[262:]
-
 TransectDFTrain = TransectDF.loc[:datetime(2023,8,31)]
-TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
+TransectDFTest = TransectDF.loc[datetime(2023,9,1):datetime(2024,7,31)]
 
 
 
@@ -86,7 +83,7 @@ Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFea
     
 #%% Prepare Training Data
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
-TargFeats = ['distances', 'wlcorrdist']
+TargFeats = ['VE', 'WL']
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
                                                              MLabels=['dailywaves_wavesat'], 
@@ -156,7 +153,7 @@ FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain
 for mID in range(len(FutureOutputs['mlabel'])): 
     PlotDateRange = [datetime(2023,9,1), datetime(2023,11,5)] # Storm Babet
     Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
-    Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename, PlotDateRange)
+    # Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename, PlotDateRange)
 
 #%%
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)

@@ -157,6 +157,8 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
                                                'Runups', 'Iribarren']],
                          how='inner', on='TransectID')
     
+    CoastalDF.rename(columns={'distances':'VE', 'wlcorrdist':'WL'}, inplace=True)
+    
     print('Converting to datetimes...')
     veDTs = []
     for Tr in range(len(CoastalDF)):
@@ -182,6 +184,7 @@ def InterpWL(CoastalDF, Tr):
     """
     Interpolate over waterline associated timeseries so that dates 
     match vegetation associated ones.
+    NOT USED
     FM Aug 2024
 
     Parameters
@@ -227,6 +230,7 @@ def InterpWLWaves(CoastalDF, Tr):
     """
     Interpolate over waterline and wave associated timeseries so that dates 
     match vegetation associated ones.
+    NOT USED
     FM Aug 2024
 
     Parameters
@@ -277,7 +281,7 @@ def InterpWLWaves(CoastalDF, Tr):
     return TransectDF
 
 
-def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
+def InterpVEWLWv(CoastalDF, Tr, IntpKind='linear'):
     """
     Interpolate over waterline and vegetation associated timeseries so that dates 
     match wave associated (full timeseries) ones.
@@ -342,7 +346,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
         TransectDF[wvcol] = [wv_interp]
         
     # Match dates with veg edge dates and append back to TransectDF
-    for wlcol in ['wlcorrdist', 'tideelev','beachwidth']:
+    for wlcol in ['WL', 'tideelev','beachwidth']:
         if IntpKind == 'pchip':
             wl_numdates_clean, wlcol_clean = Preprocess(wl_numdates, TransectDF[wlcol][Tr])
             wl_interp_f = PchipInterpolator(wl_numdates_clean, wlcol_clean)
@@ -366,7 +370,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
             td_interp_f = interp1d(td_numdates, TransectDF[tdcol][Tr], kind=IntpKind, fill_value='extrapolate')
         td_interp = td_interp_f(wv_numdates).tolist()
         TransectDF[tdcol] = [td_interp]
-    for vecol in ['distances']:#,'TZwidth']:
+    for vecol in ['VE']:#,'TZwidth']:
         if IntpKind == 'pchip':
             ve_numdates_clean, vecol_clean = Preprocess(ve_numdates, TransectDF[vecol][Tr])
             ve_interp_f = PchipInterpolator(ve_numdates_clean, vecol_clean)
@@ -376,7 +380,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
         TransectDF[vecol] = [ve_interp]
     
     # Adjacent VE and WL interpolation
-    for wlcol in ['wlcorrdist']:
+    for wlcol in ['WL']:
         if IntpKind == 'pchip':
             wl_numdates_clean, wlcol_clean = Preprocess(wl_numdates_up, CoastalDF.iloc[[Tr+1],:][wlcol][Tr+1])
             wl_interp_f = PchipInterpolator(wl_numdates_clean, wlcol_clean)
@@ -384,7 +388,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
             wl_interp_f = interp1d(wl_numdates_up, CoastalDF.iloc[[Tr+1],:][wlcol][Tr+1], kind=IntpKind, fill_value='extrapolate')
         wl_interp = wl_interp_f(wv_numdates).tolist()
         TransectDF[wlcol+'_u'] = [wl_interp]
-    for vecol in ['distances']:#,'TZwidth']:
+    for vecol in ['VE']:#,'TZwidth']:
         if IntpKind == 'pchip':
             ve_numdates_clean, vecol_clean = Preprocess(ve_numdates_up, CoastalDF.iloc[[Tr+1],:][vecol][Tr+1])
             ve_interp_f = PchipInterpolator(ve_numdates_clean, vecol_clean)
@@ -392,7 +396,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
             ve_interp_f = interp1d(ve_numdates_up, CoastalDF.iloc[[Tr+1],:][vecol][Tr+1], kind=IntpKind, fill_value='extrapolate')
         ve_interp = ve_interp_f(wv_numdates).tolist()
         TransectDF[vecol+'_u'] = [ve_interp]
-    for wlcol in ['wlcorrdist']:
+    for wlcol in ['WL']:
         if IntpKind == 'pchip':
             wl_numdates_clean, wlcol_clean = Preprocess(wl_numdates_down, CoastalDF.iloc[[Tr-1],:][wlcol][Tr-1])
             wl_interp_f = PchipInterpolator(wl_numdates_clean, wlcol_clean)
@@ -400,7 +404,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
             wl_interp_f = interp1d(wl_numdates_down, CoastalDF.iloc[[Tr-1],:][wlcol][Tr-1], kind=IntpKind, fill_value='extrapolate')
         wl_interp = wl_interp_f(wv_numdates).tolist()
         TransectDF[wlcol+'_d'] = [wl_interp]
-    for vecol in ['distances']:#,'TZwidth']:
+    for vecol in ['VE']:#,'TZwidth']:
         if IntpKind == 'pchip':
             ve_numdates_clean, vecol_clean = Preprocess(ve_numdates_down, CoastalDF.iloc[[Tr-1],:][vecol][Tr-1])
             ve_interp_f = PchipInterpolator(ve_numdates_clean, vecol_clean)
@@ -410,7 +414,7 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
         TransectDF[vecol+'_d'] = [ve_interp]
     
     # Recalculate beachwidth as values will now be mismatched
-    beachwidth = [abs(wl_interp[i] - TransectDF['distances'][Tr][i]) for i in range(len(wl_interp))]
+    beachwidth = [abs(wl_interp[i] - TransectDF['VE'][Tr][i]) for i in range(len(wl_interp))]
     TransectDF['beachwidth'] = [beachwidth]
     
     TransectDF.drop(columns=['veDTs','wldates','wltimes', 'wlDTs','dates','times'], inplace=True)
@@ -421,13 +425,10 @@ def InterpVEWL(CoastalDF, Tr, IntpKind='linear'):
     # Reset index for timeseries
     TransectDF.index = TransectDF['WaveDatesFD']
     TransectDF = TransectDF.drop(columns=['TransectID', 'WaveDates','WaveDatesFD', 'tidedatesFD'])
-    TransectDF.rename({'distances':'VE', 'wlcorrdist':'WL'})
 
     # If any index rows (i.e. daily wave dates) are empty, remove them
     TransectDF = TransectDF[~pd.isnull(TransectDF.index)]
     
-    
-
     return TransectDF
 
 
@@ -1168,8 +1169,8 @@ def FuturePredict(PredDict, ForecastDF):
         Predictions = Model.predict(ForecastArr)
         
         # Reverse scaling to get outputs back to their original scale
-        VEPredict = PredDict['scalings'][mID]['distances'].inverse_transform(Predictions[:,0].reshape(-1, 1))
-        WLPredict = PredDict['scalings'][mID]['wlcorrdist'].inverse_transform(Predictions[:,1].reshape(-1, 1))
+        VEPredict = PredDict['scalings'][mID]['VE'].inverse_transform(Predictions[:,0].reshape(-1, 1))
+        WLPredict = PredDict['scalings'][mID]['WL'].inverse_transform(Predictions[:,1].reshape(-1, 1))
         
         FutureDF = pd.DataFrame(
                    {'futureVE': VEPredict.flatten(),
@@ -1217,17 +1218,17 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
         RMSEdict = {'futureVE':None, 'futureWL':None}
         Difflist = []
         Diffdict = {'VEdiff':None, 'WLdiff':None}
-        for SL, SLcol in zip(['VE', 'WL'], ['distances', 'wlcorrdist']):
+        for SL in ['VE', 'WL']:
             # Define actual and predicted VE and WL
-            realVals = TransectDFTest[SLcol]
+            realVals = TransectDFTest[SL]
             predVals = FutureOutputs['output'][mID]['future'+SL]
             # Match indexes and remove NaNs from CreateSequence moving window
             ComboDF = pd.concat([realVals, predVals], axis=1)
             ComboDF.dropna(how='any', inplace=True)
             # Calculate RMSE
-            RMSEdict['future'+SL] = root_mean_squared_error(ComboDF[SLcol], ComboDF['future'+SL])
+            RMSEdict['future'+SL] = root_mean_squared_error(ComboDF[SL], ComboDF['future'+SL])
             # Calculate distance between predicted and actual
-            Diffdict[SL+'diff'] = ComboDF['future'+SL] - ComboDF[SLcol]
+            Diffdict[SL+'diff'] = ComboDF['future'+SL] - ComboDF[SL]
         # Add dict of VE and WL RMSEs back to per-model-run list
         RMSElist.append(RMSEdict)
         Difflist.append(pd.DataFrame(Diffdict))
@@ -1560,7 +1561,7 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     fig, axs = plt.subplots(nrows=1, ncols=5, sharey=True, figsize=(2.61, 1.50), dpi=300, gridspec_kw=gridspec)
     axs[1].set_visible(False)
     
-    SelVars = ['distances', 'wlcorrdist','WaveHsFD', 'WaveDirFD', 'WaveTpFD']
+    SelVars = ['VE', 'WL','WaveHsFD', 'WaveDirFD', 'WaveTpFD']
     # TRAIN DATA (with split)
     # plot the same data on both axes
     axs[0].plot(TransectDFTrain[SelVars], c='#0E2841', lw=0.5, alpha=0.3)
@@ -1609,8 +1610,8 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
     
     # Append VE and WL to training feats
     TrainTargFeats = TrainFeatsPlotting.copy()
-    TrainTargFeats.append('distances')
-    TrainTargFeats.append('wlcorrdist')
+    TrainTargFeats.append('VE')
+    TrainTargFeats.append('WL')
     
     TransectDFPlot = pd.concat([TransectDFTrain,TransectDFTest])
     
@@ -1630,9 +1631,9 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
         else:
             ax.plot(TransectDFPlot[Feat], c='#163E64', lw=0.7, alpha=0.5)
         # Set datetimes for uninterpolated data
-        if Feat == 'wlcorrdist' or Feat == 'tideelev':
+        if Feat == 'WL' or Feat == 'tideelev':
             FeatDT = CoastalDF.iloc[Tr]['wlDTs']
-        elif Feat == 'distances':
+        elif Feat == 'VE':
             FeatDT = CoastalDF.iloc[Tr]['veDTs']
         elif Feat == 'Runups' or Feat == 'Iribarren':
             FeatDT = CoastalDF.iloc[Tr]['WaveDates']
@@ -1684,9 +1685,9 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     
     BabetTransect = TransectDF.loc['2023-09-28 00:00:00':'2023-12-05 00:00:00']
     BabetVEs = pd.DataFrame({'veDTs':CoastalDFTr['veDTs'],
-                             'distances':CoastalDFTr['distances']})
+                             'VE':CoastalDFTr['VE']})
     BabetWLs = pd.DataFrame({'wlDTs':CoastalDFTr['wlDTs'],
-                             'wlcorrdist':CoastalDFTr['wlcorrdist']})
+                             'WL':CoastalDFTr['WL']})
     BabetVEs = BabetVEs.groupby('veDTs').mean()
     BabetWLs = BabetWLs.groupby('wlDTs').mean()
     
@@ -1698,10 +1699,10 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     ax.add_patch(rect)
     
     # Plot with VE and WL change over course of storm
-    ax.plot(BabetTransect['distances'], c='#79C060', label=r'$VE$')
-    ax.scatter(BabetVEs.index, BabetVEs['distances'], s=15, marker='x', c='#79C060')
-    ax.plot(BabetTransect['wlcorrdist'], c='#3E74B3', label=r'$WL$')
-    ax.scatter(BabetWLs.index, BabetWLs['wlcorrdist'], s=15, marker='x', c='#3E74B3')
+    ax.plot(BabetTransect['VE'], c='#79C060', label=r'$VE$')
+    ax.scatter(BabetVEs.index, BabetVEs['VE'], s=15, marker='x', c='#79C060')
+    ax.plot(BabetTransect['WL'], c='#3E74B3', label=r'$WL$')
+    ax.scatter(BabetWLs.index, BabetWLs['WL'], s=15, marker='x', c='#3E74B3')
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))
     ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
@@ -1935,8 +1936,8 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     
     lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
-    plt.plot(pd.concat([TransectDFTrain['distances'], TransectDFTest['distances']]), '#79C060', lw=lw, label=r'${y}_{VE}$')
-    plt.plot(pd.concat([TransectDFTrain['wlcorrdist'], TransectDFTest['wlcorrdist']]), '#3E74B3', lw=lw, label=r'${y}_{WL}$')
+    plt.plot(pd.concat([TransectDFTrain['VE'], TransectDFTest['VE']]), '#79C060', lw=lw, label=r'${y}_{VE}$')
+    plt.plot(pd.concat([TransectDFTrain['WL'], TransectDFTest['WL']]), '#3E74B3', lw=lw, label=r'${y}_{WL}$')
     # Plot cross-shore distances through time for test data
     # plt.plot(TransectDFTest['distances'], '#79C060', ls=(0, (1, 1)), lw=lw, label='Test VE')
     # plt.plot(TransectDFTest['wlcorrdist'], '#3E74B3', ls=(0, (1, 1)), lw=lw, label='Test WL')
@@ -1997,11 +1998,11 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
     lw = 1 # line width
     
     for i, ax, yvar, c, ylabel in zip(range(len(axs)), axs, 
-                                      ['WaveDir',
+                                      ['WaveDirFD',
                                        'Runups',
-                                       'Iribarrens',
-                                       'distances',
-                                       'wlcorrdist'],
+                                       'Iribarren',
+                                       'VE',
+                                       'WL'],
                                       ['cornflowerblue',
                                        'darkorchid',
                                        'orange',
@@ -2025,11 +2026,11 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
         ax.plot(VarDFDay[yvar], c=c, lw=lw, alpha=0.3)
         
         if i == 3:
-            ax.plot(TransectDFTest['distances'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
+            ax.plot(TransectDFTest['VE'], 'C2', ls=(0, (1, 1)), lw=lw, label='Test VE')
             ax.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.7, lw=lw, label='Pred. VE')
             ax.legend(loc='upper left', ncols=3)
         elif i == 4:
-            ax.plot(TransectDFTest['wlcorrdist'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
+            ax.plot(TransectDFTest['WL'], 'C0', ls=(0, (1, 1)), lw=lw, label='Test WL')
             ax.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.7, lw=lw, label='Pred. WL')
             ax.legend(loc='upper left', ncols=3)
         else:
@@ -2059,7 +2060,7 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
     # Rename columns so seaborn legend works
     leglabs = {'VEdiff':None, 'WLdiff':None}
-    for SL, SLreal in zip(leglabs.keys(), ['distances','wlcorrdist']):
+    for SL, SLreal in zip(leglabs.keys(), ['VE','WL']):
         SLmedian = FutureOutputs['XshoreDiff'][mID][SL].median()
         SLmedianPcnt = abs(SLmedian / (TransectDF[SLreal].max()-TransectDF[SLreal].min()))*100
         leglabs[SL] = f"""$\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}$ = {round(SLmedian,1)}m\n$\\frac{{\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}}}{{{SL[:-4]}_{{[min,max]}}}}$ = {round(SLmedianPcnt)}%"""
@@ -2376,7 +2377,7 @@ def ClusterKMeans(TransectDF, ValPlots=False):
                        c=VarDF[Mod+'Cluster'], marker='X', cmap=bluecm)
             ax2 = ax.twinx()
             ax2.scatter(VarDF.index, 
-                       VarDF['distances'], 
+                       VarDF['VE'], 
                        c=VarDF[Mod+'Cluster'], marker='^', cmap=greencm)  # Example visualization using one variable
             plt.title(f'Clustering Method: {Mod}')
             ax.set_xlabel('Time')
