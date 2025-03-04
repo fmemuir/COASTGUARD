@@ -30,7 +30,7 @@ from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, WhiteKernel
-from sklearn.metrics import silhouette_score
+from sklearn.metrics import silhouette_score, root_mean_squared_error
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 # from sklearn.utils.class_weight import compute_class_weight
@@ -555,7 +555,7 @@ def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
     return loss
 
 
-def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCols, UseSMOTE=False):
+def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCols, TrainTestPortion=None, UseSMOTE=False):
     """
     Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.
     Timeseries is expanded and interpolated to get daily timesteps, then scaled across
@@ -594,15 +594,25 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
     
     
     
-    # Scale vectors to normalise them
+    # Scale vectors to normalise themTrainTestPortion is not None and 
     Scalings = {}
     TransectDF_scaled = TransectDF.copy()
     for col in TransectDF.columns:
         Scalings[col] = StandardScaler()
         TransectDF_scaled[col] = Scalings[col].fit_transform(TransectDF[[col]])
-        
-    VarDFDay_scaled = TransectDF_scaled.iloc[:int(len(TransectDF_scaled)*0.9)]
-    VarDFDayTest_scaled = TransectDF_scaled.iloc[int(len(TransectDF_scaled)*0.9):]
+      
+    if TrainTestPortion is not None and type(TrainTestPortion) == float:
+        # if train-test proportion is a percentage
+        VarDFDay_scaled = TransectDF_scaled.iloc[:int(len(TransectDF_scaled)*TrainTestPortion)]
+        VarDFDayTest_scaled = TransectDF_scaled.iloc[int(len(TransectDF_scaled)*TrainTestPortion):]
+    elif TrainTestPortion is not None and type(TrainTestPortion) == datetime:
+        # if the train-test proportion is a date to split between
+        VarDFDay_scaled = TransectDF_scaled.loc[:TrainTestPortion]
+        VarDFDayTest_scaled = TransectDF_scaled.loc[TrainTestPortion:]
+    else:
+        # just do last 20%
+        VarDFDay_scaled = TransectDF_scaled.iloc[:int(len(TransectDF_scaled)*0.8)]
+        VarDFDayTest_scaled = TransectDF_scaled.iloc[int(len(TransectDF_scaled)*0.8):]
     
     # Define prediction dictionary for multiple runs/hyperparameterisation
     PredDict = {'mlabel':MLabels,   # name of the model run
@@ -751,7 +761,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         
         Model.compile(optimizer=Opt, 
                          loss=LossFn, 
-                         metrics=['accuracy','mae'])
+                         metrics=['accuracy','mse'])
         # Save model infrastructure to dictionary of model sruns
         PredDict['model'].append(Model)
     
@@ -1196,6 +1206,29 @@ def MovingAverage(series, windowsize):
     return mvav
 
 
+def ShorelineRMSE(FutureOutputs, TransectDFTest):
+    # for each model run
+    for mID in range(len(FutureOutputs['mlabel'])):
+        # initialise ways to store error values
+        RMSElist = []
+        RMSEdict = {'futureVE':None, 'futureWL':None}
+        for SL, SLcol in zip(['VE', 'WL'], ['distances', 'wlcorrdist']):
+            # Define actual and predicted VE and WL
+            realVals = TransectDFTest[SLcol]
+            predVals = FutureOutputs['output'][mID]['future'+SL]
+            # Match indexes and remove NaNs from CreateSequence moving window
+            ComboDF = pd.concat([realVals, predVals], axis=1)
+            ComboDF.dropna(how='any', inplace=True)
+            # Calculate RMSE
+            rmse = root_mean_squared_error(ComboDF[SLcol], ComboDF['future'+SL])
+            RMSEdict['future'+SL] = rmse
+        # Add dict of VE and WL RMSEs back to per-model-run list
+        RMSElist.append(RMSEdict)
+    FutureOutputs['rmse'] = RMSElist
+    # Add distances between actual and predicted
+    # FutureOutputs['xshore_dif'] = DiffList
+    return FutureOutputs
+    
 # ----------------------------------------------------------------------------------------
 ### PLOTTING FUNCTIONS ###
 # SCALING:
@@ -1570,11 +1603,21 @@ def PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, f
     # Append VE and WL to training feats
     TrainTargFeats = TrainFeatsPlotting.copy()
     TrainTargFeats.append('distances')
-    TrainTargFeats.append('wlcorrdist')  
+    TrainTargFeats.append('wlcorrdist')
+    
+    TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.883)]
+    TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.883):]
+    
+    TrainStart = mdates.date2num(TransectDFTrain.index[0])
+    TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+    ValEnd = mdates.date2num(TransectDFTrain.index[-1])
+    TestEnd = mdates.date2num(TransectDFTest.index[-1])
     
     fig, axs = plt.subplots(len(TrainTargFeats), 1, sharex=True, figsize=(6.55,6), dpi=300)
+    labs = list(string.ascii_lowercase[:axs.shape[0]])
     
-    for ax, Feat in zip(axs, TrainTargFeats):
+    for (axID, ax), Feat, lab in zip(enumerate(axs), TrainTargFeats, labs):
+        
         # Convert back to deg
         if Feat == 'WaveDirFD':
             ax.plot(np.rad2deg(TransectDF[Feat]), c='#163E64', lw=0.7, alpha=0.5)
@@ -1599,6 +1642,28 @@ def PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, f
         
         ax.plot(FeatDT, CoastalDF.iloc[Tr][Feat], c='#163E64', marker='o', ms=0.5, lw=0)
         ax.set_ylabel(SymbolDict[Feat]+Unit)
+        ax.set_xlim(mdates.date2num(min(CoastalDF.iloc[Tr]['WaveDatesFD'])),
+                    mdates.date2num(max(CoastalDF.iloc[Tr]['WaveDatesFD'])))
+        # Add train/val/test rects
+        TrainT = mpatches.Rectangle((TrainStart,ax.get_ylim()[0]), 
+                                    TrainEnd-TrainStart, ax.get_ylim()[1]-ax.get_ylim()[0], 
+                                    fc=[0.8,0.8,0.8], ec=None)
+        ValT = mpatches.Rectangle((TrainEnd,ax.get_ylim()[0]), 
+                                  ValEnd-TrainEnd, ax.get_ylim()[1]-ax.get_ylim()[0], 
+                                  fc=[0.9,0.9,0.9], ec=None)
+        ax.add_patch(TrainT) 
+        ax.add_patch(ValT)
+        # Add train/val/test labels
+        if axID == len(axs)-1: # last plot
+            Text_y = ax.get_ylim()[0]+((ax.get_ylim()[1]-ax.get_ylim()[0])*0.1)
+            ax.text(TrainStart+(TrainEnd-TrainStart)/2, Text_y, 'Training', ha='center')
+            ax.text(TrainEnd+(ValEnd-TrainEnd)/2, Text_y, 'Validation', ha='center')
+            ax.text(ValEnd+(TestEnd-ValEnd)/2, Text_y, 'Test', ha='center')
+        
+        ax.text(0.0039, 0.97, '('+lab+')', transform=ax.transAxes,
+                fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
+        
+        ax.xaxis.set_minor_locator(mdates.MonthLocator())
     
     plt.xlabel('Date (yyyy)')
     plt.tight_layout()
@@ -1812,7 +1877,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sit
 
 
 
-def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename):
+def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, PlotDateRange=None):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -1842,19 +1907,25 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     
     fig, ax = plt.subplots(1,1, figsize=(6.5,3.35), dpi=300)
     
-    TrainStart = mdates.date2num(TransectDFTrain.index[0])
-    TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
-    ValEnd = mdates.date2num(TransectDFTrain.index[-1])
-    TestEnd = mdates.date2num(TransectDFTest.index[-1])
-    TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
-    ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
-    # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
-    ax.add_patch(TrainT) 
-    ax.add_patch(ValT)
+    if PlotDateRange is None:
+        TrainStart = mdates.date2num(TransectDFTrain.index[0])
+        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+        ValEnd = mdates.date2num(TransectDFTrain.index[-1])
+        TestEnd = mdates.date2num(TransectDFTest.index[-1])
+        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+        # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
+        ax.add_patch(TrainT) 
+        ax.add_patch(ValT)
+        
+        plt.text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
+        plt.text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
+        plt.text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
+        
+        plt.xlim(TrainStart,TestEnd)
+    else:
+        plt.xlim(mdates.date2num(PlotDateRange[0]),mdates.date2num(PlotDateRange[1]))
     
-    plt.text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
-    plt.text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
-    plt.text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
     
     lw = 1 # line width
     # Plot cross-shore distances through time for WL and VE past
@@ -1881,8 +1952,10 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     plt.tight_layout()
     plt.show()
     
-    StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
-    EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
+    # StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
+    # EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
+    StartTime = mdates.num2date(plt.axis()[0]).strftime('%Y-%m-%d')
+    EndTime = mdates.num2date(plt.axis()[1]).strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
                            sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)

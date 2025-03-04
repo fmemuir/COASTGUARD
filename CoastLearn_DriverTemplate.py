@@ -8,6 +8,7 @@ Created on Thu Jun 13 10:51:41 2024
 
 import os
 import pickle
+from datetime import datetime,timedelta
 import matplotlib.pyplot as plt
 from itertools import combinations
 import pandas as pd
@@ -72,24 +73,28 @@ with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_daily
 #%% Separate Training and Validation
 # TransectDFTrain = TransectDF.iloc[:263]
 # TransectDFTest = TransectDF.iloc[262:]
-TransectDFTrain = TransectDF.iloc[:int(len(TransectDF)*0.9)]
-TransectDFTest = TransectDF.iloc[int(len(TransectDF)*0.9):]
+
+TransectDFTrain = TransectDF.loc[:datetime(2023,8,31)]
+TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
+
+
 
 #%% Plot timeseries of variables
 # Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
-TrainFeatsPlotting = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD', 'tideelev']
+TrainFeatsPlotting = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
 Predictions.PlotChosenVarTS(TransectDF, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD', 'tideelev']
+TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
 TargFeats = ['distances', 'wlcorrdist']
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                             MLabels=['dailywaves_wavetidesat'], 
+                                                             MLabels=['dailywaves_wavesat'], 
                                                              ValidSizes=[0.2], 
                                                              TSteps=[10],
                                                              TrainFeatCols=[TrainFeats],
-                                                             TargFeatCols=[TargFeats])
+                                                             TargFeatCols=[TargFeats],
+                                                             TrainTestPortion=datetime(2023,9,1))
 # Needs additional lines for TransectID
 
 #%% Compile the Recurrent Neural Network 
@@ -149,10 +154,14 @@ FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain
 
 #%% Plot Future WL and VE
 for mID in range(len(FutureOutputs['mlabel'])): 
+    PlotDateRange = [datetime(2023,9,1), datetime(2023,11,5)] # Storm Babet
     Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
+    Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename, PlotDateRange)
 
 #%%
-Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
+# Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
+FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
+
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
