@@ -15,6 +15,7 @@ import time
 import string
 import numpy as np
 import random
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
@@ -22,30 +23,31 @@ from matplotlib.patches import Patch, Rectangle, ConnectionPatch
 import matplotlib.dates as mdates
 from matplotlib import cm
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import seaborn as sns
+
 import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 from scipy.interpolate import interp1d, PchipInterpolator
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering
-from sklearn.gaussian_process import GaussianProcessRegressor
-from sklearn.gaussian_process.kernels import RBF, WhiteKernel
+# from sklearn.gaussian_process import GaussianProcessRegressor
+# from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from sklearn.metrics import silhouette_score, root_mean_squared_error
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler #MinMaxScaler
 from sklearn.model_selection import train_test_split
 # from sklearn.utils.class_weight import compute_class_weight
 # from imblearn.over_sampling import SMOTE
 from tensorflow.keras import backend as K
 from tensorflow.keras.models import Sequential
 from tensorflow.keras import Input
-from tensorflow.keras.layers import GRU, LSTM, Dense, Dropout
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.optimizers.schedules import ExponentialDecay
 from imblearn.over_sampling import SMOTE
 from tensorflow.keras.callbacks import EarlyStopping, TensorBoard
 from tensorboard.backend.event_processing.event_accumulator import EventAccumulator
 from tensorboard.plugins.hparams import api as hp
-
 
 import optuna
 import shap
@@ -60,7 +62,7 @@ tf.config.set_visible_devices([],'GPU')
 
 
 # ----------------------------------------------------------------------------------------
-### DATA PREPPING FUNCTIONS ###
+#%% DATA PREPPING FUNCTIONS ###
 
 def LoadIntersections(filepath, sitename):
     """
@@ -510,7 +512,7 @@ def CreateSequences(X, y=None, time_steps=1):
 
 
 # ----------------------------------------------------------------------------------------
-### MODEL INFRASTRUCTURE FUNCTIONS ###
+#%% MODEL INFRASTRUCTURE FUNCTIONS ###
 
 
 def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
@@ -1212,6 +1214,8 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
         # initialise ways to store error values
         RMSElist = []
         RMSEdict = {'futureVE':None, 'futureWL':None}
+        Difflist = []
+        Diffdict = {'VEdiff':None, 'WLdiff':None}
         for SL, SLcol in zip(['VE', 'WL'], ['distances', 'wlcorrdist']):
             # Define actual and predicted VE and WL
             realVals = TransectDFTest[SLcol]
@@ -1220,17 +1224,19 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
             ComboDF = pd.concat([realVals, predVals], axis=1)
             ComboDF.dropna(how='any', inplace=True)
             # Calculate RMSE
-            rmse = root_mean_squared_error(ComboDF[SLcol], ComboDF['future'+SL])
-            RMSEdict['future'+SL] = rmse
+            RMSEdict['future'+SL] = root_mean_squared_error(ComboDF[SLcol], ComboDF['future'+SL])
+            # Calculate distance between predicted and actual
+            Diffdict[SL+'diff'] = ComboDF['future'+SL] - ComboDF[SLcol]
         # Add dict of VE and WL RMSEs back to per-model-run list
         RMSElist.append(RMSEdict)
+        Difflist.append(Diffdict)
     FutureOutputs['rmse'] = RMSElist
     # Add distances between actual and predicted
-    # FutureOutputs['xshore_dif'] = DiffList
+    FutureOutputs['XshoreDiff'] = Difflist
     return FutureOutputs
     
 # ----------------------------------------------------------------------------------------
-### PLOTTING FUNCTIONS ###
+#%% PLOTTING FUNCTIONS ###
 # SCALING:
 # Journal 2-column width: 224pt or 3.11in
 # Journal 1-column width: 384pt or 5.33in
@@ -2046,8 +2052,17 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
+def FutureDiffViolin(FutureOutputs, mID):
+
+    sns.violinplot(data = FutureOutputs['XshoreDiff'][mID], 
+                   linewidth=0, orient='h', cut=0, inner='quartile')
+    plt.tight_layout()
+    plt.show()
+    
+
+
 # ----------------------------------------------------------------------------------------
-### CLUSTERING FUNCTIONS ###
+#%% CLUSTERING FUNCTIONS ###
 
 def Cluster(TransectDF, ValPlots=False):
     """

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from itertools import combinations
 import pandas as pd
 
-from Toolshed import Predictions
+from Toolshed import Predictions, PlottingSeaborn
 
 # Only use tensorflow in CPU mode
 import tensorflow as tf
@@ -162,6 +162,8 @@ for mID in range(len(FutureOutputs['mlabel'])):
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
 FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 
+#%%
+PlottingSeaborn.FutureDiffViolin(FutureOutputs, mID)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
