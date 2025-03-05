@@ -1908,10 +1908,7 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
 
 
     """   
-    
-    # Calculate smoothed version of predictions
-    SmoothVE = MovingAverage(FutureOutputs['output'][mID]['futureVE'], 10)
-    SmoothWL = MovingAverage(FutureOutputs['output'][mID]['futureWL'], 10)    
+       
     
     fig, ax = plt.subplots(1,1, figsize=(6.5,3.35), dpi=300)
     
@@ -1920,8 +1917,8 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
         TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
         ValEnd = mdates.date2num(TransectDFTrain.index[-1])
         TestEnd = mdates.date2num(TransectDFTest.index[-1])
-        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
-        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.9,0.9,0.9], ec=None)
+        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.95,0.95,0.95], ec=None)
         # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
         ax.add_patch(TrainT) 
         ax.add_patch(ValT)
@@ -1936,18 +1933,15 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     
     
     lw = 1 # line width
-    # Plot cross-shore distances through time for WL and VE past
-    plt.plot(pd.concat([TransectDFTrain['VE'], TransectDFTest['VE']]), '#79C060', lw=lw, label=r'${VE}$')
-    plt.plot(pd.concat([TransectDFTrain['WL'], TransectDFTest['WL']]), '#3E74B3', lw=lw, label=r'${WL}$')
-    # Plot cross-shore distances through time for test data
-    # plt.plot(TransectDFTest['distances'], '#79C060', ls=(0, (1, 1)), lw=lw, label='Test VE')
-    # plt.plot(TransectDFTest['wlcorrdist'], '#3E74B3', ls=(0, (1, 1)), lw=lw, label='Test WL')
-    # Plot predicted WL and VE
-    plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.3, lw=lw, label=r'$\hat{VE}$')
-    plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.3, lw=lw, label=r'$\hat{WL}$')
-    # Plot smoothed predicted WL and VE
-    plt.plot(FutureOutputs['output'][mID]['futureVE'].index, SmoothVE, 'C8', alpha=1, lw=lw, label=r'$\hat{VE}_{t[i:i+10]}$')
-    plt.plot(FutureOutputs['output'][mID]['futureWL'].index, SmoothWL, 'C9', alpha=1, lw=lw, label=r'$\hat{WL}_{t[i:i+10]}$')
+    for SL, SLc in ['VE', 'SL'],['#79C060','#3E74B3']:
+        # Calculate smoothed version of predictions
+        Smooth = MovingAverage(FutureOutputs['output'][mID]['future'+SL], 10)
+        # Plot cross-shore distances through time for WL and VE past
+        plt.plot(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), color=SLc, lw=lw, ls=':', label=r'${SL}$')
+        # Plot predicted WL and VE
+        plt.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.8, lw=lw, label=r'$\hat{SL}$')
+        # Plot smoothed predicted WL and VE
+        # plt.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.3, lw=lw, label=r'$\hat{SL}_{t[i:i+10]}$')
 
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')
@@ -1967,6 +1961,93 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     FigPath = os.path.join(filepath, sitename, 'plots', 
                            sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+
+
+def PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, PlotDateRange=None):
+    """
+    Plot future waterline (WL) and vegetation edge (VE) predictions for the 
+    chosen cross-shore transect.
+    FM Jan 2025
+
+    Parameters
+    ----------
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    VarDFDay : DataFrame
+        DataFrame of past data interpolated to daily timesteps (with temporal index).
+    TransectDFTest : DataFrame
+        DataFrame of past data sliced from most recent end of TransectDF to use for testing the model.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+
+
+    """   
+    
+    fig, ax = plt.subplots(1,1, figsize=(6.5,3.35), dpi=300)
+    
+    for mID in range(len(FutureOutputs['mlabel'])):
+        # Calculate smoothed version of predictions
+        SmoothVE = MovingAverage(FutureOutputs['output'][mID]['futureVE'], 10)
+        SmoothWL = MovingAverage(FutureOutputs['output'][mID]['futureWL'], 10)    
+        
+        if PlotDateRange is None:
+            TrainStart = mdates.date2num(TransectDFTrain.index[0])
+            TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+            ValEnd = mdates.date2num(TransectDFTrain.index[-1])
+            TestEnd = mdates.date2num(TransectDFTest.index[-1])
+            TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+            ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+            # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
+            ax.add_patch(TrainT) 
+            ax.add_patch(ValT)
+            
+            plt.text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
+            plt.text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
+            plt.text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
+            
+            plt.xlim(TrainStart,TestEnd)
+        else:
+            plt.xlim(mdates.date2num(PlotDateRange[0]),mdates.date2num(PlotDateRange[1]))
+        
+        
+        lw = 1 # line width
+        # Plot cross-shore distances through time for WL and VE past
+        plt.plot(pd.concat([TransectDFTrain['VE'], TransectDFTest['VE']]), '#79C060', lw=lw, label=r'${VE}$')
+        plt.plot(pd.concat([TransectDFTrain['WL'], TransectDFTest['WL']]), '#3E74B3', lw=lw, label=r'${WL}$')
+        # Plot cross-shore distances through time for test data
+        # plt.plot(TransectDFTest['distances'], '#79C060', ls=(0, (1, 1)), lw=lw, label='Test VE')
+        # plt.plot(TransectDFTest['wlcorrdist'], '#3E74B3', ls=(0, (1, 1)), lw=lw, label='Test WL')
+        # Plot predicted WL and VE
+        plt.plot(FutureOutputs['output'][mID]['futureVE'], 'C8', alpha=0.3, lw=lw, label=r'$\hat{VE}$')
+        plt.plot(FutureOutputs['output'][mID]['futureWL'], 'C9', alpha=0.3, lw=lw, label=r'$\hat{WL}$')
+        # Plot smoothed predicted WL and VE
+        # plt.plot(FutureOutputs['output'][mID]['futureVE'].index, SmoothVE, 'C8', alpha=1, lw=lw, label=r'$\hat{VE}_{t[i:i+10]}$')
+        # plt.plot(FutureOutputs['output'][mID]['futureWL'].index, SmoothWL, 'C9', alpha=1, lw=lw, label=r'$\hat{WL}_{t[i:i+10]}$')
+
+    plt.xlabel('Date (yyyy)')
+    plt.ylabel('Cross-shore distance (m)')
+    # plt.legend(loc='upper left', ncols=3)
+    plt.ylim(0,600)
+    ax.tick_params(axis='both',which='major',pad=2)
+    ax.xaxis.labelpad=2
+    ax.yaxis.labelpad=2
+
+    plt.tight_layout()
+    plt.show()
+    
+    # StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
+    # EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
+    StartTime = mdates.num2date(plt.axis()[0]).strftime('%Y-%m-%d')
+    EndTime = mdates.num2date(plt.axis()[1]).strftime('%Y-%m-%d')
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+
+
 
  
 def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename):
@@ -2066,8 +2147,10 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
         SLmedianPcnt = abs(SLmedian / (TransectDF[SLreal].max()-TransectDF[SLreal].min()))*100
         leglabs[SL] = f"""$\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}$ = {round(SLmedian,1)}m\n$\\frac{{\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}}}{{{SL[:-4]}_{{[min,max]}}}}$ = {round(SLmedianPcnt)}%"""
 
-    pltDF = dict((leglabs[key], value) for (key, value) in FutureOutputs['XshoreDiff'][mID].items())
-    
+    pltDict = dict((leglabs[key], value) for (key, value) in FutureOutputs['XshoreDiff'][mID].items())
+    # Swap so WL is on top
+    pltDF = pd.DataFrame(pltDict)
+    pltDF = pltDF.iloc[:,[1,0]]
     ax = sns.violinplot(data = pltDF, 
                         palette=['#79C060', '#3E74B3'], linewidth=0.0001, orient='h', 
                         cut=0, inner='quartile', density_norm='count',
