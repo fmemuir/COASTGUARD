@@ -87,7 +87,7 @@ TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                             MLabels=['dailywaves_wavesat_nowavegap'], 
+                                                             MLabels=['dailywaves'], 
                                                              ValidSizes=[0.2], 
                                                              TSteps=[10],
                                                              TrainFeatCols=[TrainFeats],
@@ -112,7 +112,7 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
 #%% Looped Feature Testing
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']
-TargFeats = ['distances', 'wlcorrdist']
+TargFeats = ['VE', 'WL']
 
 TrainFeatsComb = []
 for r in range(1, len(TrainFeats)+1):
@@ -130,11 +130,35 @@ PredDict = Predictions.CompileRNN(PredDict,
                                   epochNums=[150]*len(TrainFeatsComb), 
                                   batchSizes=[32]*len(TrainFeatsComb),
                                   denseLayers=[64]*len(TrainFeatsComb),
-                                  dropoutRt=[0.2]*len(TrainFeatsComb),
+                                  dropoutRt=[0.3]*len(TrainFeatsComb),
                                   learnRt=[0.001]*len(TrainFeatsComb),
                                   DynamicLR=False)
 
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
+
+#%% Ensemble Run
+TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
+TargFeats = ['VE', 'WL']
+
+EnsembleCount = 10
+        
+PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
+                                                             MLabels=['ensemble_'+str(i) for i in range(EnsembleCount)], 
+                                                             ValidSizes=[0.2]*EnsembleCount, 
+                                                             TSteps=[10]*EnsembleCount,
+                                                             TrainFeatCols=[TrainFeats]*EnsembleCount,
+                                                             TargFeatCols=[TargFeats]*EnsembleCount)
+PredDict = Predictions.CompileRNN(PredDict, 
+                                  epochNums=[150]*EnsembleCount, 
+                                  batchSizes=[32]*EnsembleCount,
+                                  denseLayers=[64]*EnsembleCount,
+                                  dropoutRt=[0.3]*EnsembleCount,
+                                  learnRt=[0.001]*EnsembleCount,
+                                  DynamicLR=False)
+
+PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
+
+
 
 #%% Plot Feature Sensitivity
 Predictions.PlotFeatSensitivity(PredDict,filepath, sitename,TransectIDs[0])
@@ -155,6 +179,10 @@ for mID in range(len(FutureOutputs['mlabel'])):
     PlotDateRange = [datetime(2023,9,1), datetime(2023,11,5)] # Storm Babet
     Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
     # Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename, PlotDateRange)
+
+#%%
+Predictions.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
+
 
 #%%
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
