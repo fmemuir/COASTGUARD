@@ -67,7 +67,7 @@ for Tr in TransectIDs:
 Predictions.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
 
 #%% Load In Pre-trained Model
-with open(os.path.join(filepath, sitename, 'predictions', '20250221-100808_dailywaves_fullvars.pkl'), 'rb') as f:
+with open(os.path.join(filepath, sitename, 'predictions', '20250303-173249_dailywaves_wavesat.pkl'), 'rb') as f:
     PredDict = pickle.load(f)
 
 #%% Separate Training and Validation
@@ -86,13 +86,23 @@ Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFea
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
+# OptParam = [1,2,3,4,5,6,7,8,9,10]
+
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                             MLabels=['dailywaves'], 
-                                                             ValidSizes=[0.2], 
-                                                             TSteps=[10],
-                                                             TrainFeatCols=[TrainFeats],
-                                                             TargFeatCols=[TargFeats],
-                                                             TrainTestPortion=datetime(2023,9,1))
+                                                              MLabels=['daily_wavevars'], 
+                                                              ValidSizes=[0.2], 
+                                                              TSteps=[10],
+                                                              TrainFeatCols=[TrainFeats],
+                                                              TargFeatCols=[TargFeats],
+                                                              TrainTestPortion=datetime(2023,9,1))
+
+# PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
+#                                                               MLabels=['daily_LSTMscale_'+str(i) for i in OptParam], 
+#                                                               ValidSizes=[0.2]*len(OptParam), 
+#                                                               TSteps=[10]*len(OptParam),
+#                                                               TrainFeatCols=[TrainFeats]*len(OptParam),
+#                                                               TargFeatCols=[TargFeats]*len(OptParam),
+#                                                               TrainTestPortion=datetime(2023,9,1))
 # Needs additional lines for TransectID
 
 #%% Compile the Recurrent Neural Network 
@@ -100,15 +110,26 @@ PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF,
 PredDict = Predictions.CompileRNN(PredDict, 
                                   epochNums=[150], 
                                   batchSizes=[32],
-                                  denseLayers=[64],
-                                  dropoutRt=[0.3],
+                                  denseLayers=[128],
+                                  dropoutRt=[0.2],
                                   learnRt=[0.001],
+                                  hiddenLscale=6,
                                   DynamicLR=False)
+# PredDict = Predictions.CompileRNN(PredDict, 
+#                                   epochNums=[150]*len(OptParam), 
+#                                   batchSizes=[32]*len(OptParam),
+#                                   denseLayers=[128]*len(OptParam),
+#                                   dropoutRt=[0.2]*len(OptParam),
+#                                   learnRt=[0.001]*len(OptParam),
+#                                   hiddenLscale=OptParam,
+#                                   DynamicLR=False)
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
+
+#%%
 
 #%% Looped Feature Testing
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']
