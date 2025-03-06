@@ -637,7 +637,8 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
                 'batchS':[],        # number of samples to use in one iteration of training
                 'denselayers':[],   # number of dense layers in model construction
                 'dropoutRt':[],     # percentage of nodes to randomly drop in training (avoids overfitting)
-                'learnRt':[]}       # size of steps to adjust parameters by on each iteration
+                'learnRt':[],       # size of steps to adjust parameters by on each iteration
+                'hiddenLscale':[]}  # Scaling relationship for number of hidden LSTM layers 
     
     for MLabel, ValidSize, TStep, TrainFeatCol, TargFeatCol in zip(PredDict['mlabel'], ValidSizes, TSteps, TrainFeatCols, TargFeatCols):
         
@@ -675,7 +676,7 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
     return PredDict, VarDFDay_scaled, VarDFDayTest_scaled
 
 
-def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, CostSensitive=False, DynamicLR=False):
+def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, hiddenLscale, CostSensitive=False, DynamicLR=False):
     """
     Compile the NN using the settings and data stored in the NN dictionary.
     FM Sept 2024
@@ -709,6 +710,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         PredDict['denselayers'].append(denseLayers[mID])
         PredDict['dropoutRt'].append(dropoutRt[mID])
         PredDict['learnRt'].append(learnRt[mID])
+        PredDict['hiddenLscale'].append(hiddenLscale[mID])
         
         # inshape = (N_timesteps, N_features)
         inshape = (PredDict['X_train'][mID].shape[0], PredDict['X_train'][mID].shape[2])
@@ -727,8 +729,8 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         
         # Number  of hidden layers can be decided by rule of thumb:
             # N_hidden = N_trainingsamples / (scaling * (N_input + N_output))
-        N_out = 2
-        N_hidden = round(inshape[0] / (5 * (inshape[1] + N_out)))
+        N_out = len(PredDict['targfeats'][mID])
+        N_hidden = round(inshape[0] / (PredDict['hiddenLscale'][mID] * (inshape[1] + N_out)))
         
         # LSTM (1 layer)
         # Input() takes input shape, used for sequential models
@@ -1917,8 +1919,8 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
         TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
         ValEnd = mdates.date2num(TransectDFTrain.index[-1])
         TestEnd = mdates.date2num(TransectDFTest.index[-1])
-        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.9,0.9,0.9], ec=None)
-        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.95,0.95,0.95], ec=None)
+        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
         # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
         ax.add_patch(TrainT) 
         ax.add_patch(ValT)
