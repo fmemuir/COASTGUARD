@@ -7,6 +7,7 @@ Created on Thu Jun 13 10:51:41 2024
 """
 
 import os
+import numpy as np
 import pickle
 from datetime import datetime,timedelta
 import matplotlib.pyplot as plt
@@ -86,50 +87,74 @@ Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFea
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
-# OptParam = [1,2,3,4,5,6,7,8,9,10]
-
-PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_wavevars'], 
-                                                              ValidSizes=[0.2], 
-                                                              TSteps=[10],
-                                                              TrainFeatCols=[TrainFeats],
-                                                              TargFeatCols=[TargFeats],
-                                                              TrainTestPortion=datetime(2023,9,1))
+OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 # PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-#                                                               MLabels=['daily_LSTMscale_'+str(i) for i in OptParam], 
-#                                                               ValidSizes=[0.2]*len(OptParam), 
-#                                                               TSteps=[10]*len(OptParam),
-#                                                               TrainFeatCols=[TrainFeats]*len(OptParam),
-#                                                               TargFeatCols=[TargFeats]*len(OptParam),
+#                                                               MLabels=['daily_wavevars'], 
+#                                                               ValidSizes=[0.2], 
+#                                                               TSteps=[10],
+#                                                               TrainFeatCols=[TrainFeats],
+#                                                               TargFeatCols=[TargFeats],
 #                                                               TrainTestPortion=datetime(2023,9,1))
+
+PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
+                                                              MLabels=['daily_batch_'+str(i) for i in OptParam], 
+                                                              ValidSizes=[0.2]*len(OptParam), 
+                                                              TSteps=[10]*len(OptParam),
+                                                              TrainFeatCols=[TrainFeats]*len(OptParam),
+                                                              TargFeatCols=[TargFeats]*len(OptParam),
+                                                              TrainTestPortion=datetime(2023,9,1))
 # Needs additional lines for TransectID
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
-PredDict = Predictions.CompileRNN(PredDict, 
-                                  epochNums=[150], 
-                                  batchSizes=[32],
-                                  denseLayers=[128],
-                                  dropoutRt=[0.2],
-                                  learnRt=[0.001],
-                                  hiddenLscale=6,
-                                  DynamicLR=False)
 # PredDict = Predictions.CompileRNN(PredDict, 
-#                                   epochNums=[150]*len(OptParam), 
-#                                   batchSizes=[32]*len(OptParam),
-#                                   denseLayers=[128]*len(OptParam),
-#                                   dropoutRt=[0.2]*len(OptParam),
-#                                   learnRt=[0.001]*len(OptParam),
-#                                   hiddenLscale=OptParam,
+#                                   epochNums=[150], 
+#                                   batchSizes=[64],
+#                                   denseLayers=[128],
+#                                   dropoutRt=[0.2],
+#                                   learnRt=[0.001],
+#                                   hiddenLscale=[6],
 #                                   DynamicLR=False)
+
+PredDict = Predictions.CompileRNN(PredDict, 
+                                  epochNums=[150]*len(OptParam), 
+                                  batchSizes=OptParam,
+                                  denseLayers=[128]*len(OptParam),
+                                  dropoutRt=[0.2]*len(OptParam),
+                                  learnRt=[0.001]*len(OptParam),
+                                  hiddenLscale=[5]*len(OptParam),
+                                  DynamicLR=False)
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
 
+#%% Parallel Coordinates
+HPfiles = [
+           '20250306-114952_daily_epochs_200.pkl',
+           '20250306-121419_daily_batch_8_daily_batch_16.pkl',
+           '20250306-170808_daily_batch_32_daily_batch_64_daily_batch_96_daily_batch_128_daily_batch_160_daily_batch_192_daily_batch_224_daily_batch_256.pkl',
+           '20250306-130124_daily_LSTMscale_1_daily_LSTMscale_2_daily_LSTMscale_3_daily_LSTMscale_4_daily_LSTMscale_5_daily_LSTMscale_6_daily_LSTMscale_7_daily_LSTMscale_8_daily_LSTMscale_9_daily_LSTMscale_10.pkl',
+           '20250306-121929_daily_dense_4_daily_dense_8_daily_dense_16_daily_dense_32_daily_dense_64_daily_dense_128.pkl',
+           '20250306-123232_daily_dropout_0.1_daily_dropout_0.2_daily_dropout_0.3_daily_dropout_0.4_daily_dropout_0.5.pkl',
+           '20250306-124336_daily_learnrt_0.0001_daily_learnrt_0.001_daily_learnrt_0.01_daily_learnrt_0.1_daily_learnrt_0.9.pkl']
+
+with open(os.path.join(filepath, sitename, 'predictions', '20250306-113911_daily_epochs_25_daily_epochs_50_daily_epochs_75_daily_epochs_100_daily_epochs_125_daily_epochs_150_daily_epochs_175.pkl',), 'rb') as f:
+    PredDictCombi = pickle.load(f)
+if 'hiddenLscale' not in PredDictCombi.keys():
+    PredDictCombi['hiddenLscale'] = [5]*len(PredDictCombi['mlabel'])
+    
+for i in range(len(HPfiles)):
+    with open(os.path.join(filepath, sitename, 'predictions', HPfiles[i]), 'rb') as f:
+        PredDictHP = pickle.load(f)
+    if 'hiddenLscale' not in PredDictHP.keys():
+        PredDictHP['hiddenLscale'] = [5]*len(PredDictHP['mlabel'])
+    for key in PredDictCombi.keys():
+        PredDictCombi[key].extend(PredDictHP[key])
 #%%
+Predictions.PlotParaCoords(PredDictCombi)
 
 #%% Looped Feature Testing
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']

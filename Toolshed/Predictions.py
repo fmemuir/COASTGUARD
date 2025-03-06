@@ -34,7 +34,7 @@ from sklearn.cluster import KMeans, SpectralClustering
 # from sklearn.gaussian_process import GaussianProcessRegressor
 # from sklearn.gaussian_process.kernels import RBF, WhiteKernel
 from sklearn.metrics import silhouette_score, root_mean_squared_error
-from sklearn.preprocessing import StandardScaler #MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 # from sklearn.utils.class_weight import compute_class_weight
 # from imblearn.over_sampling import SMOTE
@@ -1744,6 +1744,39 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
                            sitename+'_StormWavesVEWL_Tr'+str(CoastalDFTr.name)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
     
+    
+def PlotParaCoords(PredDict): 
+    PredDF = pd.DataFrame(PredDict)
+    HPScaler = MinMaxScaler()
+    HPs = ['epochN', 'batchS', 'hiddenLscale', 'denselayers', 'dropoutRt', 'learnRt', 'accuracy', 'train_time']
+    PredDFScaled = pd.DataFrame(HPScaler.fit_transform(PredDF[HPs]), columns=HPs)
+    
+    fig, axs = plt.subplots(1,2, figsize=(6.55,3.5), dpi=300)
+    
+    for ax, Metric, MetricLab in zip(axs, ['accuracy', 'train_time'], ['Accuracy', 'Training time (s)']):
+        normc = plt.Normalize(np.min(PredDF[Metric]), np.max(PredDF[Metric]))
+        if Metric == 'accuracy':
+            colours = plt.cm.PuBuGn(normc(PredDF[Metric]))
+        else:
+            colours = plt.cm.PuBuGn_r(normc(PredDF[Metric]))
+        for i in range(len(PredDFScaled)):
+            ax.plot(PredDFScaled.iloc[i,:], color=colours[i], alpha=0.5)
+        ax.set_xticks(range(len(PredDFScaled.columns)), PredDFScaled.columns, rotation=45)
+        ax.grid(axis='x', lw=0.5, ls=':')
+        
+        sm = plt.cm.ScalarMappable(cmap=plt.cm.PuBuGn, norm=normc)
+        cbar = plt.colorbar(sm,ax=ax)
+        cbar.set_ticks([np.min(PredDF[Metric]), np.max(PredDF[Metric])])
+        if Metric == 'accuracy':
+            cbar.set_ticklabels([f"{np.min(PredDF[Metric]):.2f}", f"{np.max(PredDF[Metric]):.2f}"])
+        else:
+            cbar.set_ticklabels([f"{np.min(PredDF[Metric]):.0f}", f"{np.max(PredDF[Metric]):.0f}"])
+        cbar.set_label(MetricLab)
+        
+    
+    plt.tight_layout()
+    plt.show()
+        
 
 def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sitename, Tr, enddate=None):
     """
