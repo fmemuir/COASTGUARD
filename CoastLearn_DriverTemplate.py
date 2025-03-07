@@ -79,8 +79,9 @@ TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
 
 
 #%% Plot timeseries of variables
-Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
 TrainFeatsPlotting = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
+
+Predictions.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, filepath, sitename)
 # Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data

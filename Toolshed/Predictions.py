@@ -1475,7 +1475,7 @@ def PlotFeatSensitivity(PredDict, filepath, sitename, Tr):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
     
-def PlotVarTS(TransectDF, Tr, filepath, sitename):
+def PlotVarTS(TransectDF, Tr,TrainFeatsPlotting, filepath, sitename):
     """
     Plot timeseries of training variables used.
     FM Feb 2025
@@ -1516,8 +1516,8 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     
     # set subplot spacing with small break between start and end of training
     # gridspec = dict(wspace=0.0, width_ratios=[1, 0.1, 1, 1])
-    gridspec = dict(wspace=0.0, width_ratios=[1.1, 0.1, 1.1, 0.8])
-    fig, axs = plt.subplots(nrows=1, ncols=4, sharey=True, figsize=(4.31, 1.50), dpi=300, gridspec_kw=gridspec)
+    gridspec = dict(wspace=0.0, width_ratios=[1.2, 0.1, 1.2, 0.5])
+    fig, axs = plt.subplots(nrows=1, ncols=4, sharey=True, figsize=(4.27, 1.50), dpi=300, gridspec_kw=gridspec)
     axs[1].set_visible(False)
     
     # TRAIN DATA (with split)
@@ -1560,11 +1560,13 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     
     
     # set subplot spacing with small break between start and end of training
-    gridspec = dict(wspace=0.0, width_ratios=[0.75, 0.1, 0.75, 0.7, 0.35])
-    fig, axs = plt.subplots(nrows=1, ncols=5, sharey=True, figsize=(2.61, 1.50), dpi=300, gridspec_kw=gridspec)
+    # gridspec = dict(wspace=0.0, width_ratios=[0.75, 0.1, 0.75, 0.7, 0.35])
+    gridspec = dict(wspace=0.0, width_ratios=[0.75, 0.1, 0.75, 0.35, 0.35])
+
+    fig, axs = plt.subplots(nrows=1, ncols=5, sharey=True, figsize=(2.65, 1.50), dpi=300, gridspec_kw=gridspec)
     axs[1].set_visible(False)
     
-    SelVars = ['VE', 'WL','WaveHsFD', 'WaveDirFD', 'WaveTpFD']
+    SelVars = list(['VE', 'WL'] + TrainFeatsPlotting)
     # TRAIN DATA (with split)
     # plot the same data on both axes
     axs[0].plot(TransectDFTrain[SelVars], c='#0E2841', lw=0.5, alpha=0.3)
