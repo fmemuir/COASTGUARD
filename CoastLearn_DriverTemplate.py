@@ -68,7 +68,7 @@ for Tr in TransectIDs:
 Predictions.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
 
 #%% Load In Pre-trained Model
-with open(os.path.join(filepath, sitename, 'predictions', '20250303-173249_dailywaves_wavesat.pkl'), 'rb') as f:
+with open(os.path.join(filepath, sitename, 'predictions', '20250307-110109_daily_optimal.pkl'), 'rb') as f:
     PredDict = pickle.load(f)
 
 #%% Separate Training and Validation
@@ -79,52 +79,52 @@ TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
 
 
 #%% Plot timeseries of variables
-# Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
+Predictions.PlotVarTS(TransectDF, TransectIDs[0], filepath, sitename)
 TrainFeatsPlotting = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
-Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
+# Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
-OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
-
-# PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-#                                                               MLabels=['daily_wavevars'], 
-#                                                               ValidSizes=[0.2], 
-#                                                               TSteps=[10],
-#                                                               TrainFeatCols=[TrainFeats],
-#                                                               TargFeatCols=[TargFeats],
-#                                                               TrainTestPortion=datetime(2023,9,1))
+# OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_batch_'+str(i) for i in OptParam], 
-                                                              ValidSizes=[0.2]*len(OptParam), 
-                                                              TSteps=[10]*len(OptParam),
-                                                              TrainFeatCols=[TrainFeats]*len(OptParam),
-                                                              TargFeatCols=[TargFeats]*len(OptParam),
+                                                              MLabels=['daily_optimal_noES'], 
+                                                              ValidSizes=[0.1], 
+                                                              TSteps=[10],
+                                                              TrainFeatCols=[TrainFeats],
+                                                              TargFeatCols=[TargFeats],
                                                               TrainTestPortion=datetime(2023,9,1))
+
+# PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
+#                                                               MLabels=['daily_batch_'+str(i) for i in OptParam], 
+#                                                               ValidSizes=[0.2]*len(OptParam), 
+#                                                               TSteps=[10]*len(OptParam),
+#                                                               TrainFeatCols=[TrainFeats]*len(OptParam),
+#                                                               TargFeatCols=[TargFeats]*len(OptParam),
+#                                                               TrainTestPortion=datetime(2023,9,1))
 # Needs additional lines for TransectID
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
-# PredDict = Predictions.CompileRNN(PredDict, 
-#                                   epochNums=[150], 
-#                                   batchSizes=[64],
-#                                   denseLayers=[128],
-#                                   dropoutRt=[0.2],
-#                                   learnRt=[0.001],
-#                                   hiddenLscale=[6],
-#                                   DynamicLR=False)
-
 PredDict = Predictions.CompileRNN(PredDict, 
-                                  epochNums=[150]*len(OptParam), 
-                                  batchSizes=OptParam,
-                                  denseLayers=[128]*len(OptParam),
-                                  dropoutRt=[0.2]*len(OptParam),
-                                  learnRt=[0.001]*len(OptParam),
-                                  hiddenLscale=[5]*len(OptParam),
+                                  epochNums=[150], 
+                                  batchSizes=[64],
+                                  denseLayers=[128],
+                                  dropoutRt=[0.2],
+                                  learnRt=[0.001],
+                                  hiddenLscale=[6],
                                   DynamicLR=False)
+
+# PredDict = Predictions.CompileRNN(PredDict, 
+#                                   epochNums=[150]*len(OptParam), 
+#                                   batchSizes=OptParam,
+#                                   denseLayers=[128]*len(OptParam),
+#                                   dropoutRt=[0.2]*len(OptParam),
+#                                   learnRt=[0.001]*len(OptParam),
+#                                   hiddenLscale=[5]*len(OptParam),
+#                                   DynamicLR=False)
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
@@ -153,8 +153,11 @@ for i in range(len(HPfiles)):
         PredDictHP['hiddenLscale'] = [5]*len(PredDictHP['mlabel'])
     for key in PredDictCombi.keys():
         PredDictCombi[key].extend(PredDictHP[key])
+        
 #%%
-Predictions.PlotParaCoords(PredDictCombi)
+# Predictions.PlotParaCoords(PredDictCombi)
+
+Predictions.PlotHPScatter(PredDictCombi)
 
 #%% Looped Feature Testing
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']

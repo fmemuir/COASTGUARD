@@ -1511,11 +1511,12 @@ def PlotVarTS(TransectDF, Tr, filepath, sitename):
     TransectDFTest = TransectDF_sc.iloc[int(len(TransectDF_sc)*0.9):]
     
     # Clip train data down into train and validation (have to do now because it gets done later in PrepData())
-    TransectDFVal = TransectDFTrain[len(TransectDFTrain)-round((len(TransectDFTrain)+len(TransectDFTest))*0.2):]
+    TransectDFVal = TransectDFTrain[len(TransectDFTrain)-round((len(TransectDFTrain)+len(TransectDFTest))*0.1):]
     TransectDFTrain = TransectDFTrain[:len(TransectDFTrain)-len(TransectDFVal)]
     
     # set subplot spacing with small break between start and end of training
-    gridspec = dict(wspace=0.0, width_ratios=[1, 0.1, 1, 1])
+    # gridspec = dict(wspace=0.0, width_ratios=[1, 0.1, 1, 1])
+    gridspec = dict(wspace=0.0, width_ratios=[1.1, 0.1, 1.1, 0.8])
     fig, axs = plt.subplots(nrows=1, ncols=4, sharey=True, figsize=(4.31, 1.50), dpi=300, gridspec_kw=gridspec)
     axs[1].set_visible(False)
     
@@ -1618,7 +1619,7 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
     TransectDFPlot = pd.concat([TransectDFTrain,TransectDFTest])
     
     TrainStart = mdates.date2num(TransectDFTrain.index[0])
-    TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+    TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
     ValEnd = mdates.date2num(TransectDFTrain.index[-1])
     TestEnd = mdates.date2num(TransectDFTest.index[-1])
     
@@ -1655,14 +1656,17 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
         #             mdates.date2num(max(CoastalDF.iloc[Tr]['WaveDatesFD'])))
         ax.set_xlim(TrainStart, TestEnd)
         # Add train/val/test rects
-        TrainT = mpatches.Rectangle((TrainStart,ax.get_ylim()[0]), 
-                                    TrainEnd-TrainStart, ax.get_ylim()[1]-ax.get_ylim()[0], 
-                                    fc=[0.8,0.8,0.8], ec=None)
-        ValT = mpatches.Rectangle((TrainEnd,ax.get_ylim()[0]), 
-                                  ValEnd-TrainEnd, ax.get_ylim()[1]-ax.get_ylim()[0], 
-                                  fc=[0.9,0.9,0.9], ec=None)
-        ax.add_patch(TrainT) 
-        ax.add_patch(ValT)
+        # TrainT = mpatches.Rectangle((TrainStart,ax.get_ylim()[0]), 
+        #                             TrainEnd-TrainStart, ax.get_ylim()[1]-ax.get_ylim()[0], 
+        #                             fc=[0.8,0.8,0.8], ec=None)
+        # ValT = mpatches.Rectangle((TrainEnd,ax.get_ylim()[0]), 
+        #                           ValEnd-TrainEnd, ax.get_ylim()[1]-ax.get_ylim()[0], 
+        #                           fc=[0.9,0.9,0.9], ec=None)
+        # ax.add_patch(TrainT) 
+        # ax.add_patch(ValT)
+        ax.axvline(TrainEnd, c='k', alpha=0.5, lw=1, ls='--')
+        ax.axvline(ValEnd, c='k', alpha=0.5, lw=1, ls='--')
+        
         # Add train/val/test labels
         if axID == len(axs)-1: # last plot
             Text_y = ax.get_ylim()[0]+((ax.get_ylim()[1]-ax.get_ylim()[0])*0.1)
@@ -1763,20 +1767,37 @@ def PlotParaCoords(PredDict):
             ax.plot(PredDFScaled.iloc[i,:], color=colours[i], alpha=0.5)
         ax.set_xticks(range(len(PredDFScaled.columns)), PredDFScaled.columns, rotation=45)
         ax.grid(axis='x', lw=0.5, ls=':')
+        ax.tick_params(axis='y', left=False, labelleft=False)
         
         sm = plt.cm.ScalarMappable(cmap=plt.cm.PuBuGn, norm=normc)
         cbar = plt.colorbar(sm,ax=ax)
-        cbar.set_ticks([np.min(PredDF[Metric]), np.max(PredDF[Metric])])
+        cbar.set_ticks([np.min(PredDF[Metric]), np.mean(PredDF[Metric]), np.max(PredDF[Metric])])
         if Metric == 'accuracy':
-            cbar.set_ticklabels([f"{np.min(PredDF[Metric]):.2f}", f"{np.max(PredDF[Metric]):.2f}"])
+            cbar.set_ticklabels([f"{np.min(PredDF[Metric]):.2f}", f"{np.mean(PredDF[Metric]):.2f}", f"{np.max(PredDF[Metric]):.2f}"])
         else:
-            cbar.set_ticklabels([f"{np.min(PredDF[Metric]):.0f}", f"{np.max(PredDF[Metric]):.0f}"])
-        cbar.set_label(MetricLab)
+            cbar.set_ticklabels([f"{np.min(PredDF[Metric]):.0f}", f"{np.mean(PredDF[Metric]):.0f}", f"{np.max(PredDF[Metric]):.0f}"])
+        cbar.set_label(MetricLab, rotation=270)
         
     
     plt.tight_layout()
     plt.show()
         
+
+def PlotHPScatter(PredDict):
+    
+    PredDF = pd.DataFrame(PredDict)
+    # HPScaler = MinMaxScaler()
+    # HPs = ['epochN', 'batchS', 'hiddenLscale', 'denselayers', 'dropoutRt', 'learnRt', 'accuracy', 'train_time']
+    # PredDFScaled = pd.DataFrame(HPScaler.fit_transform(PredDF[HPs]), columns=HPs)
+    
+    fig, ax = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
+
+    ax.scatter(PredDF['train_time'], PredDF['accuracy'], alpha=0.5)
+    ax.set_xlim(0,200)
+    ax.set_ylim(0.7,1)
+    plt.tight_layout()
+    plt.show()
+    
 
 def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sitename, Tr, enddate=None):
     """
@@ -1949,14 +1970,16 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     
     if PlotDateRange is None:
         TrainStart = mdates.date2num(TransectDFTrain.index[0])
-        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
         ValEnd = mdates.date2num(TransectDFTrain.index[-1])
         TestEnd = mdates.date2num(TransectDFTest.index[-1])
-        TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
-        ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+        # TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+        # ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
         # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
-        ax.add_patch(TrainT) 
-        ax.add_patch(ValT)
+        # ax.add_patch(TrainT) 
+        # ax.add_patch(ValT)
+        ax.axvline(TrainEnd, c='k', alpha=0.5, lw=1, ls='--')
+        ax.axvline(ValEnd, c='k', alpha=0.5, lw=1, ls='--')
         
         plt.text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
         plt.text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
@@ -1968,15 +1991,17 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     
     
     lw = 1 # line width
-    for SL, SLc in ['VE', 'SL'],['#79C060','#3E74B3']:
+    for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
         # Calculate smoothed version of predictions
         Smooth = MovingAverage(FutureOutputs['output'][mID]['future'+SL], 10)
         # Plot cross-shore distances through time for WL and VE past
-        plt.plot(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), color=SLc, lw=lw, ls=':', label=r'${SL}$')
+        plt.scatter(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]).index, 
+                    pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), 
+                    s=1, color='k', marker='.', label=f"${{\\hat{{{SL}}} - {SL}}}$")
         # Plot predicted WL and VE
-        plt.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.8, lw=lw, label=r'$\hat{SL}$')
+        plt.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.5, lw=lw, label=f"${{\\hat{{{SL}}} - {SL}}}$")
         # Plot smoothed predicted WL and VE
-        # plt.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.3, lw=lw, label=r'$\hat{SL}_{t[i:i+10]}$')
+        plt.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=r'$\hat{SL}_{t[i:i+10]}$')
 
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')
@@ -2031,7 +2056,7 @@ def PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FutureOutputs, filepath,
         
         if PlotDateRange is None:
             TrainStart = mdates.date2num(TransectDFTrain.index[0])
-            TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+            TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
             ValEnd = mdates.date2num(TransectDFTrain.index[-1])
             TestEnd = mdates.date2num(TransectDFTest.index[-1])
             TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
@@ -2131,7 +2156,7 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
                                        'Cross-shore distance (m)',
                                        'Cross-shore distance (m)']):
         TrainStart = mdates.date2num(TransectDFTrain.index[0])
-        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.2))])
+        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
         ValEnd = mdates.date2num(TransectDFTrain.index[-1])
         TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
         ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
