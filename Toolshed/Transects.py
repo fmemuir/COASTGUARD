@@ -1502,6 +1502,7 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     # reformat fields with lists to strings
     KeyName = list(TransectInterShp.select_dtypes(include='object').columns)
     for Key in KeyName:
+        TransectInterShp[Key] = [row.tolist() if isinstance(row, np.ndarray) else row for row in TransectInterShp[Key]]
         # round any floating points numbers before export
         realInd = next(i for i, j in enumerate(TransectInterShp[Key]) if j)
             

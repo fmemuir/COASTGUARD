@@ -926,7 +926,7 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
             mu_values.append(0.0)
             Qs_values.append(0.0)
     mu_values = np.array(mu_values)
-    WaveSedFlux = np.array(Qs_values)
+    WaveSedFlux = Qs_values
     
     # # Net diffusivity (Mu_net) [m/s-2]
     # Since each interval should be equal, delta_{t,i} cancels out in the division
