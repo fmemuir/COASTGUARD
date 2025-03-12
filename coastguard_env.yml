@@ -5,6 +5,6 @@ channels:
 dependencies:
   - pip
   - pip:
-    - copernicusmarine>=1.0<=2.0
+    - copernicusmarine>=1.0,<=2.0
   - python=3.10
   - pyfes
