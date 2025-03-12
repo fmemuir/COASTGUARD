@@ -238,8 +238,15 @@ Predictions.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutput
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
 FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 
+#%%
+mID=0
+Predictions.PlotTestScatter(FutureOutputs, TransectDFTest, mID, TransectIDs[0], filepath, sitename)
+
 #%% Violin plot of distance differences between predicted and actual VEs and WLs
 Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+
+#%%
+Predictions.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),

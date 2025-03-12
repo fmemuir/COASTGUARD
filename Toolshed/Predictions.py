@@ -28,12 +28,14 @@ import seaborn as sns
 import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 from scipy.interpolate import interp1d, PchipInterpolator
+from scipy.stats import pearsonr
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering
 # from sklearn.gaussian_process import GaussianProcessRegressor
 # from sklearn.gaussian_process.kernels import RBF, WhiteKernel
-from sklearn.metrics import silhouette_score, root_mean_squared_error
+from sklearn.metrics import silhouette_score, root_mean_squared_error, r2_score
+from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.model_selection import train_test_split
 # from sklearn.utils.class_weight import compute_class_weight
@@ -1991,23 +1993,28 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     else:
         plt.xlim(mdates.date2num(PlotDateRange[0]),mdates.date2num(PlotDateRange[1]))
     
-    
-    lw = 1 # line width
+    lw = 0.8 # line width
     for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
         # Calculate smoothed version of predictions
         Smooth = MovingAverage(FutureOutputs['output'][mID]['future'+SL], 10)
         # Plot cross-shore distances through time for WL and VE past
         plt.scatter(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]).index, 
                     pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), 
-                    s=1, color='k', marker='.', label=f"${{\\hat{{{SL}}} - {SL}}}$")
+                    s=0.8, color='k', marker='.', label=f"${SL}$")
         # Plot predicted WL and VE
-        plt.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.5, lw=lw, label=f"${{\\hat{{{SL}}} - {SL}}}$")
+        plt.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
         # Plot smoothed predicted WL and VE
-        plt.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=r'$\hat{SL}_{t[i:i+10]}$')
+        plt.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
 
+    handles, labels = plt.gca().get_legend_handles_labels() 
+    legorder = [3,0,4,1,5,2]  
+    
     plt.xlabel('Date (yyyy)')
     plt.ylabel('Cross-shore distance (m)')
-    plt.legend(loc='upper left', ncols=3)
+    plt.legend(handles=[handles[i] for i in legorder],
+               labels=[labels[i] for i in legorder], 
+               loc='upper left', ncols=3,
+               handlelength=1, columnspacing=1, handletextpad=0.6)
     plt.ylim(0,600)
     ax.tick_params(axis='both',which='major',pad=2)
     ax.xaxis.labelpad=2
@@ -2021,7 +2028,7 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     StartTime = mdates.num2date(plt.axis()[0]).strftime('%Y-%m-%d')
     EndTime = mdates.num2date(plt.axis()[1]).strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'.png')
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
@@ -2197,6 +2204,83 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
+def PlotTestScatter(FutureOutputs, TransectDFTest, mID, Tr, filepath, sitename):
+    
+    # fig, axs = plt.subplots(1,2, figsize=(6.55,3.23), dpi=300)
+    fig, axs = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
+
+    BothSLs = []
+    for SL, SLc in zip(['WL', 'VE'], ['#3E74B3','#79C060']):
+        # Define actual and predicted VE and WL
+        realVals = TransectDFTest[SL]
+        predVals = FutureOutputs['output'][mID]['future'+SL]
+        # Match indexes and remove NaNs from CreateSequence moving window
+        ComboDF = pd.concat([realVals, predVals], axis=1)
+        ComboDF.dropna(how='any', inplace=True)
+        
+        BothSLs.append(ComboDF)
+        
+        # Line through the origin
+        axs.plot([-100,1000],[-100,1000],c=[0.5,0.5,0.5], lw=0.8, linestyle='-', alpha=0.35)
+        # Scatter plot of observed vs predicted SL
+        axs.scatter(ComboDF[SL], ComboDF['future'+SL], c=SLc, s=1, alpha=0.5)
+        # Smooth version of predicted SL
+        # SmoothPred = MovingAverage(ComboDF['future'+SL], 10)
+        # axs.scatter(ComboDF[SL], SmoothPred, c='k', s=0.5)
+        
+        # SL linear regression
+        m, b = np.polyfit(ComboDF[SL], ComboDF['future'+SL], 1)  # Fit a linear trend (y = mx + b)
+        sorted_x = np.sort(ComboDF[SL])  
+        sorted_y = m * sorted_x + b       
+        # R squared and Pearson r
+        r2 = r2_score(ComboDF[SL], ComboDF['future'+SL])
+        rval, _ = pearsonr(ComboDF[SL], ComboDF['future'+SL])
+
+        # Plot lines of best fit
+        axs.plot(sorted_x, sorted_y, 
+                c='w', lw=1.7, alpha=0.7, zorder=2)
+        axs.plot(sorted_x, sorted_y, 
+                  color=SLc, linestyle='--', lw=1, zorder=3,
+                  label=f'{SL} $R^2$ = {round(r2,2)}, $r$ = {round(rval,2)}')
+    
+    # overall linear regression
+    BothReal = (list(BothSLs[1]['VE'])) + list(BothSLs[0]['WL']) 
+    BothPred = (list(BothSLs[1]['futureVE'])) + list(BothSLs[0]['futureWL'])
+    m, b = np.polyfit(BothReal, BothPred, 1)  # Fit a linear trend (y = mx + b)
+    Both_sorted_x = np.sort(BothReal)  
+    Both_sorted_y = m * Both_sorted_x + b
+    # R squared  and Pearson r
+    Both_r2 = r2_score(BothReal, BothPred)
+    Both_rval, _ = pearsonr(ComboDF[SL], ComboDF['future'+SL])
+
+    # Plot lines of best fit
+    axs.plot(Both_sorted_x, Both_sorted_y, 
+            c='w', lw=1.7, alpha=0.7, zorder=2)
+    axs.plot(Both_sorted_x, Both_sorted_y, 
+              color='#163E64', linestyle='--', lw=1, zorder=3,
+              label=f'$R^2$ = {round(Both_r2,2)}, $r$ = {round(Both_rval,2)}')
+        
+    axs.set_xlim(0,600)
+    axs.set_ylim(0,600)
+    axs.set_xlabel(r'$y$ cross-shore distance (m)')
+    axs.set_ylabel(r'$\hat{y}$ cross-shore distance (m)')
+    axs.legend()
+    
+        # # Plot histogram of residuals
+        # axs[1].hist(ComboDF['future'+SL] - ComboDF[SL], bins=np.arange(-300,300,10), 
+        #             fc=SLc, alpha=0.5,
+        #             label=f'$\\hat{{{SL}}} - {SL}$')
+        
+        # axs[1].legend()
+        
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_VEWLErrorLinReg_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+    
+
 def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
     fig, axs = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
@@ -2214,7 +2298,7 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     pltDF = pd.DataFrame(pltDict)
     pltDF = pltDF.iloc[:,[1,0]]
     ax = sns.violinplot(data = pltDF, 
-                        palette=['#79C060', '#3E74B3'], linewidth=0.0001, orient='h', 
+                        palette=['#3E74B3', '#79C060'], linewidth=0.0001, orient='h', 
                         cut=0, inner='quartile', density_norm='count',
                         legend='full')
     for l in ax.lines:
@@ -2234,7 +2318,7 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
     ax.axvline(0, c='#163E64', ls='-', alpha=0.5, lw=0.5)
         
-    sns.move_legend(ax, 'upper left')
+    sns.move_legend(ax, 'lower left')
     plt.tight_layout()
     plt.show()
     
@@ -2242,6 +2326,160 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
                            sitename+'_VEWLErrorViolin_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
+
+def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
+
+    fig, axs = plt.subplots(1,2, figsize=(6.55,3.23), dpi=300)
+    fs = 7
+    
+    # VIOLIN PLOT
+    # Rename columns so seaborn legend works
+    leglabs = {'VEdiff':None, 'WLdiff':None}
+    for SL, SLreal in zip(leglabs.keys(), ['VE','WL']):
+        SLmedian = FutureOutputs['XshoreDiff'][mID][SL].median()
+        SLmedianPcnt = abs(SLmedian / (TransectDF[SLreal].max()-TransectDF[SLreal].min()))*100
+        leglab1 = f"$RMSE_{{{SLreal}}}$ = {round(FutureOutputs['rmse'][mID]['future'+SLreal],1)} m\n"
+        leglab2 = f"$\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}$ = {round(SLmedian,1)} m\n"
+        leglab3 = f"$\\frac{{\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}}}{{{SL[:-4]}_{{[min,max]}}}}$ = {round(SLmedianPcnt)}%"
+        leglabs[SL] = leglab1 + leglab2 + leglab3
+        
+
+    pltDict = dict((leglabs[key], value) for (key, value) in FutureOutputs['XshoreDiff'][mID].items())
+    # Swap so WL is on top
+    pltDF = pd.DataFrame(pltDict)
+    pltDF = pltDF.iloc[:,[1,0]]
+    sns.violinplot(data = pltDF, 
+                        palette=['#3E74B3', '#79C060'], linewidth=0.0001, orient='h', 
+                        cut=0, inner='quartile', density_norm='count',
+                        ax=axs[0], legend='full')
+    for l in axs[0].lines:
+        # l.set_linestyle('--')
+        l.set_linewidth(1)
+        l.set_color('white')
+        
+    # axs[0].set_xlabel(r'Cross-shore $\hat{y}-y$ (m)',fontsize=fs)
+    multicolor_axlabel(axs[0], ('land    ', r'Cross-shore $\hat{y}-y$ (m)', '    sea'), 
+                               ('#C2B280', 'k', '#236E95'), 
+                       (0.18, -0.14), axis='x')
+    axs[0].tick_params(axis='y', left=False, labelleft=False)
+    # ax.set_yticklabels(['VE','WL'], rotation=90, va='center')
+    # ax.tick_params(axis='y', labelrotation=90)
+    axs[0].tick_params(labelsize=fs)
+    axs[0].grid(which='major', axis='x', c=[0.8,0.8,0.8], lw=0.5, alpha=0.3)
+    xlims = [round(lim,-1) for lim in axs[0].get_xlim()]
+    axs[0].set_xlim(xlims[0],xlims[1])
+    axs[0].set_xticks(np.arange(xlims[0],xlims[1],10), minor=True)
+    
+    axs[0].axvline(0, c=[0.5,0.5,0.5], lw=0.9, linestyle='-', alpha=0.35)
+        
+    sns.move_legend(axs[0], 'lower left')
+    
+    
+    # LIN REG PLOT
+    BothSLs = []
+    for SL, SLc in zip(['WL', 'VE'], ['#3E74B3','#79C060']):
+        # Define actual and predicted VE and WL
+        realVals = TransectDF[SL]
+        predVals = FutureOutputs['output'][mID]['future'+SL]
+        # Match indexes and remove NaNs from CreateSequence moving window
+        ComboDF = pd.concat([realVals, predVals], axis=1)
+        ComboDF.dropna(how='any', inplace=True)
+        
+        BothSLs.append(ComboDF)
+        
+        # Line through the origin
+        axs[1].plot([-100,1000],[-100,1000],c=[0.5,0.5,0.5], lw=0.9, linestyle='-', alpha=0.35)
+        # Scatter plot of observed vs predicted SL
+        axs[1].scatter(ComboDF[SL], ComboDF['future'+SL], c=SLc, s=1, alpha=0.5)
+        # Smooth version of predicted SL
+        # SmoothPred = MovingAverage(ComboDF['future'+SL], 10)
+        # axs[1].scatter(ComboDF[SL], SmoothPred, c='k', s=0.5)
+        
+        # SL linear regression
+        m, b = np.polyfit(ComboDF[SL], ComboDF['future'+SL], 1)  # Fit a linear trend (y = mx + b)
+        sorted_x = np.sort(ComboDF[SL])  
+        sorted_y = m * sorted_x + b       
+        # R squared and Pearson r
+        r2 = r2_score(ComboDF[SL], ComboDF['future'+SL])
+        rval, _ = pearsonr(ComboDF[SL], ComboDF['future'+SL])
+
+        # Plot lines of best fit
+        axs[1].plot(sorted_x, sorted_y, 
+                c='#163E64', lw=1.7, alpha=0.6, zorder=2)
+        axs[1].plot(sorted_x, sorted_y, 
+                  color=SLc, linestyle='--', lw=1, zorder=3,
+                  label=f'$R^2_{{{SL}}}$ = {round(r2,2)}, $r_{{{SL}}}$ = {round(rval,2)}')
+    
+    # overall linear regression
+    BothReal = (list(BothSLs[1]['VE'])) + list(BothSLs[0]['WL']) 
+    BothPred = (list(BothSLs[1]['futureVE'])) + list(BothSLs[0]['futureWL'])
+    m, b = np.polyfit(BothReal, BothPred, 1)  # Fit a linear trend (y = mx + b)
+    Both_sorted_x = np.sort(BothReal)
+    Both_sorted_y = m * Both_sorted_x + b
+    # R squared  and Pearson r
+    Both_r2 = r2_score(BothReal, BothPred)
+    Both_rval, _ = pearsonr(ComboDF[SL], ComboDF['future'+SL])
+
+    # Plot lines of best fit
+    axs[1].plot(Both_sorted_x, Both_sorted_y, 
+            c='w', lw=1.7, alpha=0.7, zorder=2)
+    axs[1].plot(Both_sorted_x, Both_sorted_y, 
+              color='#163E64', linestyle='--', lw=1, zorder=3,
+              label=f'$R^2$ = {round(Both_r2,2)}, $r$ = {round(Both_rval,2)}')
+        
+    axs[1].set_xlim(0,600)
+    axs[1].set_ylim(0,600)
+    axs[1].grid(which='major', axis='both', c=[0.8,0.8,0.8], lw=0.5, alpha=0.3)
+    
+    multicolor_axlabel(axs[1], ('land    ', r'$y$ cross-shore distance (m)', '    sea'), 
+                               ('#C2B280', 'k', '#236E95'), 
+                       (0.18, -0.14), axis='x')
+    multicolor_axlabel(axs[1], ('land    ', r'$\hat{y}$ cross-shore distance (m)', '    sea'), 
+                               ('#C2B280', 'k', '#236E95'), 
+                       (-0.15, 0.14), axis='y')
+    
+    axs[1].legend(loc='lower right')
+    
+    labs = list(string.ascii_lowercase[:axs.shape[0]])
+    for ax, lab in zip(axs, labs):
+        ax.text(0.009, 0.991, '('+lab+')', transform=ax.transAxes,
+                fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
+        
+    plt.tight_layout()
+    plt.subplots_adjust(wspace=0.2)
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_VEWLErrorViolinLinReg_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+    
+    
+    
+def multicolor_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', anchorpad=0,**kw):
+    
+    from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, HPacker, VPacker
+
+    # x-axis label
+    if axis=='x' or axis=='both':
+        boxes = [TextArea(text, textprops=dict(color=color, ha='left',va='bottom',**kw)) 
+                    for text,color in zip(list_of_strings,list_of_colors) ]
+        xbox = HPacker(children=boxes,align="center",pad=0, sep=5)
+        anchored_xbox = AnchoredOffsetbox(loc=3, child=xbox, pad=anchorpad,frameon=False,
+                                          bbox_to_anchor=bboxes,
+                                          bbox_transform=ax.transAxes, borderpad=0.)
+        ax.add_artist(anchored_xbox)
+
+    # y-axis label
+    if axis=='y' or axis=='both':
+        boxes = [TextArea(text, textprops=dict(color=color, ha='left',va='bottom',rotation=90,**kw)) 
+                     for text,color in zip(list_of_strings[::-1],list_of_colors[::-1]) ]
+        ybox = VPacker(children=boxes,align="center", pad=0, sep=5)
+        anchored_ybox = AnchoredOffsetbox(loc=3, child=ybox, pad=anchorpad, frameon=False, 
+                                          bbox_to_anchor=bboxes, 
+                                          bbox_transform=ax.transAxes, borderpad=0.)
+        ax.add_artist(anchored_ybox)
+        
+        
 # ----------------------------------------------------------------------------------------
 #%% CLUSTERING FUNCTIONS ###
 
