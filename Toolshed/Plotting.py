@@ -2368,24 +2368,28 @@ def SplitGDF(TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, Tra
         MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] > 0]],
                                TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] > 0]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] > 0]],
-                               TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]] ], axis=1)
+                               TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]],
+                               TransectInterGDFWave['WaveNetFlux'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]] ], axis=1)
         # Eroding VE
         MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] < 0]],
-                               TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]] ], axis=1)
+                               TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]],
+                               TransectInterGDFWave['WaveNetFlux'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]]], axis=1)
     else:
         # Subset into south and north transects
         MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                                TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
-                               TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]]], axis=1)
+                               TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]],
+                               TransectInterGDFWave[['WaveNetFlux']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
                                # TransectInterGDFWave[['WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
     
         MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                                TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
-                               TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]]], axis=1)
+                               TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]],
+                               TransectInterGDFWave[['WaveNetFlux']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
                                # TransectInterGDFWave[['WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
     
     # Remove rows with NaNs
@@ -3463,7 +3467,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         ax2 = ax.twinx()
         
         # scatter plot
-        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=5, alpha=0.8, zorder=10, edgecolors='none', label='Sat. VegEdge')
+        ax2.scatter(plotdate, plotsatdist, marker='o', c='#81A739', s=5, alpha=0.8, zorder=10, edgecolors='none', label=r'$VE$')
 
         # create error bar lines to fill between
         for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], ['#81A739']):
@@ -3491,7 +3495,7 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
         # plot trendlines (use interpolated version)
         vegav = MovingAverage(plotsatdistinterp, 3)
         if len(plotdate) >= 3:
-            ax2.plot(plotdate, vegav, color='#81A739', lw=1.5, label='3pt Mov. Av. VegEdge')
+            ax2.plot(plotdate, vegav, color='#81A739', lw=1.5, label=r'$VE$ 3pt Mov. Av.')
     
         # linear regression lines
         numx = mpl.dates.date2num(plotdate)
@@ -3502,17 +3506,31 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
             dd = mpl.dates.num2date(xx)
             pltax.plot(dd, polysat(xx), '--', color=clr, lw=1.5, zorder=10, label=r'$\Delta VE$ = '+str(round(m*365.25,2))+' m/yr')
     
-        # Vertical lines marking storm events
+            # Standard error for confidence intervals
+            y_pred = polysat(numx)
+            Resids = y - y_pred
+            Resid_StErr = np.std(Resids)
+            Conf = 0.99
+            t_value = scipy.stats.t.ppf((1 + Conf) / 2, len(numx) - 2)
+            mean_numx = np.mean(numx)
+            n = len(numx)
+            SE = Resid_StErr * np.sqrt(1/n + (numx - mean_numx)**2 / np.sum((numx - mean_numx)**2))
+            # Confidence bands
+            y_upper = y_pred + t_value * SE
+            y_lower = y_pred - t_value * SE
+            pltax.fill_between(numx, y_lower, y_upper, color=clr, edgecolor=None, alpha=0.3, label=r'$VE_{0.99CI}$')
+    
+    # Vertical lines marking storm events
         for Storm in range(len(StormsDF)):
             storm = ax.axvspan(xmin = StormsDF['Start'].iloc[Storm], xmax = StormsDF['End'].iloc[Storm], 
-                       facecolor='#5B618A', alpha=0.7, label='UK Storms')
+                       facecolor='#5B618A', alpha=0.7, label='UK Storm')
     
         ax2.title.set_text('Transect '+str(TransectID)+' - '+Title)
             
         ax2.set_ylim(min(plotsatdistinterp)-10, max(plotsatdistinterp)+30)
         ax2.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
         
-        leg1 = ax2.legend(loc=2, ncol=3)
+        leg1 = ax2.legend(loc=2, ncol=4)
         leg2 = ax.legend(handles=[winter,storm],loc=1, labelspacing=0.3, handletextpad=0)
         for patch, legwidth, legx in zip(leg2.get_patches(), [12,2], [0,6]):
             patch.set_width(legwidth)
@@ -4391,10 +4409,12 @@ def AnnualStackTimeseries(sitename, TransectInterGDF, TransectInterGDFWater, Tra
         plt.show()
         
         
-def PCAPlots(OutFilePath, sitename, MultivarGDF):
+def PCAPlots(OutFilePath, sitename, MultivarGDF, ClassLabs, ColNames=None, InsetLoc='upper left'):
 
     mpl.rcParams.update({'font.size':7})
     
+    if ColNames is not None:
+        MultivarGDF = MultivarGDF[ColNames]
     MultivarGDF.reset_index(drop=True,inplace=True)
     # Standardise data columns
     MultivarGDFStd = StandardScaler().fit_transform(MultivarGDF)
@@ -4407,19 +4427,6 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
     print('Explained Variance:')
     print(Var)
 
-    # Scree plot of explained variance
-    # plt.figure(figsize=(4,3), dpi=200)
-    # plt.bar(range(1, len(Var)+1), Var, alpha=0.5, align='center')
-    # plt.step(range(1, len(Var)+1), np.cumsum(Var), where='mid')
-    # plt.axhline(y=0.95, c='r', ls='--')
-    # # plt.axhline(y=0.05, c='r', ls='--')
-    # plt.xlabel('Explained variance ratio')
-    # plt.ylabel('Principal components')
-    # plt.tight_layout()
-    # figpath = os.path.join(OutFilePath,sitename+'_PCAScreePlot.png')
-    # plt.savefig(figpath)
-    # print('figure saved under '+figpath)
-    # # plt.show()
     
     # Find optimum number of components using a threshold for the explained variance
     CumVar = np.cumsum(Var)
@@ -4435,35 +4442,10 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
     print('Principal Components:')
     print(PCA_DF)
 
-    # Scree plot
-    # plt.figure(figsize=(4,3), dpi=200)
-    # plt.bar(range(1, len(New_Var)+1), New_Var, alpha=0.5, align='center')
-    # plt.step(range(1, len(New_Var)+1), np.cumsum(New_Var), where='mid')
-    # plt.axhline(y=0.9, c='r', ls='--')
-    # # plt.axhline(y=0.05, c='r', ls='--')
-    # plt.xlabel('Explained variance ratio')
-    # plt.ylabel('Principal components')
-    # plt.tight_layout()
-    # plt.show()
-
-    # 3D scatter plot (to investigate clustering or patterns in PCs)
-    # fig = plt.figure(figsize=(4,3), dpi=200)
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(PCA_DF['PC1'],PCA_DF['PC2'],PCA_DF['PC3'])
-    # ax.set_xlabel('PC1')
-    # ax.set_ylabel('PC2')
-    # ax.set_zlabel('PC3')
-    # plt.tight_layout()
-    # plt.show()
     
     # Biplot
     # Classify plot based on eroding vs accreting veg
-    colnames=[r'$\Delta$VE',
-             r'$\Delta$WL',
-             r'TZwidth$_{\eta}$',
-             r'$\theta_{max}$',
-             r'$\mu_{net}$']
-    MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, columns=colnames)
+    MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, columns=ClassLabs)
     MultivarGDFbiplot['Class'] = 1
     MultivarGDFbiplot['Class'].iloc[:int(len(MultivarGDFbiplot)/2)] = 0 # First half contains eroding Trs
     # Separate features and labels
@@ -4500,8 +4482,9 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
                      path_effects=[PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.7)])
     ax1.set_xlim(-1,1)
     ax1.set_ylim(-1,1)
-    ax1.yaxis.set_label_position('right')
-    ax1.yaxis.set_ticks_position('right')
+    if 'left' in InsetLoc:
+        ax1.yaxis.set_label_position('right')
+        ax1.yaxis.set_ticks_position('right')
     ax1.set_xticks(np.arange(-1,1.5,0.5))
     ax1.set_yticks(np.arange(-1,1.5,0.5))
     # ax1.axis('equal')
@@ -4510,7 +4493,7 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
     ax1.legend(loc='upper right')
     
     # Inset scree plot
-    ax2 = inset_axes(ax1, width='45%', height='35%', loc='upper left', borderpad=0)
+    ax2 = inset_axes(ax1, width='45%', height='30%', loc=InsetLoc, borderpad=0)
     varbar = ax2.bar(range(1, len(Var)+1), Var, facecolor=[0.5,0.5,0.5], alpha=0.5, align='center')
     for i in range(len(Var)):
         if i == 0:
@@ -4524,8 +4507,9 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF):
     # plt.axhline(y=0.05, c='r', ls='--', lw=0.5)
     ax2.grid(axis='y', c=[0.5,0.5,0.5], alpha=0.2, lw=0.5)
     ax2.set_ylabel(r'Explained $\sigma^2$ (%)', labelpad=0.5, path_effects=[PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.7)])
-    ax2.yaxis.set_label_position('right')
-    ax2.yaxis.set_ticks_position('right')
+    if 'left' in InsetLoc:
+        ax2.yaxis.set_label_position('right')
+        ax2.yaxis.set_ticks_position('right')
     ax2.set_yticks(np.arange(0,1,0.2))
     ax2.set_yticklabels(np.arange(0,100,20), path_effects=[PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.7)])
     ax2.tick_params(axis='y', which='major', length=2, pad=2)
