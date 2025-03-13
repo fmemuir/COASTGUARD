@@ -1443,7 +1443,7 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
 
 
 
-def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, Loc1=None, Loc2=None):
+def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, ColNames, Loc1=None, Loc2=None):
     """
     Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
     Each point on scatter is a single value on a cross-shore transect (i.e. mean value or rate over time).
@@ -1478,7 +1478,7 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, Loc1=None, Loc2=None)
     # MultivarGDF['WaveDiffus'] = MultivarGDF['WaveDiffus']*1000
     
     # Extract desired columns to an array for plotting
-    MultivarArray = np.array(MultivarGDF[['oldyoungRt','oldyungRtW','TZwidthMn','SlopeMax','WaveNetFlux']])#, 'WaveStabil']])
+    MultivarArray = np.array(MultivarGDF[ColNames])
     
     fs = 7
     # fs = 10 # PPT dimensions
@@ -1576,7 +1576,11 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, Loc1=None, Loc2=None)
                         axs[col,row].set_xticks([])
                         axs[col,row].set_yticks([])
 
-            
+    ErodePatch = mpatches.Patch(color='#C51B2F', label='Eroding Veg (-$\Delta VE$)')
+    AccretePatch = mpatches.Patch(color='#5499DE', label='Accreting Veg (+$\Delta VE$)')
+    plt.figlegend(handles=[ErodePatch, AccretePatch], loc='lower center', ncols=2, bbox_to_anchor=(0.5, -0.03), 
+                  framealpha=0.5, borderpad=0.2, labelspacing=0.2, handlelength=0.5, handletextpad=0.2) 
+       
     # align all yaxis labels in first column
     fig.align_ylabels(axs[:,0])
     
@@ -1587,7 +1591,7 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, Loc1=None, Loc2=None)
     else:
         figpath = os.path.join(filepath,sitename+'_MultivariateClustered_VegWaterTopoFlux_Heatmaps_%s-%s_%s-%s.png' % 
                                (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
-    plt.savefig(figpath)
+    plt.savefig(figpath, bbox_inches='tight') # tight ensures extra artists (figlegend) are accounted for
     print('figure saved under '+figpath)
     
     plt.show()

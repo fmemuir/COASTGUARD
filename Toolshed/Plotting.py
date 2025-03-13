@@ -2360,7 +2360,7 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     return
 
 
-def SplitGDF(TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, Loc1=None, Loc2=None):
+def SplitGDF(TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave, ColNames, Loc1=None, Loc2=None):
         
     if Loc1 is None:
         # If no transect subset locations are provided, slice based on eroding/accreting VE
@@ -2369,27 +2369,27 @@ def SplitGDF(TransectInterGDF,  TransectInterGDFWater, TransectInterGDFTopo, Tra
                                TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] > 0]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] > 0]],
                                TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]],
-                               TransectInterGDFWave['WaveNetFlux'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]] ], axis=1)
+                               TransectInterGDFWave['WaveQsNet'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] > 0]] ], axis=1)
         # Eroding VE
         MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[TransectInterGDF.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFWater['oldyungRtW'].iloc[TransectInterGDFWater.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[TransectInterGDFTopo.index[TransectInterGDF['oldyoungRt'] < 0]],
                                TransectInterGDFWave['WaveDiffus'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]],
-                               TransectInterGDFWave['WaveNetFlux'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]]], axis=1)
+                               TransectInterGDFWave['WaveQsNet'].iloc[TransectInterGDFWave.index[TransectInterGDF['oldyoungRt'] < 0]]], axis=1)
     else:
         # Subset into south and north transects
         MultivarGDF1 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc1[0]:Loc1[1]], 
                                TransectInterGDFWater['oldyungRtW'].iloc[Loc1[0]:Loc1[1]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc1[0]:Loc1[1]],
                                TransectInterGDFWave[['WaveDiffus']].iloc[Loc1[0]:Loc1[1]],
-                               TransectInterGDFWave[['WaveNetFlux']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
+                               TransectInterGDFWave[['WaveQsNet']].iloc[Loc1[0]:Loc1[1]] ], axis=1)
                                # TransectInterGDFWave[['WaveStabil']].iloc[Loc1[0]:Loc1[1]]], axis=1)
     
         MultivarGDF2 = pd.concat([ TransectInterGDF['oldyoungRt'].iloc[Loc2[0]:Loc2[1]], 
                                TransectInterGDFWater['oldyungRtW'].iloc[Loc2[0]:Loc2[1]],
                                TransectInterGDFTopo[['TZwidthMn','SlopeMax']].iloc[Loc2[0]:Loc2[1]],
                                TransectInterGDFWave[['WaveDiffus']].iloc[Loc2[0]:Loc2[1]],
-                               TransectInterGDFWave[['WaveNetFlux']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
+                               TransectInterGDFWave[['WaveQsNet']].iloc[Loc2[0]:Loc2[1]] ], axis=1)
                                # TransectInterGDFWave[['WaveStabil']].iloc[Loc2[0]:Loc2[1]]], axis=1)
     
     # Remove rows with NaNs
