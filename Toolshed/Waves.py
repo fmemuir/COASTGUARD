@@ -520,7 +520,7 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     for Tr in range(len(TransectInterGDF)):
         print('\r %i / %i transects processed' % (Tr, len(TransectInterGDF)), end='')
         
-        # Clculate the midpoint of each cross-shore transect geometry
+        # Calculate the midpoint of each cross-shore transect geometry
         MidPnt = Centroids.iloc[Tr].coords[0]
         IDLat = (np.abs(WaveY - MidPnt[1])).argmin()
         IDLong = (np.abs(WaveX - MidPnt[0])).argmin()
@@ -898,11 +898,9 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     # Time interval between wave observations
     TimeStep = np.mean(np.diff(WaveTime)).seconds
     
-    # Convert shore angle and wave directions to radians
-    # theta_rad = np.radians(ShoreAngle)
-    # Phi_0_rad = np.radians(WaveDir)
     # Calculate the angle difference (theta - Phi_0) in degrees
-    Alpha = (ShoreAngle - WaveDir + 180) % 360 - 180  # Compute angle diff in degrees
+    # modulo used to normalise angular differences between -180 and +180, accounting for circular angles
+    Alpha = (ShoreAngle - (WaveDir+90) + 180) % 360 - 180  # Compute angle diff in degrees
       
     # Initialize an array to store mu values, applying shadowing condition
     mu_values = []
