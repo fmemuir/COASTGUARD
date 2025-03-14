@@ -914,7 +914,7 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
                  ((6/5) * np.sin(np.radians(Alpha[i]))**2 - np.cos(np.radians(Alpha[i]))**2)
                  
             Qs = (K2) * (WaveHs[i]**(12/5)) * (WaveTp[i]**(1/5)) * \
-                 (np.cos(np.radians(Alpha[i]))**(6/5)) * \
+                 (abs(np.cos(np.radians(Alpha[i])))**(6/5)) * \
                  (np.sin(np.radians(Alpha[i])))
 
             mu_values.append(mu)
