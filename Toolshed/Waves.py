@@ -900,13 +900,16 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     
     # Calculate the angle difference (theta - Phi_0) in degrees
     # modulo used to normalise angular differences between -180 and +180, accounting for circular angles
+    # +90 to modify wave direction to be wave CREST orientation
     Alpha = ((WaveDir+90) - ShoreAngle + 360) % 360 - 180 # Compute angle diff in degrees
      
     # Initialize an array to store mu values, applying shadowing condition
     mu_values = []
     Qs_values = []
-    for i in range(len(WaveDir)):        
-        if Alpha[i] <= 0:  # Only include waves that are onshore (angle_diff <= 0)
+    for i in range(len(WaveDir)):    
+        # Only include waves that are onshore 
+        # if Alpha[i] <= 0:  
+        if -90 <= Alpha[i] <= 90:
             # Calculate the diffusivity (mu) using the formula for onshore waves
             # abs() value used to avoid NaNs from raising a negative number to a decimal power
             mu = (K2 / D) * (WaveTp[i]**(1/5)) * (WaveHs[i]**(12/5)) * \
@@ -920,9 +923,9 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
             mu_values.append(mu)
             Qs_values.append(Qs)
         else:
-            # Set mu to zero for offshore waves (shadowed conditions)
-            mu_values.append(0.0)
-            Qs_values.append(0.0)
+            # Block offshore waves (shadowed conditions)
+            mu_values.append(np.nan)
+            Qs_values.append(np.nan)
     mu_values = np.array(mu_values)
     WaveSedFlux = Qs_values
     
