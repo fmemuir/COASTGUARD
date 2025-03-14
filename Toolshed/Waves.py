@@ -834,7 +834,7 @@ def WaveClimate(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     # for each wave data point
     for i in range(len(WaveDir)):
         # Get smallest angle measured from clockwise and ignore shadowed waves
-        Alpha = ((ShoreAngle - WaveDir[i]) + 180) % 360-180
+        Alpha = ((WaveDir+90) - ShoreAngle + 360) % 360 - 180
         if Alpha > 0:
             # Wave shadowed = no wave energy = no diffusion effects
             # H0 = 0
@@ -900,8 +900,8 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     
     # Calculate the angle difference (theta - Phi_0) in degrees
     # modulo used to normalise angular differences between -180 and +180, accounting for circular angles
-    Alpha = (ShoreAngle - (WaveDir+90) + 180) % 360 - 180  # Compute angle diff in degrees
-      
+    Alpha = ((WaveDir+90) - ShoreAngle + 360) % 360 - 180 # Compute angle diff in degrees
+     
     # Initialize an array to store mu values, applying shadowing condition
     mu_values = []
     Qs_values = []
@@ -965,7 +965,7 @@ def CalcShoreAngle(TransectInterGDF, Tr):
     y_off = list(TransectInterGDF.iloc[Tr]['geometry'].coords)[1][1]
     
     # Translated to measure clockwise from N (same as waves)
-    ShoreAngle = 360 - np.rad2deg(math.atan2(y_off - y_on, x_off - x_on))
+    ShoreAngle = 180 - np.rad2deg(math.atan2(y_off - y_on, x_off - x_on))
     if ShoreAngle > 360:
         ShoreAngle = ShoreAngle - 360
 
@@ -998,8 +998,8 @@ def CalcAlpha(WaveDir, ShoreAngle, Tr):
         WaveAlpha = np.nan
     else:
         # modulo ensures value returned is same sign as dividend
-        WaveAlpha = [(Dir - ShoreAngle[Tr]) + 180 % 360-180 for Dir in WaveDir[Tr]]
-    
+        WaveAlpha = [((Dir+90) - ShoreAngle[Tr]) + 360 % 360-180 for Dir in WaveDir[Tr]]
+
     return WaveAlpha
 
 
