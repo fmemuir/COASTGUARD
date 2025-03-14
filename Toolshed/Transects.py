@@ -1459,7 +1459,7 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     WaveDates, WaveHs, WaveDir, WaveTp,\
         NormWaveHs, NormWaveDir, NormWaveTp, \
             StDevWaveHs, StDevWaveDir, StDevWaveTp, \
-                WaveSedFlux, WaveNetFlux, \
+                WaveQs, WaveQsNet, \
                 WaveDiffusivity, WaveStability, ShoreAngles,\
                     WaveDatesFD, WaveHsFD, WaveDirFD, WaveTpFD = Waves.SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath)
     WaveAlphas = []
@@ -1480,8 +1480,8 @@ def WavesIntersect(settings, TransectInterGDF, BasePath, output, lonmin, lonmax,
     TransectInterGDFWave['WaveAlphaFD'] = WaveAlphasFD
     TransectInterGDFWave['WaveTp'] = WaveTp
     TransectInterGDFWave['WaveTpFD'] = WaveTpFD
-    TransectInterGDFWave['WaveSedFlux'] = WaveSedFlux
-    TransectInterGDFWave['WaveNetFlux'] = WaveNetFlux
+    TransectInterGDFWave['WaveQs'] = WaveQs
+    TransectInterGDFWave['WaveQsNet'] = WaveQsNet
     TransectInterGDFWave['WaveDiffus'] = WaveDiffusivity
     TransectInterGDFWave['WaveStabil'] = WaveStability
     TransectInterGDFWave['ShoreAngle'] = ShoreAngles

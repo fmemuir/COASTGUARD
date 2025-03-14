@@ -285,7 +285,7 @@ def SampleWaves(settings, output, TransectInterGDF, WaveFilePath):
         # Calculate wave climate indicators per transect over timeframe of provided date range
         # TrWaveDiffusivity, TrWaveStability = WaveClimate(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
         # Above is old version; this one uses radians
-        TrWaveDiffusivity, TrWaveStability, TrWaveSedFlux, TrWaveNetFlux = WaveClimateSimple(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
+        TrWaveDiffusivity, TrWaveStability, TrWaveQs, TrWaveQsNet = WaveClimateSimple(ShoreAngle, SigWaveHeight[:,IDLat,IDLong], MeanWaveDir[:,IDLat,IDLong], PeakWavePer[:,IDLat,IDLong], WaveTime)
 
         # Don't need below condition if waves are just using the same output['dates'] list each transect
         # InterPnts = TransectInterGDF['interpnt'].iloc[Tr] # line intersections on each transect
@@ -445,9 +445,9 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
     StDevWaveTp : list of lists
         Standard deviation of peak wave period at the time of each satellite image processed in run
         (in seconds).
-    WaveSedFlux : list of lists
+    WaveQs : list of lists
         Sediment transport flux based on wave action (in m^3/s)
-    WaveNetFlux : list of floats
+    WaveQsNet : list of floats
         Net sediment transport flux based on wave action (in m^3/s)
     WaveDiffusivity : list of floats
         Wave diffusivity calculated from entire wave timeseries available (in m/s^2). 
@@ -506,8 +506,8 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
                    'StDevWaveHs': [],
                    'StDevWaveDir': [],
                    'StDevWaveTp': [],
-                   'WaveSedFlux': [], # transect specific
-                   'WaveNetFlux':[], # transect specific
+                   'WaveQs': [], # transect specific
+                   'WaveQsNet':[], # transect specific
                    'WaveDiffusivity': [], # transect specific
                    'WaveStability': [], # transect specific
                    'ShoreAngles': [], # transect specific
@@ -533,14 +533,14 @@ def SampleWavesSimple(settings, output, TransectInterGDF, WaveFilePath):
         
         # Calculate WaveDiffusivity and WaveStability for each transect based on transect-specific ShoreAngle
         # Uses full wave timeseries rather than just sat obs
-        TrWaveDiffusivity, TrWaveStability, TrWaveSedFlux, TrWaveNetFlux = WaveClimateSimple(ShoreAngle, 
+        TrWaveDiffusivity, TrWaveStability, TrWaveQs, TrWaveQsNet = WaveClimateSimple(ShoreAngle, 
                                                                SigWaveHeight[:, IDLat, IDLong], 
                                                                MeanWaveDir[:, IDLat, IDLong], 
                                                                PeakWavePer[:, IDLat, IDLong], 
                                                                WaveTime)
         # Append single values per-transect to results dictionary
-        ResultsDict['WaveSedFlux'].append(TrWaveSedFlux)
-        ResultsDict['WaveNetFlux'].append(TrWaveNetFlux)
+        ResultsDict['WaveQs'].append(TrWaveQs)
+        ResultsDict['WaveQsNet'].append(TrWaveQsNet)
         ResultsDict['WaveDiffusivity'].append(TrWaveDiffusivity)
         ResultsDict['WaveStability'].append(TrWaveStability)
         
@@ -760,7 +760,7 @@ def SampleWavesFuture(TransectInterGDF, WaveFilePath):
         
         # Calculate WaveDiffusivity and WaveStability for each transect based on transect-specific ShoreAngle
         # Uses full wave timeseries rather than just sat obs
-        TrWaveDiffusivity, TrWaveStability, TrWaveSedFlux, TrWaveNetFlux = WaveClimateSimple(ShoreAngle, 
+        TrWaveDiffusivity, TrWaveStability, TrWaveQs, TrWaveQsNet = WaveClimateSimple(ShoreAngle, 
                                                                SigWaveHeight[:, IDLat, IDLong], 
                                                                MeanWaveDir[:, IDLat, IDLong], 
                                                                PeakWavePer[:, IDLat, IDLong], 
@@ -927,12 +927,12 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
             mu_values.append(mu)
             Qs_values.append(Qs)
     mu_values = np.array(mu_values)
-    WaveSedFlux = Qs_values
+    WaveQs = Qs_values
     
     # # Net diffusivity (Mu_net) [m/s-2]
     # Since each interval should be equal, delta_{t,i} cancels out in the division
     WaveDiffusivity = np.nanmean(mu_values)  # Equivalent to sum(mu * delta_t) / sum(delta_t) for equal intervals
-    WaveNetFlux = np.nanmean(WaveSedFlux) # Equivalent to sum(Qs * delta_t) / sum(delta_t) for equal intervals
+    WaveQsNet = np.nanmean(WaveQs) # Equivalent to sum(Qs * delta_t) / sum(delta_t) for equal intervals
     # Stability index (Gamma) [dimensionless]
     Stabil_num = np.nansum(mu_values * TimeStep)
     Stabil_denom = np.nansum(np.abs(mu_values) * TimeStep)
@@ -940,7 +940,7 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
     # (low and high angle waves balanced out, no longshore wave effects)
     WaveStability = Stabil_num / Stabil_denom if Stabil_denom != 0 else 0
     
-    return WaveDiffusivity, WaveStability, WaveSedFlux, WaveNetFlux
+    return WaveDiffusivity, WaveStability, WaveQs, WaveQsNet
 
 
 def CalcShoreAngle(TransectInterGDF, Tr):
