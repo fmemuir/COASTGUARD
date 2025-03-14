@@ -3687,17 +3687,21 @@ def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
             plotL[lab] = plotwavedir[mask]
             colours.append(cmp(step[0]))
         # to dataframe for plotting
-        plotDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v, in plotL.items() ]))   
+        plotDF = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v, in plotL.items() ]))
         
         # For each wave height break, plot wave direction rose with 5deg bins
         # for i, c in zip(range(len(plotDF.columns)), np.arange(0,1,0.25)):
             # if i == 0: # first stage starts from 0 
         binsize = np.deg2rad(10)
         binset = np.arange(0,np.deg2rad(360)+binsize,binsize)
-        ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns, linewidth=0.5)
-            # else: # start each row with previous stage
-                # ax.bar(plotDF[plotDF.columns[i]], color=cmp(c), label=lab, bottom=plotDF[plotDF.columns[i-1]])
-            
+        WaveHist = ax.hist(plotDF, bins=binset, stacked=True, color=colours, label=plotDF.columns, linewidth=0.5)
+        ax.set_ylim(ax.get_ylim()) # lock radius axis limit
+        
+        # Plot semicircle representing land/sea at shore orientation
+        ShoreAngle = np.deg2rad(TransectInterGDFWave['ShoreAngle'].iloc[TransectID])
+        ax.fill_between(np.linspace(ShoreAngle, ShoreAngle-np.pi, 100), 0, round(ax.get_ylim()[1],-1), 
+                        fc='k', alpha=0.2, zorder=0)
+        
         ax.set_theta_zero_location('N')
         ax.set_theta_direction(-1)
         ax.set_xticklabels([])
