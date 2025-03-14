@@ -910,6 +910,10 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
         # Only include waves that are onshore 
         # if Alpha[i] <= 0:  
         if -90 <= Alpha[i] <= 90:
+            # Block offshore waves (shadowed conditions)
+            mu_values.append(np.nan)
+            Qs_values.append(np.nan)
+        else:
             # Calculate the diffusivity (mu) using the formula for onshore waves
             # abs() value used to avoid NaNs from raising a negative number to a decimal power
             mu = (K2 / D) * (WaveTp[i]**(1/5)) * (WaveHs[i]**(12/5)) * \
@@ -922,10 +926,6 @@ def WaveClimateSimple(ShoreAngle, WaveHs, WaveDir, WaveTp, WaveTime):
 
             mu_values.append(mu)
             Qs_values.append(Qs)
-        else:
-            # Block offshore waves (shadowed conditions)
-            mu_values.append(np.nan)
-            Qs_values.append(np.nan)
     mu_values = np.array(mu_values)
     WaveSedFlux = Qs_values
     
