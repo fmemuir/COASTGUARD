@@ -1484,7 +1484,7 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, ColNames, Loc1=None, 
     # fs = 10 # PPT dimensions
     mpl.rcParams.update({'font.size':fs})
 
-    fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(6.55,6.55), dpi=300)
+    fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(6.55,6.35), dpi=300)
     # fig, axs = plt.subplots(MultivarArray.shape[1],MultivarArray.shape[1], figsize=(12.68,6), dpi=300) # PPT dimensions
 
     # if no location of transects is specified, split array by eroding and accreting
