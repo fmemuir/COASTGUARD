@@ -3624,6 +3624,80 @@ def muHist(sitename, muDF_path, Titles=None):
     print('Plot saved under '+figname)
         
     plt.show()
+    
+    
+def QsHist(TransectInterGDFWave, Trs, sitename, Titles=None):
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+
+    # Read in CSV of timesteps and mu values for each transect to be plotted
+    QsDF = TransectInterGDFWave[['WaveQs', 'WaveQsNet']]
+    # xmin = []
+    # xmax = []
+    # for TransectID in TransectIDs:
+    #     xmin.append(muDF[TransectID].min())
+    #     xmax.append(muDF[TransectID].max())
+    # lims = (np.min(xmin), np.max(xmax))
+    # scaling for single column A4 page: (6.55,6)
+    mpl.rcParams.update({'font.size':7})
+    # use 2 subplots with one empty to be able to loop through them
+    # fig, axs = plt.subplots(1,1,figsize=(1.68,1.7), dpi=300, sharex=True)
+    fig, axs = plt.subplots(len(Trs),1,figsize=(1.88,3.1), dpi=300, sharex=True)
+    # common x label
+    fig.text(0.5,0.01,'$Q_{s}$ (m$^3$/s)', ha='center', va='center')
+    
+    for ax, (Tr, TransectID) in zip(axs, enumerate(Trs)):
+        
+        # Plot histogram with custom bins and colors
+        # cbins = np.arange(-0.03,0.031,0.01)
+        cbins=np.arange(-0.08,0.086,0.006)
+        cm = plt.cm.get_cmap('bwr_r') # red-white-blue
+        norm = mpl.colors.Normalize(vmin=cbins.min(), vmax=cbins.max())
+        colors = [cm(norm(b)) for b in cbins[:-1]]
+        
+        # bins = np.arange(-0.02,0.02,0.001)
+        bin_width = 0.01
+        half_range = 0.5
+        # Adjust bins to ensure 0 is in the center
+        bins = np.arange(-half_range, half_range + bin_width, bin_width) - (bin_width / 2)        
+        n, bins, patches = ax.hist(QsDF['WaveQs'].iloc[TransectID], bins=bins)
+
+        for patch in patches:
+            bin_mid = (patch.get_x() + patch.get_x() + patch.get_width()) / 2
+            patch.set_facecolor(cm(norm(bin_mid)))  # Set color based on normalized bin position
+
+        # Plot Qs,net
+        ax.axvline(QsDF['WaveQsNet'].iloc[TransectID], c='k', alpha=0.3,
+                   ls='--', lw=0.7)
+        ax.text(x=QsDF['WaveQsNet'].iloc[TransectID], y=np.max(n)-(0.1*np.max(n)),
+                s=r"$Q_{s,net}$ = %.3f m$^3$/s" % QsDF['WaveQsNet'].iloc[TransectID],
+                fontsize=6, ha='center')
+        
+        ax.set_xticks(np.arange(-0.2,0.3,0.1))
+        ax.set_xticks(np.arange(-0.2,0.3,0.01), minor=True)
+        # ax.set_yscale('log')
+        ax.set_ylim(0,np.max(n))
+        ax.set_xlim(-0.2,0.2)
+        # ax.set_xlabel('Wave diffusivity (m/s$^2$)')
+        if Titles is not None:
+            ax.set_title('Transect '+str(TransectID)+' - '+Titles[Tr], pad=1)
+        else:
+            ax.set_title('Transect '+str(TransectID), pad=1)
+        ax.tick_params(axis='y', which='both', left=False, labelleft=False)
+        
+        figID += '_'+str(TransectID)
+    
+    plt.tight_layout()
+    # plt.subplots_adjust(left=0.08,right=0.95, wspace=0, hspace=0.25)
+    
+    figname = os.path.join(outfilepath,sitename + '_WaveSedFluxHist_Transect'+figID+'.png')
+    plt.savefig(figname, bbox_inches='tight', dpi=300, transparent=True)
+    print('Plot saved under '+figname)
+        
+    plt.show()
         
     
 def TrWaveRose(sitename, TransectInterGDFWave, TransectIDs):
@@ -4413,12 +4487,17 @@ def AnnualStackTimeseries(sitename, TransectInterGDF, TransectInterGDFWater, Tra
         plt.show()
         
         
-def PCAPlots(OutFilePath, sitename, MultivarGDF, ClassLabs, ColNames=None, InsetLoc='upper left'):
+def PCAPlots(OutFilePath, sitename, MultivarGDF, ClassLabs=None, InsetLoc='upper left'):
 
     mpl.rcParams.update({'font.size':7})
     
-    if ColNames is not None:
-        MultivarGDF = MultivarGDF[ColNames]
+    if ClassLabs is not None:
+        MultivarGDF = MultivarGDF[ClassLabs.keys()]
+    MultivarGDF.sort_index(inplace=True)
+    # Tr indexes for figure name
+    Loc1 = (MultivarGDF.index[0], MultivarGDF.index[int(len(MultivarGDF)/2)-1])
+    Loc2 = (MultivarGDF.index[int(len(MultivarGDF)/2)], MultivarGDF.index[-1])
+    
     MultivarGDF.reset_index(drop=True,inplace=True)
     # Standardise data columns
     MultivarGDFStd = StandardScaler().fit_transform(MultivarGDF)
@@ -4449,7 +4528,10 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF, ClassLabs, ColNames=None, Inset
     
     # Biplot
     # Classify plot based on eroding vs accreting veg
-    MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, columns=ClassLabs)
+    if ClassLabs is not None:
+        MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, columns=ClassLabs.values())
+    else:
+        MultivarGDFbiplot = pd.DataFrame(data=MultivarGDF, columns=MultivarGDF.columns)
     MultivarGDFbiplot['Class'] = 1
     MultivarGDFbiplot['Class'].iloc[:int(len(MultivarGDFbiplot)/2)] = 0 # First half contains eroding Trs
     # Separate features and labels
@@ -4494,10 +4576,11 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF, ClassLabs, ColNames=None, Inset
     # ax1.axis('equal')
     ax1.set_xlabel(f'PC1 [explains {round(Var[0]*100,1)}% of $\sigma^2$]')
     ax1.set_ylabel(f'PC2 [explains {round(Var[1]*100,1)}% of $\sigma^2$]')
-    ax1.legend(loc='upper right')
+    ax1.legend(loc='upper right', handletextpad=0.1)
     
     # Inset scree plot
     ax2 = inset_axes(ax1, width='45%', height='30%', loc=InsetLoc, borderpad=0)
+    ax2.patch.set_alpha(0.5)
     varbar = ax2.bar(range(1, len(Var)+1), Var, facecolor=[0.5,0.5,0.5], alpha=0.5, align='center')
     for i in range(len(Var)):
         if i == 0:
@@ -4527,7 +4610,8 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF, ClassLabs, ColNames=None, Inset
     ax2.set_ylim(0,1)
     # Save full biplot fig
     plt.tight_layout()
-    figpath = os.path.join(OutFilePath,sitename+'_PCABiplot.png')
+    figpath = os.path.join(OutFilePath,sitename+'_PCABiplot_%s-%s_%s-%s.png' % 
+                           (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
     plt.savefig(figpath)
     print('figure saved under '+figpath)
     plt.show()
