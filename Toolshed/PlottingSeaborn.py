@@ -1289,6 +1289,32 @@ def ThresholdViolin(sitename, filepath, sites):
     plt.show()
     
   
+def QsViolin(Qs_Trs, WaveTime, StormsDF):
+
+    Qs_Trs_Storm = pd.DataFrame(Qs_Trs, index=WaveTime)
+    Qs_Trs_Storm['Storm'] = 0
+    for _, row in StormsDF.iterrows():
+        mask = (Qs_Trs_Storm.index >= row['starttime']) & (Qs_Trs_Storm.index <= row['endtime'])
+        Qs_Trs_Storm.loc[mask, 'Storm'] = 1
+        
+    # fig, ax = plt.subplots(1,1)
+    # for Tr, clr in zip([1325, 271], ['b','r']):
+    #     ax.hist(Qs_Trs_Storm[Tr][ Qs_Trs_Storm['Storm']==0], bins=np.arange(-0.2,0.21,0.01), fc='k', alpha=0.5)
+    #     ax.hist(Qs_Trs_Storm[Tr][ Qs_Trs_Storm['Storm']==1], bins=np.arange(-0.2,0.21,0.01), fc=clr, alpha=0.5)
+    # plt.show()  
+
+    Qs_Trs_Fair = Qs_Trs_Storm[[1325,271]][Qs_Trs_Storm['Storm']==0]
+    Qs_Trs_Stormy = Qs_Trs_Storm[[1325,271]][Qs_Trs_Storm['Storm']==1]
+    fig, ax = plt.subplots(1,1)
+    # sns.violinplot(data = Qs_Trs_Fair, ax=ax)
+    sns.violinplot(data = Qs_Trs_Stormy, ax=ax, palette='bwr_r')
+    plt.show()
+    
+    fig, ax = plt.subplots(1,1)
+    sns.boxplot(data = Qs_Trs_Fair, ax=ax, palette='bwr_r')
+    # sns.violinplot(data = Qs_Trs_Stormy, ax=ax)
+    plt.show()
+
     
 def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None):
     """
