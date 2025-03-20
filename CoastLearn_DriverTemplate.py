@@ -56,6 +56,8 @@ CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWa
 # Subset and interpolate timeseries to match up to same dates
 # TransectIDs = [271]
 TransectIDs = [1325]
+# TransectIDs = [66]
+
 
 #%% Interpolate variables to daily
 # Plot Interpolation Methods
@@ -66,10 +68,6 @@ for Tr in TransectIDs:
     
 #%% Plot VE, WL and wave height for storm
 Predictions.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
-
-#%% Load In Pre-trained Model
-with open(os.path.join(filepath, sitename, 'predictions', '20250307-110109_daily_optimal.pkl'), 'rb') as f:
-    PredDict = pickle.load(f)
 
 #%% Separate Training and Validation
 TransectDF = TransectDF.loc[:datetime(2024,7,31)]
@@ -91,7 +89,7 @@ TargFeats = ['VE', 'WL']
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_optimal_noES'], 
+                                                              MLabels=['daily_optimal_'], 
                                                               ValidSizes=[0.1], 
                                                               TSteps=[10],
                                                               TrainFeatCols=[TrainFeats],
@@ -106,6 +104,10 @@ PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF,
 #                                                               TargFeatCols=[TargFeats]*len(OptParam),
 #                                                               TrainTestPortion=datetime(2023,9,1))
 # Needs additional lines for TransectID
+#%% Load In Pre-trained Model
+with open(os.path.join(filepath, sitename, 'predictions', '20250307-113621_daily_optimal_val10.pkl'), 'rb') as f:
+    PredDict = pickle.load(f)
+
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
@@ -226,9 +228,10 @@ FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain
 
 #%% Plot Future WL and VE
 for mID in range(len(FutureOutputs['mlabel'])): 
-    PlotDateRange = [datetime(2023,9,1), datetime(2023,11,5)] # Storm Babet
-    Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
-    # Predictions.PlotFuture(mID, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename, PlotDateRange)
+    PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
+    # Predictions.PlotFuture(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
+    Predictions.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                                filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
 
 #%%
 Predictions.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
@@ -247,6 +250,13 @@ Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, siten
 
 #%%
 Predictions.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+
+#%% Thresholding Past Observations
+
+ImpactClass = Predictions.ClassifyImpact(TransectDFTrain,Method='combi')
+
+# FutureImpacts = Predictions.ApplyImpactClasses(ImpactClass, FutureOutputs)
+Predictions.PlotImpactClasses(ImpactClass, TransectDFTrain)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
