@@ -1241,6 +1241,101 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
     FutureOutputs['XshoreDiff'] = Difflist
     return FutureOutputs
     
+
+
+#%% CLASSIFICATION OF IMPACTS ###
+
+def ClassifyImpact(TransectDF, Method='pcnt'):
+    
+    # Define dictionary
+    ImpactClass = {'WL':[], 'VE':[]}
+    
+    # For each type of shoreline
+    for SL in ['WL','VE']:
+        # If using percentiles
+        if Method=='pcnt':
+            # Mid impact is between 5th and 25th percentile
+            MidQuant = TransectDF[SL].quantile(q=0.25)
+            # High impact is lower than 5th percentile
+            LowQuant =  TransectDF[SL].quantile(q=0.05)
+            ImpactClass[SL+'_MidLim'] = MidQuant
+            ImpactClass[SL+'_HighLim'] = LowQuant
+            
+            for i in range(len(TransectDF[SL])):
+                if TransectDF[SL].iloc[i] <= LowQuant:
+                    # High impact
+                    ImpactClass[SL].append(3)
+                elif LowQuant < TransectDF[SL].iloc[i] < MidQuant:
+                    # Mid impact
+                    ImpactClass[SL].append(2)
+                else:
+                    # Low impact
+                    ImpactClass[SL].append(1)
+        
+        elif Method=='combi':
+            # Mid impact is between 5th and 25th percentile
+            MidQuant = TransectDF[SL].quantile(q=0.25)
+            # High impact is lower than 5th percentile
+            LowQuant =  TransectDF[SL].quantile(q=0.05)
+            ImpactClass[SL+'_MidLim'] = MidQuant
+            ImpactClass[SL+'_HighLim'] = LowQuant
+            
+            Slopes = TransectDF[SL].diff() / TransectDF.index.to_series().diff().dt.total_seconds()
+            # Mid impact is between 5th and 25th percentile
+            MidSlope = Slopes.quantile(q=0.25)
+            # High impact is lower than 5th percentile
+            SteepSlope =  Slopes.quantile(q=0.05)
+            ImpactClass[SL+'_MidSlope'] = MidSlope
+            ImpactClass[SL+'_HighSlope'] = SteepSlope
+            
+            for i in range(len(TransectDF[SL])):
+                # Use quantile as base class
+                if TransectDF[SL].iloc[i] <= LowQuant:
+                    # High impact
+                    ImpactClass[SL].append(3)
+                elif TransectDF[SL].iloc[i] <= MidQuant:
+                    # Mid impact
+                    ImpactClass[SL].append(2)
+                else:
+                    # Low impact
+                    ImpactClass[SL].append(1)
+                # Add mid and steep slopes on top
+                if Slopes.iloc[i] <= SteepSlope:
+                    ImpactClass[SL][-1] = max(ImpactClass[SL][-1],3)
+                elif Slopes.iloc[i] <= MidSlope:
+                    ImpactClass[SL][-1] = max(ImpactClass[SL][-1],2)
+        
+        # Or if using slope        
+        else:
+            Slopes = TransectDF[SL].diff() / TransectDF.index.to_series().diff().dt.total_seconds()
+            # Mid impact is between 5th and 25th percentile
+            MidQuant = Slopes.quantile(q=0.25)
+            # High impact is lower than 5th percentile
+            LowQuant =  Slopes.quantile(q=0.05)
+            ImpactClass[SL+'_MidSlope'] = MidQuant
+            ImpactClass[SL+'_HighSlope'] = LowQuant
+            
+            for i in range(len(TransectDF[SL])):
+                if Slopes.iloc[i] <= LowQuant:
+                    ImpactClass[SL].append(3)
+                elif LowQuant < Slopes.iloc[i] < MidQuant:
+                    ImpactClass[SL].append(2)
+                else:
+                    ImpactClass[SL].append(1)
+            
+        ImpactClass[SL] = pd.Series(ImpactClass[SL], index=TransectDF.index)
+        
+    ImpactClass['Sum'] = ImpactClass['WL'] + ImpactClass['VE']
+    
+
+
+    return ImpactClass
+
+
+# def ApplyImpactClasses(ImpactClass, FutureOutputs, mID=0):
+    
+    
+
 # ----------------------------------------------------------------------------------------
 #%% PLOTTING FUNCTIONS ###
 # SCALING:
@@ -1945,7 +2040,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sit
 
 
 
-def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, PlotDateRange=None):
+def PlotFuture(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -1969,30 +2064,121 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
 
     """   
        
+    fig, ax = plt.subplots(2,1, figsize=(6.5,6.5))
+
+    TrainStart = mdates.date2num(TransectDFTrain.index[0])
+    TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
+    ValEnd = mdates.date2num(TransectDFTrain.index[-1])
+    TestEnd = mdates.date2num(TransectDFTest.index[-1])
+    # TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
+    # ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
+    # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
+    # ax.add_patch(TrainT) 
+    # ax.add_patch(ValT)
+    ax[0].axvline(TrainEnd, c='k', alpha=0.5, lw=1, ls='--')
+    ax[0].axvline(ValEnd, c='k', alpha=0.5, lw=1, ls='--')
     
+    ax[0].text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
+    ax[0].text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
+    ax[0].text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
+    
+    ax[0].set_xlim(TrainStart,TestEnd)
+    ax[1].set_xlim(ValEnd,TestEnd)
+        
+    
+    lw = 0.8 # line width
+    for a in [ax[0], ax[1]]:
+        for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
+            # Calculate smoothed version of predictions
+            Smooth = MovingAverage(FutureOutputs['output'][mID]['future'+SL], 10)
+            # Plot cross-shore distances through time for WL and VE past
+            a.scatter(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]).index, 
+                        pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), 
+                        s=0.8, color='k', marker='.', label=f"${SL}$")
+            # Plot predicted WL and VE
+            a.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
+            # Plot smoothed predicted WL and VE
+            a.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
+            
+
+    handles, labels = ax[0].get_legend_handles_labels() 
+    legorder = [3,0,4,1,5,2]  
+    
+    ax[0].set_xlabel('Date (yyyy)')
+    ax[1].set_xlabel('Date (yyyy-mm)')
+    ax[0].set_ylabel('Cross-shore distance (m)')
+    ax[0].legend(handles=[handles[i] for i in legorder],
+                labels=[labels[i] for i in legorder], 
+                loc='upper left', ncols=3,
+                handlelength=1, columnspacing=1, handletextpad=0.6)
+    ax[0].set_ylim(0,600)
+    ax[0].tick_params(axis='both',which='major',pad=2)
+    ax[0].xaxis.labelpad=2
+    ax[0].yaxis.labelpad=2
+    
+    handles, labels = ax[1].get_legend_handles_labels() 
+    legorder = [3,0,4,1,5,2]  
+    ax[1].legend(handles=[handles[i] for i in legorder],
+                labels=[labels[i] for i in legorder], 
+                loc='upper left', ncols=3,
+                handlelength=1, columnspacing=1, handletextpad=0.6)
+    # top line
+    fig.add_artist(ConnectionPatch(
+    xyA=(ValEnd,0), coordsA=ax[0].transData,
+    xyB=(0,1), coordsB=ax[1].transAxes,
+    color='k', alpha=0.3, linewidth=0.5))   
+    # bottom line
+    fig.add_artist(ConnectionPatch(
+    xyA=(TestEnd, 0), coordsA=ax[0].transData,
+    xyB=(1,1), coordsB=ax[1].transAxes,
+    color='k', alpha=0.3, linewidth=0.5))  
+
+    plt.tight_layout()
+    plt.show()
+    
+    # StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
+    # EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
+    StartTime = mdates.num2date(ax[0].axis()[0]).strftime('%Y-%m-%d')
+    EndTime = mdates.num2date(ax[0].axis()[1]).strftime('%Y-%m-%d')
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+
+
+def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, PlotDateRange, Storm=None):
+    """
+    Plot future waterline (WL) and vegetation edge (VE) predictions for the 
+    chosen cross-shore transect.
+    FM Jan 2025
+
+    Parameters
+    ----------
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    VarDFDay : DataFrame
+        DataFrame of past data interpolated to daily timesteps (with temporal index).
+    TransectDFTest : DataFrame
+        DataFrame of past data sliced from most recent end of TransectDF to use for testing the model.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+
+
+    """   
+       
     fig, ax = plt.subplots(1,1, figsize=(6.5,3.35), dpi=300)
     
-    if PlotDateRange is None:
-        TrainStart = mdates.date2num(TransectDFTrain.index[0])
-        TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
-        ValEnd = mdates.date2num(TransectDFTrain.index[-1])
-        TestEnd = mdates.date2num(TransectDFTest.index[-1])
-        # TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
-        # ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
-        # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
-        # ax.add_patch(TrainT) 
-        # ax.add_patch(ValT)
-        ax.axvline(TrainEnd, c='k', alpha=0.5, lw=1, ls='--')
-        ax.axvline(ValEnd, c='k', alpha=0.5, lw=1, ls='--')
+    if Storm is not None:
+        rectwidth = mdates.date2num(Storm[0]) - mdates.date2num(Storm[1])
+        rect = mpatches.Rectangle((mdates.date2num(datetime(2023,10,18)), -200), rectwidth, 1000, 
+                                  fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+        ax.add_patch(rect)
         
-        plt.text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
-        plt.text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
-        plt.text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
-        
-        plt.xlim(TrainStart,TestEnd)
-    else:
-        plt.xlim(mdates.date2num(PlotDateRange[0]),mdates.date2num(PlotDateRange[1]))
-    
+    plt.xlim(mdates.date2num(PlotDateRange[0]),mdates.date2num(PlotDateRange[1]))
+
     lw = 0.8 # line width
     for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
         # Calculate smoothed version of predictions
@@ -2028,8 +2214,9 @@ def PlotFuture(mID, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, si
     StartTime = mdates.num2date(plt.axis()[0]).strftime('%Y-%m-%d')
     EndTime = mdates.num2date(plt.axis()[1]).strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'.png')
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+
 
 
 def PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, PlotDateRange=None):
@@ -2453,6 +2640,33 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
                            sitename+'_VEWLErrorViolinLinReg_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
+  
+    
+def PlotImpactClasses(ImpactClass, TransectDF):
+    
+    fig, ax = plt.subplots(1,1, figsize=(6.5,3.25), dpi=300)
+        
+    msize = 5
+    for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
+        # Plot cross-shore distances through time for WL and VE past
+        ax.plot(TransectDF[SL].index, TransectDF[SL], 
+                   color=SLc, lw = 0.8, label=f"${SL}$")
+        ax.scatter(TransectDF[SL].index[ImpactClass[SL]==3], TransectDF[SL][ImpactClass[SL]==3], 
+                   s=msize, c='red')
+        ax.scatter(TransectDF[SL].index[ImpactClass[SL]==2], TransectDF[SL][ImpactClass[SL]==2], 
+                   s=msize, c='orange')
+        ax.scatter(TransectDF[SL].index[ImpactClass[SL]==1], TransectDF[SL][ImpactClass[SL]==1], 
+                   s=msize, c='green')
+
+    ax.set_xlabel('Date (yyyy)')
+
+    ax.set_ylim(0,600)
+    ax.tick_params(axis='both',which='major',pad=2)
+    ax.xaxis.labelpad=2
+    ax.yaxis.labelpad=2
+    
+    plt.tight_layout()
+    plt.show()
     
     
 def multicolor_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', anchorpad=0,**kw):
@@ -2478,7 +2692,12 @@ def multicolor_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', an
                                           bbox_to_anchor=bboxes, 
                                           bbox_transform=ax.transAxes, borderpad=0.)
         ax.add_artist(anchored_ybox)
+      
         
+        
+      
+        
+      
         
 # ----------------------------------------------------------------------------------------
 #%% CLUSTERING FUNCTIONS ###
