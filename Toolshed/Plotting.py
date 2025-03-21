@@ -4560,11 +4560,11 @@ def PCAPlots(OutFilePath, sitename, MultivarGDF, ClassLabs=None, InsetLoc='upper
     for i in range(n_coeffs):
         ax1.arrow(0, 0, coeffs[i,0], coeffs[i,1], color='k', alpha=0.5, head_width=0.03, zorder=5)
         # Use vector math to plot annotations along the direction of each arrow
-        xtext = 0 + (coeffs[i,0] - 0) * 7
+        xtext = 2 + (coeffs[i,0] - 0) * 7
         ytext = 0 + (coeffs[i,1] - 0) * 7
         ax1.annotate(text=MultivarGDFbiplot.columns[i], xy=(coeffs[i,0], coeffs[i,1]), 
                      xytext=(xtext,ytext), textcoords='offset points',
-                     color='k', ha='right', va='center', zorder=5,
+                     color='k', ha='left', va='center', zorder=5,
                      path_effects=[PathEffects.withStroke(linewidth=1, foreground='w', alpha=0.7)])
     ax1.set_xlim(-1,1)
     ax1.set_ylim(-1,1)
