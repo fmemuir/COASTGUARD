@@ -561,6 +561,55 @@ def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
     return loss
 
 
+def ShoreshopLoss(y_true, y_pred):
+    """
+    Apply a loss function to the shoreline prediction model using the Shoreshop
+    guidelines function, which is a mix of the RMSE (normalised), Pearson 
+    Correlation and Standard Deviation (normalised). More info at:
+    https://github.com/ShoreShop/ShoreModel_Benchmark/tree/main
+    
+    Note: tf math functions are used because they return tensors, not arrays or
+    scalars. This is so GPU acceleration and backpropagation can take place.
+    FM Mar 2025
+    
+    Parameters
+    ----------
+    y_true : float, array
+        Actual values.
+    y_pred : float, array
+        Predicted values to measure against actual values.
+
+    Returns
+    -------
+    loss : float
+        Measure of error based on actual vs predicted.
+
+    """
+    # Calculate RMSE
+    rmse_pred = tf.sqrt(tf.reduce_mean(tf.square(y_true - y_pred)))
+    
+    # Calculate Standard Deviation
+    std_targ = tf.math.reduce_std(y_true)
+    std_pred = tf.math.reduce_std(y_pred)
+    
+    # Calculate normalised versions of RMSE and StDv
+    rmse_norm = rmse_pred / (std_targ + 1e-8)  # Avoid division by zero
+    std_norm = std_pred / (std_targ + 1e-8)
+    
+    # Calculate Correlation Coefficient
+    mean_true = tf.reduce_mean(y_true)
+    mean_pred = tf.reduce_mean(y_pred)
+    
+    num = tf.reduce_sum((y_true - mean_true) * (y_pred - mean_pred))
+    den = tf.sqrt(tf.reduce_sum(tf.square(y_true - mean_true)) * tf.reduce_sum(tf.square(y_pred - mean_pred)) + 1e-8)    
+    corr = num / den  # Pearson correlation coefficient
+    
+    # Calculate final loss 
+    loss = tf.sqrt(tf.square(0 - rmse_norm) + tf.square(1 - corr) + tf.square(1 - std_norm))
+    
+    return loss
+
+
 def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCols, TrainTestPortion=None, UseSMOTE=False):
     """
     Prepare features (X) and labels (y) for feeding into a NN for timeseries prediction.
@@ -630,6 +679,7 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
                 'seqlen':[],        # length of temporal sequence in timesteps to break data up into
                 'trainfeats':[],    # column names of training features
                 'targfeats':[],     # column names of target features
+                'validsize':[],     # portion (decimal) of training data to set aside as validation 
                 'X_train':[],       # training features/cross-shore values (scaled and filled to daily)
                 'y_train':[],       # training target/cross-shore VE and WL (scaled and filled to daily)
                 'X_val':[],         # validation features/cross-shore values
@@ -660,6 +710,7 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
         
         # Separate test and train data and add to prediction dict (can't stratify when y is multicolumn)
         X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=ValidSize, random_state=0)#, stratify=y)
+        PredDict['validsize'].append(ValidSize)
         PredDict['X_val'].append(X_val)
         PredDict['y_val'].append(y_val)
         
@@ -678,7 +729,7 @@ def PrepData(TransectDF, MLabels, ValidSizes, TSteps, TrainFeatCols, TargFeatCol
     return PredDict, VarDFDay_scaled, VarDFDayTest_scaled
 
 
-def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, hiddenLscale, CostSensitive=False, DynamicLR=False):
+def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt, hiddenLscale, LossFn='mse', DynamicLR=False):
     """
     Compile the NN using the settings and data stored in the NN dictionary.
     FM Sept 2024
@@ -756,13 +807,16 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         else:
             Opt = Adam(learning_rate=float(PredDict['learnRt'][mID]))
                        
-        if CostSensitive:
+        if LossFn == 'CostSensitive':
             print('Using cost sensitive loss function...')
             # Define values for false +ve and -ve and create matrix
             falsepos_cost = 1   # Inconvenience of incorrect classification
             falseneg_cost = 100 # Risk to infrastructure by incorrect classification
             binary_thresh = 0.5
             LossFn = CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh)
+        
+        elif LossFn == 'Shoreshop':
+            LossFn = ShoreshopLoss
         else:
             # Just use MSE loss fn and static learning rates
             LossFn = 'mse'
@@ -2040,7 +2094,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sit
 
 
 
-def PlotFuture(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename):
+def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -2067,7 +2121,10 @@ def PlotFuture(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, filepath
     fig, ax = plt.subplots(2,1, figsize=(6.5,6.5))
 
     TrainStart = mdates.date2num(TransectDFTrain.index[0])
-    TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
+    # TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
+    TrainEnd = mdates.date2num(TransectDFTrain.index[
+        round(len(TransectDFTrain)-(len(TransectDFTrain)*PredDict['validsize'][mID]))
+        ])
     ValEnd = mdates.date2num(TransectDFTrain.index[-1])
     TestEnd = mdates.date2num(TransectDFTest.index[-1])
     # TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
@@ -2141,7 +2198,7 @@ def PlotFuture(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, filepath
     StartTime = mdates.num2date(ax[0].axis()[0]).strftime('%Y-%m-%d')
     EndTime = mdates.num2date(ax[0].axis()[1]).strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_Tr'+str(Tr)+'.png')
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
@@ -2637,7 +2694,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     plt.show()
     
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_VEWLErrorViolinLinReg_Tr'+str(Tr)+'.png')
+                           sitename+'_VEWLErrorViolinLinReg_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
   

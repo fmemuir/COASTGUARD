@@ -89,7 +89,7 @@ TargFeats = ['VE', 'WL']
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_optimal_'], 
+                                                              MLabels=['daily_optimal_ShoreshopFn'], 
                                                               ValidSizes=[0.1], 
                                                               TSteps=[10],
                                                               TrainFeatCols=[TrainFeats],
@@ -118,6 +118,7 @@ PredDict = Predictions.CompileRNN(PredDict,
                                   dropoutRt=[0.2],
                                   learnRt=[0.001],
                                   hiddenLscale=[6],
+                                  LossFn='Shoreshop',
                                   DynamicLR=False)
 
 # PredDict = Predictions.CompileRNN(PredDict, 
@@ -157,7 +158,7 @@ for i in range(len(HPfiles)):
     for key in PredDictCombi.keys():
         PredDictCombi[key].extend(PredDictHP[key])
         
-#%%
+#%% Plot Hyperparameter scattergram
 # Predictions.PlotParaCoords(PredDictCombi)
 
 Predictions.PlotHPScatter(PredDictCombi)
@@ -229,9 +230,9 @@ FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain
 #%% Plot Future WL and VE
 for mID in range(len(FutureOutputs['mlabel'])): 
     PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
-    # Predictions.PlotFuture(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
-    Predictions.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-                                filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
+    Predictions.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
+    # Predictions.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                                # filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
 
 #%%
 Predictions.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
@@ -241,14 +242,10 @@ Predictions.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutput
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
 FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 
-#%%
+#%% Violin and scatter plots of distance differences between predicted and actual VEs and WLs
 mID=0
-Predictions.PlotTestScatter(FutureOutputs, TransectDFTest, mID, TransectIDs[0], filepath, sitename)
-
-#%% Violin plot of distance differences between predicted and actual VEs and WLs
-Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
-
-#%%
+# Predictions.PlotTestScatter(FutureOutputs, TransectDFTest, mID, TransectIDs[0], filepath, sitename)
+# Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
 Predictions.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
 
 #%% Thresholding Past Observations
