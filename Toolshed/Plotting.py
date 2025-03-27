@@ -3560,6 +3560,189 @@ def VegStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDF, TransectID
     print('Plot saved under '+figname)
     
     plt.show()
+    
+    
+    
+def VEWLBWStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDFWater, TransectIDs, Titles=None, Hemisphere='N', ShowPlot=True):
+    """
+    FM Mar 2025
+
+    Parameters
+    ----------
+    figpath : str
+        Path to folder to save plots.
+    sitename : str
+        Name of site of interest.
+    CSVpath : str
+        Path to CSV which stores storm timeline data.
+    TransectInterGDF : GeoDataFrame
+        GeoDataFrame of cross-shore transects intersected with veg edge lines.
+    TransectIDs : list
+        List of transect IDs to plot.
+    Hemisphere : str, optional
+        Northern (N) or Southern (S) Hemisphere for marking 'winter' season. The default is 'N'.
+    ShowPlot : bool, optional
+        Flag to turn plt.show() on or off (if plotting lots of transects). The default is True.
+
+
+    """
+    # Read in errors CSV
+    StormsDF = pd.read_csv(CSVpath)
+    StormsDF = StormsDF.iloc[::-1]
+    StormsDF['Start'] = pd.to_datetime(StormsDF['Start'], format='%d/%m/%Y')
+    StormsDF['End'] = pd.to_datetime(StormsDF['End'], format='%d/%m/%Y')
+    
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+    figID = ''
+    
+    if ShowPlot is False:
+        plt.ioff()
+    
+    # if more than one Transect ID is to be compared on a single plot
+    if type(TransectIDs) == list:
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        fig, axs = plt.subplots(len(TransectIDs)*3,1,figsize=(6.55,7), sharex=True)
+    else:
+        TransectIDs = [TransectIDs]
+        # scaling for single column A4 page
+        mpl.rcParams.update({'font.size':7})
+        # use 2 subplots with one empty to be able to loop through them
+        fig, axs = plt.subplots(1,1,figsize=(6.55,4), sharex=True)
+        axs = [axs] # to be able to loop through
+    
+    PlotVars = ['distances', 'wlcorrdist', 'beachwidth']
+    PlotColours = {'distances':'#81A739', 'wlcorrdist':'#0A1DAE', 'beachwidth':'#4F948A'}
+    PlotLabels = {'distances':r'$VE$', 'wlcorrdist':r'$WL$', 'beachwidth':r'$BW$'}
+    PlotLinRegColours = {'distances':'#3A4C1A','wlcorrdist':'#0A0D55', 'beachwidth':'#245151'}
+    
+    for TransectID, Title in zip(TransectIDs, Titles):
+        for i, Var in enumerate(PlotVars):
+            ax = axs[2 * i] if TransectID == TransectIDs[0] else axs[2 * i + 1]
+            
+            daterange = [0,len(TransectInterGDFWater['dates'].iloc[TransectID])]
+            plotdate = [datetime.strptime(x, '%Y-%m-%d') for x in TransectInterGDFWater['dates'].iloc[TransectID][daterange[0]:daterange[1]]]
+            plotsatdist = TransectInterGDFWater[Var].iloc[TransectID][daterange[0]:daterange[1]]
+            # remove and interpolate outliers
+            plotsatdistinterp = InterpNaN(plotsatdist)
+            
+            if len(plotdate) == 0:
+                retur
+            
+            plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
+            ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
+                            
+            # xaxis ticks as year with interim Julys marked
+            ax.xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+            ax.xaxis.set_major_formatter(mdates.ConciseDateFormatter(ax.xaxis.get_major_locator()))
+            
+            ax2 = ax.twinx()
+            
+            # scatter plot
+            ax2.scatter(plotdate, plotsatdist, marker='o', c=PlotColours[Var], s=5, alpha=0.8, zorder=4, edgecolors='none', label=PlotLabels[Var])
+    
+            # create error bar lines to fill between
+            for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], [PlotColours[Var]]):
+                yerrorplus = [x + errorRMSE for x in plotdist]
+                yerrorneg = [x - errorRMSE for x in plotdist]
+                # axloop.fill_between(plotdate, yerrorneg, yerrorplus, color=col, alpha=0.3, edgecolor=None)
+           
+            # ax2.errorbar(plotdate, plotsatdist, yerr=errorRMSE, elinewidth=0.5, fmt='none', ecolor='#81A739')
+            
+            
+            # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
+            for i in range(plotdate[0].year-1, plotdate[-1].year+1):
+                if Hemisphere == 'N':
+                    rectWinterStart = mdates.date2num(datetime(i, 11, 1, 0, 0))
+                    rectWinterEnd = mdates.date2num(datetime(i+1, 3, 1, 0, 0))
+                elif Hemisphere == 'S':
+                    rectWinterStart = mdates.date2num(datetime(i, 5, 1, 0, 0))
+                    rectWinterEnd = mdates.date2num(datetime(i, 9, 1, 0, 0))
+                rectwidth = rectWinterEnd - rectWinterStart
+                rect = mpatches.Rectangle((rectWinterStart, -2000), rectwidth, 4000, 
+                                          fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
+                ax.add_patch(rect)
+            winter = mpatches.Patch(fc=[0.3,0.3,0.3], ec=None, alpha=0.2, label='UK Winter')
+              
+            # plot trendlines (use interpolated version)
+            vegav = MovingAverage(plotsatdistinterp, 3)
+            if len(plotdate) >= 3:
+                ax2.plot(plotdate, vegav, color=PlotColours[Var], lw=1.5, label=PlotLabels[Var]+' 3pt Mov. Av.')
+        
+            # linear regression lines
+            numx = mpl.dates.date2num(plotdate)
+            for y, pltax, clr in zip([plotsatdist], [ax2], [PlotLinRegColours[Var]]):
+                m, c = np.polyfit(numx,y,1)
+                polysat = np.poly1d([m, c])
+                xx = np.linspace(numx.min(), numx.max(), 100)
+                dd = mpl.dates.num2date(xx)
+                pltax.plot(dd, polysat(xx), '--', color=clr, lw=1.5, zorder=10, label=r'$\Delta$'+PlotLabels[Var]+' = '+str(round(m*365.25,2))+' m/yr')
+        
+                # Standard error for confidence intervals
+                y_pred = polysat(numx)
+                Resids = y - y_pred
+                Resid_StErr = np.std(Resids)
+                Conf = 0.99
+                t_value = scipy.stats.t.ppf((1 + Conf) / 2, len(numx) - 2)
+                mean_numx = np.mean(numx)
+                n = len(numx)
+                SE = Resid_StErr * np.sqrt(1/n + (numx - mean_numx)**2 / np.sum((numx - mean_numx)**2))
+                # Confidence bands
+                y_upper = y_pred + t_value * SE
+                y_lower = y_pred - t_value * SE
+                pltax.fill_between(numx, y_lower, y_upper, color=clr, edgecolor=None, alpha=0.3, label=PlotLabels[Var]+r'$_{0.99CI}$')
+        
+            # Vertical lines marking storm events
+            for Storm in range(len(StormsDF)):
+                storm = ax.axvspan(xmin = StormsDF['Start'].iloc[Storm], xmax = StormsDF['End'].iloc[Storm], 
+                           facecolor='#5B618A', alpha=0.7, label='UK Storm')
+        
+            ax2.set_title('Transect '+str(TransectID)+' - '+Title, pad=2)
+                
+            ax2.set_ylim(min(plotsatdistinterp)-10, max(plotsatdistinterp)+30)
+            ax2.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
+            
+            leg1 = ax2.legend(loc=2, ncol=4)
+            leg2 = ax.legend(handles=[winter,storm],loc=1, labelspacing=0.3, handletextpad=0)
+            for patch, legwidth, legx in zip(leg2.get_patches(), [12,2], [0,6]):
+                patch.set_width(legwidth)
+                patch.set_x(legx)
+            # weird zorder with twin axes; remove legend and plot on second axis
+            leg1.remove()
+            leg2.remove()
+            ax2.add_artist(leg1)
+            ax2.add_artist(leg2)
+        
+            ax.set_yticks([])
+            ax2.yaxis.tick_left()
+                
+            
+        figID += '_'+str(TransectID)
+        plt.tight_layout()
+    
+    # common plot labels
+    lab = fig.add_subplot(111,frameon=False)
+    lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
+    lab.set_xlabel('Date')
+    for Var, Pos in zip(PlotVars,[0.83,0.52,0.21]):
+        fig.text(0.04, Pos, 'Cross-shore distance (m)', va='center', ha='center', rotation='vertical', color=PlotColours[Var])
+    
+    # Add alphabetical labels to corners of subplots
+    ax_labels = list(string.ascii_lowercase[:3*axs.shape[0]])
+    for ax, lab in zip(axs.flat, ax_labels):
+        ax.text(0.004, 0.091, '('+lab+')', transform=ax.transAxes,
+                fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
+        
+    figname = os.path.join(outfilepath,sitename + '_SatVEWLBWStormTimeseries_Transect'+figID+'.png')
+    
+    plt.tight_layout()
+            
+    plt.savefig(figname, dpi=300, bbox_inches='tight')
+    print('Plot saved under '+figname)
+    
+    plt.show()
 
 
 def muHist(sitename, muDF_path, Titles=None):
