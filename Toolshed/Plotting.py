@@ -3629,7 +3629,7 @@ def VEWLBWStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDFWater, Tr
             plotsatdistinterp = InterpNaN(plotsatdist)
             
             if len(plotdate) == 0:
-                retur
+                return
             
             plotdate, plotsatdist = [list(d) for d in zip(*sorted(zip(plotdate, plotsatdist), key=lambda x: x[0]))]    
             ax.grid(color=[0.7,0.7,0.7], ls=':', lw=0.5, zorder=0)        
