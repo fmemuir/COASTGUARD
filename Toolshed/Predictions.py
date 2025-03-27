@@ -476,7 +476,20 @@ def DailyInterp(TransectDF):
     return VarDFDay
 
 
-def CreateSequences(X, y=None, time_steps=1):
+
+def VarCorrelations(VarDFDayTrain, TrainFeats):
+    
+    CorrDict = {'VE':[], 'WL':[]}
+    for SL in CorrDict.keys():
+        for Key in TrainFeats:
+            rval, _ = pearsonr(VarDFDayTrain[SL], VarDFDayTrain[Key])
+            CorrDict[SL].append(rval)
+    CorrDF = pd.DataFrame(CorrDict, index=TrainFeats)
+    return CorrDF
+        
+
+
+def CreateSequences(X, y=None, time_steps=1, Pad=False):
     '''
     Function to create sequences (important for timeseries data where data point
     is temporally dependent on the one that came before it). Data sequences are
@@ -501,13 +514,30 @@ def CreateSequences(X, y=None, time_steps=1):
     Xs = []
     ys = []
     Ind = []
-    if len(X) > time_steps:  # Check if there's enough data
-        for i in range(len(X) - time_steps):
+    # X_array = X.to_numpy(dtype='float32')  
+    # y_array = y.to_numpy(dtype='float32') if y is not None else None
+    # if Pad:
+    if len(X) < time_steps:
+        pad_length = time_steps - len(X)+1
+        pad_array = np.zeros((pad_length, X.shape[1]), dtype='float32')
+        Xarr = np.vstack((X.to_numpy(dtype='float32'), pad_array))
+        if y is not None:
+            pad_array = np.zeros((pad_length, y.shape[1]), dtype='float32')
+            yarr = np.vstack((y.to_numpy(dtype='float32'), pad_array))
+    else:
+        if y is not None:
+            Xarr, yarr = X.to_numpy(dtype='float32'), y.to_numpy(dtype='float32')
+        else:
+            Xarr, yarr = X.to_numpy(dtype='float32'), None
+    if len(Xarr) >= time_steps:  # Check if there's enough data
+        for i in range(len(Xarr) - time_steps):
             # Slice feature set into sequences using moving window of size = number of timesteps
-            Xs.append(X[i:(i + time_steps)])
-            Ind.append(X.index[i + time_steps])
-            if y is not None:
-                ys.append(y.iloc[i + time_steps])
+            Xs.append(Xarr[i:(i + time_steps)])
+            Ind.append(X.index[min(i + time_steps, len(X) - 1)])  # Preserve index
+            if y is not None and i + time_steps < len(y):
+                ys.append(yarr[i + time_steps])
+            else:
+                ys.append(np.nan)
         return np.array(Xs), np.array(ys), np.array(Ind)
     else:
         # Not enough data to create a sequence
@@ -561,6 +591,7 @@ def CostSensitiveLoss(falsepos_cost, falseneg_cost, binary_thresh):
     return loss
 
 
+@tf.keras.utils.register_keras_serializable()
 def ShoreshopLoss(y_true, y_pred):
     """
     Apply a loss function to the shoreline prediction model using the Shoreshop
@@ -1220,8 +1251,9 @@ def FuturePredict(PredDict, ForecastDF):
         # ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
         ForecastFeat = ForecastDF[PredDict['trainfeats'][mID]]
         
-        # Sequence forecast data to shape (samples, sequencelen, variables)
-        ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, time_steps=PredDict['seqlen'][mID])
+        # Sequence forecast data to shape (samples, sequencelen, variables) 
+        ForecastArr, _, ForecastInd = CreateSequences(X=ForecastFeat, 
+                                                      time_steps=PredDict['seqlen'][mID])
         
         # Make prediction based off forecast data and trained model
         Predictions = Model.predict(ForecastArr)

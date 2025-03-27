@@ -89,9 +89,9 @@ TargFeats = ['VE', 'WL']
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_optimal_ShoreshopFn'], 
+                                                              MLabels=['daily_optimal_365t'], 
                                                               ValidSizes=[0.1], 
-                                                              TSteps=[10],
+                                                              TSteps=[365],
                                                               TrainFeatCols=[TrainFeats],
                                                               TargFeatCols=[TargFeats],
                                                               TrainTestPortion=datetime(2023,9,1))
@@ -105,9 +105,10 @@ PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF,
 #                                                               TrainTestPortion=datetime(2023,9,1))
 # Needs additional lines for TransectID
 #%% Load In Pre-trained Model
-with open(os.path.join(filepath, sitename, 'predictions', '20250307-113621_daily_optimal_val10.pkl'), 'rb') as f:
+# with open(os.path.join(filepath, sitename, 'predictions', '20250307-113621_daily_optimal_val10.pkl'), 'rb') as f:
+#     PredDict = pickle.load(f)
+with open(os.path.join(filepath, sitename, 'predictions', '20250324-180820_daily_optimal_365t.pkl'), 'rb') as f:
     PredDict = pickle.load(f)
-
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
