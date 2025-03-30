@@ -3726,13 +3726,13 @@ def VEWLBWStormsTimeSeries(figpath, sitename, CSVpath, TransectInterGDFWater, Tr
     lab = fig.add_subplot(111,frameon=False)
     lab.tick_params(labelcolor='none',which='both',top=False,bottom=False,left=False, right=False)
     lab.set_xlabel('Date')
-    for Var, Pos in zip(PlotVars,[0.83,0.52,0.21]):
+    for Var, Pos in zip(PlotVars,[0.83,0.52,0.23]):
         fig.text(0.04, Pos, 'Cross-shore distance (m)', va='center', ha='center', rotation='vertical', color=PlotColours[Var])
     
     # Add alphabetical labels to corners of subplots
     ax_labels = list(string.ascii_lowercase[:3*axs.shape[0]])
     for ax, lab in zip(axs.flat, ax_labels):
-        ax.text(0.004, 0.091, '('+lab+')', transform=ax.transAxes,
+        ax.text(0.004, 0.12, '('+lab+')', transform=ax.transAxes,
                 fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
         
     figname = os.path.join(outfilepath,sitename + '_SatVEWLBWStormTimeseries_Transect'+figID+'.png')
