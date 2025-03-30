@@ -431,6 +431,10 @@ def InterpVEWLWv(CoastalDF, Tr, IntpKind='linear'):
     # If any index rows (i.e. daily wave dates) are empty, remove them
     TransectDF = TransectDF[~pd.isnull(TransectDF.index)]
     
+    # Convert circular variables to components (to conserve topology and avoid jumps)
+    TransectDF['WaveDirsin'] = np.sin(np.deg2rad(TransectDF['WaveDirFD']))
+    TransectDF['WaveDircos'] = np.cos(np.deg2rad(TransectDF['WaveDirFD']))
+    
     return TransectDF
 
 
@@ -2126,7 +2130,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sit
 
 
 
-def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename):
+def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, SurveyGDF=None):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -2149,9 +2153,11 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
 
 
     """   
-       
-    fig, ax = plt.subplots(2,1, figsize=(6.5,6.5))
-
+    
+    gridspec = dict(width_ratios=[1, 0.2])
+    fig, ax = plt.subplots(2,2, figsize=(6.5,5.5), gridspec_kw=gridspec)
+    # ax[0] is full timeseries, ax[2] is test subset timeseries
+    
     TrainStart = mdates.date2num(TransectDFTrain.index[0])
     # TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
     TrainEnd = mdates.date2num(TransectDFTrain.index[
@@ -2159,24 +2165,23 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
         ])
     ValEnd = mdates.date2num(TransectDFTrain.index[-1])
     TestEnd = mdates.date2num(TransectDFTest.index[-1])
-    # TrainT = mpatches.Rectangle((TrainStart,-100), TrainEnd-TrainStart, 1000, fc=[0.8,0.8,0.8], ec=None)
-    # ValT = mpatches.Rectangle((TrainEnd,-100), ValEnd-TrainEnd, 1000, fc=[0.9,0.9,0.9], ec=None)
-    # TestT = mpatches.Rectangle((0,0), 10, 10, fc='red', ec=None, alpha=0.3)
-    # ax.add_patch(TrainT) 
-    # ax.add_patch(ValT)
-    ax[0].axvline(TrainEnd, c='k', alpha=0.5, lw=1, ls='--')
-    ax[0].axvline(ValEnd, c='k', alpha=0.5, lw=1, ls='--')
+
+    ax[0,0].axvline(TrainEnd, c='k', alpha=0.5, lw=1, ls='--')
+    ax[0,0].axvline(ValEnd, c='k', alpha=0.5, lw=1, ls='--')
     
-    ax[0].text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
-    ax[0].text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
-    ax[0].text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
+    ax[0,0].text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
+    ax[0,0].text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
+    ax[0,0].text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
     
-    ax[0].set_xlim(TrainStart,TestEnd)
-    ax[1].set_xlim(ValEnd,TestEnd)
+    ax[0,0].set_xlim(TrainStart,TestEnd)
+    ax[1,0].set_xlim(ValEnd,TestEnd)
         
     
     lw = 0.8 # line width
-    for a in [ax[0], ax[1]]:
+    Lims = (0,600)
+    for a in [ax[0,0], ax[1,0]]:
+        if SurveyGDF is not None:
+            a.plot(mdates.date2num(SurveyGDF['Vdates'].iloc[Tr]), [i+70 for i in SurveyGDF['Vdists'].iloc[Tr]], 'ro')
         for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
             # Calculate smoothed version of predictions
             Smooth = MovingAverage(FutureOutputs['output'][mID]['future'+SL], 10)
@@ -2188,38 +2193,47 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
             a.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
             # Plot smoothed predicted WL and VE
             a.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
-            
-
-    handles, labels = ax[0].get_legend_handles_labels() 
+    # histograms on side to show distribution
+    Bins = np.arange(-600,600,10)
+    for a, ObsHist, PredHist  in zip([ax[0,1],ax[1,1]], 
+                                     [pd.concat([TransectDFTrain, TransectDFTest]), TransectDFTest],
+                                     [FutureOutputs['output'][mID], FutureOutputs['output'][mID].loc[TransectDFTrain.index[-1]:]]):
+        for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
+            a.hist(ObsHist[SL], bins=Bins, fc='k', orientation='horizontal')
+            a.hist(PredHist['future'+SL], bins=Bins, fc=SLc, alpha=0.7, orientation='horizontal')
+            a.set_ylim(Lims)
+            a.yaxis.set_tick_params(which='major', labelleft=False)
+    
+    handles, labels = ax[0,0].get_legend_handles_labels() 
     legorder = [3,0,4,1,5,2]  
     
-    ax[0].set_xlabel('Date (yyyy)')
-    ax[1].set_xlabel('Date (yyyy-mm)')
-    ax[0].set_ylabel('Cross-shore distance (m)')
-    ax[0].legend(handles=[handles[i] for i in legorder],
+    ax[0,0].set_xlabel('Date (yyyy)')
+    ax[1,0].set_xlabel('Date (yyyy-mm)')
+    ax[0,0].set_ylabel('Cross-shore distance (m)')
+    ax[0,0].legend(handles=[handles[i] for i in legorder],
                 labels=[labels[i] for i in legorder], 
                 loc='upper left', ncols=3,
                 handlelength=1, columnspacing=1, handletextpad=0.6)
-    ax[0].set_ylim(0,600)
-    ax[0].tick_params(axis='both',which='major',pad=2)
-    ax[0].xaxis.labelpad=2
-    ax[0].yaxis.labelpad=2
+    ax[0,0].set_ylim(Lims)
+    ax[0,0].tick_params(axis='both',which='major',pad=2)
+    ax[0,0].xaxis.labelpad=2
+    ax[0,0].yaxis.labelpad=2
     
-    handles, labels = ax[1].get_legend_handles_labels() 
+    handles, labels = ax[1,0].get_legend_handles_labels() 
     legorder = [3,0,4,1,5,2]  
-    ax[1].legend(handles=[handles[i] for i in legorder],
+    ax[1,0].legend(handles=[handles[i] for i in legorder],
                 labels=[labels[i] for i in legorder], 
                 loc='upper left', ncols=3,
                 handlelength=1, columnspacing=1, handletextpad=0.6)
     # top line
     fig.add_artist(ConnectionPatch(
-    xyA=(ValEnd,0), coordsA=ax[0].transData,
-    xyB=(0,1), coordsB=ax[1].transAxes,
+    xyA=(ValEnd,0), coordsA=ax[0,0].transData,
+    xyB=(0,1), coordsB=ax[1,0].transAxes,
     color='k', alpha=0.3, linewidth=0.5))   
     # bottom line
     fig.add_artist(ConnectionPatch(
-    xyA=(TestEnd, 0), coordsA=ax[0].transData,
-    xyB=(1,1), coordsB=ax[1].transAxes,
+    xyA=(TestEnd, 0), coordsA=ax[0,0].transData,
+    xyB=(1,1), coordsB=ax[1,0].transAxes,
     color='k', alpha=0.3, linewidth=0.5))  
 
     plt.tight_layout()
@@ -2227,8 +2241,8 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
     
     # StartTime = FutureOutputs['output'][mID].index[0].strftime('%Y-%m-%d')
     # EndTime = FutureOutputs['output'][mID].index[-1].strftime('%Y-%m-%d')
-    StartTime = mdates.num2date(ax[0].axis()[0]).strftime('%Y-%m-%d')
-    EndTime = mdates.num2date(ax[0].axis()[1]).strftime('%Y-%m-%d')
+    StartTime = mdates.num2date(ax[0,0].axis()[0]).strftime('%Y-%m-%d')
+    EndTime = mdates.num2date(ax[0,0].axis()[1]).strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
                            sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)

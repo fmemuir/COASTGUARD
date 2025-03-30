@@ -39,6 +39,8 @@ SymbolDict = {'VE':          r'$VE$',
               'tideelevMx':  r'$z^{*}_{tide}$',
               'WaveHsFD':    r'$H_{s}$',
               'WaveDirFD':   r'$\bar\theta$',
+              'WaveDirsin':  r'$sin(\bar\theta)$',
+              'WaveDircos':  r'$cos(\bar\theta)$',
               'WaveTpFD':    r'$T_{p}$', 
               'WaveAlphaFD': r'$\alpha$',
               'Runups':      r'$R_{2}$',
@@ -84,14 +86,15 @@ Predictions.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, filepath, s
     
 #%% Prepare Training Data
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
+# TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirsin', 'WaveDircos', 'WaveTpFD']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_optimal_365t'], 
+                                                              MLabels=['daily_optimal'], 
                                                               ValidSizes=[0.1], 
-                                                              TSteps=[365],
+                                                              TSteps=[10],
                                                               TrainFeatCols=[TrainFeats],
                                                               TargFeatCols=[TargFeats],
                                                               TrainTestPortion=datetime(2023,9,1))
@@ -105,10 +108,10 @@ PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF,
 #                                                               TrainTestPortion=datetime(2023,9,1))
 # Needs additional lines for TransectID
 #%% Load In Pre-trained Model
-# with open(os.path.join(filepath, sitename, 'predictions', '20250307-113621_daily_optimal_val10.pkl'), 'rb') as f:
-#     PredDict = pickle.load(f)
-with open(os.path.join(filepath, sitename, 'predictions', '20250324-180820_daily_optimal_365t.pkl'), 'rb') as f:
+with open(os.path.join(filepath, sitename, 'predictions', '20250307-113621_daily_optimal_val10.pkl'), 'rb') as f:
     PredDict = pickle.load(f)
+# with open(os.path.join(filepath, sitename, 'predictions', '20250324-180820_daily_optimal_365t.pkl'), 'rb') as f:
+#     PredDict = pickle.load(f)
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
@@ -229,11 +232,17 @@ FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain, VarDFDayTest]))
 
 #%% Plot Future WL and VE
+with open(os.path.join('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/COASTGUARD/Data/StAndrewsEWPTOA/validation','StAndrewsEWPTOA_valid_intersects.pkl'),'rb') as f:
+    ValidInterGDF = pickle.load(f)
+    #%%
 for mID in range(len(FutureOutputs['mlabel'])): 
     PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
-    Predictions.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
+    Predictions.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                           filepath, sitename)
     # Predictions.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
                                 # filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
+    # Predictions.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+    #                        filepath, sitename, ValidInterGDF)
 
 #%%
 Predictions.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
