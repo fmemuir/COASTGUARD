@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from itertools import combinations
 import pandas as pd
 
-from Toolshed import Predictions
+from Toolshed import Predictions, PredictionsPlotting
 
 # Only use tensorflow in CPU mode
 import tensorflow as tf
@@ -140,7 +140,7 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
 
 #%% Plot Pearson correlations
-Predictions.PlotCorrs(filepath, sitename, TransectIDs[0], VarDFDayTrain, ['VE', 'WL', 'beachwidth', 'tideelevFD', 'tideelevMx',
+PredictionsPlotting.PlotCorrs(filepath, sitename, TransectIDs[0], VarDFDayTrain, ['VE', 'WL', 'beachwidth', 'tideelevFD', 'tideelevMx',
        'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups',
        'Iribarren', 'WL_u', 'VE_u', 'WL_d', 'VE_d'], SymbolDict)
 #%% Parallel Coordinates
@@ -169,7 +169,7 @@ for i in range(len(HPfiles)):
 #%% Plot Hyperparameter scattergram
 # Predictions.PlotParaCoords(PredDictCombi)
 
-Predictions.PlotHPScatter(PredDictCombi)
+PredictionsPlotting.PlotHPScatter(PredDictCombi)
 
 #%% Looped Feature Testing
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']
@@ -222,7 +222,7 @@ PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
 
 #%% Plot Feature Sensitivity
-Predictions.PlotFeatSensitivity(PredDict,filepath, sitename,TransectIDs[0])
+PredictionsPlotting.PlotFeatSensitivity(PredDict,filepath, sitename,TransectIDs[0])
 
 #%% Feature Importance
 mID = 0
@@ -241,15 +241,15 @@ with open(os.path.join('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/M
     #%%
 for mID in range(len(FutureOutputs['mlabel'])): 
     PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
-    Predictions.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+    PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
                            filepath, sitename)
-    # Predictions.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+    # PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
                                 # filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
-    # Predictions.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+    # PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
     #                        filepath, sitename, ValidInterGDF)
 
 #%%
-Predictions.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
+PredictionsPlotting.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
 
 
 #%%
@@ -260,14 +260,14 @@ FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 mID=0
 # Predictions.PlotTestScatter(FutureOutputs, TransectDFTest, mID, TransectIDs[0], filepath, sitename)
 # Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
-Predictions.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+PredictionsPlotting.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
 
 #%% Thresholding Past Observations
 
 ImpactClass = Predictions.ClassifyImpact(TransectDFTrain,Method='combi')
 
 # FutureImpacts = Predictions.ApplyImpactClasses(ImpactClass, FutureOutputs)
-Predictions.PlotImpactClasses(ImpactClass, TransectDFTrain)
+PredictionsPlotting.PlotImpactClasses(ImpactClass, TransectDFTrain)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
@@ -275,7 +275,7 @@ Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 
 #%% Plot Accuracy Over Epochs (for all training runs)
 AccuracyPath = os.path.join(filepath, sitename,'predictions','tuning','combi_CSVs')
 FigPath = os.path.join(filepath, sitename, 'plots', sitename+'_tuning_accuracy.png')
-AccuracyDF = Predictions.PlotAccuracy(AccuracyPath, FigPath)
+AccuracyDF = PredictionsPlotting.PlotAccuracy(AccuracyPath, FigPath)
 
 #%% Train Using Optuna Hyperparameterisation
 OptStudy = Predictions.TrainRNN_Optuna(PredDict, 'test1')
