@@ -28,7 +28,7 @@ import seaborn as sns
 import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 from scipy.interpolate import interp1d, PchipInterpolator
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, circmean
 
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering
@@ -324,6 +324,19 @@ def InterpVEWLWv(CoastalDF, Tr, IntpKind='linear'):
         unique_vals = df_grouped['values'].values
         
         return unique_numdates, unique_vals
+    
+    # Calculate circular exponential weighted average
+    def CircEWA(DFrad):
+        # Compute sine and cosine
+        DFsin = np.sin(DFrad)
+        DFcos = np.cos(DFrad)
+        
+        # Apply EWA to sine and cosine components
+        DFEWAsin = DFsin.ewm(span=10, adjust=False).mean()
+        DFEWAcos = DFcos.ewm(span=10, adjust=False).mean()
+        
+        # Convert back to degrees
+        return np.rad2deg(np.arctan2(DFEWAsin, DFEWAcos)) % 360
 
 
     # Interpolate over waterline and wave associated variables
@@ -432,8 +445,19 @@ def InterpVEWLWv(CoastalDF, Tr, IntpKind='linear'):
     TransectDF = TransectDF[~pd.isnull(TransectDF.index)]
     
     # Convert circular variables to components (to conserve topology and avoid jumps)
-    TransectDF['WaveDirsin'] = np.sin(np.deg2rad(TransectDF['WaveDirFD']))
-    TransectDF['WaveDircos'] = np.cos(np.deg2rad(TransectDF['WaveDirFD']))
+    TransectDF['WaveDirsin'] = np.sin(TransectDF['WaveDirFD'])
+    TransectDF['WaveDircos'] = np.cos(TransectDF['WaveDirFD'])
+    
+    # Calculate moving window averages (MA) and exponentially weighted averages (EW) for each daily wave condition
+    for wvcol in ['WaveHsFD', 'WaveTpFD']:
+        TransectDF[wvcol[:-2]+'MA'] = TransectDF[wvcol].rolling(window=10, min_periods=1).mean()
+        TransectDF[wvcol[:-2]+'EW'] = TransectDF[wvcol].ewm(span=10, adjust=False).mean()
+    for wvcol in ['WaveDirFD', 'WaveAlphaFD']:
+
+        TransectDF[wvcol[:-2]+'MA'] = TransectDF[wvcol].rolling(window=10, min_periods=1).apply(
+                                    lambda x: circmean(x, high=360, low=0), raw=True)
+        TransectDF[wvcol[:-2]+'EW'] = CircEWA(TransectDF[wvcol])
+    
     
     return TransectDF
 
@@ -1486,6 +1510,42 @@ def PlotInterps(CoastalDF, Tr, FigPath):
     plt.show()
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)     
 
+
+def PlotCorrs(filepath, sitename, Tr, VarDFDayTrain, TrainFeats, SymbolDict):
+    
+    CorrDF = VarCorrelations(VarDFDayTrain, TrainFeats)
+    
+    NewInd = []
+    for Key in CorrDF.index:
+        NewInd.append(SymbolDict[Key])
+    CorrDF.index = NewInd
+    
+    fig, ax = plt.subplots(1, 1, sharex=True, figsize=(6.55,2))
+    CorrDF.plot(kind="bar", color=['#79C060','#3E74B3'], ax=ax)
+    
+    ax.set_xticks(range(len(CorrDF.index)),CorrDF.index, rotation=0)
+    ax.set_ylabel(r'$r$')
+    ax.grid(which='major', axis='y', c=[0.8,0.8,0.8], lw=0.5, alpha=0.5)
+    
+    ax_inset = ax.inset_axes([0.333,0.5,0.333,0.47])
+    CorrDF.iloc[5:10].plot(kind="bar", color=['#79C060','#3E74B3'], ax=ax_inset)
+    
+    ax_inset.set_ylim(-0.2,0.2)
+    ax_inset.set_yticks(np.arange(-0.2,0.3,0.1))
+    ax_inset.get_legend().remove()
+    ax_inset.set_xticks(range(len(CorrDF.iloc[5:10].index)),CorrDF.iloc[5:10].index, rotation=0)
+    ax_inset.grid(which='major', axis='y', c=[0.8,0.8,0.8], lw=0.5, alpha=0.5)
+    
+    for axs, lab, xpos, ypos in zip([ax, ax_inset], list(string.ascii_lowercase[:2]), [0.0041, 0.01], [0.985, 0.96]):
+        axs.text(xpos,ypos, '('+lab+')', transform=axs.transAxes,
+                fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
+    
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_Correlations_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)    
 
 def PlotAccuracy(CSVdir, FigPath):
     # List to store each CSV's DataFrame

@@ -69,7 +69,7 @@ for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWLWv(CoastalDF, Tr, IntpKind='pchip')
     
 #%% Plot VE, WL and wave height for storm
-Predictions.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
+PredictionsPlotting.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
 
 #%% Separate Training and Validation
 TransectDF = TransectDF.loc[:datetime(2024,7,31)]
@@ -81,12 +81,12 @@ TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
 #%% Plot timeseries of variables
 TrainFeatsPlotting = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
 
-Predictions.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, filepath, sitename)
+PredictionsPlotting.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, filepath, sitename)
 # Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
-# TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirsin', 'WaveDircos', 'WaveTpFD']#, 'tideelev']
+# TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW',  'WaveTpEW']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
@@ -139,6 +139,10 @@ PredDict = Predictions.CompileRNN(PredDict,
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
 
+#%% Plot Pearson correlations
+Predictions.PlotCorrs(filepath, sitename, TransectIDs[0], VarDFDayTrain, ['VE', 'WL', 'beachwidth', 'tideelevFD', 'tideelevMx',
+       'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups',
+       'Iribarren', 'WL_u', 'VE_u', 'WL_d', 'VE_d'], SymbolDict)
 #%% Parallel Coordinates
 HPfiles = [
            '20250306-114952_daily_epochs_200.pkl',
