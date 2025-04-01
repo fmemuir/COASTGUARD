@@ -882,7 +882,7 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
             # Plot cross-shore distances through time for WL and VE past
             a.scatter(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]).index, 
                         pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), 
-                        s=0.8, color='k', marker='.', label=f"${SL}$")
+                        s=15, color='k', edgecolors=SLc, linewidths=0.3, marker='.', label=f"${SL}$")
             # Plot predicted WL and VE
             a.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
             # Plot smoothed predicted WL and VE
@@ -966,7 +966,7 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
 
     """   
        
-    fig, ax = plt.subplots(1,1, figsize=(6.5,3.35), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(6.5,3.35))
     
     if Storm is not None:
         rectwidth = mdates.date2num(Storm[0]) - mdates.date2num(Storm[1])
@@ -976,19 +976,21 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
         
     plt.xlim(mdates.date2num(PlotDateRange[0]),mdates.date2num(PlotDateRange[1]))
 
-    lw = 0.8 # line width
+    lw = 1.2 # line width
     for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
         # Calculate smoothed version of predictions
         Smooth = MovingAverage(FutureOutputs['output'][mID]['future'+SL], 10)
         # Plot cross-shore distances through time for WL and VE past
         plt.scatter(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]).index, 
                     pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), 
-                    s=0.8, color='k', marker='.', label=f"${SL}$")
+                    s=30, color='k', edgecolors=SLc, linewidths=1, marker='.', label=f"${SL}$")
         # Plot predicted WL and VE
         plt.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
         # Plot smoothed predicted WL and VE
         plt.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
 
+    
+    
     handles, labels = plt.gca().get_legend_handles_labels() 
     legorder = [3,0,4,1,5,2]  
     
@@ -1002,6 +1004,12 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
     ax.tick_params(axis='both',which='major',pad=2)
     ax.xaxis.labelpad=2
     ax.yaxis.labelpad=2
+
+    # Marker where harbour failed
+    plt.axvline(x=mdates.date2num(datetime(2023,10,29)), c=[0.3,0.3,0.3], ls='--', lw=0.8, alpha=0.2)
+    plt.text(x=mdates.date2num(datetime(2023,10,29)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.23),
+            s='slipway lost', ha='left', va='top', alpha=0.3)
+
 
     plt.tight_layout()
     plt.show()
@@ -1441,7 +1449,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
 def PlotImpactClasses(ImpactClass, TransectDF):
     
-    fig, ax = plt.subplots(1,1, figsize=(6.5,3.25), dpi=300)
+    fig, ax = plt.subplots(1,1, figsize=(6.5,3.25))
         
     msize = 5
     for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):

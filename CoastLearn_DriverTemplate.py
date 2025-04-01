@@ -242,9 +242,9 @@ with open(os.path.join('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/M
 for mID in range(len(FutureOutputs['mlabel'])): 
     PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
     PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-                           filepath, sitename)
+                            filepath, sitename)
     # PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-                                # filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
+    #                             filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
     # PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
     #                        filepath, sitename, ValidInterGDF)
 
@@ -264,10 +264,10 @@ PredictionsPlotting.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filep
 
 #%% Thresholding Past Observations
 
-ImpactClass = Predictions.ClassifyImpact(TransectDFTrain,Method='combi')
+ImpactClass = Predictions.ClassifyImpact(TransectDFTest,Method='combi')
 
 # FutureImpacts = Predictions.ApplyImpactClasses(ImpactClass, FutureOutputs)
-PredictionsPlotting.PlotImpactClasses(ImpactClass, TransectDFTrain)
+PredictionsPlotting.PlotImpactClasses(ImpactClass, TransectDFTest)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
