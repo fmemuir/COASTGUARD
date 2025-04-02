@@ -241,10 +241,10 @@ with open(os.path.join('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/M
     #%%
 for mID in range(len(FutureOutputs['mlabel'])): 
     PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
-    PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-                            filepath, sitename)
-    # PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-    #                             filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,21), datetime(2023,10,18)])
+    # PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+    #                         filepath, sitename)
+    PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                                filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)])
     # PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
     #                        filepath, sitename, ValidInterGDF)
 
@@ -264,10 +264,16 @@ PredictionsPlotting.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filep
 
 #%% Thresholding Past Observations
 
-ImpactClass = Predictions.ClassifyImpact(TransectDFTest,Method='combi')
+# ImpactClass = Predictions.ClassifyImpact(TransectDF,Method='combi')
+PredImpactClass = Predictions.ClassifyImpact(FullFutureOutputs['output'][0], Method='combi')
 
 # FutureImpacts = Predictions.ApplyImpactClasses(ImpactClass, FutureOutputs)
-PredictionsPlotting.PlotImpactClasses(ImpactClass, TransectDFTest)
+# PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], ImpactClass, TransectDF)
+PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], PredImpactClass, FullFutureOutputs['output'][0])
+
+PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                            filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)],
+                            ImpactClass=PredImpactClass)
 
 #%% Export Hyperparameter Test Data
 Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
