@@ -1244,7 +1244,7 @@ def FuturePredict(PredDict, ForecastDF):
         Model = PredDict['model'][mID]
         
         # Scale forecast data using same relationships as past training data
-        for col in ForecastDF.columns:
+        for col in PredDict['trainfeats'][mID]:
             ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
         
         # Separate out forecast features
@@ -1305,11 +1305,17 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
 
 def ClassifyImpact(TransectDF, Method='pcnt'):
     
-    # Define dictionary
-    ImpactClass = {'WL':[], 'VE':[]}
     
     # For each type of shoreline
-    for SL in ['WL','VE']:
+    if 'future' in TransectDF.columns.any(): # if classifying future shorelines
+        SLkeys = ['futureWL','futureVE']
+        # Define dictionary
+        ImpactClass = {'futureWL':[], 'futureVE':[]}
+    else:
+        SLkeys = ['WL','VE']
+        # Define dictionary
+        ImpactClass = {'WL':[], 'VE':[]}
+    for SL in SLkeys:
         # If using percentiles
         if Method=='pcnt':
             # Mid impact is between 5th and 25th percentile
@@ -1383,7 +1389,10 @@ def ClassifyImpact(TransectDF, Method='pcnt'):
             
         ImpactClass[SL] = pd.Series(ImpactClass[SL], index=TransectDF.index)
         
-    ImpactClass['Sum'] = ImpactClass['WL'] + ImpactClass['VE']
+    if 'future' in TransectDF.columns.any():
+        ImpactClass['Sum'] = ImpactClass['futureWL'] + ImpactClass['futureVE']
+    else:
+        ImpactClass['Sum'] = ImpactClass['WL'] + ImpactClass['VE']
     
 
 
