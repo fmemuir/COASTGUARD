@@ -942,7 +942,7 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
-def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, PlotDateRange, Storm=None):
+def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, PlotDateRange, Storm=None, ImpactClass=None):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -966,10 +966,12 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
 
     """   
        
-    fig, ax = plt.subplots(1,1, figsize=(6.5,3.35))
+    # fig, ax = plt.subplots(1,1, figsize=(6.5,3.35))
+    fig, ax = plt.subplots(1,1, figsize=(3.5,2.3))
+
     
     if Storm is not None:
-        rectwidth = mdates.date2num(Storm[0]) - mdates.date2num(Storm[1])
+        rectwidth = mdates.date2num(Storm[1]) - mdates.date2num(Storm[0])
         rect = mpatches.Rectangle((mdates.date2num(datetime(2023,10,18)), -200), rectwidth, 1000, 
                                   fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
         ax.add_patch(rect)
@@ -994,22 +996,32 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
     handles, labels = plt.gca().get_legend_handles_labels() 
     legorder = [3,0,4,1,5,2]  
     
-    plt.xlabel('Date (yyyy)')
+    plt.xlabel('Date (2023-mm-dd)')
     plt.ylabel('Cross-shore distance (m)')
+    # plt.legend(handles=[handles[i] for i in legorder],
+    #             labels=[labels[i] for i in legorder], 
+    #             loc='upper left', ncols=3,
+    #             handlelength=1, columnspacing=1, handletextpad=0.6)
     plt.legend(handles=[handles[i] for i in legorder],
-               labels=[labels[i] for i in legorder], 
-               loc='upper left', ncols=3,
-               handlelength=1, columnspacing=1, handletextpad=0.6)
+                labels=[labels[i] for i in legorder], 
+                loc='upper center', bbox_to_anchor=(0.5, -0.2), ncols=6,
+                handlelength=1, columnspacing=1, handletextpad=0.6)
     plt.ylim(0,600)
     ax.tick_params(axis='both',which='major',pad=2)
     ax.xaxis.labelpad=2
     ax.yaxis.labelpad=2
 
-    # Marker where harbour failed
-    plt.axvline(x=mdates.date2num(datetime(2023,10,29)), c=[0.3,0.3,0.3], ls='--', lw=0.8, alpha=0.2)
-    plt.text(x=mdates.date2num(datetime(2023,10,29)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.23),
-            s='slipway lost', ha='left', va='top', alpha=0.3)
+    # Marker where storm occurred and harbour failed
+    if Storm is not None:
+        ax.text(x=mdates.date2num(Storm[1]), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.05),
+                s='Storm\nBabet', rotation=0, ha='left', va='top', alpha=0.3)
+        plt.axvline(x=mdates.date2num(datetime(2023,10,29)), c=[0.3,0.3,0.3], ls='--', lw=0.8, alpha=0.2)
+        plt.text(x=mdates.date2num(datetime(2023,10,29)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.05),
+                s='slipway lost', ha='left', va='top', alpha=0.3)
 
+    ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))
+    ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
 
     plt.tight_layout()
     plt.show()
@@ -1019,7 +1031,7 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
     StartTime = mdates.num2date(plt.axis()[0]).strftime('%Y-%m-%d')
     EndTime = mdates.num2date(plt.axis()[1]).strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_Tr'+str(Tr)+'.png')
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
@@ -1447,21 +1459,26 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
   
     
-def PlotImpactClasses(ImpactClass, TransectDF):
+def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     
-    fig, ax = plt.subplots(1,1, figsize=(6.5,3.25))
-        
+    # fig, ax = plt.subplots(1,1, figsize=(6.5,3.25))
+    fig, ax = plt.subplots(1,1, figsize=(4.5,2.))
+
+    if 'future' in TransectDF.columns.any():
+        SLkeys = ['futureVE','futureWL']
+    else:
+        SLkeys = ['VE', 'WL']
     msize = 5
-    for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
+    for SL, SLc in zip(SLkeys, ['#79C060','#3E74B3']):
         # Plot cross-shore distances through time for WL and VE past
         ax.plot(TransectDF[SL].index, TransectDF[SL], 
                    color=SLc, lw = 0.8, label=f"${SL}$")
         ax.scatter(TransectDF[SL].index[ImpactClass[SL]==3], TransectDF[SL][ImpactClass[SL]==3], 
-                   s=msize, c='red')
+                   s=msize, c='red', label='High impact')
         ax.scatter(TransectDF[SL].index[ImpactClass[SL]==2], TransectDF[SL][ImpactClass[SL]==2], 
-                   s=msize, c='orange')
+                   s=msize, c='orange', label='Medium impact')
         ax.scatter(TransectDF[SL].index[ImpactClass[SL]==1], TransectDF[SL][ImpactClass[SL]==1], 
-                   s=msize, c='green')
+                   s=msize, c='green', label='Low impact')
 
     ax.set_xlabel('Date (yyyy)')
 
@@ -1470,8 +1487,21 @@ def PlotImpactClasses(ImpactClass, TransectDF):
     ax.xaxis.labelpad=2
     ax.yaxis.labelpad=2
     
+    handles, labels = plt.gca().get_legend_handles_labels()
+    by_label = {labels[0]: handles[0],
+                labels[4]: handles[4],
+                labels[1]: handles[1],
+                labels[2]: handles[2],
+                labels[3]: handles[3]}
+    plt.legend(by_label.values(), by_label.keys(), loc='upper center', bbox_to_anchor=(0.5, -0.2), ncol=5,
+               handlelength=1, handletextpad=0.5)
+    
     plt.tight_layout()
     plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_ImpactClassTimeseries_Tr'+str(Tr)+'.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
     
 def multicolor_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', anchorpad=0,**kw):
