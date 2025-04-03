@@ -85,16 +85,16 @@ PredictionsPlotting.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, fil
 # Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
-# TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW',  'WaveTpEW']#, 'tideelev']
+# TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'tideelev']
+TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW', 'WaveTpEW']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_optimal'], 
+                                                              MLabels=['fixed_EW_365t'], 
                                                               ValidSizes=[0.1], 
-                                                              TSteps=[10],
+                                                              TSteps=[365],
                                                               TrainFeatCols=[TrainFeats],
                                                               TargFeatCols=[TargFeats],
                                                               TrainTestPortion=datetime(2023,9,1))
@@ -241,10 +241,10 @@ with open(os.path.join('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/M
     #%%
 for mID in range(len(FutureOutputs['mlabel'])): 
     PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
-    # PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-    #                         filepath, sitename)
-    PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-                                filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)])
+    PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                            filepath, sitename)
+    # PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+    #                             filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)])
     # PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
     #                        filepath, sitename, ValidInterGDF)
 
@@ -254,22 +254,27 @@ PredictionsPlotting.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutu
 
 #%%
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
-FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
+# FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
+for SL in ['VE', 'WL']: 
+    FullFutureOutputs['output'][mID]['future'+SL] = FullFutureOutputs['output'][mID]['future'+SL].loc[TransectDFTest.index[0]:]
+FullFutureOutputs = Predictions.ShorelineRMSE(FullFutureOutputs, TransectDF)
 
 #%% Violin and scatter plots of distance differences between predicted and actual VEs and WLs
 mID=0
 # Predictions.PlotTestScatter(FutureOutputs, TransectDFTest, mID, TransectIDs[0], filepath, sitename)
 # Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
-PredictionsPlotting.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+# PredictionsPlotting.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+PredictionsPlotting.FutureViolinLinReg(FullFutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+
 
 #%% Thresholding Past Observations
 
-# ImpactClass = Predictions.ClassifyImpact(TransectDF,Method='combi')
+ImpactClass = Predictions.ClassifyImpact(TransectDF,Method='combi')
 PredImpactClass = Predictions.ClassifyImpact(FullFutureOutputs['output'][0], Method='combi')
 
 # FutureImpacts = Predictions.ApplyImpactClasses(ImpactClass, FutureOutputs)
-# PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], ImpactClass, TransectDF)
-PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], PredImpactClass, FullFutureOutputs['output'][0])
+PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], ImpactClass, TransectDF)
+# PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], PredImpactClass, FullFutureOutputs['output'][0])
 
 PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
                             filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)],
