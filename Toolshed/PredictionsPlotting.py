@@ -967,7 +967,7 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
     """   
        
     # fig, ax = plt.subplots(1,1, figsize=(6.5,3.35))
-    fig, ax = plt.subplots(1,1, figsize=(3.5,2.3))
+    fig, ax = plt.subplots(1,1, figsize=(3.5,2.6))
 
     
     if Storm is not None:
@@ -983,40 +983,56 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
         # Calculate smoothed version of predictions
         Smooth = MovingAverage(FutureOutputs['output'][mID]['future'+SL], 10)
         # Plot cross-shore distances through time for WL and VE past
-        plt.scatter(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]).index, 
+        ax.scatter(pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]).index, 
                     pd.concat([TransectDFTrain[SL], TransectDFTest[SL]]), 
                     s=30, color='k', edgecolors=SLc, linewidths=1, marker='.', label=f"${SL}$")
         # Plot predicted WL and VE
-        plt.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
+        ax.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
         # Plot smoothed predicted WL and VE
-        plt.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
+        ax.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
+        
+        if ImpactClass is not None:
+            ax2 = ax.twinx()
+            Low, = ax2.plot(FutureOutputs['output'][mID]['future'+SL][ImpactClass['future'+SL]==1],
+                     color='#E4FF5C', alpha=0.7, lw=0, 
+                     marker='^', ms=4, markeredgewidth=0.8, markeredgecolor='k')
+            Med, = ax2.plot(FutureOutputs['output'][mID]['future'+SL][ImpactClass['future'+SL]==2],
+                     color='#FF990A', alpha=0.7, lw=0, 
+                     marker='^', ms=4, markeredgewidth=0.8, markeredgecolor='k')
+            High, = ax2.plot(FutureOutputs['output'][mID]['future'+SL][ImpactClass['future'+SL]==3],
+                     color='#D52941', alpha=0.7, lw=0, 
+                     marker='^', ms=4, markeredgewidth=0.8, markeredgecolor='k')
+            ax2.set_ylim(0,600)
+            ax2.tick_params(axis='y', right=False, labelright=False)
+    
+    if ImpactClass is not None:
+        ax2.legend(handles=[Low, Med, High], labels=['Low impact', 'Medium impact', 'High impact'],
+                   loc='upper left', handlelength=1, columnspacing=1, handletextpad=0.6)
 
-    
-    
-    handles, labels = plt.gca().get_legend_handles_labels() 
+    handles, labels = ax.get_legend_handles_labels() 
     legorder = [3,0,4,1,5,2]  
     
-    plt.xlabel('Date (2023-mm-dd)')
-    plt.ylabel('Cross-shore distance (m)')
+    ax.set_xlabel('Date (2023-mm-dd)')
+    ax.set_ylabel('Cross-shore distance (m)')
     # plt.legend(handles=[handles[i] for i in legorder],
     #             labels=[labels[i] for i in legorder], 
     #             loc='upper left', ncols=3,
     #             handlelength=1, columnspacing=1, handletextpad=0.6)
-    plt.legend(handles=[handles[i] for i in legorder],
+    ax.legend(handles=[handles[i] for i in legorder],
                 labels=[labels[i] for i in legorder], 
                 loc='upper center', bbox_to_anchor=(0.5, -0.2), ncols=6,
                 handlelength=1, columnspacing=1, handletextpad=0.6)
-    plt.ylim(0,600)
+    ax.set_ylim(0,600)
     ax.tick_params(axis='both',which='major',pad=2)
     ax.xaxis.labelpad=2
     ax.yaxis.labelpad=2
 
     # Marker where storm occurred and harbour failed
     if Storm is not None:
-        ax.text(x=mdates.date2num(Storm[1]), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.05),
-                s='Storm\nBabet', rotation=0, ha='left', va='top', alpha=0.3)
-        plt.axvline(x=mdates.date2num(datetime(2023,10,29)), c=[0.3,0.3,0.3], ls='--', lw=0.8, alpha=0.2)
-        plt.text(x=mdates.date2num(datetime(2023,10,29)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.05),
+        ax.text(x=mdates.date2num(Storm[0]), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.05),
+                s='Storm\nBabet', rotation=0, ha='right', va='top', alpha=0.3)
+        ax.axvline(x=mdates.date2num(datetime(2023,10,29)), c=[0.3,0.3,0.3], ls='--', lw=0.8, alpha=0.2)
+        ax.text(x=mdates.date2num(datetime(2023,10,29)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.05),
                 s='slipway lost', ha='left', va='top', alpha=0.3)
 
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))
@@ -1340,12 +1356,14 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     # Rename columns so seaborn legend works
     leglabs = {'VEdiff':None, 'WLdiff':None}
     for SL, SLreal in zip(leglabs.keys(), ['VE','WL']):
+        SLRMSEPct = abs(FutureOutputs['rmse'][mID]['future'+SLreal] / (TransectDF[SLreal].max()-TransectDF[SLreal].min()))*100
         SLmedian = FutureOutputs['XshoreDiff'][mID][SL].median()
         SLmedianPcnt = abs(SLmedian / (TransectDF[SLreal].max()-TransectDF[SLreal].min()))*100
         leglab1 = f"$RMSE_{{{SLreal}}}$ = {round(FutureOutputs['rmse'][mID]['future'+SLreal],1)} m\n"
-        leglab2 = f"$\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}$ = {round(SLmedian,1)} m\n"
-        leglab3 = f"$\\frac{{\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}}}{{{SL[:-4]}_{{[min,max]}}}}$ = {round(SLmedianPcnt)}%"
-        leglabs[SL] = leglab1 + leglab2 + leglab3
+        leglab2 = f"$\\frac{{RMSE_{{{SL[:-4]}}}}}{{{SL[:-4]}_{{[min,max]}}}}$ = {round(SLRMSEPct)}%\n"
+        leglab3 = f"$\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}$ = {round(SLmedian,1)} m\n"
+        leglab4 = f"$\\frac{{\\eta_{{\\hat{{{SL[:-4]}}} - {SL[:-4]}}}}}{{{SL[:-4]}_{{[min,max]}}}}$ = {round(SLmedianPcnt)}%"
+        leglabs[SL] = leglab1 + leglab2 + leglab3 + leglab4
         
 
     pltDict = dict((leglabs[key], value) for (key, value) in FutureOutputs['XshoreDiff'][mID].items())
@@ -1462,26 +1480,26 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
 def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     
     # fig, ax = plt.subplots(1,1, figsize=(6.5,3.25))
-    fig, ax = plt.subplots(1,1, figsize=(4.5,2.))
+    fig, ax = plt.subplots(1,1, figsize=(4.7,2.))
 
     if 'future' in TransectDF.columns.any():
         SLkeys = ['futureVE','futureWL']
     else:
         SLkeys = ['VE', 'WL']
-    msize = 5
+    msize = 10
     for SL, SLc in zip(SLkeys, ['#79C060','#3E74B3']):
         # Plot cross-shore distances through time for WL and VE past
         ax.plot(TransectDF[SL].index, TransectDF[SL], 
                    color=SLc, lw = 0.8, label=f"${SL}$")
-        ax.scatter(TransectDF[SL].index[ImpactClass[SL]==3], TransectDF[SL][ImpactClass[SL]==3], 
-                   s=msize, c='red', label='High impact')
-        ax.scatter(TransectDF[SL].index[ImpactClass[SL]==2], TransectDF[SL][ImpactClass[SL]==2], 
-                   s=msize, c='orange', label='Medium impact')
-        ax.scatter(TransectDF[SL].index[ImpactClass[SL]==1], TransectDF[SL][ImpactClass[SL]==1], 
-                   s=msize, c='green', label='Low impact')
+        #['red','orange','green']
+        for ImpID, ImpCl, ImpLab in zip([3,2,1], ['#D52941','#FF990A','#E4FF5C'], ['High', 'Medium', 'Low']):
+            ax.scatter(TransectDF[SL].index[ImpactClass[SL]==ImpID], TransectDF[SL][ImpactClass[SL]==ImpID], 
+                       s=msize, marker='^', linewidths=0.3, c=ImpCl, label=f'{ImpLab} impact')
 
     ax.set_xlabel('Date (yyyy)')
-
+    ax.set_ylabel('Cross-shore distance (m)')
+    
+    ax.set_xlim(TransectDF.index.min(), TransectDF.index.max())
     ax.set_ylim(0,600)
     ax.tick_params(axis='both',which='major',pad=2)
     ax.xaxis.labelpad=2
