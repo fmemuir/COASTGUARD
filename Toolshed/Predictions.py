@@ -320,8 +320,7 @@ def InterpVEWLWv(CoastalDF, Tr, IntpKind='linear'):
         DFEWAsin = DFsin.ewm(span=10, adjust=False).mean()
         DFEWAcos = DFcos.ewm(span=10, adjust=False).mean()
         
-        # Convert back to degrees
-        return np.rad2deg(np.arctan2(DFEWAsin, DFEWAcos)) % 360
+        return np.arctan2(DFEWAsin, DFEWAcos)
 
 
     # Interpolate over waterline and wave associated variables
@@ -442,6 +441,9 @@ def InterpVEWLWv(CoastalDF, Tr, IntpKind='linear'):
         TransectDF[wvcol[:-2]+'MA'] = TransectDF[wvcol].rolling(window=10, min_periods=1).apply(
                                     lambda x: circmean(x, high=360, low=0), raw=True)
         TransectDF[wvcol[:-2]+'EW'] = CircEWA(TransectDF[wvcol])
+        TransectDF[wvcol[:-2]+'sinEW'] = np.sin(TransectDF[wvcol[:-2]+'EW'])
+        TransectDF[wvcol[:-2]+'cosEW'] = np.cos(TransectDF[wvcol[:-2]+'EW'])
+    
     
     
     return TransectDF
@@ -861,7 +863,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
     return PredDict
   
 
-def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
+def TrainRNN(PredDict, filepath, sitename, EarlyStop=False, Looped=False):
     """
     Train the compiled NN based on the training data set aside for it. Results
     are written to PredDict which is saved to a pickle file. If TensorBoard is
@@ -886,7 +888,11 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False):
         Dictionary to store all the NN model metadata, now with trained NN models.
 
     """
-    predictpath = os.path.join(filepath, sitename,'predictions')
+    if Looped is True:
+        predictpath = os.path.join(filepath, sitename,'predictions','fullrun')
+    else:
+        predictpath = os.path.join(filepath, sitename,'predictions')
+    
     if os.path.isdir(predictpath) is False:
         os.mkdir(predictpath)
     tuningpath = os.path.join(predictpath,'tuning')
@@ -1243,10 +1249,6 @@ def FuturePredict(PredDict, ForecastDF):
         mID = PredDict['mlabel'].index(MLabel)
         Model = PredDict['model'][mID]
         
-        # Scale forecast data using same relationships as past training data
-        for col in PredDict['trainfeats'][mID]:
-            ForecastDF[col] = PredDict['scalings'][mID][col].transform(ForecastDF[[col]])
-        
         # Separate out forecast features
         # ForecastFeat = ForecastDF[['WaveHs', 'WaveDir', 'WaveTp', 'WaveAlpha', 'Runups', 'Iribarrens']]
         ForecastFeat = ForecastDF[PredDict['trainfeats'][mID]]
@@ -1266,7 +1268,8 @@ def FuturePredict(PredDict, ForecastDF):
                    {'futureVE': VEPredict.flatten(),
                     'futureWL': WLPredict.flatten()},
                    index=ForecastInd)
-        
+        # Get rid of any potential duplicate dates from combining DFs
+        FutureDF = FutureDF[~FutureDF.index.duplicated()]
         FutureOutputs['output'].append(FutureDF)
         
     return FutureOutputs
@@ -1283,7 +1286,9 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
         for SL in ['VE', 'WL']:
             # Define actual and predicted VE and WL
             realVals = TransectDFTest[SL]
+            realVals = realVals[~realVals.index.duplicated()]
             predVals = FutureOutputs['output'][mID]['future'+SL]
+            predVals = predVals[~predVals.index.duplicated()]
             # Match indexes and remove NaNs from CreateSequence moving window
             ComboDF = pd.concat([realVals, predVals], axis=1)
             ComboDF.dropna(how='any', inplace=True)
