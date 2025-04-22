@@ -444,7 +444,9 @@ def InterpVEWLWv(CoastalDF, Tr, IntpKind='linear'):
         TransectDF[wvcol[:-2]+'sinEW'] = np.sin(TransectDF[wvcol[:-2]+'EW'])
         TransectDF[wvcol[:-2]+'cosEW'] = np.cos(TransectDF[wvcol[:-2]+'EW'])
     
-    
+    # Time-lagging neighbour values by 10 days (and fill gap at start with mean value)
+    for col in ['WL_u', 'VE_u', 'WL_d', 'VE_d']:
+        TransectDF[col+'-10'] = TransectDF[col].shift(periods=10, axis=0, fill_value=TransectDF[col].mean())
     
     return TransectDF
 
@@ -1280,7 +1282,7 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
     for mID in range(len(FutureOutputs['mlabel'])):
         # initialise ways to store error values
         RMSElist = []
-        RMSEdict = {'futureVE':None, 'futureWL':None}
+        RMSEdict = {'futureVE':None, 'future10dVE':None, 'futureWL':None, 'future10dWL':None}
         Difflist = []
         Diffdict = {'VEdiff':None, 'WLdiff':None}
         for SL in ['VE', 'WL']:
@@ -1294,6 +1296,7 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
             ComboDF.dropna(how='any', inplace=True)
             # Calculate RMSE
             RMSEdict['future'+SL] = root_mean_squared_error(ComboDF[SL], ComboDF['future'+SL])
+            RMSEdict['future10d'+SL] = root_mean_squared_error(ComboDF[SL][:10], ComboDF['future'+SL][:10])
             # Calculate distance between predicted and actual
             Diffdict[SL+'diff'] = ComboDF['future'+SL] - ComboDF[SL]
         # Add dict of VE and WL RMSEs back to per-model-run list
