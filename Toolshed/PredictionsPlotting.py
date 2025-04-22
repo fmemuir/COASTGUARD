@@ -211,8 +211,8 @@ def PlotAccuracy(CSVdir, FigPath):
     AccuracyDF = pd.concat(dfs, axis=1)
     
     plt.figure(figsize=(3.22,1.72))
-    plt.plot(AccuracyDF, c='w', alpha=0.5)
-    plt.plot(AccuracyDF['dense64_validation'], c='#283252')
+    plt.plot(AccuracyDF, c='#283252', alpha=0.5)
+    plt.plot(AccuracyDF['dense64_validation'], c='r')
     plt.xlabel('epoch')
     plt.ylabel('accuracy')
     plt.show()
@@ -1475,7 +1475,40 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
                            sitename+'_VEWLErrorViolinLinReg_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
-  
+
+
+def PlotSiteRMSE(FutureOutputsClean, filepath, sitename):
+    
+    fig, axs = plt.subplots(1,2, figsize=(3.25,5))
+    
+    SLkeys = ['futureVE','futureWL']
+        
+    for SL, SLc, ax, SLlab in zip(SLkeys, ['#79C060','#3E74B3'], axs, [r'$VE$',r'$WL$']):
+        for Tr in FutureOutputsClean.keys():
+            if FutureOutputsClean[Tr]['rmse'][0][SL] > 50:
+                ax.scatter(FutureOutputsClean[Tr]['rmse'][0][SL], Tr,
+                            facecolor='w', marker='o', edgecolors=SLc, label=SLlab)
+            else:
+                ax.scatter(FutureOutputsClean[Tr]['rmse'][0][SL], Tr,
+                            facecolor=SLc, marker='o', edgecolors=None, label=SLlab+' < 50 m')
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys(), loc='center right')
+        ax.set_xlim(0,ax.get_xlim()[1])
+        ax.set_ylim(0,list(FutureOutputsClean.keys())[-1]+20)
+    
+    axs[1].yaxis.set_tick_params(labelleft=False)
+    axs[0].set_ylabel('Transect ID')
+    # Shared axis label
+    fig.supxlabel('Root mean square error (m)')
+    
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_FullSiteRMSE.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+    
     
 def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     
