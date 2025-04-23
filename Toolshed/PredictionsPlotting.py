@@ -632,7 +632,7 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=True)
     
     
-def PlotParaCoords(PredDict): 
+def PlotParaCoords(PredDict, filepath, sitename): 
     PredDF = pd.DataFrame(PredDict)
     HPScaler = MinMaxScaler()
     HPs = ['epochN', 'batchS', 'hiddenLscale', 'denselayers', 'dropoutRt', 'learnRt', 'accuracy', 'train_time']
@@ -651,6 +651,7 @@ def PlotParaCoords(PredDict):
         ax.set_xticks(range(len(PredDFScaled.columns)), PredDFScaled.columns, rotation=45)
         ax.grid(axis='x', lw=0.5, ls=':')
         ax.tick_params(axis='y', left=False, labelleft=False)
+        ax.set_facecolor('#D5D5D5')
         
         sm = plt.cm.ScalarMappable(cmap=plt.cm.PuBuGn, norm=normc)
         cbar = plt.colorbar(sm,ax=ax)
@@ -664,6 +665,10 @@ def PlotParaCoords(PredDict):
     
     plt.tight_layout()
     plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_HP_Accuracy_Time.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
         
 
 def PlotHPScatter(PredDict):
