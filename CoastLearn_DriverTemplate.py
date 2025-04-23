@@ -85,14 +85,14 @@ PredictionsPlotting.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, fil
 # Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD', 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']#, 'tideelev']
+TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']#, 'tideelev']
 # TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW', 'WaveTpEW']#, 'tideelev']
 TargFeats = ['VE', 'WL']
 
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['neighbours'], 
+                                                              MLabels=['daily_optimal_val10'], 
                                                               ValidSizes=[0.1], 
                                                               TSteps=[10],
                                                               TrainFeatCols=[TrainFeats],
@@ -167,9 +167,9 @@ for i in range(len(HPfiles)):
         PredDictCombi[key].extend(PredDictHP[key])
         
 #%% Plot Hyperparameter scattergram
-# Predictions.PlotParaCoords(PredDictCombi)
+PredictionsPlotting.PlotParaCoords(PredDictCombi, filepath, sitename)
 
-PredictionsPlotting.PlotHPScatter(PredDictCombi)
+# PredictionsPlotting.PlotHPScatter(PredDictCombi)
 
 #%% Looped Feature Testing
 TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']
@@ -253,6 +253,7 @@ PredictionsPlotting.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutu
 
 
 #%%
+mID=0
 # Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
 # FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 for SL in ['VE', 'WL']: 
