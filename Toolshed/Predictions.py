@@ -1312,11 +1312,11 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
 def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs):
 
     Rows = []
-    for transect_id, data in FutureOutputs.items():
+    for Tr, data in FutureOutputs.items():
         if data is None:
             # Transect is missing: fill with NaNs
             Row = {
-                'TransectID': transect_id,
+                'TransectID': Tr,
                 'preddate': np.nan,
                 'predVE': np.nan,
                 'predWL': np.nan,
@@ -1329,6 +1329,8 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs
             output_df = data['output'][0] if data['output'] else None
             if output_df is not None:
                 preddate = output_df.index.tolist()
+                FirstDt = preddate[0].strftime('%Y-%m-%d')
+                LastDt = preddate[-1].strftime('%Y-%m-%d')
                 predVE = output_df['futureVE'].tolist()
                 predWL = output_df['futureWL'].tolist()
             else:
@@ -1337,7 +1339,7 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs
             rmse_dict = data['rmse'][0] if data['rmse'] else {}
             
             Row = {
-                'TransectID': transect_id,
+                'TransectID': Tr,
                 'preddate': preddate,
                 'predVE': predVE,
                 'predWL': predWL,
@@ -1354,6 +1356,29 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs
     
     # Merge with TransectInterGDF
     CoastalGDF = TransectInterGDF.merge(FutureOutputsDF, on='TransectID')
+
+    CoastalSHP = CoastalGDF.copy()
+    
+    # reformat fields with lists to strings
+    KeyName = list(CoastalSHP.select_dtypes(include='object').columns)
+    for Key in KeyName:
+        # round any floating points numbers before export
+        realInd = next(i for i, j in enumerate(CoastalSHP[Key]) if j)
+            
+        if type(CoastalSHP[Key][realInd]) == list: # for lists of intersected values per transect
+            if type(CoastalSHP[Key][realInd][0]) == np.float64:  
+                for Tr in range(len(CoastalSHP[Key])):
+                    CoastalSHP.loc[Tr, Key] = [round(i,2) for i in CoastalSHP[Key][Tr]]
+        else: # for singular values per transect
+            if type(CoastalSHP[Key][realInd]) == np.float64: 
+                for Tr in range(len(CoastalSHP[Key])):
+                    CoastalSHP.loc[Tr, Key] = [round(i,2) for i in CoastalSHP[Key][Tr]]
+                    
+        CoastalSHP[Key] = CoastalSHP[Key].astype(str)
+    
+    
+    CoastalSHP.to_file(os.path.join(filepath,sitename,'intersections',
+                                    sitename+f'_Transects_Intersected_Future_{FirstDt}_{LastDt}.shp'))
 
     return CoastalGDF
     
