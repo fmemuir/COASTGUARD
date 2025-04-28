@@ -16,6 +16,7 @@ import numpy as np
 import random
 
 import pandas as pd
+import geopandas as gpd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 from scipy.interpolate import interp1d, PchipInterpolator
 from scipy.stats import circmean
@@ -1308,6 +1309,54 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
     return FutureOutputs
     
 
+def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs):
+
+    Rows = []
+    for transect_id, data in FutureOutputs.items():
+        if data is None:
+            # Transect is missing: fill with NaNs
+            Row = {
+                'TransectID': transect_id,
+                'preddate': np.nan,
+                'predVE': np.nan,
+                'predWL': np.nan,
+                'futureVE': np.nan,
+                'future10dVE': np.nan,
+                'futureWL': np.nan,
+                'future10dWL': np.nan,
+            }
+        else:
+            output_df = data['output'][0] if data['output'] else None
+            if output_df is not None:
+                preddate = output_df.index.tolist()
+                predVE = output_df['futureVE'].tolist()
+                predWL = output_df['futureWL'].tolist()
+            else:
+                preddate = predVE = predWL = np.nan
+            
+            rmse_dict = data['rmse'][0] if data['rmse'] else {}
+            
+            Row = {
+                'TransectID': transect_id,
+                'preddate': preddate,
+                'predVE': predVE,
+                'predWL': predWL,
+                'futureVE': rmse_dict.get('futureVE', np.nan),
+                'future10dVE': rmse_dict.get('future10dVE', np.nan),
+                'futureWL': rmse_dict.get('futureWL', np.nan),
+                'future10dWL': rmse_dict.get('future10dWL', np.nan),
+            }
+        
+        Rows.append(Row)
+    
+    # Create the DataFrame
+    FutureOutputsDF = pd.DataFrame(Rows)
+    
+    # Merge with TransectInterGDF
+    CoastalGDF = TransectInterGDF.merge(FutureOutputsDF, on='TransectID')
+
+    return CoastalGDF
+    
 
 #%% CLASSIFICATION OF IMPACTS ###
 
