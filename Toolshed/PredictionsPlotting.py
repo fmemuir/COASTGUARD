@@ -1495,7 +1495,7 @@ def PlotSiteRMSE(FutureOutputsClean, filepath, sitename):
                             facecolor='w', marker='o', edgecolors=SLc, label=SLlab)
             else:
                 ax.scatter(FutureOutputsClean[Tr]['rmse'][0][SL], Tr,
-                            facecolor=SLc, marker='o', edgecolors=None, label=SLlab+' < 50 m')
+                            facecolor=SLc, marker='o', edgecolors=None, label=SLlab+f' < {} m')
         handles, labels = ax.get_legend_handles_labels()
         by_label = dict(zip(labels, handles))
         ax.legend(by_label.values(), by_label.keys(), loc='center right')
@@ -1512,6 +1512,44 @@ def PlotSiteRMSE(FutureOutputsClean, filepath, sitename):
     
     FigPath = os.path.join(filepath, sitename, 'plots', 
                            sitename+'_FullSiteRMSE.png')
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
+    
+    
+def PlotRMSE_Rt(CoastalGDF, filepath, sitename):
+    
+    fig, axs = plt.subplots(1,2, figsize=(6.55,3.28))
+    
+    # Only use non-nan values across both columns
+    badVE = ~np.logical_or(np.isnan(CoastalGDF['VE_RMSE']), np.isnan(CoastalGDF['oldyoungRt']))
+    badWL = ~np.logical_or(np.isnan(CoastalGDF['WL_RMSE']), np.isnan(CoastalGDF['oldyungRtW']))
+    
+    VEr,_ = pearsonr(CoastalGDF['VE_RMSE'][badVE], np.abs(CoastalGDF['oldyoungRt'][badVE]))
+    WLr,_ = pearsonr(CoastalGDF['WL_RMSE'][badWL], np.abs(CoastalGDF['oldyungRtW'][badWL]))
+    
+    # Plot scatters of both VE and WL RMSE against change rate
+    axs[0].scatter(CoastalGDF['VE_RMSE'][badVE], np.abs(CoastalGDF['oldyoungRt'][badVE]), s=15, facecolor='#79C060',
+                   label=f'$r_{{VE}}$ = {round(VEr,2)}')
+    axs[1].scatter(CoastalGDF['WL_RMSE'][badWL], np.abs(CoastalGDF['oldyungRtW'][badWL]), s=15, facecolor='#3E74B3',
+                   label=f'$r_{{WL}}$ = {round(WLr,2)}')
+    
+    axs[0].set_xlabel(r'$RMSE_{VE}$ (m)')
+    axs[1].set_xlabel(r'$RMSE_{WL}$ (m)')
+    axs[0].set_ylabel(r'$\Delta VE$ (m/yr)')
+    axs[1].set_ylabel(r'$\Delta WL$ (m/yr)')
+    
+    axs[0].set_xlim(0)
+    axs[1].set_xlim(0)
+    axs[0].set_ylim(0)
+    axs[1].set_ylim(0)
+    
+    axs[0].legend()
+    axs[1].legend()
+    
+    plt.tight_layout()
+    plt.show()
+    
+    FigPath = os.path.join(filepath, sitename, 'plots', 
+                           sitename+'_FullSiteRMSE_Rt.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
     
