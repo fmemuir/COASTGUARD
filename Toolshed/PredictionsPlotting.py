@@ -1487,25 +1487,33 @@ def PlotSiteRMSE(FutureOutputsClean, filepath, sitename):
     fig, axs = plt.subplots(1,2, figsize=(3.25,5))
     
     SLkeys = ['futureVE','futureWL']
+    
+    # Extract out RMSE values
+    RMSEList = dict(zip(SLkeys, [[],[]]))
+    for Tr in FutureOutputsClean.keys():
+        for SL in SLkeys:
+            RMSEList[SL].append(FutureOutputsClean[Tr]['rmse'][0][SL])
         
     for SL, SLc, ax, SLlab in zip(SLkeys, ['#79C060','#3E74B3'], axs, [r'$VE$',r'$WL$']):
-        for Tr in FutureOutputsClean.keys():
-            if FutureOutputsClean[Tr]['rmse'][0][SL] > 50:
-                ax.scatter(FutureOutputsClean[Tr]['rmse'][0][SL], Tr,
-                            facecolor='w', marker='o', edgecolors=SLc, label=SLlab)
-            else:
-                ax.scatter(FutureOutputsClean[Tr]['rmse'][0][SL], Tr,
-                            facecolor=SLc, marker='o', edgecolors=None, label=SLlab+f' < {} m')
-        handles, labels = ax.get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        ax.legend(by_label.values(), by_label.keys(), loc='center right')
-        ax.set_xlim(0,ax.get_xlim()[1])
-        ax.set_ylim(0,list(FutureOutputsClean.keys())[-1]+20)
+        RMSEArray = np.array(RMSEList[SL])
+        Pct = round(np.percentile(RMSEArray, 75))
+        ax.scatter(RMSEArray[np.where(RMSEArray > Pct)], 
+                   np.array(list(FutureOutputsClean.keys()))[np.where(RMSEArray > Pct)],
+                   s=15, facecolor='w', marker='o', edgecolors=SLc, label=SLlab)
+        ax.scatter(RMSEArray[np.where(RMSEArray < Pct)], 
+                   np.array(list(FutureOutputsClean.keys()))[np.where(RMSEArray < Pct)],
+                   s=15, facecolor=SLc, marker='o', edgecolors=None, label=SLlab+f' < 75$^{{th}}$%\n({Pct} m)')
+        # handles, labels = ax.get_legend_handles_labels()
+        # by_label = dict(zip(labels, handles))
+        # ax.legend(by_label.values(), by_label.keys(), loc='center right')
+        ax.legend(loc='center right')
+        ax.set_xlim(0)
+        ax.set_ylim(0,list(FutureOutputsClean.keys())[-1]+5)
     
     axs[1].yaxis.set_tick_params(labelleft=False)
     axs[0].set_ylabel('Transect ID')
     # Shared axis label
-    fig.supxlabel('Root mean square error (m)')
+    fig.supxlabel('            RMSE (m)')
     
     plt.tight_layout()
     plt.show()
