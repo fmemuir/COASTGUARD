@@ -1184,11 +1184,11 @@ def TZIntersect(settings, TransectInterGDF, VeglinesGDF, BasePath):
         
     fpath = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'])
     # read in Transition Zone tifs
-    fnames = [os.path.basename(x) for x in glob.glob(os.path.join(fpath,'jpg_files', '*_TZ.tif'))]
+    fnames = [os.path.basename(x) for x in glob.glob(os.path.join(fpath,'img_files', '*_TZ.tif'))]
 
     for fnum, fname in enumerate(fnames): # for each TZ raster (and therefore image date)
         with rio.Env():
-            with rio.open(os.path.join(fpath, 'jpg_files', fname)) as src:
+            with rio.open(os.path.join(fpath, 'img_files', fname)) as src:
                 img = src.read(1).astype("float32") # first band
                 results = (
                 {'properties': {'raster_val': v}, 'geometry': s}

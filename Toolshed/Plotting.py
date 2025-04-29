@@ -127,7 +127,7 @@ def SatGIF(metadata,settings,output):
     dates = settings['inputs']['dates']
 
     # create a subfolder to store the .jpg images showing the detection
-    filepath_jpg = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
+    filepath_jpg = os.path.join(filepath_data, sitename, 'img_files', 'detection')
     if not os.path.exists(filepath_jpg):
             os.makedirs(filepath_jpg)
     # close all open figures
@@ -151,7 +151,7 @@ def SatGIF(metadata,settings,output):
 
             print('\r%s:   %d%%' % (satname,int(((i+1)/len(filenames))*100)), end='')
             
-            # TO DO: need to load in images from jpg_files folder
+            # TO DO: need to load in images from img_files folder
             # Append image array and dates to lists for plotting
             img = rasterio.open(filenames[i])
             im_RGB = img.read()

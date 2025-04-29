@@ -899,7 +899,7 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
     for imarray, imtype, bandno in zip([im_RGB, im_NDVI],['RGB.tif', 'NDVI.tif'],[3,1]):
         if bandno > 1:
             imarray_brc = np.moveaxis(imarray,2,0) # rasterio expects shape of (bands, rows, cols)
-            savename = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype)
+            savename = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'img_files',tifname+'_'+imtype)
             with rasterio.open(savename,'w',
                 driver='GTiff',
                 height=imarray_brc.shape[1],
@@ -912,7 +912,7 @@ def save_RGB_NDVI(im_ms, cloud_mask, georef, filenames, settings):
                 tif.write(imarray_brc)
         else:
             imarray_brc = imarray
-            savename = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+imtype)
+            savename = os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'img_files',tifname+'_'+imtype)
             with rasterio.open(
                 savename,'w',
                 driver='GTiff',
@@ -956,7 +956,7 @@ def save_ClassIm(im_classif, im_labels, cloud_mask, georef, filenames, settings)
     
     # Binary classified image
     with rasterio.open(
-        os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+'CLASS.tif'),
+        os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'img_files',tifname+'_'+'CLASS.tif'),
         'w',
         driver='GTiff',
         height=im_classif.shape[0],
@@ -1027,7 +1027,7 @@ def save_TZone(im_ms, im_labels, cloud_mask, im_ref_buffer, georef, filenames, s
     
     # Binary classified image
     with rasterio.open(
-        os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'jpg_files',tifname+'_'+'TZ.tif'),
+        os.path.join(settings['inputs']['filepath'],settings['inputs']['sitename'],'img_files',tifname+'_'+'TZ.tif'),
         'w',
         driver='GTiff',
         height=im_TZ_cl_fill.shape[0],
@@ -1397,7 +1397,7 @@ def save_jpg(metadata, settings, polygon, dates, **kwargs):
     filepath_data = settings['inputs']['filepath']
 
     # create subfolder to store the jpg files
-    filepath_jpg = os.path.join(filepath_data, sitename, 'jpg_files', 'preprocessed')
+    filepath_jpg = os.path.join(filepath_data, sitename, 'img_files', 'preprocessed')
     if not os.path.exists(filepath_jpg):
             os.makedirs(filepath_jpg)
 
@@ -1435,7 +1435,7 @@ def save_jpg(metadata, settings, polygon, dates, **kwargs):
 
     # print the location where the images have been saved
     print('Satellite images saved as .jpg in ' + os.path.join(filepath_data, sitename,
-                                                    'jpg_files', 'preprocessed'))
+                                                    'img_files', 'preprocessed'))
 
 def get_reference_sl(metadata, settings, polygon, dates):
     """

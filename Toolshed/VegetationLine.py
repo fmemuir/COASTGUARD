@@ -80,7 +80,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
         return output, output_latlon, output_proj
     
     # create a subfolder to store the .jpg images showing the detection
-    filepath_jpg = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
+    filepath_jpg = os.path.join(filepath_data, sitename, 'img_files', 'detection')
     if not os.path.exists(filepath_jpg):
         os.makedirs(filepath_jpg)
     # close all open figures
@@ -1885,8 +1885,8 @@ def show_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, image_epsg, geor
             else:
                 plt.waitforbuttonpress()
 
-    # if save_figure is True, save a .jpg under /jpg_files/detection
-    filepath = os.path.join(filepath_data, sitename, 'jpg_files', 'detection')
+    # if save_figure is True, save a .jpg under /img_files/detection
+    filepath = os.path.join(filepath_data, sitename, 'img_files', 'detection')
     if settings['save_figure'] and not skip_image:
         fig.savefig(os.path.join(filepath, date + '_' + satname + '.jpg'), dpi=150)
 
@@ -1964,7 +1964,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, vegli
     sitename = settings['inputs']['sitename']
     filepath_data = settings['inputs']['filepath']
     # subfolder where the .jpg is stored if the user accepts the shoreline detection
-    filepath = os.path.join(filepath_data, sitename, 'jpg_files','detection')
+    filepath = os.path.join(filepath_data, sitename, 'img_files','detection')
     # format date
     if satname != 'S2':
         date_str = datetime.strptime(date,'%Y-%m-%d').strftime('%Y-%m-%d')
@@ -2093,7 +2093,7 @@ def adjust_detection(im_ms, cloud_mask, im_labels, im_ref_buffer, vegline, vegli
         else:
             plt.waitforbuttonpress()
 
-    # if save_figure is True, save a .jpg under /jpg_files/detection
+    # if save_figure is True, save a .jpg under /img_files/detection
     if settings['save_figure'] and not skip_image:
         fig.savefig(os.path.join(filepath, date + '_' + satname + '.jpg'), dpi=150)
         
