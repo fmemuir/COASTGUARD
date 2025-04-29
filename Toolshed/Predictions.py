@@ -1309,7 +1309,7 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
     return FutureOutputs
     
 
-def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs):
+def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOutputs):
 
     Rows = []
     for Tr, data in FutureOutputs.items():
@@ -1320,10 +1320,10 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs
                 'preddate': np.nan,
                 'predVE': np.nan,
                 'predWL': np.nan,
-                'futureVE': np.nan,
-                'future10dVE': np.nan,
-                'futureWL': np.nan,
-                'future10dWL': np.nan,
+                'VE_RMSE': np.nan,
+                'VE_RMSE10d': np.nan,
+                'WL_RMSE': np.nan,
+                'WL_RMSE10d': np.nan,
             }
         else:
             output_df = data['output'][0] if data['output'] else None
@@ -1343,10 +1343,10 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs
                 'preddate': preddate,
                 'predVE': predVE,
                 'predWL': predWL,
-                'futureVE': rmse_dict.get('futureVE', np.nan),
-                'future10dVE': rmse_dict.get('future10dVE', np.nan),
-                'futureWL': rmse_dict.get('futureWL', np.nan),
-                'future10dWL': rmse_dict.get('future10dWL', np.nan),
+                'VE_RMSE': rmse_dict.get('futureVE', np.nan),
+                'VE_RMSE10d': rmse_dict.get('future10dVE', np.nan),
+                'WL_RMSE': rmse_dict.get('futureWL', np.nan),
+                'WL_RMSE10d': rmse_dict.get('future10dWL', np.nan),
             }
         
         Rows.append(Row)
@@ -1354,32 +1354,42 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDF, CoastalDF, FutureOutputs
     # Create the DataFrame
     FutureOutputsDF = pd.DataFrame(Rows)
     
-    # Merge with TransectInterGDF
-    CoastalGDF = TransectInterGDF.merge(FutureOutputsDF, on='TransectID')
-
+    # Merge
+    CoastalGDF = TransectInterGDFWater.merge(FutureOutputsDF, on='TransectID')
+    
+    # Make a copy to edit
     CoastalSHP = CoastalGDF.copy()
     
-    # reformat fields with lists to strings
+    # Reformat fields with lists to strings
     KeyName = list(CoastalSHP.select_dtypes(include='object').columns)
+    
     for Key in KeyName:
-        # round any floating points numbers before export
-        realInd = next(i for i, j in enumerate(CoastalSHP[Key]) if j)
-            
-        if type(CoastalSHP[Key][realInd]) == list: # for lists of intersected values per transect
-            if type(CoastalSHP[Key][realInd][0]) == np.float64:  
-                for Tr in range(len(CoastalSHP[Key])):
-                    CoastalSHP.loc[Tr, Key] = [round(i,2) for i in CoastalSHP[Key][Tr]]
-        else: # for singular values per transect
-            if type(CoastalSHP[Key][realInd]) == np.float64: 
-                for Tr in range(len(CoastalSHP[Key])):
-                    CoastalSHP.loc[Tr, Key] = [round(i,2) for i in CoastalSHP[Key][Tr]]
-                    
+        # find a real (non-empty) value to inspect type
+        realInd = next(
+            (i for i, j in enumerate(CoastalSHP[Key]) if j is not None and not (isinstance(j, float) and np.isnan(j))),
+            None
+        )
+        if realInd is None:
+            continue  # skip fully empty columns
+    
+        val = CoastalSHP[Key].iloc[realInd]
+    
+        if isinstance(val, list):  # list column
+            if len(val) > 0 and isinstance(val[0], (np.float64, float)):  # list of floats
+                # round the floats inside lists
+                CoastalSHP[Key] = CoastalSHP[Key].apply(lambda x: [round(i, 2) for i in x] if isinstance(x, list) else x)
+        elif isinstance(val, (np.float64, float)):  # single float column
+            # round the single floats
+            CoastalSHP[Key] = CoastalSHP[Key].round(2)
+        
+        # finally convert all entries in this column to strings
         CoastalSHP[Key] = CoastalSHP[Key].astype(str)
     
+    # Now save
+    CoastalSHP.to_file(
+        os.path.join(filepath, sitename, 'veglines', f'{sitename}_Transects_Intersected_Future_{FirstDt}_{LastDt}.shp')
+    )
     
-    CoastalSHP.to_file(os.path.join(filepath,sitename,'intersections',
-                                    sitename+f'_Transects_Intersected_Future_{FirstDt}_{LastDt}.shp'))
-
     return CoastalGDF
     
 
