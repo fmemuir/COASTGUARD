@@ -1309,7 +1309,7 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
     return FutureOutputs
     
 
-def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOutputs):
+def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOutputs, Subtitle=''):
 
     Rows = []
     for Tr, data in FutureOutputs.items():
@@ -1387,7 +1387,7 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOu
     
     # Now save
     CoastalSHP.to_file(
-        os.path.join(filepath, sitename, 'veglines', f'{sitename}_Transects_Intersected_Future_{FirstDt}_{LastDt}.shp')
+        os.path.join(filepath, sitename, 'veglines', f'{sitename}_Transects_Intersected_Future_{FirstDt}_{LastDt}{Subtitle}.shp')
     )
     
     return CoastalGDF

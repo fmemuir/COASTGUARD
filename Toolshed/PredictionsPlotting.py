@@ -1482,7 +1482,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
 
 
-def PlotSiteRMSE(FutureOutputsClean, filepath, sitename):
+def PlotSiteRMSE(FutureOutputsClean, filepath, sitename, Subtitle=''):
     
     fig, axs = plt.subplots(1,2, figsize=(3.25,5))
     
@@ -1519,11 +1519,11 @@ def PlotSiteRMSE(FutureOutputsClean, filepath, sitename):
     plt.show()
     
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_FullSiteRMSE.png')
+                           sitename+'_FullSiteRMSE'+Subtitle+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
     
-def PlotRMSE_Rt(CoastalGDF, filepath, sitename):
+def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
     
     fig, axs = plt.subplots(1,2, figsize=(6.55,3.28))
     
@@ -1557,7 +1557,7 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename):
     plt.show()
     
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_FullSiteRMSE_Rt.png')
+                           sitename+'_FullSiteRMSE_Rt'+Subtitle+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
     
