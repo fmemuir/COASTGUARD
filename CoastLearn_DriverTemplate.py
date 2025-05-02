@@ -85,14 +85,14 @@ PredictionsPlotting.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, fil
 # Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']#, 'tideelev']
-# TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW', 'WaveTpEW']#, 'tideelev']
+# TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']#, 'tideelev']
+TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW', 'WaveTpEW', 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']
 TargFeats = ['VE', 'WL']
 
 # OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
 
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['daily_optimal_val10'], 
+                                                              MLabels=['fixed_EW_neighbours'], 
                                                               ValidSizes=[0.1], 
                                                               TSteps=[10],
                                                               TrainFeatCols=[TrainFeats],
