@@ -121,7 +121,7 @@ def CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGD
     Returns
     -------
     CoastalDF : DataFrame
-        DataFrame process.
+        DataFrame processed.
 
     """
     print('Merging transect-based data...')
@@ -1075,6 +1075,31 @@ def SHAPTest(PredDict, mID):
 
 
 def TrainRNN_Optuna(PredDict, mlabel):
+    """
+    Train recurrent neural network using the package Optuna (https://optuna.readthedocs.io/en/stable/index.html). 
+    Alternative to TrainRNN(). Results are written to PredDict which is saved to 
+    a pickle file. If TensorBoard is used as the callback, the training history
+    is also written to log files for viewing within a TensorBoard dashboard.
+    FM Dec 2024
+
+    Parameters
+    ----------
+    PredDict : dict
+        Dictionary to store all the NN model metadata.
+    mlabel : str
+        Unique model name.
+
+    Raises
+    ------
+    optuna
+        Exception raised to tell the trainer that the trial was pruned (if hyperparams were already tested).
+
+    Returns
+    -------
+    study : optuna.study.Study
+        Optuna optimisation task i.e. a set of hyperparameter trials.
+
+    """
     # Custom RMSE metric function
     def root_mean_squared_error(y_true, y_pred):
         return K.sqrt(K.mean(K.square(y_pred - y_true)))
@@ -1190,7 +1215,23 @@ def TrainRNN_Optuna(PredDict, mlabel):
 
 
 def RunsToCSV(tuningdir,outputCSV):
-    
+    """
+    Export group of hyperparameter test outputs to one CSV file.
+    FM Feb 2025
+
+    Parameters
+    ----------
+    tuningdir : str
+        Filepath to directory holding collection of folders made by TrainRNN() 
+        (holding .tfevents files).
+    outputCSV : str
+        Filename of output CSV with all training history stored.
+
+    Returns
+    -------
+    None.
+
+    """
     AllData = []
     
     # Iterate through all subdirectories (each subdirectory corresponds to a run)
@@ -1279,6 +1320,27 @@ def FuturePredict(PredDict, ForecastDF):
 
 
 def ShorelineRMSE(FutureOutputs, TransectDFTest):
+    """
+    Calculate root mean square error between the CoastLearn predicted shorelines
+    and their unseen test counterparts. futureVE/WL is the vegetation edge/waterline
+    for the whole test period, future10dVE/WL is the vegetation edge/waterline
+    for just the first 10 days predicted following the end of validation.
+    FM Mar 2025
+
+    Parameters
+    ----------
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions
+    TransectDFTest : DataFrame
+        Per-transect dataframe of training and target features, output from InterpVEWLWv().
+
+    Returns
+    -------
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions,
+        now with RMSE info as a dict key.
+
+    """
     # for each model run
     for mID in range(len(FutureOutputs['mlabel'])):
         # initialise ways to store error values
@@ -1310,7 +1372,36 @@ def ShorelineRMSE(FutureOutputs, TransectDFTest):
     
 
 def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOutputs, Subtitle=''):
+    """
+    Save root mean square error information (from predicted vs. test shoreline
+    predictions) as a shapefile of transects.
+    FM Apr 2025
 
+    Parameters
+    ----------
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    TransectInterGDFWater : GeoDataFrame
+        GeoDataFrame of cross-shore transects, intersected with waterlines.
+    CoastalDF : DataFrame
+        DataFrame of cross-shore transects (rows) and intersected coastal 
+        timeseries/metrics (columns).
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions,
+        now with RMSE info as a dict key.
+    Subtitle : str, optional
+        Additional filename title to differentiate between full site model runs. The default is ''.
+
+    Returns
+    -------
+    CoastalGDF : GeoDataFrame
+        DataFrame of cross-shore transects (rows) and intersected coastal 
+        timeseries/metrics (columns), with RMSE stats as additional columns and 
+        a geometry column from the Transect GDFs.
+
+    """
     Rows = []
     for Tr, data in FutureOutputs.items():
         if data is None:
@@ -1394,7 +1485,28 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOu
     
 
 def RMSE_Stats(FutureOutputs):
-    
+    """
+    Return and print summary RMSE statistics for a full-site run of CoastLearn.
+    FM May 2025
+
+    Parameters
+    ----------
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions,
+        now with RMSE info as a dict key.
+
+    Returns
+    -------
+    VERMSE : list
+        Per-transect list of RMSE values for predicted vegetation edge.
+    WLRMSE : list
+        Per-transect list of RMSE values for predicted waterline.
+    VERMSE10d : list
+        Per-transect list of RMSE values for predicted vegetation edge (just first 10 days).
+    WLRMSE10d : list
+        Per-transect list of RMSE values for predicted waterline (just first 10 days).
+
+    """
     VERMSE = []
     WLRMSE = []
     for Tr in FutureOutputs.keys():
@@ -1427,7 +1539,30 @@ def RMSE_Stats(FutureOutputs):
 #%% CLASSIFICATION OF IMPACTS ###
 
 def ClassifyImpact(TransectDF, Method='pcnt'):
-    
+    """
+    Classify impact of coastal shoreline changes predicted by CoastLearn.
+    FM Mar 2025
+
+    Parameters
+    ----------
+    TransectDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in timeseries.
+        Usually 'FutureOutputsClean[Tr]['output'][0]' is passed.
+    Method : str, optional
+        Method to use for calculating the impact factor. The default is 'pcnt'. Choose from:
+        'pcnt' (use the 5th and 25th percentiles of cross-shore distance 
+                to classify the bounds of high and medium impact); 
+        'slope' (use the 5th and 25th percentiles of cross-shore timeseries slope 
+                to classify the bounds of high and medium impact); 
+        'combi' (use a combination of distance and slope percentiles). 
+
+    Returns
+    -------
+    ImpactClass : dict
+        Dict of impact classifications for futureVE and futureWL, plus the bounds
+        calculated to apply the classifications.
+
+    """
     
     # For each type of shoreline
     if 'future' in TransectDF.columns.any(): # if classifying future shorelines
@@ -1522,9 +1657,6 @@ def ClassifyImpact(TransectDF, Method='pcnt'):
     return ImpactClass
 
 
-# def ApplyImpactClasses(ImpactClass, FutureOutputs, mID=0):
-    
-        
 # ----------------------------------------------------------------------------------------
 #%% CLUSTERING FUNCTIONS ###
 
