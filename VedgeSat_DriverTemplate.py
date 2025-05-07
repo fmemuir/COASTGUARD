@@ -18,6 +18,7 @@ import ee
 import geopandas as gpd
 
 ee.Initialize()
+ee.Authenticate() # should only need to be run the first time after installation
 
 
 
