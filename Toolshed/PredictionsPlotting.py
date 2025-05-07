@@ -143,6 +143,74 @@ def PlotInterps(CoastalDF, Tr, FigPath):
     plt.tight_layout()
     plt.show()
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)     
+    
+    
+def PlotInterpsWLVE(CoastalDF, Tr, FigPath):
+    """
+    Plot results of different scipy interpolation methods.
+    FM Feb 2025
+
+    Parameters
+    ----------
+    TransectDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in timeseries.
+    FigPath : str
+        Path to save figure to.
+
+    """
+    
+    VEDF = pd.DataFrame(CoastalDF['VE'].iloc[Tr], 
+                              index=pd.to_datetime(CoastalDF['dates'].iloc[Tr], format='%Y-%m-%d'),
+                              columns=['VE'])
+    WLDF = pd.DataFrame(CoastalDF['WL'].iloc[Tr], 
+                              index=pd.to_datetime(CoastalDF['wldates'].iloc[Tr], format='%Y-%m-%d'),
+                              columns=['WL'])
+    VEDF = VEDF[~VEDF.index.duplicated(keep='first')]
+    WLDF = WLDF[~WLDF.index.duplicated(keep='first')]
+    
+    Mthds = ['nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial', 'piecewise_polynomial', 'spline', 'pchip', 'akima', 'cubicspline', 'from_derivatives']
+    fig, axs = plt.subplots(4,3, sharex=True, figsize=(6.55,5))
+    axs=axs.flatten()
+    
+    SD = '2021-03-01 00:00:00'
+    ED = '2022-01-01 00:00:00'
+    for TransectDF, clr, lab in zip([VEDF,WLDF], ['#79C060','#3E74B3'], ['$VE$','$WL$']):
+        for i, Mthd in enumerate(Mthds):
+
+            if Mthd in ['polynomial','spline']:
+                # Ord = pd.isnull(TransectDF['WaveHsFD']).sum() - 1
+                Ord = 5
+                TransectDFInterp = TransectDF.resample('D').interpolate(method=Mthd, order=Ord, axis=0)
+                axs[i].set_title(Mthd+', order='+str(Ord), pad=1)
+            else:
+                TransectDFInterp = TransectDF.resample('D').interpolate(method=Mthd, axis=0)
+                axs[i].set_title(Mthd, pad=1)
+            
+            # plot results
+            axs[i].plot(TransectDF.loc[SD:ED], c=clr, marker='o', ms=2, lw=0, label=lab)
+            axs[i].plot(TransectDFInterp.loc[SD:ED], c=clr, lw=1.5, alpha=0.5, label=lab+' interpolated')
+            
+            
+            axs[i].xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
+            axs[i].xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
+            
+            if Mthd in ['quadratic','cubic','polynomial','spline','cubicspline'] and clr=='#3E74B3':
+                axs[i].text(TransectDFInterp[SD:ED].idxmin()-timedelta(days=5),
+                            TransectDFInterp.loc[SD:ED].min()+50, 
+                            'undershooting', color='r', ha='right', va='center')
+            if Mthd in ['polynomial'] and clr=='#3E74B3':
+                axs[i].text(TransectDFInterp[SD:ED].idxmax()+timedelta(days=5),
+                            TransectDFInterp.loc[SD:ED].max()+50, 
+                            'overshooting', color='r', ha='left', va='center')
+    plt.legend(bbox_to_anchor=(0.5,-0.6), ncols=4)
+        # axs[i].set_ylim((-1,1))
+            
+    fig.supxlabel('Date')
+    fig.supylabel('Wave height (m)')
+    
+    plt.tight_layout()
+    plt.show()
+    plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)  
 
 
 def PlotCorrs(filepath, sitename, Tr, VarDFDayTrain, TrainFeats, SymbolDict):
@@ -1515,6 +1583,10 @@ def PlotSiteRMSE(FutureOutputsClean, filepath, sitename, Subtitle=''):
     # Shared axis label
     fig.supxlabel('            RMSE (m)')
     
+    for ax, lab in zip(axs, list(string.ascii_lowercase[:2])):
+        ax.text(0.9,0.993, '('+lab+')', transform=ax.transAxes,
+                fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
+        
     plt.tight_layout()
     plt.show()
     
@@ -1539,7 +1611,7 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
                    label=f'$r_{{VE}}$ = {round(VEr,2)}')
     axs[1].scatter(CoastalGDF['WL_RMSE'][badWL], np.abs(CoastalGDF['oldyungRtW'][badWL]), s=15, facecolor='#3E74B3',
                    label=f'$r_{{WL}}$ = {round(WLr,2)}')
-    
+        
     axs[0].set_xlabel(r'$RMSE_{VE}$ (m)')
     axs[1].set_xlabel(r'$RMSE_{WL}$ (m)')
     axs[0].set_ylabel(r'$\Delta VE$ (m/yr)')
@@ -1550,8 +1622,12 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
     axs[0].set_ylim(0)
     axs[1].set_ylim(0)
     
-    axs[0].legend()
-    axs[1].legend()
+    axs[0].legend(loc='upper left')
+    axs[1].legend(loc='upper left')
+    
+    for ax, lab, xpos, ypos in zip(axs, list(string.ascii_lowercase[:2]), [0.955, 0.955], [0.992, 0.992]):
+        ax.text(xpos,ypos, '('+lab+')', transform=ax.transAxes,
+                fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
     
     plt.tight_layout()
     plt.show()

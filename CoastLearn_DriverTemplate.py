@@ -63,7 +63,7 @@ TransectIDs = [1325]
 
 #%% Interpolate variables to daily
 # Plot Interpolation Methods
-# Predictions.PlotInterps(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/'+sitename+'_InterpolationMethods.png')
+PredictionsPlotting.PlotInterpsWLVE(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/Paper3_Figs/'+sitename+'_InterpolationMethods_WLVE.png')
 
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWLWv(CoastalDF, Tr, IntpKind='pchip')
