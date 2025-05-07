@@ -509,6 +509,9 @@ def CreateSequences(X, y=None, time_steps=1, Pad=False):
         Training classes as array of binary labels.
     time_steps : int, optional
         Number of time steps over which to generate sequences. The default is 1.
+    Pad : bool, optional
+        Flag for whether to apply a padding of zeros to the start of the timeseries
+        if there isn't enough data for a full sequence. The default is False.
 
     Returns
     -------
@@ -516,6 +519,7 @@ def CreateSequences(X, y=None, time_steps=1, Pad=False):
         Numpy arrays of sequenced data
 
     '''
+    # Initialise training and target feature lists
     Xs = []
     ys = []
     Ind = []
@@ -1402,6 +1406,7 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOu
         a geometry column from the Transect GDFs.
 
     """
+    # Strip out prediction data to be saved to shapefile
     Rows = []
     for Tr, data in FutureOutputs.items():
         if data is None:
@@ -1507,18 +1512,21 @@ def RMSE_Stats(FutureOutputs):
         Per-transect list of RMSE values for predicted waterline (just first 10 days).
 
     """
+    # Loop through RMSEs to populate lists
     VERMSE = []
     WLRMSE = []
     for Tr in FutureOutputs.keys():
         VERMSE.append(FutureOutputs[Tr]['rmse'][0]['futureVE'])
         WLRMSE.append(FutureOutputs[Tr]['rmse'][0]['futureWL'])
 
+    # Loop through RMSEs to populate lists (first 10 days of predictions)
     VERMSE10d = []
     WLRMSE10d = []
     for Tr in FutureOutputs.keys():
         VERMSE10d.append(FutureOutputs[Tr]['rmse'][0]['future10dVE'])
         WLRMSE10d.append(FutureOutputs[Tr]['rmse'][0]['future10dWL'])
       
+    # Print summary stats of transect-based RMSE values (site-wide minimum, median, maximum RMSE)
     print("minimum / median / maximum RMSE for both shorelines, full period:")
     print(f"{ np.nanmin([WLRMSE,VERMSE]) } / { np.nanmedian([WLRMSE,VERMSE]) } / { np.nanmax([WLRMSE,VERMSE]) }")
     print("minimum / median / maximum RMSE for waterline, full period:")
@@ -1526,6 +1534,8 @@ def RMSE_Stats(FutureOutputs):
     print("minimum / median / maximum RMSE for vegetation edge, full period:")
     print(f"{ np.nanmin(VERMSE) } / { np.nanmedian(VERMSE) } / { np.nanmax(VERMSE) }")
     
+    # Print summary stats of transect-based RMSE values (site-wide minimum, median, maximum RMSE)
+    # (first 10 days of predictions)
     print("minimum / median / maximum RMSE for both shorelines, first 10 days:")
     print(f"{ np.nanmin([WLRMSE10d,VERMSE10d]) } / { np.nanmedian([WLRMSE10d,VERMSE10d]) } / { np.nanmax([WLRMSE10d,VERMSE10d]) }")
     print("minimum / median / maximum RMSE for waterline, first 10 days:")
