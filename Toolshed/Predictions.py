@@ -1393,6 +1393,37 @@ def SaveRMSEtoSHP(filepath, sitename, TransectInterGDFWater, CoastalDF, FutureOu
     return CoastalGDF
     
 
+def RMSE_Stats(FutureOutputs):
+    
+    VERMSE = []
+    WLRMSE = []
+    for Tr in FutureOutputs.keys():
+        VERMSE.append(FutureOutputs[Tr]['rmse'][0]['futureVE'])
+        WLRMSE.append(FutureOutputs[Tr]['rmse'][0]['futureWL'])
+
+    VERMSE10d = []
+    WLRMSE10d = []
+    for Tr in FutureOutputs.keys():
+        VERMSE10d.append(FutureOutputs[Tr]['rmse'][0]['future10dVE'])
+        WLRMSE10d.append(FutureOutputs[Tr]['rmse'][0]['future10dWL'])
+      
+    print("minimum / median / maximum RMSE for both shorelines, full period:")
+    print(f"{ np.nanmin([WLRMSE,VERMSE]) } / { np.nanmedian([WLRMSE,VERMSE]) } / { np.nanmax([WLRMSE,VERMSE]) }")
+    print("minimum / median / maximum RMSE for waterline, full period:")
+    print(f"{ np.nanmin(WLRMSE) } / { np.nanmedian(WLRMSE) } / { np.nanmax(WLRMSE) }")
+    print("minimum / median / maximum RMSE for vegetation edge, full period:")
+    print(f"{ np.nanmin(VERMSE) } / { np.nanmedian(VERMSE) } / { np.nanmax(VERMSE) }")
+    
+    print("minimum / median / maximum RMSE for both shorelines, first 10 days:")
+    print(f"{ np.nanmin([WLRMSE10d,VERMSE10d]) } / { np.nanmedian([WLRMSE10d,VERMSE10d]) } / { np.nanmax([WLRMSE10d,VERMSE10d]) }")
+    print("minimum / median / maximum RMSE for waterline, first 10 days:")
+    print(f"{ np.nanmin(WLRMSE10d) } / { np.nanmedian(WLRMSE10d) } / { np.nanmax(WLRMSE10d) }")
+    print("minimum / median / maximum RMSE for vegetation edge, first 10 days:")
+    print(f"{ np.nanmin(VERMSE10d) } / { np.nanmedian(VERMSE10d) } / { np.nanmax(VERMSE10d) }")
+    
+    return VERMSE, WLRMSE, VERMSE10d, WLRMSE10d
+
+
 #%% CLASSIFICATION OF IMPACTS ###
 
 def ClassifyImpact(TransectDF, Method='pcnt'):
