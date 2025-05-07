@@ -254,8 +254,8 @@ PredictionsPlotting.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutu
 
 #%%
 mID=0
-# Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
-# FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
+Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
+FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 for SL in ['VE', 'WL']: 
     FullFutureOutputs['output'][mID]['future'+SL] = FullFutureOutputs['output'][mID]['future'+SL].loc[TransectDFTest.index[0]:]
 FullFutureOutputs = Predictions.ShorelineRMSE(FullFutureOutputs, TransectDF)
