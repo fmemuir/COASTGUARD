@@ -82,9 +82,28 @@ def MovingAverage(series, windowsize):
 
 
 def VarCorrelations(VarDFDayTrain, TrainFeats):
-    
+    """
+    Generate correlations dataframe for plotting
+    FM Mar 2025
+
+    Parameters
+    ----------
+    VarDFDayTrain : DataFrame
+        Scaled DataFrame of past data interpolated to daily timesteps (with temporal index), 
+        for training and validation.
+    TrainFeats : list
+        Training features to plot correlations of.
+
+    Returns
+    -------
+    CorrDF : DataFrame
+        Correlations dataframe of Pearson r values with VE and WL.
+
+    """
+    # Correlating with VE or WL
     CorrDict = {'VE':[], 'WL':[]}
     for SL in CorrDict.keys():
+        # For each training feature, calculate pearson r with VE and WL
         for Key in TrainFeats:
             rval, _ = pearsonr(VarDFDayTrain[SL], VarDFDayTrain[Key])
             CorrDict[SL].append(rval)
@@ -115,7 +134,7 @@ def PlotInterps(CoastalDF, Tr, FigPath):
     fig, axs = plt.subplots(4,3, sharex=True, figsize=(6.55,5),dpi=300)
     axs=axs.flatten()
     for i, Mthd in enumerate(Mthds):
-
+        # Need to set order for polynomial interpolation approaches
         if Mthd in ['polynomial','spline']:
             # Ord = pd.isnull(TransectDF['WaveHsFD']).sum() - 1
             Ord = 5
@@ -124,13 +143,16 @@ def PlotInterps(CoastalDF, Tr, FigPath):
         else:
             TransectDFInterp = TransectDF.interpolate(method=Mthd, axis=0)
             axs[i].set_title(Mthd, pad=1)
-
+        
+        # Plot specific region of wave data which is missing
         axs[i].plot(TransectDFInterp['WaveHsFD'][3280:], c='#46B0E1', lw=1.5)
         axs[i].plot(TransectDF['WaveHsFD'][3280:], c='#1559A0', lw=1.5)
         
+        # Set formatting of axis labels as mon-year
         axs[i].xaxis.set_major_locator(mdates.MonthLocator())
         axs[i].xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
         
+        # Label where methods have over or undershot
         if Mthd in ['polynomial','akima','cubicspline','quadratic', 'cubic']:
             axs[i].text(TransectDFInterp['WaveHsFD'][3280:][TransectDFInterp['WaveHsFD'][3280:] == TransectDFInterp['WaveHsFD'][3280:].min()].index-timedelta(days=5),
                         TransectDFInterp['WaveHsFD'][3280:].min()+0.05, 
@@ -147,7 +169,7 @@ def PlotInterps(CoastalDF, Tr, FigPath):
     
 def PlotInterpsWLVE(CoastalDF, Tr, FigPath):
     """
-    Plot results of different scipy interpolation methods.
+    Plot results of different scipy interpolation methods (VE and WL).
     FM Feb 2025
 
     Parameters
@@ -159,6 +181,7 @@ def PlotInterpsWLVE(CoastalDF, Tr, FigPath):
 
     """
     
+    # Set up vegetation edge and waterline dataframes
     VEDF = pd.DataFrame(CoastalDF['VE'].iloc[Tr], 
                               index=pd.to_datetime(CoastalDF['dates'].iloc[Tr], format='%Y-%m-%d'),
                               columns=['VE'])
@@ -168,15 +191,17 @@ def PlotInterpsWLVE(CoastalDF, Tr, FigPath):
     VEDF = VEDF[~VEDF.index.duplicated(keep='first')]
     WLDF = WLDF[~WLDF.index.duplicated(keep='first')]
     
+    # Set up methods for interpolation
     Mthds = ['nearest', 'zero', 'slinear', 'quadratic', 'cubic', 'polynomial', 'piecewise_polynomial', 'spline', 'pchip', 'akima', 'cubicspline', 'from_derivatives']
     fig, axs = plt.subplots(4,3, sharex=True, figsize=(6.55,5))
     axs=axs.flatten()
     
+    # Start and end date for plotting
     SD = '2021-03-01 00:00:00'
     ED = '2022-01-01 00:00:00'
     for TransectDF, clr, lab in zip([VEDF,WLDF], ['#79C060','#3E74B3'], ['$VE$','$WL$']):
         for i, Mthd in enumerate(Mthds):
-
+        # Need to set order for polynomial interpolation approaches
             if Mthd in ['polynomial','spline']:
                 # Ord = pd.isnull(TransectDF['WaveHsFD']).sum() - 1
                 Ord = 5
@@ -186,14 +211,15 @@ def PlotInterpsWLVE(CoastalDF, Tr, FigPath):
                 TransectDFInterp = TransectDF.resample('D').interpolate(method=Mthd, axis=0)
                 axs[i].set_title(Mthd, pad=1)
             
-            # plot results
+            # Plot results of interpolation as line and original points as markers
             axs[i].plot(TransectDF.loc[SD:ED], c=clr, marker='o', ms=2, lw=0, label=lab)
             axs[i].plot(TransectDFInterp.loc[SD:ED], c=clr, lw=1.5, alpha=0.5, label=lab+' interpolated')
             
-            
+            # Set formatting of axis labels as mon-year
             axs[i].xaxis.set_major_locator(mdates.MonthLocator(bymonth=(1,7)))
             axs[i].xaxis.set_major_formatter(mdates.DateFormatter('%b %Y'))
             
+            # Label where methods have over/undershot
             if Mthd in ['quadratic','cubic','polynomial','spline','cubicspline'] and clr=='#3E74B3':
                 axs[i].text(TransectDFInterp[SD:ED].idxmin()-timedelta(days=5),
                             TransectDFInterp.loc[SD:ED].min()+50, 
@@ -202,9 +228,11 @@ def PlotInterpsWLVE(CoastalDF, Tr, FigPath):
                 axs[i].text(TransectDFInterp[SD:ED].idxmax()+timedelta(days=5),
                             TransectDFInterp.loc[SD:ED].max()+50, 
                             'overshooting', color='r', ha='left', va='center')
+    # Plot legend outside fig box
     plt.legend(bbox_to_anchor=(0.5,-0.6), ncols=4)
         # axs[i].set_ylim((-1,1))
-            
+      
+    # Common x and y labels
     fig.supxlabel('Date')
     fig.supylabel('Wave height (m)')
     
@@ -214,7 +242,28 @@ def PlotInterpsWLVE(CoastalDF, Tr, FigPath):
 
 
 def PlotCorrs(filepath, sitename, Tr, VarDFDayTrain, TrainFeats, SymbolDict):
-    
+    """
+    Plot bar chart of Pearson r values between each training feature and VE or WL.
+    FM Apr 2025
+
+    Parameters
+    ----------
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Tr : int
+        Transect ID to plot correlations between.
+    VarDFDayTrain : DataFrame
+        Scaled DataFrame of past data interpolated to daily timesteps (with temporal index), 
+        for training and validation.
+    TrainFeats : list
+        Training features to plot correlations of.
+    SymbolDict : dict
+        Dict of math-style labels for each feature name.
+
+
+    """
     CorrDF = VarCorrelations(VarDFDayTrain, TrainFeats)
     
     NewInd = []
@@ -250,6 +299,24 @@ def PlotCorrs(filepath, sitename, Tr, VarDFDayTrain, TrainFeats, SymbolDict):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)    
 
 def PlotAccuracy(CSVdir, FigPath):
+    """
+    Plot accuracy metric over all training runs in combined CSV, generated from
+    Predictions.RunsToCSV()
+    FM Feb 2025
+
+    Parameters
+    ----------
+    CSVdir : str
+        Filepath to CSV of combined training histories over different runs.
+    FigPath : str
+        Filepath to save the figure to.
+
+    Returns
+    -------
+    AccuracyDF : DataFrame
+        DESCRIPTION.
+
+    """
     # List to store each CSV's DataFrame
     dfs = []
     
@@ -290,7 +357,22 @@ def PlotAccuracy(CSVdir, FigPath):
 
 
 def PlotFeatSensitivity(PredDict, filepath, sitename, Tr):
+    """
     
+    FM Feb 2025
+
+    Parameters
+    ----------
+    PredDict : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    Tr : TYPE
+        DESCRIPTION.
+
+    """
     # Grid point size
     sz = 200
     
@@ -561,7 +643,30 @@ def PlotVarTS(TransectDF, Tr,TrainFeatsPlotting, filepath, sitename):
 
 
 def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, filepath, sitename):
+    """
     
+    FM Mar 2025
+
+    Parameters
+    ----------
+    TransectDFTrain : TYPE
+        DESCRIPTION.
+    TransectDFTest : TYPE
+        DESCRIPTION.
+    CoastalDF : TYPE
+        DESCRIPTION.
+    TrainFeatsPlotting : TYPE
+        DESCRIPTION.
+    SymbolDict : TYPE
+        DESCRIPTION.
+    Tr : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+
+    """
     # Append VE and WL to training feats
     TrainTargFeats = TrainFeatsPlotting.copy()
     TrainTargFeats.append('VE')
@@ -640,6 +745,22 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
     
 
 def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
+    """
+    
+    FM Feb 2025
+
+    Parameters
+    ----------
+    TransectDF : TYPE
+        DESCRIPTION.
+    CoastalDFTr : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+
+    """
     
     BabetTransect = TransectDF.loc['2023-09-28 00:00:00':'2023-12-05 00:00:00']
     BabetVEs = pd.DataFrame({'veDTs':CoastalDFTr['veDTs'],
@@ -701,6 +822,21 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     
     
 def PlotParaCoords(PredDict, filepath, sitename): 
+    """
+    
+    FM Mar 2025
+
+    Parameters
+    ----------
+    PredDict : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+
+    """
+    
     PredDF = pd.DataFrame(PredDict)
     HPScaler = MinMaxScaler()
     HPs = ['epochN', 'batchS', 'hiddenLscale', 'denselayers', 'dropoutRt', 'learnRt', 'accuracy', 'train_time']
@@ -740,6 +876,16 @@ def PlotParaCoords(PredDict, filepath, sitename):
         
 
 def PlotHPScatter(PredDict):
+    """
+    
+    FM Mar 2025
+
+    Parameters
+    ----------
+    PredDict : TYPE
+        DESCRIPTION.
+
+    """
     
     PredDF = pd.DataFrame(PredDict)
     # HPScaler = MinMaxScaler()
@@ -1298,7 +1444,26 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
 
 
 def PlotTestScatter(FutureOutputs, TransectDFTest, mID, Tr, filepath, sitename):
+    """
     
+    FM Mar 2025
+
+    Parameters
+    ----------
+    FutureOutputs : TYPE
+        DESCRIPTION.
+    TransectDFTest : TYPE
+        DESCRIPTION.
+    mID : TYPE
+        DESCRIPTION.
+    Tr : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+
+    """
     # fig, axs = plt.subplots(1,2, figsize=(6.55,3.23), dpi=300)
     fig, axs = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
 
@@ -1375,7 +1540,26 @@ def PlotTestScatter(FutureOutputs, TransectDFTest, mID, Tr, filepath, sitename):
     
 
 def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
+    """
     
+    FM Mar 2025
+
+    Parameters
+    ----------
+    FutureOutputs : TYPE
+        DESCRIPTION.
+    mID : TYPE
+        DESCRIPTION.
+    TransectDF : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    Tr : TYPE
+        DESCRIPTION.
+
+    """
     fig, axs = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
     fs = 7
     
@@ -1421,7 +1605,26 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
 
 
 def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
+    """
+    
+    FM Mar 2025
 
+    Parameters
+    ----------
+    FutureOutputs : TYPE
+        DESCRIPTION.
+    mID : TYPE
+        DESCRIPTION.
+    TransectDF : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    Tr : TYPE
+        DESCRIPTION.
+
+    """
     fig, axs = plt.subplots(1,2, figsize=(6.55,3.23), dpi=300)
     fs = 7
     
@@ -1551,7 +1754,22 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
 
 
 def PlotSiteRMSE(FutureOutputsClean, filepath, sitename, Subtitle=''):
+    """
     
+    FM Apr 2025
+
+    Parameters
+    ----------
+    FutureOutputsClean : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    Subtitle : TYPE, optional
+        DESCRIPTION. The default is ''.
+
+    """
     fig, axs = plt.subplots(1,2, figsize=(3.25,5))
     
     SLkeys = ['futureVE','futureWL']
@@ -1596,7 +1814,22 @@ def PlotSiteRMSE(FutureOutputsClean, filepath, sitename, Subtitle=''):
     
     
 def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
+    """
     
+    FM Apr 2025
+
+    Parameters
+    ----------
+    CoastalGDF : TYPE
+        DESCRIPTION.
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    Subtitle : TYPE, optional
+        DESCRIPTION. The default is ''.
+
+    """
     fig, axs = plt.subplots(1,2, figsize=(6.55,3.28))
     
     # Only use non-nan values across both columns
@@ -1638,7 +1871,24 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
     
     
 def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
+    """
     
+    FM Apr 2025
+
+    Parameters
+    ----------
+    filepath : TYPE
+        DESCRIPTION.
+    sitename : TYPE
+        DESCRIPTION.
+    Tr : TYPE
+        DESCRIPTION.
+    ImpactClass : TYPE
+        DESCRIPTION.
+    TransectDF : TYPE
+        DESCRIPTION.
+
+    """
     # fig, ax = plt.subplots(1,1, figsize=(6.5,3.25))
     fig, ax = plt.subplots(1,1, figsize=(4.7,2.))
 
@@ -1683,7 +1933,28 @@ def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     
     
 def multicolor_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', anchorpad=0,**kw):
+    """
     
+    FM Apr 2025
+
+    Parameters
+    ----------
+    ax : TYPE
+        DESCRIPTION.
+    list_of_strings : TYPE
+        DESCRIPTION.
+    list_of_colors : TYPE
+        DESCRIPTION.
+    bboxes : TYPE
+        DESCRIPTION.
+    axis : TYPE, optional
+        DESCRIPTION. The default is 'x'.
+    anchorpad : TYPE, optional
+        DESCRIPTION. The default is 0.
+    **kw : TYPE
+        DESCRIPTION.
+
+    """
     from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, HPacker, VPacker
 
     # x-axis label
@@ -1716,7 +1987,17 @@ def multicolor_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', an
 #%% CLUSTERING FUNCTIONS ###
 
 def PlotClusteredTS(VarDF):
+    """
     
+    FM Sep 2024
+
+    Parameters
+    ----------
+    VarDF : TYPE
+        DESCRIPTION.
+
+
+    """
     fig, ax = plt.subplots(figsize=(10, 5))
     bluecm = cm.get_cmap('cool')
     greencm = cm.get_cmap('summer')
@@ -1734,7 +2015,24 @@ def PlotClusteredTS(VarDF):
 
     
 def PlotCluster(VarDF, pca_df, scale_factor, eigenvectors, variances):
+    """
     
+    FM Sep 2024
+
+    Parameters
+    ----------
+    VarDF : TYPE
+        DESCRIPTION.
+    pca_df : TYPE
+        DESCRIPTION.
+    scale_factor : TYPE
+        DESCRIPTION.
+    eigenvectors : TYPE
+        DESCRIPTION.
+    variances : TYPE
+        DESCRIPTION.
+
+    """
     fig, ax = plt.subplots(figsize=(5, 5))
     clusterDF = []
     for cluster, clustc in zip(pca_df['Cluster'].unique(), ['#BEE4A8','#FF8183','#F6C999']):
@@ -1789,6 +2087,20 @@ def PlotCluster(VarDF, pca_df, scale_factor, eigenvectors, variances):
         
         
 def PlotClusterElbowSil(k_n, inertia, sil_scores):
+    """
+    
+    FM Sep 2024
+
+    Parameters
+    ----------
+    k_n : TYPE
+        DESCRIPTION.
+    inertia : TYPE
+        DESCRIPTION.
+    sil_scores : TYPE
+        DESCRIPTION.
+
+    """
     # Optional: Plot an elbow graph to find the optimal number of clusters
     plt.figure(figsize=(10, 5))
     plt.plot(k_n, inertia, marker='o')
@@ -1807,6 +2119,23 @@ def PlotClusterElbowSil(k_n, inertia, sil_scores):
     
     
 def PlotClusterVisuals(VarDF, Mod, pca_df, eigenvectors):
+    """
+    
+    FM Sep 2024
+
+    Parameters
+    ----------
+    VarDF : TYPE
+        DESCRIPTION.
+    Mod : TYPE
+        DESCRIPTION.
+    pca_df : TYPE
+        DESCRIPTION.
+    eigenvectors : TYPE
+        DESCRIPTION.
+
+    
+    """
     # Optional: Visualization of clusters
     fig, ax = plt.subplots(figsize=(10, 5))
     bluecm = cm.get_cmap('cool')
