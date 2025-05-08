@@ -264,13 +264,16 @@ def PlotCorrs(filepath, sitename, Tr, VarDFDayTrain, TrainFeats, SymbolDict):
 
 
     """
+    # Get correlations dataframe (pearson r values)
     CorrDF = VarCorrelations(VarDFDayTrain, TrainFeats)
     
+    # Reindex dataframe with math-symbol labels for plotting
     NewInd = []
     for Key in CorrDF.index:
         NewInd.append(SymbolDict[Key])
     CorrDF.index = NewInd
     
+    # Plot correlations (r values) of each variable with VE and WL
     fig, ax = plt.subplots(1, 1, sharex=True, figsize=(6.55,2))
     CorrDF.plot(kind="bar", color=['#79C060','#3E74B3'], ax=ax)
     
@@ -278,6 +281,7 @@ def PlotCorrs(filepath, sitename, Tr, VarDFDayTrain, TrainFeats, SymbolDict):
     ax.set_ylabel(r'$r$')
     ax.grid(which='major', axis='y', c=[0.8,0.8,0.8], lw=0.5, alpha=0.5)
     
+    # Plot inset which zooms in on forecast-available correlations
     ax_inset = ax.inset_axes([0.333,0.5,0.333,0.47])
     CorrDF.iloc[5:10].plot(kind="bar", color=['#79C060','#3E74B3'], ax=ax_inset)
     
@@ -287,6 +291,7 @@ def PlotCorrs(filepath, sitename, Tr, VarDFDayTrain, TrainFeats, SymbolDict):
     ax_inset.set_xticks(range(len(CorrDF.iloc[5:10].index)),CorrDF.iloc[5:10].index, rotation=0)
     ax_inset.grid(which='major', axis='y', c=[0.8,0.8,0.8], lw=0.5, alpha=0.5)
     
+    # Alphabetical subplot labels
     for axs, lab, xpos, ypos in zip([ax, ax_inset], list(string.ascii_lowercase[:2]), [0.0041, 0.01], [0.985, 0.96]):
         axs.text(xpos,ypos, '('+lab+')', transform=axs.transAxes,
                 fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
@@ -359,7 +364,8 @@ def PlotAccuracy(CSVdir, FigPath):
 
 def PlotFeatSensitivity(PredDict, filepath, sitename, Tr):
     """
-    
+    Plot resulting accuracies of all different combinations of (forecast-availale) 
+    training features, as a matrix or bingo card style plot and vertical bar chart.
     FM Feb 2025
 
     Parameters
@@ -645,7 +651,7 @@ def PlotVarTS(TransectDF, Tr,TrainFeatsPlotting, filepath, sitename):
 
 def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, Tr, filepath, sitename):
     """
-    
+    Plot timeseries of specific subset of training variables used.
     FM Mar 2025
 
     Parameters
@@ -676,12 +682,14 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
     
     TransectDFPlot = pd.concat([TransectDFTrain,TransectDFTest])
     
+    # Set training/validation/test start and end dates 
     TrainStart = mdates.date2num(TransectDFTrain.index[0])
     TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
     ValEnd = mdates.date2num(TransectDFTrain.index[-1])
     TestEnd = mdates.date2num(TransectDFTest.index[-1])
     
     fig, axs = plt.subplots(len(TrainTargFeats), 1, sharex=True, figsize=(6.55,6), dpi=300)
+    # Alphabetical subplot labels
     labs = list(string.ascii_lowercase[:axs.shape[0]])
     
     for (axID, ax), Feat, lab in zip(enumerate(axs), TrainTargFeats, labs):
@@ -734,7 +742,7 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
         
         ax.text(0.0039, 0.97, '('+lab+')', transform=ax.transAxes,
                 fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
-        
+        # Set plot labels to month names
         ax.xaxis.set_minor_locator(mdates.MonthLocator())
     
     plt.xlabel('Date (yyyy)')
@@ -748,7 +756,9 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
 
 def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     """
-    
+    Plot cross-shore timeseries of specific storm event (Babet). Variables plotted 
+    are: cross-shore vegetation edge and waterline positions; daily mean significant
+    wave height; daily mean tide; daily max tide.
     FM Feb 2025
 
     Parameters
@@ -764,7 +774,7 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
         Name of site of interest.
 
     """
-    
+    # Set event time period for slicing vegetation edges and waterlines
     BabetTransect = TransectDF.loc['2023-09-28 00:00:00':'2023-12-05 00:00:00']
     BabetVEs = pd.DataFrame({'veDTs':CoastalDFTr['veDTs'],
                              'VE':CoastalDFTr['VE']})
@@ -774,7 +784,7 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     BabetWLs = BabetWLs.groupby('wlDTs').mean()
     
     fig, ax = plt.subplots(1,1, figsize=(3.3,1.94), dpi=300)
-
+    # Plot rectangle spanning event period
     rectwidth = mdates.date2num(datetime(2023,10,21)) - mdates.date2num(datetime(2023,10,18))
     rect = mpatches.Rectangle((mdates.date2num(datetime(2023,10,18)), -200), rectwidth, 1000, 
                               fc=[0.3,0.3,0.3], ec=None, alpha=0.2)
@@ -826,7 +836,9 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
     
 def PlotParaCoords(PredDict, filepath, sitename): 
     """
-    
+    Multivariate plot of different hyperparameters tested as lines traversing 
+    (scaled) hyperparameter points, colour-coded by both overall accuracy and
+    training time of run.
     FM Mar 2025
 
     Parameters
@@ -839,19 +851,20 @@ def PlotParaCoords(PredDict, filepath, sitename):
         Name of site of interest.
 
     """
-    
+    # Scale data using MinMax so that the hyperparam values fit on the same y axis
     PredDF = pd.DataFrame(PredDict)
     HPScaler = MinMaxScaler()
     HPs = ['epochN', 'batchS', 'hiddenLscale', 'denselayers', 'dropoutRt', 'learnRt', 'accuracy', 'train_time']
     PredDFScaled = pd.DataFrame(HPScaler.fit_transform(PredDF[HPs]), columns=HPs)
     
     fig, axs = plt.subplots(1,2, figsize=(6.55,3.5), dpi=300)
-    
+    # For each subplot/metric (accuracy or training time)
     for ax, Metric, MetricLab in zip(axs, ['accuracy', 'train_time'], ['Accuracy', 'Training time (s)']):
+        # Normalise colour bar points by the metric 
         normc = plt.Normalize(np.min(PredDF[Metric]), np.max(PredDF[Metric]))
         if Metric == 'accuracy':
             colours = plt.cm.PuBuGn(normc(PredDF[Metric]))
-        else:
+        else:  # flip colour bar if training time (large is bad)
             colours = plt.cm.PuBuGn_r(normc(PredDF[Metric]))
         for i in range(len(PredDFScaled)):
             ax.plot(PredDFScaled.iloc[i,:], color=colours[i], alpha=0.5)
@@ -859,7 +872,7 @@ def PlotParaCoords(PredDict, filepath, sitename):
         ax.grid(axis='x', lw=0.5, ls=':')
         ax.tick_params(axis='y', left=False, labelleft=False)
         ax.set_facecolor('#D5D5D5')
-        
+        # Plot colour bars
         sm = plt.cm.ScalarMappable(cmap=plt.cm.PuBuGn, norm=normc)
         cbar = plt.colorbar(sm,ax=ax)
         cbar.set_ticks([np.min(PredDF[Metric]), np.mean(PredDF[Metric]), np.max(PredDF[Metric])])
@@ -880,7 +893,8 @@ def PlotParaCoords(PredDict, filepath, sitename):
 
 def PlotHPScatter(PredDict):
     """
-    
+    Plot scatter plot of training time versus accuracy for different model 
+    runs with different hyperparameter values.
     FM Mar 2025
 
     Parameters
@@ -906,7 +920,7 @@ def PlotHPScatter(PredDict):
 
 def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sitename, Tr, enddate=None):
     """
-    lot integrated gradient values for feature importance analysis.
+    Plot integrated gradient values for feature importance analysis.
     FM Feb 2025
 
     Parameters
@@ -963,6 +977,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sit
     axs[0].set_ylim(ylimits)
     axs[0].yaxis.tick_right()
     axs[0].set_title('(a) Global Integrated Gradients', fontsize=7)
+    # Plot inset of global integrated gradients for just forecast-available metrics
     ax0inset = inset_axes(axs[0], width='70%', height='45%', loc='upper left', borderpad=0)
     ax0inset.plot(range(IntGradAttr.shape[1])[:7], np.mean(np.abs(IntGradAttr),axis=-1).flatten()[:7], 
                   c='k', zorder=0)
@@ -1069,11 +1084,12 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
 
 
     """   
-    
+    # Adjust width and height ratios between subplots
     gridspec = dict(width_ratios=[1, 0.2])
     fig, ax = plt.subplots(2,2, figsize=(6.5,5.5), gridspec_kw=gridspec)
     # ax[0] is full timeseries, ax[2] is test subset timeseries
     
+    # Get training period start and end dates
     TrainStart = mdates.date2num(TransectDFTrain.index[0])
     # TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
     TrainEnd = mdates.date2num(TransectDFTrain.index[
@@ -1082,17 +1098,16 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
     ValEnd = mdates.date2num(TransectDFTrain.index[-1])
     TestEnd = mdates.date2num(TransectDFTest.index[-1])
 
+    # Plot markers for star and end of training/validation/test
     ax[0,0].axvline(TrainEnd, c='k', alpha=0.5, lw=1, ls='--')
     ax[0,0].axvline(ValEnd, c='k', alpha=0.5, lw=1, ls='--')
-    
     ax[0,0].text(TrainStart+(TrainEnd-TrainStart)/2, 20, 'Training', ha='center')
     ax[0,0].text(TrainEnd+(ValEnd-TrainEnd)/2, 20, 'Validation', ha='center')
     ax[0,0].text(ValEnd+(TestEnd-ValEnd)/2, 20, 'Test', ha='center')
-    
     ax[0,0].set_xlim(TrainStart,TestEnd)
     ax[1,0].set_xlim(ValEnd,TestEnd)
         
-    
+    # Plot timeseries of cross-shore shoreline positions
     lw = 0.8 # line width
     Lims = (0,600)
     for a in [ax[0,0], ax[1,0]]:
@@ -1109,7 +1124,7 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
             a.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
             # Plot smoothed predicted WL and VE
             a.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
-    # histograms on side to show distribution
+    # Histograms on side to show cross-shore distribution
     Bins = np.arange(-600,600,10)
     for a, ObsHist, PredHist  in zip([ax[0,1],ax[1,1]], 
                                      [pd.concat([TransectDFTrain, TransectDFTest]), TransectDFTest],
@@ -1120,6 +1135,7 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
             a.set_ylim(Lims)
             a.yaxis.set_tick_params(which='major', labelleft=False)
     
+    # Reorder legend to ignore plot order
     handles, labels = ax[0,0].get_legend_handles_labels() 
     legorder = [3,0,4,1,5,2]  
     
@@ -1141,6 +1157,8 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
                 labels=[labels[i] for i in legorder], 
                 loc='upper left', ncols=3,
                 handlelength=1, columnspacing=1, handletextpad=0.6)
+    
+    # Add connecting lines between plot edges to show inset
     # top line
     fig.add_artist(ConnectionPatch(
     xyA=(ValEnd,0), coordsA=ax[0,0].transData,
@@ -1185,13 +1203,12 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
     sitename : str
         Name of site of interest.
 
-
     """   
        
     # fig, ax = plt.subplots(1,1, figsize=(6.5,3.35))
     fig, ax = plt.subplots(1,1, figsize=(3.5,2.6))
 
-    
+    # Add rectangle to denote storm period
     if Storm is not None:
         rectwidth = mdates.date2num(Storm[1]) - mdates.date2num(Storm[0])
         rect = mpatches.Rectangle((mdates.date2num(datetime(2023,10,18)), -200), rectwidth, 1000, 
@@ -1200,6 +1217,7 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
         
     plt.xlim(mdates.date2num(PlotDateRange[0]),mdates.date2num(PlotDateRange[1]))
 
+    # For each shoreline type
     lw = 1.2 # line width
     for SL, SLc in zip(['VE', 'WL'], ['#79C060','#3E74B3']):
         # Calculate smoothed version of predictions
@@ -1213,6 +1231,7 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
         # Plot smoothed predicted WL and VE
         ax.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
         
+        # If provided, also plot impact classes at each daily timestep
         if ImpactClass is not None:
             ax2 = ax.twinx()
             Low, = ax2.plot(FutureOutputs['output'][mID]['future'+SL][ImpactClass['future'+SL]==1],
@@ -1231,6 +1250,7 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
         ax2.legend(handles=[Low, Med, High], labels=['Low impact', 'Medium impact', 'High impact'],
                    loc='upper left', handlelength=1, columnspacing=1, handletextpad=0.6)
 
+    # Reorder legend to ignore plot order
     handles, labels = ax.get_legend_handles_labels() 
     legorder = [3,0,4,1,5,2]  
     
@@ -1257,6 +1277,7 @@ def PlotFutureShort(mID, Tr, TransectDFTrain, TransectDFTest, FutureOutputs, fil
         ax.text(x=mdates.date2num(datetime(2023,10,29)), y=ax.get_ylim()[1]-(ax.get_ylim()[1]*0.05),
                 s='slipway lost', ha='left', va='top', alpha=0.3)
 
+    # Set axis labels as month-day
     ax.xaxis.set_major_locator(mdates.DayLocator(interval=10))
     ax.xaxis.set_minor_locator(mdates.DayLocator(interval=1))
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m-%d'))
@@ -1305,7 +1326,9 @@ def PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FutureOutputs, filepath,
         SmoothVE = MovingAverage(FutureOutputs['output'][mID]['futureVE'], 10)
         SmoothWL = MovingAverage(FutureOutputs['output'][mID]['futureWL'], 10)    
         
+        # If plotting the whole timeseries
         if PlotDateRange is None:
+            # Define where training/validation/test start and end
             TrainStart = mdates.date2num(TransectDFTrain.index[0])
             TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
             ValEnd = mdates.date2num(TransectDFTrain.index[-1])
@@ -1387,9 +1410,11 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
 
     """
     fig, axs = plt.subplots(5,1, sharex=True, figsize=(6.55,6), dpi=150)
+    # Set subplot spacing/padding to nothing
     plt.subplots_adjust(wspace=None,hspace=None)
     lw = 1 # line width
     
+    # For each training feature in selection
     for i, ax, yvar, c, ylabel in zip(range(len(axs)), axs, 
                                       ['WaveDirFD',
                                        'Runups',
@@ -1406,6 +1431,7 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
                                        'Iribarren (1)',
                                        'Cross-shore distance (m)',
                                        'Cross-shore distance (m)']):
+        # Define training/validation/test start and end dates
         TrainStart = mdates.date2num(TransectDFTrain.index[0])
         TrainEnd = mdates.date2num(TransectDFTrain.index[round(len(TransectDFTrain)-(len(TransectDFTrain)*0.1))])
         ValEnd = mdates.date2num(TransectDFTrain.index[-1])
@@ -1448,7 +1474,8 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
 
 def PlotTestScatter(FutureOutputs, TransectDFTest, mID, Tr, filepath, sitename):
     """
-    
+    Scatter plot of test vegetation edge and waterline against predicted, to assess
+    model performance.
     FM Mar 2025
 
     Parameters
@@ -1544,7 +1571,8 @@ def PlotTestScatter(FutureOutputs, TransectDFTest, mID, Tr, filepath, sitename):
 
 def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     """
-    
+    Violin plot of cross-shore distances between predicted and observed (test) 
+    veg edge and waterline, for selected transect.
     FM Mar 2025
 
     Parameters
@@ -1566,7 +1594,7 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     fig, axs = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
     fs = 7
     
-    # Rename columns so seaborn legend works
+    # Rename columns so automatic seaborn legend works
     leglabs = {'VEdiff':None, 'WLdiff':None}
     for SL, SLreal in zip(leglabs.keys(), ['VE','WL']):
         SLmedian = FutureOutputs['XshoreDiff'][mID][SL].median()
@@ -1581,11 +1609,13 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
                         palette=['#3E74B3', '#79C060'], linewidth=0.0001, orient='h', 
                         cut=0, inner='quartile', density_norm='count',
                         legend='full')
+    # Change line style of quartile markings
     for l in ax.lines:
         # l.set_linestyle('--')
         l.set_linewidth(1)
         l.set_color('white')
         
+    # Set labels and lims
     ax.set_xlabel(r'Cross-shore $\hat{y}-y$ (m)',fontsize=fs)
     ax.tick_params(axis='y', left=False, labelleft=False)
     # ax.set_yticklabels(['VE','WL'], rotation=90, va='center')
@@ -1597,7 +1627,7 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     ax.set_xticks(np.arange(xlims[0],xlims[1],10), minor=True)
     
     ax.axvline(0, c='#163E64', ls='-', alpha=0.5, lw=0.5)
-        
+    # Seaborn-specific fn to shift legend
     sns.move_legend(ax, 'lower left')
     plt.tight_layout()
     plt.show()
@@ -1609,7 +1639,8 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
 
 def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     """
-    
+    Subplots of violin and scatter showing cross-shore distances between 
+    predicted and observed (test) veg edge and waterline, for selected transect.
     FM Mar 2025
 
     Parameters
@@ -1653,11 +1684,13 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
                         palette=['#3E74B3', '#79C060'], linewidth=0.0001, orient='h', 
                         cut=0, inner='quartile', density_norm='count',
                         ax=axs[0], legend='full')
+    # Change line style of quartile markings    
     for l in axs[0].lines:
         # l.set_linestyle('--')
         l.set_linewidth(1)
         l.set_color('white')
         
+    # Set colour-coded land and sea labels
     # axs[0].set_xlabel(r'Cross-shore $\hat{y}-y$ (m)',fontsize=fs)
     multicolour_axlabel(axs[0], ('land    ', r'Cross-shore $\hat{y}-y$ (m)', '    sea'), 
                                ('#C2B280', 'k', '#236E95'), 
@@ -1670,7 +1703,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     xlims = [round(lim,-1) for lim in axs[0].get_xlim()]
     axs[0].set_xlim(xlims[0],xlims[1])
     axs[0].set_xticks(np.arange(xlims[0],xlims[1],10), minor=True)
-    
+    # Line at 0 to mark 'perfect' performance
     axs[0].axvline(0, c=[0.5,0.5,0.5], lw=0.9, linestyle='-', alpha=0.35)
         
     sns.move_legend(axs[0], 'lower left')
@@ -1732,6 +1765,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     axs[1].set_ylim(0,600)
     axs[1].grid(which='major', axis='both', c=[0.8,0.8,0.8], lw=0.5, alpha=0.3)
     
+    # Set colour-coded land and sea labels
     multicolour_axlabel(axs[1], ('land    ', r'$y$ cross-shore distance (m)', '    sea'), 
                                ('#C2B280', 'k', '#236E95'), 
                        (0.18, -0.14), axis='x')
@@ -1741,6 +1775,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
     axs[1].legend(loc='lower right')
     
+    # Alphabetical subplot labels
     labs = list(string.ascii_lowercase[:axs.shape[0]])
     for ax, lab in zip(axs, labs):
         ax.text(0.009, 0.991, '('+lab+')', transform=ax.transAxes,
@@ -1758,7 +1793,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
 
 def PlotSiteRMSE(FutureOutputs, filepath, sitename, Subtitle=''):
     """
-    
+    Site-wide root mean square error plot to assess model performance againsyt test data..
     FM Apr 2025
 
     Parameters
@@ -1771,9 +1806,12 @@ def PlotSiteRMSE(FutureOutputs, filepath, sitename, Subtitle=''):
         Name of site of interest.
     Subtitle : str, optional
         Additional filename title to differentiate between full site model runs. The default is ''.
+        
     """
+    
     fig, axs = plt.subplots(1,2, figsize=(3.25,5))
     
+    # Shoreline labels
     SLkeys = ['futureVE','futureWL']
     
     # Extract out RMSE values
@@ -1781,13 +1819,16 @@ def PlotSiteRMSE(FutureOutputs, filepath, sitename, Subtitle=''):
     for Tr in FutureOutputs.keys():
         for SL in SLkeys:
             RMSEList[SL].append(FutureOutputs[Tr]['rmse'][0][SL])
-        
+    # For each shoreline type
     for SL, SLc, ax, SLlab in zip(SLkeys, ['#79C060','#3E74B3'], axs, [r'$VE$',r'$WL$']):
         RMSEArray = np.array(RMSEList[SL])
+        # Get 75th percentile of RMSE values across all transects
         Pct = round(np.percentile(RMSEArray, 75))
+        # Plot vertical scatter of RMSE against transect ID for each transect
         ax.scatter(RMSEArray[np.where(RMSEArray > Pct)], 
                    np.array(list(FutureOutputs.keys()))[np.where(RMSEArray > Pct)],
                    s=15, facecolor='w', marker='o', edgecolors=SLc, label=SLlab)
+        # If RMSE is less than 75th percentile, mark as solid ('good' performance)
         ax.scatter(RMSEArray[np.where(RMSEArray < Pct)], 
                    np.array(list(FutureOutputs.keys()))[np.where(RMSEArray < Pct)],
                    s=15, facecolor=SLc, marker='o', edgecolors=None, label=SLlab+f' < 75$^{{th}}$%\n({Pct} m)')
@@ -1803,6 +1844,7 @@ def PlotSiteRMSE(FutureOutputs, filepath, sitename, Subtitle=''):
     # Shared axis label
     fig.supxlabel('            RMSE (m)')
     
+    # Alphabetical subplot labels
     for ax, lab in zip(axs, list(string.ascii_lowercase[:2])):
         ax.text(0.9,0.993, '('+lab+')', transform=ax.transAxes,
                 fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
@@ -1817,7 +1859,9 @@ def PlotSiteRMSE(FutureOutputs, filepath, sitename, Subtitle=''):
     
 def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
     """
-    
+    Plot scatter of root mean square error between predicted and observed 
+    shoreline, against linear regression change rates of that shoreline.
+    To investigate relationship between cross-shore dynamism and LSTM skill.
     FM Apr 2025
 
     Parameters
@@ -1849,6 +1893,7 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
     axs[1].scatter(CoastalGDF['WL_RMSE'][badWL], np.abs(CoastalGDF['oldyungRtW'][badWL]), s=15, facecolor='#3E74B3',
                    label=f'$r_{{WL}}$ = {round(WLr,2)}')
         
+    # Labels and lims
     axs[0].set_xlabel(r'$RMSE_{VE}$ (m)')
     axs[1].set_xlabel(r'$RMSE_{WL}$ (m)')
     axs[0].set_ylabel(r'$\Delta VE$ (m/yr)')
@@ -1862,6 +1907,7 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
     axs[0].legend(loc='upper left')
     axs[1].legend(loc='upper left')
     
+    # Alphabetical subplot labels
     for ax, lab, xpos, ypos in zip(axs, list(string.ascii_lowercase[:2]), [0.955, 0.955], [0.992, 0.992]):
         ax.text(xpos,ypos, '('+lab+')', transform=ax.transAxes,
                 fontsize=6, va='top', bbox=dict(facecolor='w', edgecolor='k',pad=1.5))
@@ -1876,7 +1922,8 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
     
 def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     """
-    
+    Plot timeseries of classified impact fro each daily timestep in training/
+    predicted data.
     FM Apr 2025
 
     Parameters
@@ -1896,7 +1943,8 @@ def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     """
     # fig, ax = plt.subplots(1,1, figsize=(6.5,3.25))
     fig, ax = plt.subplots(1,1, figsize=(4.7,2.))
-
+    
+    # For looping through either past or future shoreline timeseries
     if 'future' in TransectDF.columns.any():
         SLkeys = ['futureVE','futureWL']
     else:
@@ -1906,7 +1954,7 @@ def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
         # Plot cross-shore distances through time for WL and VE past
         ax.plot(TransectDF[SL].index, TransectDF[SL], 
                    color=SLc, lw = 0.8, label=f"${SL}$")
-        #['red','orange','green']
+        # For each class        
         for ImpID, ImpCl, ImpLab in zip([3,2,1], ['#D52941','#FF990A','#E4FF5C'], ['High', 'Medium', 'Low']):
             ax.scatter(TransectDF[SL].index[ImpactClass[SL]==ImpID], TransectDF[SL][ImpactClass[SL]==ImpID], 
                        s=msize, marker='^', linewidths=0.3, c=ImpCl, label=f'{ImpLab} impact')
@@ -1920,6 +1968,7 @@ def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     ax.xaxis.labelpad=2
     ax.yaxis.labelpad=2
     
+    # Rearrange legend order
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = {labels[0]: handles[0],
                 labels[4]: handles[4],
@@ -1984,17 +2033,14 @@ def multicolour_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', a
         ax.add_artist(anchored_ybox)
       
         
-        
-      
-        
-      
+
         
 # ----------------------------------------------------------------------------------------
 #%% CLUSTERING FUNCTIONS ###
 
 def PlotClusteredTS(VarDF):
     """
-    
+    Plot timeseries of wave height and veg edge in respective clusters.
     FM Sep 2024
 
     Parameters
@@ -2022,7 +2068,8 @@ def PlotClusteredTS(VarDF):
     
 def PlotCluster(VarDF, pca_df, scale_factor, eigenvectors, variances):
     """
-    
+    Plot results of clustering exercise where principal components of coastal
+    metrics have been given classifications.
     FM Sep 2024
 
     Parameters
@@ -2095,7 +2142,8 @@ def PlotCluster(VarDF, pca_df, scale_factor, eigenvectors, variances):
         
 def PlotClusterElbowSil(k_n, inertia, sil_scores):
     """
-    
+    Elbow plot to determine the best number of clusters for k-means clustering
+    based on the error on each cluster centre .
     FM Sep 2024
 
     Parameters
@@ -2104,7 +2152,7 @@ def PlotClusterElbowSil(k_n, inertia, sil_scores):
         k-means cluster number.
     inertia : list of floats
         Sum of squared distances of samples to their closest cluster center, 
-        weighted by the sample weights if provided..
+        weighted by the sample weights if provided.
     sil_scores : list of floats
         Mean Silhouette Coefficient for all samples, for assessing closeness
         of clusters.
@@ -2129,6 +2177,8 @@ def PlotClusterElbowSil(k_n, inertia, sil_scores):
     
 def PlotClusterVisuals(VarDF, Mod, pca_df, eigenvectors):
     """
+    Plots for cluster results as a biplot of 2 Principal Components, and triplot f
+    or 3 Principal Components.
     
     FM Sep 2024
 
