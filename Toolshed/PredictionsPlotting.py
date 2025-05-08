@@ -314,7 +314,7 @@ def PlotAccuracy(CSVdir, FigPath):
     Returns
     -------
     AccuracyDF : DataFrame
-        DESCRIPTION.
+        DataFrame of training histories (i.e. accuracy over epoch).
 
     """
     # List to store each CSV's DataFrame
@@ -347,6 +347,7 @@ def PlotAccuracy(CSVdir, FigPath):
     
     plt.figure(figsize=(3.22,1.72))
     plt.plot(AccuracyDF, c='#283252', alpha=0.5)
+    # Best performer
     plt.plot(AccuracyDF['dense64_validation'], c='r')
     plt.xlabel('epoch')
     plt.ylabel('accuracy')
@@ -363,14 +364,14 @@ def PlotFeatSensitivity(PredDict, filepath, sitename, Tr):
 
     Parameters
     ----------
-    PredDict : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    Tr : TYPE
-        DESCRIPTION.
+    PredDict : dict
+        Dictionary to store all the NN model metadata, with trained NN models.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Tr : int
+        ID of the chosen cross-shore transect.
 
     """
     # Grid point size
@@ -649,22 +650,23 @@ def PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotti
 
     Parameters
     ----------
-    TransectDFTrain : TYPE
-        DESCRIPTION.
-    TransectDFTest : TYPE
-        DESCRIPTION.
-    CoastalDF : TYPE
-        DESCRIPTION.
-    TrainFeatsPlotting : TYPE
-        DESCRIPTION.
-    SymbolDict : TYPE
-        DESCRIPTION.
-    Tr : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
+    TransectDFTrain : DataFrame
+        DataFrame of past data to use for training (and validating) the model.
+    TransectDFTest : DataFrame
+        DataFrame of past (unseen) data to use for testing the model.
+    CoastalDF : DataFrame
+        DataFrame of cross-shore transects (rows) and intersected coastal 
+        timeseries/metrics (columns).
+    TrainFeatsPlotting : str
+        Name of training features to plot.
+    SymbolDict : dict
+        Dict of math-style labels for each feature name.
+    Tr : int
+        ID of the chosen cross-shore transect.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
 
     """
     # Append VE and WL to training feats
@@ -751,14 +753,15 @@ def PlotStormWaveHs(TransectDF, CoastalDFTr, filepath, sitename):
 
     Parameters
     ----------
-    TransectDF : TYPE
-        DESCRIPTION.
-    CoastalDFTr : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
+    TransectDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in timeseries.
+    CoastalDFTr : Series
+        Slice of CoastalDF dataframe to use for plotting original coastal 
+        observations (not interpolated).
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
 
     """
     
@@ -828,12 +831,12 @@ def PlotParaCoords(PredDict, filepath, sitename):
 
     Parameters
     ----------
-    PredDict : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
+    PredDict : dict
+        Dictionary to store all the NN model metadata, with trained NN models.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
 
     """
     
@@ -882,8 +885,8 @@ def PlotHPScatter(PredDict):
 
     Parameters
     ----------
-    PredDict : TYPE
-        DESCRIPTION.
+    PredDict : dict
+        Dictionary to store all the NN model metadata, with trained NN models.
 
     """
     
@@ -1450,18 +1453,18 @@ def PlotTestScatter(FutureOutputs, TransectDFTest, mID, Tr, filepath, sitename):
 
     Parameters
     ----------
-    FutureOutputs : TYPE
-        DESCRIPTION.
-    TransectDFTest : TYPE
-        DESCRIPTION.
-    mID : TYPE
-        DESCRIPTION.
-    Tr : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    TransectDFTest : DataFrame
+        Past data sliced from most recent (unseen) end of TransectDF to use for testing the model.
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    Tr : int
+        ID of the chosen cross-shore transect.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
 
     """
     # fig, axs = plt.subplots(1,2, figsize=(6.55,3.23), dpi=300)
@@ -1546,18 +1549,18 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
 
     Parameters
     ----------
-    FutureOutputs : TYPE
-        DESCRIPTION.
-    mID : TYPE
-        DESCRIPTION.
-    TransectDF : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    Tr : TYPE
-        DESCRIPTION.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    TransectDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in timeseries.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Tr : int
+        ID of the chosen cross-shore transect.
 
     """
     fig, axs = plt.subplots(1,1, figsize=(3.11,3.11), dpi=300)
@@ -1611,18 +1614,18 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
 
     Parameters
     ----------
-    FutureOutputs : TYPE
-        DESCRIPTION.
-    mID : TYPE
-        DESCRIPTION.
-    TransectDF : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    Tr : TYPE
-        DESCRIPTION.
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    mID : int
+        ID of the chosen model run stored in FutureOutputs.
+    TransectDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in timeseries.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Tr : int
+        ID of the chosen cross-shore transect.
 
     """
     fig, axs = plt.subplots(1,2, figsize=(6.55,3.23), dpi=300)
@@ -1656,7 +1659,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
         l.set_color('white')
         
     # axs[0].set_xlabel(r'Cross-shore $\hat{y}-y$ (m)',fontsize=fs)
-    multicolor_axlabel(axs[0], ('land    ', r'Cross-shore $\hat{y}-y$ (m)', '    sea'), 
+    multicolour_axlabel(axs[0], ('land    ', r'Cross-shore $\hat{y}-y$ (m)', '    sea'), 
                                ('#C2B280', 'k', '#236E95'), 
                        (0.18, -0.14), axis='x')
     axs[0].tick_params(axis='y', left=False, labelleft=False)
@@ -1729,10 +1732,10 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     axs[1].set_ylim(0,600)
     axs[1].grid(which='major', axis='both', c=[0.8,0.8,0.8], lw=0.5, alpha=0.3)
     
-    multicolor_axlabel(axs[1], ('land    ', r'$y$ cross-shore distance (m)', '    sea'), 
+    multicolour_axlabel(axs[1], ('land    ', r'$y$ cross-shore distance (m)', '    sea'), 
                                ('#C2B280', 'k', '#236E95'), 
                        (0.18, -0.14), axis='x')
-    multicolor_axlabel(axs[1], ('land    ', r'$\hat{y}$ cross-shore distance (m)', '    sea'), 
+    multicolour_axlabel(axs[1], ('land    ', r'$\hat{y}$ cross-shore distance (m)', '    sea'), 
                                ('#C2B280', 'k', '#236E95'), 
                        (-0.15, 0.14), axis='y')
     
@@ -1753,22 +1756,21 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     
 
 
-def PlotSiteRMSE(FutureOutputsClean, filepath, sitename, Subtitle=''):
+def PlotSiteRMSE(FutureOutputs, filepath, sitename, Subtitle=''):
     """
     
     FM Apr 2025
 
     Parameters
     ----------
-    FutureOutputsClean : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    Subtitle : TYPE, optional
-        DESCRIPTION. The default is ''.
-
+    FutureOutputs : dict
+        Dict storing per-model dataframes of future cross-shore waterline and veg edge predictions.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Subtitle : str, optional
+        Additional filename title to differentiate between full site model runs. The default is ''.
     """
     fig, axs = plt.subplots(1,2, figsize=(3.25,5))
     
@@ -1776,25 +1778,25 @@ def PlotSiteRMSE(FutureOutputsClean, filepath, sitename, Subtitle=''):
     
     # Extract out RMSE values
     RMSEList = dict(zip(SLkeys, [[],[]]))
-    for Tr in FutureOutputsClean.keys():
+    for Tr in FutureOutputs.keys():
         for SL in SLkeys:
-            RMSEList[SL].append(FutureOutputsClean[Tr]['rmse'][0][SL])
+            RMSEList[SL].append(FutureOutputs[Tr]['rmse'][0][SL])
         
     for SL, SLc, ax, SLlab in zip(SLkeys, ['#79C060','#3E74B3'], axs, [r'$VE$',r'$WL$']):
         RMSEArray = np.array(RMSEList[SL])
         Pct = round(np.percentile(RMSEArray, 75))
         ax.scatter(RMSEArray[np.where(RMSEArray > Pct)], 
-                   np.array(list(FutureOutputsClean.keys()))[np.where(RMSEArray > Pct)],
+                   np.array(list(FutureOutputs.keys()))[np.where(RMSEArray > Pct)],
                    s=15, facecolor='w', marker='o', edgecolors=SLc, label=SLlab)
         ax.scatter(RMSEArray[np.where(RMSEArray < Pct)], 
-                   np.array(list(FutureOutputsClean.keys()))[np.where(RMSEArray < Pct)],
+                   np.array(list(FutureOutputs.keys()))[np.where(RMSEArray < Pct)],
                    s=15, facecolor=SLc, marker='o', edgecolors=None, label=SLlab+f' < 75$^{{th}}$%\n({Pct} m)')
         # handles, labels = ax.get_legend_handles_labels()
         # by_label = dict(zip(labels, handles))
         # ax.legend(by_label.values(), by_label.keys(), loc='center right')
         ax.legend(loc='center right')
         ax.set_xlim(0)
-        ax.set_ylim(0,list(FutureOutputsClean.keys())[-1]+5)
+        ax.set_ylim(0,list(FutureOutputs.keys())[-1]+5)
     
     axs[1].yaxis.set_tick_params(labelleft=False)
     axs[0].set_ylabel('Transect ID')
@@ -1820,14 +1822,16 @@ def PlotRMSE_Rt(CoastalGDF, filepath, sitename, Subtitle=''):
 
     Parameters
     ----------
-    CoastalGDF : TYPE
-        DESCRIPTION.
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    Subtitle : TYPE, optional
-        DESCRIPTION. The default is ''.
+    CoastalGDF : GeoDataFrame
+        DataFrame of cross-shore transects (rows) and intersected coastal 
+        timeseries/metrics (columns), with RMSE stats as additional columns and 
+        a geometry column from the Transect GDFs.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Subtitle : str, optional
+        Additional filename title to differentiate between full site model runs. The default is ''.
 
     """
     fig, axs = plt.subplots(1,2, figsize=(6.55,3.28))
@@ -1877,16 +1881,17 @@ def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
 
     Parameters
     ----------
-    filepath : TYPE
-        DESCRIPTION.
-    sitename : TYPE
-        DESCRIPTION.
-    Tr : TYPE
-        DESCRIPTION.
-    ImpactClass : TYPE
-        DESCRIPTION.
-    TransectDF : TYPE
-        DESCRIPTION.
+    filepath : str
+        Local path to COASTGUARD Data folder.
+    sitename : str
+        Name of site of interest.
+    Tr : int
+        ID of the chosen cross-shore transect.
+    ImpactClass : dict
+        Dict of impact classifications for futureVE and futureWL, plus the bounds
+        calculated to apply the classifications.
+    TransectDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in timeseries.
 
     """
     # fig, ax = plt.subplots(1,1, figsize=(6.5,3.25))
@@ -1932,27 +1937,28 @@ def PlotImpactClasses(filepath, sitename, Tr, ImpactClass, TransectDF):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
     
-def multicolor_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', anchorpad=0,**kw):
+def multicolour_axlabel(ax, list_of_strings, list_of_colors, bboxes, axis='x', anchorpad=0,**kw):
     """
-    
+    Axis label which has different font colours for different components. Used
+    for labelling 'land' and 'sea' as yellow and blue respectively.
     FM Apr 2025
 
     Parameters
     ----------
-    ax : TYPE
-        DESCRIPTION.
-    list_of_strings : TYPE
-        DESCRIPTION.
-    list_of_colors : TYPE
-        DESCRIPTION.
-    bboxes : TYPE
-        DESCRIPTION.
-    axis : TYPE, optional
-        DESCRIPTION. The default is 'x'.
-    anchorpad : TYPE, optional
-        DESCRIPTION. The default is 0.
-    **kw : TYPE
-        DESCRIPTION.
+    ax : matplotlib.Axes
+        Axis to apply multicoloured label to .
+    list_of_strings : tuple
+        Separate strings to use for axis label.
+    list_of_colors : tuple
+        Separate font colours to use for axis label (same length as list_of_strings).
+    bboxes : tuple
+        Bounding box of where to place label.
+    axis : str, optional
+        Label x or y axis. The default is 'x'.
+    anchorpad : float, optional
+        Amount of padding to add to label. The default is 0.
+    **kw : Text properties
+        Additioonal keyword arguments for font properties.
 
     """
     from matplotlib.offsetbox import AnchoredOffsetbox, TextArea, HPacker, VPacker
@@ -1993,8 +1999,8 @@ def PlotClusteredTS(VarDF):
 
     Parameters
     ----------
-    VarDF : TYPE
-        DESCRIPTION.
+    VarDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in (irregular) timeseries.
 
 
     """
@@ -2021,16 +2027,17 @@ def PlotCluster(VarDF, pca_df, scale_factor, eigenvectors, variances):
 
     Parameters
     ----------
-    VarDF : TYPE
-        DESCRIPTION.
-    pca_df : TYPE
-        DESCRIPTION.
-    scale_factor : TYPE
-        DESCRIPTION.
-    eigenvectors : TYPE
-        DESCRIPTION.
-    variances : TYPE
-        DESCRIPTION.
+    VarDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in (irregular) timeseries.
+    pca_df : DataFrame
+        Principal Component Analysis dataframe generated from Predictions.Cluster().
+        Output of sklearn.decomposition.PCA().
+    scale_factor : float
+        Scaling factor to fit points on plot.
+    eigenvectors : ndarray of shape (n_components, n_features)
+        Principal axes in feature space, representing the directions of maximum variance in the data.
+    variances : ndarray of shape (n_components,)
+        Percentage of variances explained by each component.
 
     """
     fig, ax = plt.subplots(figsize=(5, 5))
@@ -2093,12 +2100,14 @@ def PlotClusterElbowSil(k_n, inertia, sil_scores):
 
     Parameters
     ----------
-    k_n : TYPE
-        DESCRIPTION.
-    inertia : TYPE
-        DESCRIPTION.
-    sil_scores : TYPE
-        DESCRIPTION.
+    k_n : int
+        k-means cluster number.
+    inertia : list of floats
+        Sum of squared distances of samples to their closest cluster center, 
+        weighted by the sample weights if provided..
+    sil_scores : list of floats
+        Mean Silhouette Coefficient for all samples, for assessing closeness
+        of clusters.
 
     """
     # Optional: Plot an elbow graph to find the optimal number of clusters
@@ -2125,14 +2134,15 @@ def PlotClusterVisuals(VarDF, Mod, pca_df, eigenvectors):
 
     Parameters
     ----------
-    VarDF : TYPE
-        DESCRIPTION.
-    Mod : TYPE
-        DESCRIPTION.
-    pca_df : TYPE
-        DESCRIPTION.
-    eigenvectors : TYPE
-        DESCRIPTION.
+    VarDF : DataFrame
+        Dataframe of per-transect coastal metrics/variables in (irregular) timeseries.
+    Mod : str
+        Clustering model type.
+    pca_df : DataFrame
+        Principal Component Analysis dataframe generated from Predictions.Cluster().
+        Output of sklearn.decomposition.PCA().
+    eigenvectors : ndarray of shape (n_components, n_features)
+        Principal axes in feature space, representing the directions of maximum variance in the data.
 
     
     """
