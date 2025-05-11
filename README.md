@@ -12,7 +12,7 @@ Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA04
 
 ### Useful Files to Start
 - :satellite: [VedgeSat_DriverTemplate](https://github.com/fmemuir/COASTGUARD/VedgeSat_DriverTemplate.py): For extracting coastal vegetation edges (and optional waterlines) from public satellite images
-- :chart_increasing: [CoasTrack_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoasTrack_DriverTemplate.py): For generating cross-shore transects and intersecting with different remotely sensed coastal change metrics (vegetation, waterlines, waves, topography)
+- :chart_with_upwards_trend: [CoasTrack_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoasTrack_DriverTemplate.py): For generating cross-shore transects and intersecting with different remotely sensed coastal change metrics (vegetation, waterlines, waves, topography)
 - :crystal_ball: [CoastLearn_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoastLearn_DriverTemplate.py): For predicting future vegetation edge and waterline positions using an entirely satellite-data-driven neural network
 
 
@@ -201,7 +201,7 @@ The `CoasTrack` module outputs a series of shapefiles and `.pkl` files represent
 ## Roadmap
 This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!
 
-**June 2024:** New functionality is coming to run timeseries predictions based on the vegetation edge and waterline timeseries that are generated from this tool!
+**May 2025:** The PhD thesis associated with this toolshed has been handed in! Moving forward, changes will be more minor and issue-focused.
 
 ## Contributions
 We welcome any enhancements! Please [open an issue](https://github.com/fmemuir/COASTGUARD/issues/new) if you have any contributions or questions.
@@ -213,5 +213,5 @@ If you would like to share your use of this toolkit, please cite it as appropria
 - Muir, F. M. E., Hurst, M. D., Richardson-Foulger, L., Naylor, L. A., Rennie, A. F. (2024). VedgeSat: An automated, open-source toolkit for coastal change monitoring using satellite-derived vegetation edges. *Earth Surface Processes and Landforms, 49*(8), 2405–2423. [https://doi.org/10.1002/esp.5835](https://doi.org/10.1002/esp.5835)
 - Muir, F. M. E. (2023). COASTGUARD. GitHub. [https://github.com/fmemuir/COASTGUARD](https://github.com/fmemuir/COASTGUARD)
 
-Please let us know if you do, we'd love to see COASTGUARD and the VedgeSat tool in use across the world! 
+Please let us know if you do, we'd love to see COASTGUARD in use across the world! 
 
