@@ -11,9 +11,9 @@ https://github.com/fmemuir/COASTGUARD/assets/22475417/0ffaeea4-adeb-41c7-9936-93
 Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, which is partially built on the [CoastSat](https://github.com/kvos/CoastSat) toolbox. The paper validating this approach is [here](https://doi.org/10.1002/esp.5835).
 
 ### Useful Files to Start
-- [VedgeSat_DriverTemplate](https://github.com/fmemuir/COASTGUARD/VedgeSat_DriverTemplate.py): For extracting coastal vegetation edges (and optional waterlines) from public satellite images
-- [CoasTrack_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoasTrack_DriverTemplate.py): For generating cross-shore transects and intersecting with different remotely sensed coastal change metrics (vegetation, waterlines, waves, topography)
-- [CoastLearn_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoastLearn_DriverTemplate.py): For predicting future vegetation edge and waterline positions using an entirely satellite-data-driven neural network
+- :satellite: [VedgeSat_DriverTemplate](https://github.com/fmemuir/COASTGUARD/VedgeSat_DriverTemplate.py): For extracting coastal vegetation edges (and optional waterlines) from public satellite images
+- :chart_increasing: [CoasTrack_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoasTrack_DriverTemplate.py): For generating cross-shore transects and intersecting with different remotely sensed coastal change metrics (vegetation, waterlines, waves, topography)
+- :crystal_ball: [CoastLearn_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoastLearn_DriverTemplate.py): For predicting future vegetation edge and waterline positions using an entirely satellite-data-driven neural network
 
 
 ## :warning: PATCH NOTES :wrench:
