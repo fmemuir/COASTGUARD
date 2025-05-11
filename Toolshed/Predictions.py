@@ -778,12 +778,21 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
     ----------
     PredDict : dict
         Dictionary to store all the NN model metadata.
-    epochNums : list, hyperparameter
+    epochNums : list of int, hyperparameter
         List of different numbers of times a dataset passes through model in training.
-    batchSizes : list, hyperparameter
+    batchSizes : list of int, hyperparameter
         List of different numbers of samples to work through before internal model parameters are updated.
-    CostSensitive : bool, optional
-        Option for including a cost-sensitive loss function. The default is False.
+    denseLayers : list of int, hyperparameter
+        Number of neurons in fully connected layer.
+    dropoutRt : list of float, hyperparameter
+        Rate at which to discard data randomly to avoid overfitting.
+    learnRt : list of float, hyperparameter
+        Magnitude that weights adjust by to reach minimum loss.
+    hiddenLscale : list of int, hyperparameter
+        Number of LSTM cells based on N_samples/ k * (N_inputs + N_outputs).
+    LossFn : str, optional
+        Function used to calculate model loss (error), from 'mse', 'CostSensitive'
+        or 'Shoreshop'. The default is 'mse'.
     DynamicLR : bool, optional
         Option for including a dynamic learning rate in the model. The default is False.
 
@@ -793,6 +802,7 @@ def CompileRNN(PredDict, epochNums, batchSizes, denseLayers, dropoutRt, learnRt,
         Dictionary to store all the NN model metadata, now with compiled models added.
 
     """
+    
     for mlabel in PredDict['mlabel']:
         # Index of model setup
         mID = PredDict['mlabel'].index(mlabel)
