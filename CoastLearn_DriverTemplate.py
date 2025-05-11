@@ -22,15 +22,20 @@ tf.config.set_visible_devices([],'GPU')
 # %load_ext tensorboard
 # import tensorboard
 
+
+
+
+#%% ------------------------ MODELLING ------------------------ 
+
 #%% Load Transect Data
 # Name of site to save directory and files under
-sitename = 'StAndrewsEastS2Full2024'
+sitename = 'EXAMPLE'
 filepath = os.path.join(os.getcwd(), 'Data')
 
 # Load in transect data with coastal change variables
 TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave = Predictions.LoadIntersections(filepath, sitename)
 
-# Define symbol disctionary for labelling
+# Define symbol dictionary for labelling
 SymbolDict = {'VE':          r'$VE$',
               'WL':          r'$WL$',
               'tideelev':    r'$z_{tide,sat}$',
@@ -54,28 +59,24 @@ SymbolDict = {'VE':          r'$VE$',
 # Compile relevant coastal change metrics into one dataframe
 CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
 
-#%% Interpolate
-# Subset and interpolate timeseries to match up to same dates
-# TransectIDs = [271]
+#%% Subset Timeseries to Match Dates
 TransectIDs = [1325]
-# TransectIDs = [66]
 
 
-#%% Interpolate variables to daily
+#%% Interpolate Variables to Daily
 # Plot Interpolation Methods
-# PredictionsPlotting.PlotInterpsWLVE(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/Paper3_Figs/'+sitename+'_InterpolationMethods_WLVE.png')
+PredictionsPlotting.PlotInterpsWLVE(CoastalDF, TransectIDs[0], '/path/to/your/figures/'+sitename+'_InterpolationMethods_WLVE.png')
 
+# You can choose the type of interpolation from scipy.interpolate.interp1d(), but pchip is recommended
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWLWv(CoastalDF, Tr, IntpKind='pchip')
     
-#%% Plot VE, WL and wave height for storm
-PredictionsPlotting.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
+
 
 #%% Separate Training and Validation
 TransectDF = TransectDF.loc[:datetime(2024,7,31)]
 TransectDFTrain = TransectDF.loc[:datetime(2023,8,31)]
 TransectDFTest = TransectDF.loc[datetime(2023,9,1):]
-
 
 
 #%% Plot timeseries of variables
@@ -85,122 +86,53 @@ PredictionsPlotting.PlotVarTS(TransectDF, TransectIDs[0],TrainFeatsPlotting, fil
 # Predictions.PlotChosenVarTS(TransectDFTrain, TransectDFTest, CoastalDF, TrainFeatsPlotting, SymbolDict, TransectIDs[0], filepath, sitename)
     
 #%% Prepare Training Data
-# TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']#, 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']#, 'tideelev']
+# Use the recommended variables (full descriptions are in the code or CoasTrack_README.txt)
 TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW', 'WaveTpEW', 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']
 TargFeats = ['VE', 'WL']
 
-# OptParam = [32, 64, 96, 128, 160, 192, 224, 256]
-
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                              MLabels=['fixed_EW_neighbours'], 
-                                                              ValidSizes=[0.1], 
-                                                              TSteps=[10],
-                                                              TrainFeatCols=[TrainFeats],
+                                                              MLabels=['modelname'], # unique model ID
+                                                              ValidSizes=[0.1], # proportion of training to use for validation
+                                                              TSteps=[10], # sequence length in days
+                                                              TrainFeatCols=[TrainFeats], 
                                                               TargFeatCols=[TargFeats],
+                                                              # You can use a date for separating out training/validation/test, or just a proportion (decimal)
                                                               TrainTestPortion=datetime(2023,9,1))
 
-# PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-#                                                               MLabels=['daily_batch_'+str(i) for i in OptParam], 
-#                                                               ValidSizes=[0.2]*len(OptParam), 
-#                                                               TSteps=[10]*len(OptParam),
-#                                                               TrainFeatCols=[TrainFeats]*len(OptParam),
-#                                                               TargFeatCols=[TargFeats]*len(OptParam),
-#                                                               TrainTestPortion=datetime(2023,9,1))
-# Needs additional lines for TransectID
-#%% Load In Pre-trained Model
-with open(os.path.join(filepath, sitename, 'predictions', '20250307-113621_daily_optimal_val10.pkl'), 'rb') as f:
+
+#%% OR Load In Pre-trained Model
+with open(os.path.join(filepath, sitename, 'predictions', 'oldmodelname.pkl'), 'rb') as f:
     PredDict = pickle.load(f)
-# with open(os.path.join(filepath, sitename, 'predictions', '20250324-180820_daily_optimal_365t.pkl'), 'rb') as f:
-#     PredDict = pickle.load(f)
+
 
 #%% Compile the Recurrent Neural Network 
 # with desired number of epochs and batch size (per model run)
+# These hyperparameters are recommended; DON'T CHANGE unless you know what you are doing
 PredDict = Predictions.CompileRNN(PredDict, 
-                                  epochNums=[150], 
-                                  batchSizes=[64],
-                                  denseLayers=[128],
-                                  dropoutRt=[0.2],
-                                  learnRt=[0.001],
-                                  hiddenLscale=[6],
-                                  LossFn='Shoreshop',
-                                  DynamicLR=False)
-
-# PredDict = Predictions.CompileRNN(PredDict, 
-#                                   epochNums=[150]*len(OptParam), 
-#                                   batchSizes=OptParam,
-#                                   denseLayers=[128]*len(OptParam),
-#                                   dropoutRt=[0.2]*len(OptParam),
-#                                   learnRt=[0.001]*len(OptParam),
-#                                   hiddenLscale=[5]*len(OptParam),
-#                                   DynamicLR=False)
+                                  epochNums=[150],      # number of epochs
+                                  batchSizes=[64],      # batch size
+                                  denseLayers=[128],    # number of dense layers
+                                  dropoutRt=[0.2],      # data dropout rate
+                                  learnRt=[0.001],      # LSTM learning rate
+                                  hiddenLscale=[6],     # scaling factor for number of hidden layers
+                                  LossFn='Shoreshop',   # loss function, 'mse', 'CostSensitive', 'Shoreshop'
+                                  DynamicLR=False)      # Flag for whether learning rate is dynamically changed in training
 
 #%% Train Neural Network
 # FIlepath and sitename are used to save pickle file of model runs under
+# Early stopping helpds avoid overtraining
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
+#%% OR Train Using Optuna Hyperparameterisation
+# OptStudy outputs can then be used in CompileRNN() and TrainRNN()
+OptStudy = Predictions.TrainRNN_Optuna(PredDict, 'test1')
 
-#%% Plot Pearson correlations
-PredictionsPlotting.PlotCorrs(filepath, sitename, TransectIDs[0], VarDFDayTrain, ['VE', 'WL', 'beachwidth', 'tideelevFD', 'tideelevMx',
-       'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups',
-       'Iribarren', 'WL_u', 'VE_u', 'WL_d', 'VE_d'], SymbolDict)
-#%% Parallel Coordinates
-HPfiles = [
-           '20250306-114952_daily_epochs_200.pkl',
-           '20250306-121419_daily_batch_8_daily_batch_16.pkl',
-           '20250306-170808_daily_batch_32_daily_batch_64_daily_batch_96_daily_batch_128_daily_batch_160_daily_batch_192_daily_batch_224_daily_batch_256.pkl',
-           '20250306-130124_daily_LSTMscale_1_daily_LSTMscale_2_daily_LSTMscale_3_daily_LSTMscale_4_daily_LSTMscale_5_daily_LSTMscale_6_daily_LSTMscale_7_daily_LSTMscale_8_daily_LSTMscale_9_daily_LSTMscale_10.pkl',
-           '20250306-121929_daily_dense_4_daily_dense_8_daily_dense_16_daily_dense_32_daily_dense_64_daily_dense_128.pkl',
-           '20250306-123232_daily_dropout_0.1_daily_dropout_0.2_daily_dropout_0.3_daily_dropout_0.4_daily_dropout_0.5.pkl',
-           '20250306-124336_daily_learnrt_0.0001_daily_learnrt_0.001_daily_learnrt_0.01_daily_learnrt_0.1_daily_learnrt_0.9.pkl']
+#%% OPTIONAL: Export Hyperparameter Test Data
+# Make sure all desired training history files produced by TensorFlow are in one folder called 'combi'
+Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
+                      'combi_history.csv')
 
-with open(os.path.join(filepath, sitename, 'predictions', '20250306-113911_daily_epochs_25_daily_epochs_50_daily_epochs_75_daily_epochs_100_daily_epochs_125_daily_epochs_150_daily_epochs_175.pkl',), 'rb') as f:
-    PredDictCombi = pickle.load(f)
-if 'hiddenLscale' not in PredDictCombi.keys():
-    PredDictCombi['hiddenLscale'] = [5]*len(PredDictCombi['mlabel'])
-    
-for i in range(len(HPfiles)):
-    with open(os.path.join(filepath, sitename, 'predictions', HPfiles[i]), 'rb') as f:
-        PredDictHP = pickle.load(f)
-    if 'hiddenLscale' not in PredDictHP.keys():
-        PredDictHP['hiddenLscale'] = [5]*len(PredDictHP['mlabel'])
-    for key in PredDictCombi.keys():
-        PredDictCombi[key].extend(PredDictHP[key])
-        
-#%% Plot Hyperparameter scattergram
-PredictionsPlotting.PlotParaCoords(PredDictCombi, filepath, sitename)
-
-# PredictionsPlotting.PlotHPScatter(PredDictCombi)
-
-#%% Looped Feature Testing
-TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveAlphaFD', 'WaveTpFD']
-TargFeats = ['VE', 'WL']
-
-TrainFeatsComb = []
-for r in range(1, len(TrainFeats)+1):
-    comb = combinations(TrainFeats, r)
-    for ft in comb:
-        TrainFeatsComb.append(list(ft))
-        
-PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
-                                                             MLabels=[str(i) for i in range(len(TrainFeatsComb))], 
-                                                             ValidSizes=[0.2]*len(TrainFeatsComb), 
-                                                             TSteps=[10]*len(TrainFeatsComb),
-                                                             TrainFeatCols=TrainFeatsComb,
-                                                             TargFeatCols=[TargFeats]*len(TrainFeatsComb))
-PredDict = Predictions.CompileRNN(PredDict, 
-                                  epochNums=[150]*len(TrainFeatsComb), 
-                                  batchSizes=[32]*len(TrainFeatsComb),
-                                  denseLayers=[64]*len(TrainFeatsComb),
-                                  dropoutRt=[0.3]*len(TrainFeatsComb),
-                                  learnRt=[0.001]*len(TrainFeatsComb),
-                                  DynamicLR=False)
-
-PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
-
-#%% Ensemble Run
-TrainFeats = ['WaveHsFD', 'Runups', 'WaveDirFD', 'WaveTpFD']
-TargFeats = ['VE', 'WL']
-
+#%% OPTIONAL: Ensemble Run for Probabilistic Predictions
 EnsembleCount = 10
         
 PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
@@ -219,15 +151,9 @@ PredDict = Predictions.CompileRNN(PredDict,
 
 PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
 
-
-
-#%% Plot Feature Sensitivity
-PredictionsPlotting.PlotFeatSensitivity(PredDict,filepath, sitename,TransectIDs[0])
-
 #%% Feature Importance
-mID = 0
-IntGradAttr = Predictions.FeatImportance(PredDict, mID)
-Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sitename, TransectIDs[0])
+
+IntGradAttr = Predictions.FeatImportance(PredDict)
 
 #%% Make WL and VE Predictions
 # Using full list of variables from past portion as test/placeholder
@@ -235,73 +161,162 @@ Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filep
 FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain, VarDFDayTest]))
 
-predpath = os.path.join(filepath,sitename,'predictions','20250502-151230_fixed_EW_neighbours'+'_Prediction.pkl')
+predpath = os.path.join(filepath,sitename,'predictions','modelname'+'_Prediction.pkl')
 with open(predpath, 'wb') as f:
-    pickle.dump(FullFutureOutputs, f)
+    pickle.dump(FutureOutputs, f)
 
 #%% OR Read In Trained and Predicted Test Data
 
-pklpath = os.path.join(filepath,sitename,'predictions','20250502-151230_fixed_EW_neighbours.pkl')
+pklpath = os.path.join(filepath,sitename,'predictions','oldmodelname_Prediction.pkl')
 with open(pklpath, 'rb') as f:
-    PredDict = pickle.load(f)
-    
-#%% Plot Future WL and VE
-with open(os.path.join('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/COASTGUARD/Data/StAndrewsEWPTOA/validation','StAndrewsEWPTOA_valid_intersects.pkl'),'rb') as f:
-    ValidInterGDF = pickle.load(f)
-    #%%
-for mID in range(len(FutureOutputs['mlabel'])): 
-    PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # Storm Babet
-    PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-                            filepath, sitename)
-    # PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-    #                             filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)])
-    # PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-    #                        filepath, sitename, ValidInterGDF)
+    FutureOutputs = pickle.load(f)
 
-#%%
-PredictionsPlotting.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
-
-
-#%%
+#%% Calculate Root Mean Square Error 
+# (between test data and predictions) 
 mID=0
-Predictions.PlotFutureVars(0, TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
 FutureOutputs = Predictions.ShorelineRMSE(FutureOutputs, TransectDFTest)
 for SL in ['VE', 'WL']: 
     FullFutureOutputs['output'][mID]['future'+SL] = FullFutureOutputs['output'][mID]['future'+SL].loc[TransectDFTest.index[0]:]
 FullFutureOutputs = Predictions.ShorelineRMSE(FullFutureOutputs, TransectDF)
 
-#%% Violin and scatter plots of distance differences between predicted and actual VEs and WLs
-mID=0
-# Predictions.PlotTestScatter(FutureOutputs, TransectDFTest, mID, TransectIDs[0], filepath, sitename)
-# Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
-# PredictionsPlotting.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
-PredictionsPlotting.FutureViolinLinReg(FullFutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
 
-
-#%% Thresholding Past Observations
+#%% Thresholding Past Observations for Impact Classification
 
 ImpactClass = Predictions.ClassifyImpact(TransectDF,Method='combi')
 PredImpactClass = Predictions.ClassifyImpact(FullFutureOutputs['output'][0], Method='combi')
 
-# FutureImpacts = Predictions.ApplyImpactClasses(ImpactClass, FutureOutputs)
-PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], ImpactClass, TransectDF)
-# PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], PredImpactClass, FullFutureOutputs['output'][0])
 
-PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
-                            filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)],
-                            ImpactClass=PredImpactClass)
 
-#%% Export Hyperparameter Test Data
-Predictions.RunsToCSV(os.path.join(filepath, sitename, 'predictions', 'tuning', 'combi'),
-                      'combi_history.csv')
+
+#%% ------------------------ BATCH RUN OVER SITE ------------------------ 
+
+#%% Initialise storage dicts
+
+CoastalDF = Predictions.CompileTransectData(TransectInterGDF, TransectInterGDFWater, TransectInterGDFTopo, TransectInterGDFWave)
+
+PredDicts = dict.fromkeys(list(range(len(CoastalDF))),None)
+FutureOutputs = dict.fromkeys(list(range(len(CoastalDF))),None)
+TransectsDFTrain = dict.fromkeys(list(range(len(CoastalDF))),None)
+TransectsDFTest = dict.fromkeys(list(range(len(CoastalDF))),None)
+
+#%% Full Site Run (looped through transects)
+
+for Tr in CoastalDF[::1].index: # every nth Transect
+    print(f"{Tr}/{len(CoastalDF)}")
+    # ignore Tr with less than 6 months of data (img every 10 days on average)
+    if len(CoastalDF['VE'].iloc[Tr]) < 18 or len(CoastalDF['WL'].iloc[Tr]) < 18: 
+        continue
+    else:
+        # Interpolate over transect data to get daily metrics
+        TransectDF = Predictions.InterpVEWLWv(CoastalDF, Tr, IntpKind='pchip')
+        TransectDFTrain = TransectDF.iloc[:int(0.8825*len(TransectDF))]
+        TransectDFTest = TransectDF.iloc[int(0.8825*len(TransectDF)):]
+        
+        # Define training and target features
+        TrainFeats = ['WaveHsEW', 'Runups', 'WaveDirEW', 'WaveTpEW', 'WL_u-10', 'VE_u-10','WL_d-10', 'VE_d-10']
+        TargFeats = ['VE', 'WL']
+        
+        # Separate timeseries into training/validation and testing portions
+        TransectsDFTrain[Tr] = TransectDFTrain
+        TransectsDFTest[Tr] = TransectDFTest
+        
+        # Prep data
+        PredDict, VarDFDayTrain, VarDFDayTest = Predictions.PrepData(TransectDF, 
+                                                                      MLabels=['Tr'+str(Tr)], 
+                                                                      ValidSizes=[0.1], 
+                                                                      TSteps=[10],
+                                                                      TrainFeatCols=[TrainFeats],
+                                                                      TargFeatCols=[TargFeats],
+                                                                      TrainTestPortion=0.8825)
+        # Compile LSTM based on provided hyperparameters
+        PredDict = Predictions.CompileRNN(PredDict, 
+                                          epochNums=[150], 
+                                          batchSizes=[64],
+                                          denseLayers=[128],
+                                          dropoutRt=[0.2],
+                                          learnRt=[0.001],
+                                          hiddenLscale=[6],
+                                          LossFn='Shoreshop',
+                                          DynamicLR=False)
+        
+        # Train LSTM to predict target features
+        PredDict = Predictions.TrainRNN(PredDict,filepath,sitename,EarlyStop=True)
+        PredDicts[Tr] = PredDict
+        
+        # Use the trained model to predict target features in timeseries over the test period
+        FutureOutput = Predictions.FuturePredict(PredDict, VarDFDayTest)
+        # Assess the performance of the predictions against unseen test data
+        FutureOutput = Predictions.ShorelineRMSE(FutureOutput, TransectDFTest)
+        FutureOutputs[Tr] = FutureOutput
+
+PredDictsClean = {k: v for k, v in PredDicts.items() if v is not None}
+FutureOutputsClean = {k: v for k, v in FutureOutputs.items() if v is not None}
+
+# Save all outputs to pickle file
+pklpath = os.path.join(filepath,sitename,'predictions',sitename+'_FullPredict_EW_neighbours.pkl')
+with open(pklpath, 'wb') as f:
+    pickle.dump(FutureOutputsClean, f)
+    
+    
+
+
+#%% ------------------------ PLOTTING ------------------------ 
+
+#%%Plot Pearson correlations
+PredictionsPlotting.PlotCorrs(filepath, sitename, TransectIDs[0], VarDFDayTrain, ['VE', 'WL', 'beachwidth', 'tideelevFD', 'tideelevMx',
+       'WaveHsFD', 'WaveDirFD', 'WaveTpFD', 'WaveAlphaFD', 'Runups',
+       'Iribarren', 'WL_u', 'VE_u', 'WL_d', 'VE_d'], SymbolDict)
+
+#%% Plot Feature Sensitivity
+PredictionsPlotting.PlotFeatSensitivity(PredDict,filepath, sitename,TransectIDs[0])
+
 #%% Plot Accuracy Over Epochs (for all training runs)
 AccuracyPath = os.path.join(filepath, sitename,'predictions','tuning','combi_CSVs')
 FigPath = os.path.join(filepath, sitename, 'plots', sitename+'_tuning_accuracy.png')
 AccuracyDF = PredictionsPlotting.PlotAccuracy(AccuracyPath, FigPath)
 
-#%% Train Using Optuna Hyperparameterisation
-OptStudy = Predictions.TrainRNN_Optuna(PredDict, 'test1')
+#%%Plot VE, WL and Wave Height for Storm
+PredictionsPlotting.PlotStormWaveHs(TransectDF, CoastalDF.iloc[TransectIDs[0]], filepath, sitename)
 
+#%% Plot Feature Importance Results
+PredictionsPlotting.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sitename, TransectIDs[0])
+
+#%% Plot Future WL and VE
+PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # specific date range
+
+for mID in range(len(FutureOutputs['modelname'])): 
+    PredictionsPlotting.PlotFuture(mID, TransectIDs[0], PredDict, TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                            filepath, sitename)
+    PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                                filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)])
+
+#%% Plot Future Prediction Ensemble
+#(if ensemble cell above was run)
+PredictionsPlotting.PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FullFutureOutputs, filepath, sitename)
+
+#%% Plot Future Variables In Full
+PredictionsPlotting.PlotFutureVars(TransectDFTrain, TransectDFTest, VarDFDayTrain, FutureOutputs, filepath, sitename)
+
+#%% Violin and scatter plots of distance differences between predicted and actual VEs and WLs
+
+# Predictions.PlotTestScatter(FutureOutputs, TransectDFTest, mID, TransectIDs[0], filepath, sitename)
+# Predictions.FutureDiffViolin(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+# PredictionsPlotting.FutureViolinLinReg(FutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+PredictionsPlotting.FutureViolinLinReg(FullFutureOutputs, mID, TransectDFTest, filepath, sitename, TransectIDs[0])
+
+#%% Plot Impact Classifications
+PredictionsPlotting.PlotImpactClasses(filepath, sitename, TransectIDs[0], ImpactClass, TransectDF)
+
+PlotDateRange = [datetime(2023,10,1), datetime(2023,11,5)] # specific date range
+PredictionsPlotting.PlotFutureShort(mID, TransectIDs[0], TransectDFTrain, TransectDFTest, FullFutureOutputs, 
+                            filepath, sitename, PlotDateRange, Storm=[datetime(2023,10,18), datetime(2023,10,21)],
+                            ImpactClass=PredImpactClass)
+
+
+
+
+
+#%% ------------------------ CLUSTERING (UNUSED) ------------------------ 
 #%% Cluster Past Observations
 ClusterDF = Predictions.Cluster(TransectDFTrain[['distances','wlcorrdist']], ValPlots=True)
 
