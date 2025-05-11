@@ -25,7 +25,7 @@ import seaborn as sns
 import pandas as pd
 pd.options.mode.chained_assignment = None # suppress pandas warning about setting a value on a copy of a slice
 
-from scipy.stats import pearsonr
+from scipy.stats import pearsonr, t
 from sklearn.metrics import silhouette_score, r2_score
 from sklearn.decomposition import PCA
 from sklearn.cluster import KMeans, SpectralClustering
@@ -1061,7 +1061,7 @@ def PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filepath, sit
 
 
 
-def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, SurveyGDF=None):
+def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutputs, filepath, sitename, SurveyGDF=None, Subtitle=''):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect.
@@ -1124,6 +1124,7 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
             a.plot(FutureOutputs['output'][mID]['future'+SL], color=SLc, alpha=0.4, lw=lw, label=f"${{\\hat{{{SL}}}}}$")
             # Plot smoothed predicted WL and VE
             a.plot(FutureOutputs['output'][mID]['future'+SL].index, Smooth, color=SLc, alpha=0.8, lw=lw, label=f"${{ \\hat{{{SL}}}_{{t[i:i+10]}} }}$")
+    
     # Histograms on side to show cross-shore distribution
     Bins = np.arange(-600,600,10)
     for a, ObsHist, PredHist  in zip([ax[0,1],ax[1,1]], 
@@ -1134,6 +1135,7 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
             a.hist(PredHist['future'+SL], bins=Bins, fc=SLc, alpha=0.7, orientation='horizontal')
             a.set_ylim(Lims)
             a.yaxis.set_tick_params(which='major', labelleft=False)
+        a.xaxis.set_tick_params(which='major', bottom=False, labelbottom=False)
     
     # Reorder legend to ignore plot order
     handles, labels = ax[0,0].get_legend_handles_labels() 
@@ -1141,7 +1143,15 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
     
     ax[0,0].set_xlabel('Date (yyyy)')
     ax[1,0].set_xlabel('Date (yyyy-mm)')
-    ax[0,0].set_ylabel('Cross-shore distance (m)')
+    # land and sea labels multicoloured
+    multicolour_axlabel(ax[0,0], ('land    ', 'Cross-shore distance (m)', '    sea'), 
+                               ('#C2B280', 'k', '#236E95'), 
+                       (0.18, -0.14), axis='x')
+    multicolour_axlabel(ax[1,0], ('land    ', 'Cross-shore distance (m)', '    sea'), 
+                               ('#C2B280', 'k', '#236E95'), 
+                       (0.18, -0.14), axis='x')
+    # ax[0,0].set_ylabel('Cross-shore distance (m)')
+    # ax[1,0].set_ylabel('Cross-shore distance (m)')
     ax[0,0].legend(handles=[handles[i] for i in legorder],
                 labels=[labels[i] for i in legorder], 
                 loc='upper left', ncols=3,
@@ -1178,7 +1188,7 @@ def PlotFuture(mID, Tr,  PredDict, TransectDFTrain, TransectDFTest, FutureOutput
     StartTime = mdates.num2date(ax[0,0].axis()[0]).strftime('%Y-%m-%d')
     EndTime = mdates.num2date(ax[0,0].axis()[1]).strftime('%Y-%m-%d')
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+'.png')
+                           sitename+'_predictedWLVE_'+StartTime+'_'+EndTime+'_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+Subtitle+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
@@ -1637,7 +1647,7 @@ def FutureDiffViolin(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
 
 
-def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
+def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr, Subtitle='', BothLinReg=True):
     """
     Subplots of violin and scatter showing cross-shore distances between 
     predicted and observed (test) veg edge and waterline, for selected transect.
@@ -1657,8 +1667,27 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
         Name of site of interest.
     Tr : int
         ID of the chosen cross-shore transect.
+    Subtitle : str, optional
+        Additional filename title to differentiate between full site model runs. The default is ''.
+    BothLinReg : bool, optional
+        Flag to decide whether to plot stats for both shorelines or just individuals. The default is True.
 
     """
+    
+    # Prediction interval calculation
+    def PredIntervals(x, y, y_pred, confidence=0.95):
+        n = len(x)
+        residuals = y - y_pred
+        mean_x = np.mean(x)
+        se = np.sqrt(np.sum(residuals**2) / (n - 2))  # Standard error
+        t_value = t.ppf((1 + confidence) / 2, n - 2)  # T-value for CI
+    
+        pred_err = t_value * se * np.sqrt(1/n + (x - mean_x)**2 / np.sum((x - mean_x)**2))
+        lower = y_pred - pred_err
+        upper = y_pred + pred_err
+        return lower, upper
+    
+    
     fig, axs = plt.subplots(1,2, figsize=(6.55,3.23), dpi=300)
     fs = 7
     
@@ -1736,30 +1765,35 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
         # R squared and Pearson r
         r2 = r2_score(ComboDF[SL], ComboDF['future'+SL])
         rval, _ = pearsonr(ComboDF[SL], ComboDF['future'+SL])
+        
+        # Calculate prediction intervals
+        # lower, upper = PredIntervals(ComboDF[SL], ComboDF['future' + SL], sorted_y)
+        # plt.fill_between(sorted_x, lower, upper, color='gray', alpha=0.5, label='Prediction Interval (95%)')
 
         # Plot lines of best fit
         axs[1].plot(sorted_x, sorted_y, 
-                c='#163E64', lw=1.7, alpha=0.6, zorder=2)
+                c='#163E64', lw=1.7, alpha=0.5, zorder=2)
         axs[1].plot(sorted_x, sorted_y, 
                   color=SLc, linestyle='--', lw=1, zorder=3,
                   label=f'$R^2_{{{SL}}}$ = {round(r2,2)}, $r_{{{SL}}}$ = {round(rval,2)}')
     
     # overall linear regression
-    BothReal = (list(BothSLs[1]['VE'])) + list(BothSLs[0]['WL']) 
-    BothPred = (list(BothSLs[1]['futureVE'])) + list(BothSLs[0]['futureWL'])
-    m, b = np.polyfit(BothReal, BothPred, 1)  # Fit a linear trend (y = mx + b)
-    Both_sorted_x = np.sort(BothReal)
-    Both_sorted_y = m * Both_sorted_x + b
-    # R squared  and Pearson r
-    Both_r2 = r2_score(BothReal, BothPred)
-    Both_rval, _ = pearsonr(ComboDF[SL], ComboDF['future'+SL])
-
-    # Plot lines of best fit
-    axs[1].plot(Both_sorted_x, Both_sorted_y, 
-            c='w', lw=1.7, alpha=0.7, zorder=2)
-    axs[1].plot(Both_sorted_x, Both_sorted_y, 
-              color='#163E64', linestyle='--', lw=1, zorder=3,
-              label=f'$R^2$ = {round(Both_r2,2)}, $r$ = {round(Both_rval,2)}')
+    if BothLinReg:
+        BothReal = (list(BothSLs[1]['VE'])) + list(BothSLs[0]['WL']) 
+        BothPred = (list(BothSLs[1]['futureVE'])) + list(BothSLs[0]['futureWL'])
+        m, b = np.polyfit(BothReal, BothPred, 1)  # Fit a linear trend (y = mx + b)
+        Both_sorted_x = np.sort(BothReal)
+        Both_sorted_y = m * Both_sorted_x + b
+        # R squared  and Pearson r
+        Both_r2 = r2_score(BothReal, BothPred)
+        Both_rval, _ = pearsonr(ComboDF[SL], ComboDF['future'+SL])
+    
+        # Plot lines of best fit
+        axs[1].plot(Both_sorted_x, Both_sorted_y, 
+                c='w', lw=1.7, alpha=0.7, zorder=2)
+        axs[1].plot(Both_sorted_x, Both_sorted_y, 
+                  color='#163E64', linestyle='--', lw=1, zorder=3,
+                  label=f'$R^2$ = {round(Both_r2,2)}, $r$ = {round(Both_rval,2)}')
         
     axs[1].set_xlim(0,600)
     axs[1].set_ylim(0,600)
@@ -1786,7 +1820,7 @@ def FutureViolinLinReg(FutureOutputs, mID, TransectDF, filepath, sitename, Tr):
     plt.show()
     
     FigPath = os.path.join(filepath, sitename, 'plots', 
-                           sitename+'_VEWLErrorViolinLinReg_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+'.png')
+                           sitename+'_VEWLErrorViolinLinReg_'+FutureOutputs['mlabel'][mID]+'_Tr'+str(Tr)+Subtitle+'.png')
     plt.savefig(FigPath, dpi=300, bbox_inches='tight',transparent=False)
     
 
