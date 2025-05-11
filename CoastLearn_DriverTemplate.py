@@ -63,7 +63,7 @@ TransectIDs = [1325]
 
 #%% Interpolate variables to daily
 # Plot Interpolation Methods
-PredictionsPlotting.PlotInterpsWLVE(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/Paper3_Figs/'+sitename+'_InterpolationMethods_WLVE.png')
+# PredictionsPlotting.PlotInterpsWLVE(CoastalDF, TransectIDs[0], '/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year4/Outputs/Figures/Paper3_Figs/'+sitename+'_InterpolationMethods_WLVE.png')
 
 for Tr in TransectIDs:
     TransectDF = Predictions.InterpVEWLWv(CoastalDF, Tr, IntpKind='pchip')
@@ -235,6 +235,16 @@ Predictions.PlotIntGrads(PredDict, VarDFDayTrain, IntGradAttr, SymbolDict, filep
 FutureOutputs = Predictions.FuturePredict(PredDict, VarDFDayTest)
 FullFutureOutputs = Predictions.FuturePredict(PredDict, pd.concat([VarDFDayTrain, VarDFDayTest]))
 
+predpath = os.path.join(filepath,sitename,'predictions','20250502-151230_fixed_EW_neighbours'+'_Prediction.pkl')
+with open(predpath, 'wb') as f:
+    pickle.dump(FullFutureOutputs, f)
+
+#%% OR Read In Trained and Predicted Test Data
+
+pklpath = os.path.join(filepath,sitename,'predictions','20250502-151230_fixed_EW_neighbours.pkl')
+with open(pklpath, 'rb') as f:
+    PredDict = pickle.load(f)
+    
 #%% Plot Future WL and VE
 with open(os.path.join('/media/14TB_RAID_Array/User_Homes/Freya_Muir/PhD/Year2/ModelsFrameworks/COASTGUARD/Data/StAndrewsEWPTOA/validation','StAndrewsEWPTOA_valid_intersects.pkl'),'rb') as f:
     ValidInterGDF = pickle.load(f)
