@@ -1394,7 +1394,7 @@ def PlotFutureEnsemble(TransectDFTrain, TransectDFTest, FutureOutputs, filepath,
 
 
  
-def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename):
+def PlotFutureVars(TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs, filepath, sitename, mID=0):
     """
     Plot future waterline (WL) and vegetation edge (VE) predictions for the 
     chosen cross-shore transect, alongside timeseries of training variables used.
@@ -1402,8 +1402,8 @@ def PlotFutureVars(mID, TransectDFTrain, TransectDFTest, VarDFDay, FutureOutputs
 
     Parameters
     ----------
-    mID : int
-        ID of the chosen model run stored in FutureOutputs.
+    mID : int, optional
+        ID of the chosen model run stored in FutureOutputs. The default is 0.
     TransectDFTest : DataFrame
         DataFrame of past data (not interpolated) to use for training the model.
     TransectDFTest : DataFrame

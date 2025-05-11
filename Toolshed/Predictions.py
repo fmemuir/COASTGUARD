@@ -991,7 +991,7 @@ def TrainRNN(PredDict, filepath, sitename, EarlyStop=False, Looped=False):
     return PredDict
 
 
-def FeatImportance(PredDict, mID):
+def FeatImportance(PredDict, mID=0):
     """
     Calculate feature importance from trained model, using Integrated Gradients.
     FM Feb 2025
@@ -1000,8 +1000,8 @@ def FeatImportance(PredDict, mID):
     ----------
     PredDict : dict
         Dictionary to store all the NN model metadata, now with trained NN models.
-    mID : int
-        ID of the chosen model run stored in PredDict.
+    mID : int, optional
+        ID of the chosen model run stored in PredDict. The default is 0.
 
     Returns
     -------
