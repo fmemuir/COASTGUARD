@@ -195,6 +195,9 @@ You'll find these in the AVISO Altimetry database under */auxiliary/tide_model/f
 
 When loading in the tidal data in the COASTGUARD driver file, you should **change the tidal files path `tidepath` to wherever you have cloned the aviso-fes repo to on your machine.**
 
+### CoasTrack Outputs
+The `CoasTrack` module outputs a series of shapefiles and `.pkl` files representing cross-shore transect intersections with various remotely sensed coastal metrics. The code documentation has tried to explain the origin and abbreviations of each variable and attribute field heading. However if you would like a full description in one place, the [CoasTrack_README.txt](https://github.com/fmemuir/COASTGUARD/blob/master/CoasTrack_README.txt) file has descriptions of the contents of these datasets.
+
 ## Roadmap
 This code is live and the master branch is being updated often (daily to weekly). If you clone this repo, please update it regularly with `git pull`!
 
