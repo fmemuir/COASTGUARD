@@ -1172,7 +1172,7 @@ def VegTZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Hemisphere='N',
             ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.7, capsize=1, capthick=0.5, label='TZwidth (m)')
         # single error bar plot for legend
         TZbar = mlines.Line2D([],[],linestyle='None', marker='|', ms=10, mec='#E7960D', mew=0.7, label='TZwidth (m)')
-        TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.3, edgecolor=None, zorder=0, label=r'$TZwidth_{\eta}$ ('+str(round(plotTZMn))+' m)')
+        TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.3, edgecolor=None, zorder=0, label=r'$TZwidth_{\mu}$ ('+str(round(plotTZMn))+' m)')
                    
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year):
@@ -1309,7 +1309,7 @@ def TZTimeseries(sitename, TransectInterGDFTopo, TransectIDs, Titles=None, Hemis
             ax.errorbar(plotdate[i], plotsatdist[i], yerr=plotTZ[i], ecolor='#E7960D', elinewidth=0.5, capsize=0, capthick=0.5, label='TZwidth (m)')
         # single error bar plot for legend
         TZbar = mlines.Line2D([],[],linestyle='None', marker='|', ms=10, mec='#E7960D', mew=0.7, label='TZwidth (m)')
-        TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.5, edgecolor=None, zorder=0, label=r'$TZwidth_{\eta}$ ('+str(round(plotTZMn))+' m)')
+        TZfill = ax.fill_between(plotdate, yneg, yplus, color='#E7960D', alpha=0.5, edgecolor=None, zorder=0, label=r'$TZwidth_{\mu}$ ('+str(round(plotTZMn))+' m)')
                    
         # create rectangles highlighting winter months (based on N or S hemisphere 'winter')
         for i in range(plotdate[0].year-1, plotdate[-1].year+1):
@@ -2148,7 +2148,7 @@ def MultivariateMatrix(sitename, TransectInterGDF,  TransectInterGDFWater, Trans
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
            r'$\Delta$water (m/yr)',
-           r'$TZwidth_{\eta}$ (m)',
+           r'$TZwidth_{\mu}$ (m)',
            r'$slope_{max}$ ($\circ$)']
     
     for row in range(MultivarArray.shape[1]):
@@ -2272,7 +2272,7 @@ def MultivariateMatrixClustered(sitename, TransectInterGDF,  TransectInterGDFWat
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
            r'$\Delta$water (m/yr)',
-           r'$TZwidth_{\eta}$ (m)',
+           r'$TZwidth_{\mu}$ (m)',
            r'$slope_{max}$ ($\circ$)']
     
     for row in range(MultivarArray.shape[1]):
@@ -2462,7 +2462,7 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
     # Plot matrix of relationships
     lab = [r'$\Delta$VE (m/yr)',
            r'$\Delta$WL (m/yr)',
-           r'TZwidth$_{\eta}$ (m)',
+           r'TZwidth$_{\mu}$ (m)',
            r'$\theta_{max}$ ($\circ$)',
            r'$\mu_{net}$ (m/s$^{2}$)']
            # r'$\Gamma$ (1)']
@@ -2719,7 +2719,7 @@ def MultivariateMatrixClusteredSeason(sitename, TransectInterGDF,  TransectInter
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
            r'$\Delta$water (m/yr)',
-           r'$TZwidth_{\eta}$ (m)']
+           r'$TZwidth_{\mu}$ (m)']
     
     for row in range(2):
         for col in range(2): 
@@ -2885,7 +2885,7 @@ def MultivariateMatrixWaves(sitename, TransectInterGDF,  TransectInterGDFWater, 
     # Plot matrix of relationships
     lab = [r'$\Delta$veg (m/yr)',
            r'$\Delta$water (m/yr)',
-           r'TZwidth$_{\eta}$ (m)',
+           r'TZwidth$_{\mu}$ (m)',
            r'slope$_{max}$ ($\circ$)',
            r'$\mu_{net}$ (m/s$^{2}$)']
            #r'$\Gamma$ (1)']

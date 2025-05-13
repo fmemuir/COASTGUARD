@@ -1370,7 +1370,7 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
     # Plot matrix of relationships
     lab = [r'$\Delta$VE (m/yr)',
            r'$\Delta$WL (m/yr)',
-           r'TZwidth$_{\eta}$ (m)',
+           r'TZwidth$_{\mu}$ (m)',
            r'$\theta_{max}$ ($\circ$)',
            r'$\mu_{net}$ (m/s$^{2}$)']
            # r'$\Gamma$ (1)']
@@ -1523,7 +1523,7 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, ColNames, Loc1=None, 
     # Plot matrix of relationships
     lab = [r'$\Delta$VE (m/yr)',
            r'$\Delta$WL (m/yr)',
-           r'TZwidth$_{\eta}$ (m)',
+           r'TZwidth$_{\mu}$ (m)',
            r'$\theta_{max}$ ($\circ$)',
            r'$Q_{s,net}$ (m$^{3}/s$)']
            # r'$\Gamma$ (1)']
