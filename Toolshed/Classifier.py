@@ -22,6 +22,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # image processing modules
+import ee
 from skimage.segmentation import flood
 from skimage import morphology
 from pylab import ginput
@@ -403,17 +404,29 @@ def label_vegimages(metadata, settings):
     mng = plt.get_current_fig_manager()                                         
     mng.window.showMaximized()
 
-    # loop through satellites
-    for satname in metadata.keys():
-        if satname == 'PSScene4Band':
-            filepath = os.path.dirname(metadata[satname]['filenames'][0])
-        else:
-            filepath = Toolbox.get_filepath(settings['inputs'],satname)
-        if len(metadata[satname]['filenames']) < 2: # for single images; for loop list needs to be nested
-            filenames = [metadata[satname]['filenames']]
-        else:
-            filenames = metadata[satname]['filenames']
+    sitename = settings['inputs']['sitename']
+    # ref_line = np.delete(settings['reference_shoreline'],2,1)
+    filepath_data = settings['inputs']['filepath']
+    filepath_out = os.path.join(filepath_data, sitename)
+    satnames, output, output_latlon, output_proj, skipped = Toolbox.ResumeVeglines(filepath_data, filepath_out, sitename, metadata)
+
+    imgcount = 0
+    # loop through satellite list
+    for satname in satnames:
+        
+        imgcount += len(metadata[satname]['filenames'])
+        # get images
+        #filepath = Toolbox.get_filepath(settings['inputs'],satname)
+        filenames = metadata[satname]['filenames']
+        datelist = metadata[satname]['dates']
+        # Collate filenames of images per platform
+        imgs = []
+        for i in range(len(filenames)):
+            imgs.append(ee.Image(filenames[i]))
             
+        # get pixel sizes, image collections and georefs for each platform
+        pixel_size, clf_model, ImgColl, init_georef = Image_Processing.InitialiseImgs(metadata, settings, satname, imgs)
+        
         # loop through images
         for i in range(len(filenames)):
             # image filename
@@ -422,10 +435,10 @@ def label_vegimages(metadata, settings):
                 dates = [metadata[satname]['dates'],metadata[satname]['dates']]
             else:
                 dates = [metadata[satname]['dates'][i],metadata[satname]['dates'][i]]
-            
-            polygon = settings['inputs']['polygon']
+                polygon = settings['inputs']['polygon']
+
             # read and preprocess image
-            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(fn, filenames, satname, settings, polygon, dates, savetifs=False)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, init_georef, fn, datelist, filenames, satname, settings, polygon, dates, skipped)
             
             # compute cloud_cover percentage (with no data pixels)
             # if image is empty, skip
