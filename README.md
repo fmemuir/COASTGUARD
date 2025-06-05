@@ -1,20 +1,19 @@
 # COASTGUARD
 
-$\textcolor{#00B0B7}{\textsf{C}}$ oastal $\textcolor{#00B0B7}{\textsf{O}}$ bservation + $\textcolor{#00B0B7}{\textsf{A}}$ nalysis using $\textcolor{#00B0B7}{\textsf{S}}$ atellite-derived $\textcolor{#00B0B7}{\textsf{T}}$ imeseries, 
+`C`oastal `O`bservation + `A`nalysis with `S`atellite-derived `T`imeseries, 
 
-$\textcolor{#00B0B7}{\textsf{G}}$ enerated $\textcolor{#00B0B7}{\textsf{U}}$ sing $\textcolor{#00B0B7}{\textsf{A}}$ I + $\textcolor{#00B0B7}{\textsf{R}}$ eal-time $\textcolor{#00B0B7}{\textsf{D}}$ ata
+`G`enerated `U`sing `A`I + `R`eal-time `D`ata
 
 is a Python toolkit for coastal monitoring and modelling using machine learning approaches. 
 
 https://github.com/fmemuir/COASTGUARD/assets/22475417/0ffaeea4-adeb-41c7-9936-937d9899df6c
-
-Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, which is partially built on the [CoastSat](https://github.com/kvos/CoastSat) toolbox. The paper validating this approach is [here](https://doi.org/10.1002/esp.5835).
 
 ### Useful Files to Start
 - :artificial_satellite: [VedgeSat_DriverTemplate](https://github.com/fmemuir/COASTGUARD/VedgeSat_DriverTemplate.py): For extracting coastal vegetation edges (and optional waterlines) from public satellite images
 - :chart_with_upwards_trend: [CoasTrack_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoasTrack_DriverTemplate.py): For generating cross-shore transects and intersecting with different remotely sensed coastal change metrics (vegetation, waterlines, waves, topography)
 - :crystal_ball: [CoastLearn_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoastLearn_DriverTemplate.py): For predicting future vegetation edge and waterline positions using an entirely satellite-data-driven neural network
 
+Currently, the main toolset <b>VedgeSat</b> is for extracting <b>coastal vegetation edges</b> from satellite imagery, which is partially built on the [CoastSat](https://github.com/kvos/CoastSat) toolbox. The paper validating this approach is [here](https://doi.org/10.1002/esp.5835).
 
 ## :warning: PATCH NOTES :wrench:
 - **28 October 2024**: Related to 23 Oct updates, the transect intersection with waterlines has been streamlined to try and speed up the process. This is in a new function `Transects.GetWaterIntersections()`. Users can still call the old/stable `Transects.GetBeachWidth()` if desired.
