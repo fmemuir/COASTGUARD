@@ -3817,7 +3817,7 @@ def QsHist(TransectInterGDFWave, Trs, sitename, Titles=None):
     figID = ''
 
     # Read in CSV of timesteps and mu values for each transect to be plotted
-    QsDF = TransectInterGDFWave[['WaveQs', 'WaveQsNet']]
+    QsDF = TransectInterGDFWave[['WaveQs', 'WaveQsNet']].iloc[Trs]
     # xmin = []
     # xmax = []
     # for TransectID in TransectIDs:
@@ -3828,42 +3828,51 @@ def QsHist(TransectInterGDFWave, Trs, sitename, Titles=None):
     mpl.rcParams.update({'font.size':7})
     # use 2 subplots with one empty to be able to loop through them
     # fig, axs = plt.subplots(1,1,figsize=(1.68,1.7), dpi=300, sharex=True)
-    fig, axs = plt.subplots(len(Trs),1,figsize=(1.88,3.1), dpi=300, sharex=True)
+    # fig, axs = plt.subplots(len(Trs),1,figsize=(1.88,3.1), dpi=300, sharex=True)
+    fig, axs = plt.subplots(len(Trs),1,figsize=(1.83,3.1), dpi=300, sharex=True)
+
     # common x label
-    fig.text(0.5,0.01,'$Q_{s}$ (m$^3$/s)', ha='center', va='center')
+    fig.text(0.5,0.01,'$Q_{s}$ (m$^3$/yr)', ha='center', va='center')
     
     for ax, (Tr, TransectID) in zip(axs, enumerate(Trs)):
-        
+        # Scale Qs_net to m3/yr for plotting
+        QsDF['WaveQs'].iloc[Tr] = np.array(QsDF['WaveQs'].iloc[Tr])*31536000
+        QsDF['WaveQsNet'].iloc[Tr] = QsDF['WaveQsNet'].iloc[Tr]*31536000
         # Plot histogram with custom bins and colors
         # cbins = np.arange(-0.03,0.031,0.01)
-        cbins=np.arange(-0.08,0.086,0.006)
+        # cbins=np.arange(-0.08,0.086,0.006)
+        cbins=np.arange(-2600000,2800000,200000)
         cm = plt.cm.get_cmap('bwr_r') # red-white-blue
         norm = mpl.colors.Normalize(vmin=cbins.min(), vmax=cbins.max())
         colors = [cm(norm(b)) for b in cbins[:-1]]
         
         # bins = np.arange(-0.02,0.02,0.001)
-        bin_width = 0.01
-        half_range = 0.5
+        # bin_width = 0.01
+        # half_range = 0.5
+        bin_width = 0.01*31536000
+        half_range = 0.5*31536000
         # Adjust bins to ensure 0 is in the center
         bins = np.arange(-half_range, half_range + bin_width, bin_width) - (bin_width / 2)        
-        n, bins, patches = ax.hist(QsDF['WaveQs'].iloc[TransectID], bins=bins)
+        n, bins, patches = ax.hist(QsDF['WaveQs'].iloc[Tr], bins=bins)
 
         for patch in patches:
             bin_mid = (patch.get_x() + patch.get_x() + patch.get_width()) / 2
             patch.set_facecolor(cm(norm(bin_mid)))  # Set color based on normalized bin position
 
         # Plot Qs,net
-        ax.axvline(QsDF['WaveQsNet'].iloc[TransectID], c='k', alpha=0.3,
+        ax.axvline(QsDF['WaveQsNet'].iloc[Tr], c='k', alpha=0.3,
                    ls='--', lw=0.7)
-        ax.text(x=QsDF['WaveQsNet'].iloc[TransectID], y=np.max(n)-(0.1*np.max(n)),
-                s=r"$Q_{s,net}$ = %.3f m$^3$/s" % QsDF['WaveQsNet'].iloc[TransectID],
+        ax.text(x=QsDF['WaveQsNet'].iloc[Tr], y=np.max(n)-(0.1*np.max(n)),
+                s=f"$Q_{{s,net}}$ = {QsDF['WaveQsNet'].iloc[Tr]:,.0f} m$^3$/yr",
                 fontsize=6, ha='center')
         
-        ax.set_xticks(np.arange(-0.2,0.3,0.1))
-        ax.set_xticks(np.arange(-0.2,0.3,0.01), minor=True)
+        # ax.set_xticks(np.arange(-0.2,0.3,0.1))
+        # ax.set_xticks(np.arange(-0.2,0.3,0.01), minor=True)
+        ax.set_xticks(np.arange(-6000000,9000000,3000000))
+        ax.set_xticks(np.arange(-6000000,9000000,300000), minor=True)
         # ax.set_yscale('log')
         ax.set_ylim(0,np.max(n))
-        ax.set_xlim(-0.2,0.2)
+        ax.set_xlim(-0.2*31536000,0.2*31536000)
         # ax.set_xlabel('Wave diffusivity (m/s$^2$)')
         if Titles is not None:
             ax.set_title('Transect '+str(TransectID)+' - '+Titles[Tr], pad=1)

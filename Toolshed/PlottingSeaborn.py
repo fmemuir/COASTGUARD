@@ -1500,8 +1500,8 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, ColNames, Loc1=None, 
     # summer (pale) eroding = #F9C784 
     # summer (pale) accreting = #9DB4C0
         
-    # Scale up diffusivity (mu) for nicer labelling
-    # MultivarGDF['WaveDiffus'] = MultivarGDF['WaveDiffus']*1000
+    # Scale Qs_net to m3/yr for plotting
+    MultivarGDF['WaveQsNet'] = MultivarGDF['WaveQsNet']*31536000
     
     # Extract desired columns to an array for plotting
     MultivarArray = np.array(MultivarGDF[ColNames])
@@ -1525,7 +1525,7 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, ColNames, Loc1=None, 
            r'$\Delta$WL (m/yr)',
            r'TZwidth$_{\mu}$ (m)',
            r'$\theta_{max}$ ($\circ$)',
-           r'$Q_{s,net}$ (m$^{3}/s$)']
+           r'$Q_{s,net}$ (m$^{3}/yr$)']
            # r'$\Gamma$ (1)']
     
     for row in range(MultivarArray.shape[1]):
