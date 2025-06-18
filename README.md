@@ -177,7 +177,8 @@ The tool takes all the input settings the user has defined, and performs these s
 ### Extracting Waterlines Alongside Vegetation Edges
 As this tool is built from the original CoastSat toolkit, it is possible to extract instantaneous waterlines as well as vegetation edges from each satellite image. To do this, change the `wetdry` flag in the user requirements to `True`. Any tidal correction on the extracted waterlines is performed using the FES2014/FES2022 tidal model. You will need to use pyFES and the Aviso FES repo for this. 
 
-To get the tide data set up for the newer version FES2022, follow [this helpful CoastSat guide](https://github.com/kvos/CoastSat/blob/master/doc/FES2022_setup.md). **Note: you don't need to change the filepaths in the .yaml file as is listed in these steps! The function `ChangeYAMLPaths()` in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/blob/master/Toolshed/Toolbox.py) does this for you the first time you run `ComputeTides()`.**
+To get the tide data set up for the newer version FES2022, follow [this helpful CoastSat guide](https://github.com/kvos/CoastSat/blob/master/doc/FES2022_setup.md). **NOTE 1: you don't need to change the filepaths in the .yaml file as is listed in these steps! The function `ChangeYAMLPaths()` in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/blob/master/Toolshed/Toolbox.py) does this for you the first time you run `ComputeTides()`. NOTE 2: the guide linked says not to download ocean_tide_extrapolated.tar.xz, but if you want to use the grid modelled as close as possible to the coast (important for veg applications), then I recommend you DO download the extrapolated version AS WELL.**
+
 
 To set up the older FES2014 model, follow these steps:
 1. **Clone** the repo from [the aviso-fes github](https://github.com/CNES/aviso-fes). 
