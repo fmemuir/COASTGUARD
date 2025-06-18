@@ -1,20 +1,18 @@
-# COASTGUARD
+![COASTGUARD_logo](https://github.com/user-attachments/assets/5d9d52b6-b40b-497d-952b-646e88531de6)
 
-$\textcolor{#00B0B7}{\textsf{C}}$ oastal $\textcolor{#00B0B7}{\textsf{O}}$ bservation + $\textcolor{#00B0B7}{\textsf{A}}$ nalysis using $\textcolor{#00B0B7}{\textsf{S}}$ atellite-derived $\textcolor{#00B0B7}{\textsf{T}}$ imeseries, 
+`C`oastal `O`bservation + `A`nalysis with `S`atellite-derived `T`imeseries, 
 
-$\textcolor{#00B0B7}{\textsf{G}}$ enerated $\textcolor{#00B0B7}{\textsf{U}}$ sing $\textcolor{#00B0B7}{\textsf{A}}$ I + $\textcolor{#00B0B7}{\textsf{R}}$ eal-time $\textcolor{#00B0B7}{\textsf{D}}$ ata
+`G`enerated `U`sing `A`I + `R`eal-time `D`ata
 
 is a Python toolkit for coastal monitoring and modelling using machine learning approaches. 
 
-https://github.com/fmemuir/COASTGUARD/assets/22475417/0ffaeea4-adeb-41c7-9936-937d9899df6c
-
-Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA043}{\textsf{coastal vegetation edges}}$ from satellite imagery, which is partially built on the [CoastSat](https://github.com/kvos/CoastSat) toolbox. The paper validating this approach is [here](https://doi.org/10.1002/esp.5835).
-
 ### Useful Files to Start
-- :artificial_satellite: [VedgeSat_DriverTemplate](https://github.com/fmemuir/COASTGUARD/VedgeSat_DriverTemplate.py): For extracting coastal vegetation edges (and optional waterlines) from public satellite images
-- :chart_with_upwards_trend: [CoasTrack_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoasTrack_DriverTemplate.py): For generating cross-shore transects and intersecting with different remotely sensed coastal change metrics (vegetation, waterlines, waves, topography)
-- :crystal_ball: [CoastLearn_DriverTemplate](https://github.com/fmemuir/COASTGUARD/CoastLearn_DriverTemplate.py): For predicting future vegetation edge and waterline positions using an entirely satellite-data-driven neural network
+- :artificial_satellite: [VedgeSat_DriverTemplate](https://github.com/fmemuir/COASTGUARD/blob/master/VedgeSat_DriverTemplate.py): For extracting coastal vegetation edges (and optional waterlines) from public satellite images
+- :chart_with_upwards_trend: [CoasTrack_DriverTemplate](https://github.com/fmemuir/COASTGUARD/blob/master/CoasTrack_DriverTemplate.py): For generating cross-shore transects and intersecting with different remotely sensed coastal change metrics (vegetation, waterlines, waves, topography)
+- :crystal_ball: [CoastLearn_DriverTemplate](https://github.com/fmemuir/COASTGUARD/blob/master/CoastLearn_DriverTemplate.py): For predicting future vegetation edge and waterline positions using an entirely satellite-data-driven neural network
+Currently, the main toolset <b>VedgeSat</b> is for extracting <b>coastal vegetation edges</b> from satellite imagery, which is partially built on the [CoastSat](https://github.com/kvos/CoastSat) toolbox. The paper validating this approach is [here](https://doi.org/10.1002/esp.5835).
 
+https://github.com/fmemuir/COASTGUARD/assets/22475417/0ffaeea4-adeb-41c7-9936-937d9899df6c
 
 ## :warning: PATCH NOTES :wrench:
 - **28 October 2024**: Related to 23 Oct updates, the transect intersection with waterlines has been streamlined to try and speed up the process. This is in a new function `Transects.GetWaterIntersections()`. Users can still call the old/stable `Transects.GetBeachWidth()` if desired.
@@ -33,7 +31,7 @@ Currently, the main toolset <b>VedgeSat</b> is for extracting $\textcolor{#2EA04
     pip install copernicusmarine
     ```
 
-- **28 February 2024**: Second update to the code in response to the same issue; location mismatches were found in the coastal buffer vs. satellite images, but only for Landsat imagery (see [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/10) for more info). The reason is Landsat images are always stored in projection system UTM North (even if in the southern hemisphere), to avoid issues with images falling across the equator. A function to find correct UTM codes for a user's AOI has been included in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/Toolbox.py). **This requires the `utm` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
+- **28 February 2024**: Second update to the code in response to the same issue; location mismatches were found in the coastal buffer vs. satellite images, but only for Landsat imagery (see [this issue thread](https://github.com/fmemuir/COASTGUARD/issues/10) for more info). The reason is Landsat images are always stored in projection system UTM North (even if in the southern hemisphere), to avoid issues with images falling across the equator. A function to find correct UTM codes for a user's AOI has been included in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/blob/master/Toolshed/Toolbox.py). **This requires the `utm` package; if you created a `conda` environment for COASTGUARD prior to this update, add it to your `coastguard` environment with:**
     ```
     conda activate coastguard
     conda install utm
@@ -179,7 +177,8 @@ The tool takes all the input settings the user has defined, and performs these s
 ### Extracting Waterlines Alongside Vegetation Edges
 As this tool is built from the original CoastSat toolkit, it is possible to extract instantaneous waterlines as well as vegetation edges from each satellite image. To do this, change the `wetdry` flag in the user requirements to `True`. Any tidal correction on the extracted waterlines is performed using the FES2014/FES2022 tidal model. You will need to use pyFES and the Aviso FES repo for this. 
 
-To get the tide data set up for the newer version FES2022, follow [this helpful CoastSat guide](https://github.com/kvos/CoastSat/blob/master/doc/FES2022_setup.md). **Note: you don't need to change the filepaths in the .yaml file as is listed in these steps! The function `ChangeYAMLPaths()` in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/blob/master/Toolshed/Toolbox.py) does this for you the first time you run `ComputeTides()`.**
+To get the tide data set up for the newer version FES2022, follow [this helpful CoastSat guide](https://github.com/kvos/CoastSat/blob/master/doc/FES2022_setup.md). **NOTE 1: you don't need to change the filepaths in the .yaml file as is listed in these steps! The function `ChangeYAMLPaths()` in [`Toolbox.py`](https://github.com/fmemuir/COASTGUARD/blob/master/Toolshed/Toolbox.py) does this for you the first time you run `ComputeTides()`. NOTE 2: the guide linked says not to download ocean_tide_extrapolated.tar.xz, but if you want to use the grid modelled as close as possible to the coast (important for veg applications), then I recommend you DO download the extrapolated version AS WELL.**
+
 
 To set up the older FES2014 model, follow these steps:
 1. **Clone** the repo from [the aviso-fes github](https://github.com/CNES/aviso-fes). 
