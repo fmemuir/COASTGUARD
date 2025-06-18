@@ -176,7 +176,7 @@ def RetrieveImages(inputs, SLC=True):
                     SatGroup.append(Landsat9)
                     
                 elif satname == 'S2':
-                    Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(dateset[0], dateset[1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
+                    Sentinel2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED").filterBounds(point).filterDate(dateset[0], dateset[1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
                     SatGroup.append(Sentinel2)
                     
                 else: # local images i.e. Planet
@@ -224,7 +224,7 @@ def RetrieveImages(inputs, SLC=True):
             else:
                 Sat.append(Landsat9)
         if 'S2' in inputs['sat_list']:
-            Sentinel2 = ee.ImageCollection("COPERNICUS/S2").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
+            Sentinel2 = ee.ImageCollection("COPERNICUS/S2_HARMONIZED").filterBounds(point).filterDate(inputs['dates'][0], inputs['dates'][1]).filter(ee.Filter.lte('CLOUDY_PIXEL_PERCENTAGE', cloud_thresh))
             if Sentinel2.size().getInfo() == 0:
                 inputs['sat_list'].remove('S2')
             else:
@@ -948,13 +948,13 @@ def check_images_available(inputs):
     #              'L7':'LANDSAT/LE07/C01/T1_TOA',
     #              'L8':'LANDSAT/LC08/C01/T1_TOA',
     #              'L9':'LANDSAT/LC09/C02/T1_TOA',
-    #              'S2':'COPERNICUS/S2'}
+    #              'S2':'COPERNICUS/S2_HARMONIZED'}
     # New Collection 2 names
     col_names_T1 = {'L5':'LANDSAT/LT05/C02/T1_TOA',
                     'L7':'LANDSAT/LE07/C02/T1_TOA',
                     'L8':'LANDSAT/LC08/C02/T1_TOA',
                     'L9':'LANDSAT/LC09/C02/T1_TOA',
-                    'S2':'COPERNICUS/S2'}
+                    'S2':'COPERNICUS/S2_HARMONIZED'}
     
 
     print('- In Landsat Tier 1 & Sentinel-2 Level-1C:')
