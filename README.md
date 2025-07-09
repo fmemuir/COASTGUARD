@@ -114,7 +114,7 @@ conda activate coastguard
 conda install -c conda-forge earthengine-api pandas=2.0.3 geopandas spyder=5.5.0 geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook netcdf4 arosics utm
 ```
 
-Please note that solving and building the environment can take some time (minutes to hours *depending on the nature of your base environment*). If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
+Please note that solving and building the environment can take some time (minutes to hours *depending on the nature of your base environment*). This is why the environment installation steps are split up, to avoid package versions fighting with each other for a long time. If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
 ```
 conda update -n base conda
 
