@@ -74,7 +74,8 @@ Various improvements have been made to the toolkit to address recent advancement
 1. Download repo: `$ git clone https://github.com/fmemuir/COASTGUARD.git`
 2. Create conda environment: `conda env create -f coastguard_env.yml`
 3. Activate env: `conda activate coastguard`
-4. Authenticate GEE: `earthengine authenticate`
+4. Install remaining packages: `conda install -c conda-forge earthengine-api pandas=2.0.3 geopandas spyder=5.5.0 geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook netcdf4 arosics utm`
+5. Authenticate GEE: `earthengine authenticate`
 
 **Remember!**: Always run `conda activate coastguard` each time you want to use the toolbox. You *should not* need to authenticate `earthengine` each time, just the once when installing.
 
@@ -106,16 +107,19 @@ conda env create --file coastguard_env.yml
 ```
 Note: the Python version listed in the .yml file is a dependent of the `pyfes` package (which is needed for tidal corrections of waterlines), see these issues [here](https://github.com/CNES/aviso-fes/issues/19) for details.
 
-Then run this command to install the remaining packages:
+Then run these commands to install the remaining packages in the new environment:
 ```
+conda activate coastguard
+
 conda install -c conda-forge earthengine-api pandas=2.0.3 geopandas spyder=5.5.0 geemap scikit-image matplotlib rasterio seaborn astropy geopy notebook netcdf4 arosics utm
 ```
 
-Please note that solving and building the environment can take some time (minutes to hours *depending on the the nature of your base environment*). If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
+Please note that solving and building the environment can take some time (minutes to hours *depending on the nature of your base environment*). If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
 ```
 conda update -n base conda
 
 conda install -n base conda-libmamba-solver
+
 conda config --set solver libmamba
 ```
 
