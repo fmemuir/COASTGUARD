@@ -113,11 +113,12 @@ conda update -n base conda
 conda env create --file coastguard_env.yml 
 ```
 
-Please note that solving and building the environment can take some time (minutes to hours *depending on the the nature of your base environment*). If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
+Please note that solving and building the environment can take some time (minutes to hours *depending on the nature of your base environment*). This is why the environment installation steps are split up, to avoid package versions fighting with each other for a long time. If you want to make things go faster, it's recommended you solve the conda environment installation with [Mamba](https://www.anaconda.com/blog/a-faster-conda-for-a-growing-community). You can set Mamba as the default conda solver with these steps:
 ```
 conda update -n base conda
 
 conda install -n base conda-libmamba-solver
+
 
 conda config --set solver libmamba
 ```
