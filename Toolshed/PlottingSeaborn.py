@@ -1316,6 +1316,48 @@ def QsViolin(Qs_Trs, WaveTime, StormsDF):
     plt.show()
 
     
+  
+def VEWLcorrViolin(TempCorrGDF, Loc1, Loc2, Name1, Name2, filepath, sitename):
+    
+    
+    TempCorrS = TempCorrGDF.iloc[Loc1[0]:Loc1[1]]
+    TempCorrN = TempCorrGDF.iloc[Loc2[0]:Loc2[1]]
+
+    TempCorrPlot = pd.DataFrame({'VEWL_rvalS':TempCorrS['VEWL_rval'], 'VEWL_rvalN':TempCorrN['VEWL_rval']})
+    #eroding, accreting ['#B2182B','#2166AC']
+    
+    # fig = plt.figure(figsize=[1.89,2.64], tight_layout=True)
+    fig = plt.figure(figsize=(3.31, 3.31), dpi=300, tight_layout=True)
+
+    # sns.set(font="Arial", font_scale=0.55)
+    sns.set(font="Arial", font_scale=0.6)
+    sns.set_style("ticks", {'axes.grid' : False})
+    
+    ax = sns.violinplot(data = TempCorrPlot, 
+                        linewidth=0, palette = 'bwr_r', orient='v', cut=0, inner='quart')
+    # change quartile line styles
+    for il, l in enumerate(ax.lines):
+        l.set_linestyle('--')
+        l.set_linewidth(0.7)
+        l.set_color('white')
+        # overwrite middle line (median) setting to a thicker white line
+        for i in range(0,3*len(TempCorrPlot.columns))[1::3]:
+            if i == il:
+                l.set_linestyle('-')
+                l.set_linewidth(1)
+    
+    ax.set_xticklabels([Name1,Name2])
+    plt.ylabel('Spearman rank $r_s$ between cross-shore VE and WL timeseries')
+    # plt.ylim(-0.1,0.55)
+    
+    figpath = os.path.join(filepath,sitename+'TemporalCorrelation_VEWL_%s-%s_%s-%s.png' % 
+                               (Loc1[0],Loc1[1],Loc2[0],Loc2[1]))
+    plt.savefig(figpath)
+    print('figure saved under '+figpath)
+    plt.show()
+
+    
+
 def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None):
     """
     Create a multivariate matrix plot of vegetation edges, waterlines, topographic data and wave data.
@@ -1415,8 +1457,8 @@ def MultivariateMatrixClusteredWaves(sitename, MultivarGDF, Loc1=None, Loc2=None
                     regLn, = axs[col,row].plot(Lowess[:, 0], Lowess[:, 1], c='k', ls='--', lw=1.5, zorder=3)
                 
                     # Calculate Spearman correlation
-                    Spearman, _ = spearmanr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
-                    SpearmanLab = f"$r_s$ = {Spearman:.2f}"
+                    Spearman, pvalue = spearmanr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
+                    SpearmanLab = f"$r_s$ = {Spearman:.2f}\n$p$ = {pvalue:.4f}"
                     SpearmanLeg = Line2D([0], [0], color='none', label=SpearmanLab)
                     ScatterLeg = axs[col,row].legend(handles=[SpearmanLeg],loc='lower right', 
                                         prop={'size':5}, edgecolor='none', framealpha=0.5,
@@ -1568,8 +1610,11 @@ def MultivariateMatrixClusteredFlux(sitename, MultivarGDF, ColNames, Loc1=None, 
                     regLn, = axs[col,row].plot(Lowess[:, 0], Lowess[:, 1], c='k', ls='--', lw=1.5, zorder=3)
                 
                     # Calculate Spearman correlation
-                    Spearman, _ = spearmanr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
-                    SpearmanLab = f"$r_s$ = {Spearman:.2f}"
+                    Spearman, pvalue = spearmanr(list(MultivarArray[:,row]), list(MultivarArray[:,col]))
+                    if pvalue < 0.0001:
+                        SpearmanLab = f"$r_s$ = {Spearman:.2f}\n$p$ < 0.0001"
+                    else:
+                        SpearmanLab = f"$r_s$ = {Spearman:.2f}\n$p$ = {pvalue:.03g}"
                     SpearmanLeg = Line2D([0], [0], color='none', label=SpearmanLab)
                     ScatterLeg = axs[col,row].legend(handles=[SpearmanLeg],loc='lower right', 
                                         prop={'size':5}, edgecolor='none', framealpha=0.5,
