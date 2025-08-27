@@ -38,6 +38,7 @@ from sklearn.linear_model import LinearRegression
 from sklearn.cluster import KMeans
 import scipy.stats
 from scipy.stats import circmean
+import statsmodels.api as sm
 from statsmodels.tsa.seasonal import seasonal_decompose
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -1781,12 +1782,14 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
         X = np.array(valsrtclean[i]).reshape((-1,1))
         y = np.array(satsrtclean[i])
         model = LinearRegression(fit_intercept=True).fit(X,y)
-        r2 = model.score(X,y)
+        R2 = model.score(X,y)
+        r, pval = scipy.stats.pearsonr(X[:,0],y)
         
         valfit = np.linspace(0,round(np.max(valsrtclean[i])),len(valsrtclean[i])).reshape((-1,1))
         satfit = model.predict(valfit)
 
-        plt.plot(valfit,satfit, c=cmap(i), alpha=0.8, linewidth=1.2, label=(satdateclean[i]+' R$^2$ = '+str(round(r2,2))), zorder=3)
+        plt.plot(valfit,satfit, c=cmap(i), alpha=0.8, linewidth=1.2, 
+                 label=f"{satdateclean[i]}, $R^2$ = {R2:.2f}, $p$ = {pval:.4f}", zorder=3)
 
     plt.legend(facecolor='#ECEAEC', framealpha=1, bbox_to_anchor=(0.5,0), loc='lower center', bbox_transform=f.transFigure, ncol=2)
     
@@ -1796,7 +1799,8 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     X = np.array(valfull).reshape((-1,1))
     y = np.array(satfull)
     model = LinearRegression(fit_intercept=True).fit(X,y)
-    r2 = model.score(X,y)
+    R2 = model.score(X,y)
+    r, pval = scipy.stats.pearsonr(X[:,0],y)
     
     valfit = np.linspace(0,round(np.max(valfull)),len(valfull)).reshape((-1,1))
     satfit = model.predict(valfit)
@@ -1804,7 +1808,12 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     # plot glowing background line for overall lin reg first
     plt.plot(valfit,satfit, c='w', linestyle='-', linewidth=1.6, alpha=0.7, zorder=3)
     plt.plot(valfit,satfit, c='#818C93', linestyle='--', linewidth=1.2, zorder=3)
-    plt.text(valfit[-1]+7,satfit[-1]-1,'R$^2$ = '+str(round(r2,2)), c='#818C93', zorder=3, ha='right', va='top', rotation=41)
+    if pval < 0.0001:
+        plt.text(valfit[-1]+7,satfit[-1]-5,f"R$^2$ = {R2:.2f}\n$p$ < 0.0001", 
+                 c='#818C93', zorder=3, ha='right', va='top', rotation=41)
+    else:
+        plt.text(valfit[-1]+7,satfit[-1]-5,f"R$^2$ = {R2:.2f}\n$p$ = {pval:.3f}", 
+                 c='#818C93', zorder=3, ha='right', va='top', rotation=41)
 
     plt.xlim(0,230)
     plt.ylim(0,230)
@@ -1816,7 +1825,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
     ax.set_anchor('N')
     plt.tight_layout()
     
-    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_LinReg_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'.png')
+    figpath = os.path.join(filepath,sitename+'_Validation_Satellite_Distances_LinReg_'+str(TransectIDs[0])+'to'+str(TransectIDs[1])+'_corr.png')
     plt.savefig(figpath)
     print('figure saved under '+figpath)
 
@@ -1830,7 +1839,7 @@ def SatRegress(sitename,SatGDF,DatesCol,ValidDF,TransectIDs,PlotTitle):
         totalN.append(len(valsrtclean[i]))
         print(satdateclean[i]+','+str(len(valsrtclean[i]))+','+str(len(satsrtclean[i])))
     print('sum N: '+str(np.sum(totalN)))
-        
+    print(f"R-squared: {R2}, Pearson r = {r}, = p-value = {pval}")
     # # Print out unique dates and satnames    
     # SatGDFNames = SatGDF.groupby(['dates']).first()
     # SatNames = []
@@ -3152,10 +3161,22 @@ def TideHeights(figpath, sitename, VegGDF, CSVpath, cmapDates):
     
     # Fit linear regression to scatter
     x = ErrorDF['RMSE']
-    msat, csat = np.polyfit(x,ErrorDF['Tides'],1)
+    y = ErrorDF['Tides']
+    msat, csat = np.polyfit(x,y,1)
     polysat = np.poly1d([msat, csat])
     xx = np.linspace(x.min(), x.max(), 100)
     plt.plot(xx, polysat(xx), c='#A5A5AF', linestyle='--', linewidth=1.2)
+    
+    X_sm = sm.add_constant(x)  # add intercept
+    sm_model = sm.OLS(y, X_sm).fit()
+    # print(sm_model.rsquared)
+    # print(sm_model.pvalues[0])
+    # print(dir(sm_model))
+    # print(sm_model.summary())
+    
+    plt.text(xx[-1], polysat(xx)[-1]-0.1, 
+             f"$R^2$ = {sm_model.rsquared:.2f}\n$p$ = {sm_model.pvalues[0]:.2f}", c='#A5A5AF',
+             ha='right', va='top')
     
     # Plot properties
     plt.xticks(range(0,35,5))
