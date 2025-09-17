@@ -28,6 +28,7 @@ import matplotlib.dates as mdates
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patheffects as PathEffects
 import matplotlib.font_manager as mplfm
+import matplotlib.colors as mcolors
 
 plt.ion()
 
@@ -943,7 +944,14 @@ def VegWaterSeasonalitySimple(sitename, TransectInterGDF, TransectIDs, Titles=No
             Resid = Seasonality.resid
             SSI = np.var(Season) / (np.var(Season) + np.var(Resid))
             
-            print('Transect '+str(TransectID)+' '+twin_lab+' seasonality index: '+str(SSI))
+            print('Transect '+str(TransectID)+' '+twin_lab+' annual seasonality index: '+str(SSI))
+            
+            # Tidal seasonality
+            TideSeasonality = seasonal_decompose(Timeseries, model='additive', period=18)
+            TideSeason = TideSeasonality.seasonal
+            TideResid = TideSeasonality.resid
+            TideSSI = np.var(TideSeason) / (np.var(TideSeason) + np.var(TideResid))
+            print('Transect '+str(TransectID)+' '+twin_lab+' tidal seasonality index: '+str(TideSSI))
             
             
             # PLOT 1: timeseries scatter plot  
@@ -3831,7 +3839,7 @@ def WLStormsTimeSeriesErrors(figpath, sitename, CSVpath, TransectInterGDFWater, 
     if type(TransectIDs) == list:
         # scaling for single column A4 page
         mpl.rcParams.update({'font.size':7})
-        fig, axs = plt.subplots(len(TransectIDs)*1,1,figsize=(6.55,3.67), sharex=True)
+        fig, axs = plt.subplots(len(TransectIDs)*2,1,figsize=(6.55,5.67), sharex=True)
     else:
         TransectIDs = [TransectIDs]
         # scaling for single column A4 page
@@ -3840,11 +3848,11 @@ def WLStormsTimeSeriesErrors(figpath, sitename, CSVpath, TransectInterGDFWater, 
         fig, axs = plt.subplots(1,1,figsize=(6.55,4), sharex=True)
         axs = [axs] # to be able to loop through
     
-    PlotVars = ['wlcorrdist']
-    PlotDateVars = ['wldates']
-    PlotColours = {'wlcorrdist':'#0A1DAE' }
-    PlotLabels = {'wlcorrdist':r'$WL$'}
-    PlotLinRegColours = {'wlcorrdist':'#0A0D55'}
+    PlotVars = ['distances','wlcorrdist']
+    PlotDateVars = ['dates','wldates']
+    PlotColours = {'distances':'#81A739','wlcorrdist':'#0A1DAE' }
+    PlotLabels = {'distances':r'$VE$','wlcorrdist':r'$WL$'}
+    PlotLinRegColours = {'distances':'#3A4C1A','wlcorrdist':'#0A0D55'}
     
     for TransectID, Title in zip(TransectIDs, Titles):
         for i, Var in enumerate(PlotVars):
@@ -3856,6 +3864,14 @@ def WLStormsTimeSeriesErrors(figpath, sitename, CSVpath, TransectInterGDFWater, 
             plotsatdist = TransectInterGDFWater[Var].iloc[TransectID][daterange[0]:daterange[1]]
             # remove and interpolate outliers
             plotsatdistinterp = InterpNaN(plotsatdist)
+            
+            BadDTs = [datetime.strptime(x, '%Y-%m-%d') for x in BadDates[TransectID]]
+            BadIDs = []
+            for BadDT in BadDTs:
+                try:
+                    BadIDs.append(plotdate.index(BadDT))
+                except:
+                    continue
             
             if len(plotdate) == 0:
                 return
@@ -3870,9 +3886,14 @@ def WLStormsTimeSeriesErrors(figpath, sitename, CSVpath, TransectInterGDFWater, 
             ax2 = ax.twinx()
             
             # scatter plot
-            ax2.scatter(plotdate, plotsatdist, marker='o', c=PlotColours[Var], s=5, alpha=0.8, zorder=4, edgecolors='none', label=PlotLabels[Var])
+            ax2.scatter(plotdate, plotsatdist, 
+                        marker='o', c=PlotColours[Var], s=5, alpha=0.8, zorder=4, edgecolors='none', 
+                        label=PlotLabels[Var])
             # plot bad dates on scatter
-            # ax2.scatter()
+            ax2.scatter([plotdate[BadID] for BadID in BadIDs],
+                        [plotsatdist[BadID] for BadID in BadIDs],
+                        marker='X', c='#A33530', s=10, alpha=0.8, zorder=4, edgecolors='none', 
+                        label='Poor '+PlotLabels[Var])
             
             # create error bar lines to fill between
             for axloop, errorRMSE, plotdist, col in zip([ax], [10.4], [plotsatdist], [PlotColours[Var]]):
@@ -3935,7 +3956,7 @@ def WLStormsTimeSeriesErrors(figpath, sitename, CSVpath, TransectInterGDFWater, 
             ax2.set_ylim(min(plotsatdistinterp)-10, max(plotsatdistinterp)+30)
             ax2.set_xlim(min(plotdate)-timedelta(days=100),max(plotdate)+timedelta(days=100))
             
-            leg1 = ax2.legend(loc=2, ncol=4)
+            leg1 = ax2.legend(loc=2, ncol=5)
             leg2 = ax.legend(handles=[winter,storm],loc=1, labelspacing=0.3, handletextpad=0)
             for patch, legwidth, legx in zip(leg2.get_patches(), [12,2], [0,6]):
                 patch.set_width(legwidth)
@@ -3975,7 +3996,167 @@ def WLStormsTimeSeriesErrors(figpath, sitename, CSVpath, TransectInterGDFWater, 
     
     plt.show()
 
+def CoregQuiver(sitename, coregstats):
+    """
+    Quiver plot of coregistration results from using AROSICS (Scheffler et al., 
+    2017). Arrows are vectors of image shift calculated from the amount of 
+    change in longitude (dX) and latitude (dY).
+    FM Sept 2025
 
+    Parameters
+    ----------
+    sitename : str
+        Name of site.
+    coregstats : dict
+        Coregistration statistics after VedgeSat/CoastSat run, with datetime of 
+        image acquisition, dX, dY, and reliability of shift calculated.
+
+    Returns
+    -------
+    None.
+
+    """
+    
+    coregDF = pd.DataFrame(coregstats)
+    coregDF['date'] = pd.to_datetime(coregDF['datetime'], format='%Y-%m-%d %H:%M:%S.%f').dt.date
+    coregDFsm = coregDF[['dX','dY','Reliability', 'date']].groupby(by='date').mean()
+
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+
+    mpl.rcParams.update({'font.size':7})
+
+    # Convert dates to numeric values for colormap
+    date_nums = mdates.date2num(coregDFsm.index)
+    norm = mcolors.Normalize(vmin=date_nums.min(), vmax=date_nums.max())
+    cmap = cm.magma_r
+
+    # Build the quiver plot
+    fig, (ax, cax) = plt.subplots(nrows=2,figsize=(6.55,7.5), 
+                      gridspec_kw={"height_ratios":[1, 0.05]})
+    ax.quiver(
+        np.zeros(len(coregDFsm)), np.zeros(len(coregDFsm)),  # all arrows start at origin
+        coregDFsm['dX'], coregDFsm['dY'],
+        color=cmap(norm(date_nums)),           # color by date
+        angles='xy', scale_units='xy', scale=1, alpha=0.8
+    )
+
+    # Add inset axis (position relative to parent axis: [x0, y0, width, height])
+    axins = inset_axes(ax, width="40%", height="40%", loc="lower left")
+    axins2 = inset_axes(ax, width="40%", height="40%", loc="upper right")
+
+    # Inset 1 (centre)
+    axins.quiver(
+        np.zeros(len(coregDFsm)), np.zeros(len(coregDFsm)),
+        coregDFsm['dX'], coregDFsm['dY'],
+        color=cmap(norm(date_nums)),
+        angles='xy', scale_units='xy', scale=1, width=0.01, alpha=0.8
+    )
+
+    axins.axhline(0, color='k', linewidth=0.5)
+    axins.axvline(0, color='k', linewidth=0.5)
+
+    axins.set_xlim(-6, 6)
+    axins.set_ylim(-6, 6)
+    axins.set_xlabel("dX (m)")
+    axins.set_ylabel("dY (m)")
+    axins.tick_params(bottom=False,top=True,left=False,right=True)
+    axins.tick_params(labelbottom=False,labeltop=True,labelleft=False,labelright=True)
+    axins.yaxis.set_label_position("right")
+    axins.xaxis.set_label_position("top")
+    axins.set_aspect('equal')
+
+    axins.tick_params(axis='both', which='both', labelsize=6)
+
+    # Inset 2 (outliers)
+    axins2.quiver(
+        np.zeros(len(coregDFsm)), np.zeros(len(coregDFsm)),
+        coregDFsm['dX'], coregDFsm['dY'],
+        color=cmap(norm(date_nums)),
+        angles='xy', scale_units='xy', scale=1, width=0.01, alpha=0.8
+    )
+
+    axins2.axhline(0, color='k', linewidth=0.5)
+    axins2.axvline(0, color='k', linewidth=0.5)
+
+    axins2.set_xlim(45, 65)
+    axins2.set_ylim(-10, 10)
+    axins2.set_xlabel("dX (m)")
+    axins2.set_ylabel("dY (m)")
+    axins2.set_aspect('equal')
+    axins2.tick_params(axis='both', which='both', labelsize=6)
+
+    # Add crosshairs at origin
+    ax.axhline(0, color='k', linewidth=0.8)
+    ax.axvline(0, color='k', linewidth=0.8)
+
+    ax.set_xlabel("dX (m)")
+    ax.set_ylabel("dY (m)")
+
+    ax.set_xlim(-65,65)
+    ax.set_ylim(-65,65)
+
+    #ax.set_facecolor('#E0E0E0')
+
+    # Add colorbar with date formatting
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    sm.set_array([])
+    cbar = plt.colorbar(sm, cax=cax, orientation='horizontal', label="Acquisition Date")
+    years = np.arange(coregDFsm.index.min().year, coregDFsm.index.max().year + 1)
+    year_ticks = [mdates.date2num(np.datetime64(f"{y}-01-01")) for y in years]
+
+    cbar.set_ticks(year_ticks)
+    cbar.set_ticklabels(years)  # show just year
+
+    ax.set_aspect('equal')
+    #plt.tight_layout()
+
+    figname = os.path.join(outfilepath,sitename + '_CoregQuiver.png')
+    plt.savefig(figname, bbox_inches='tight', dpi=300)
+    print('Plot saved under '+figname)
+
+
+    plt.show()
+ 
+    
+def CoregBar(sitename, coregstats):
+    coregDF = pd.DataFrame(coregstats)
+    coregDF['date'] = pd.to_datetime(coregDF['datetime'], format='%Y-%m-%d %H:%M:%S.%f').dt.date
+    coregDFsm = coregDF[['dX','dY','Reliability', 'date']].groupby(by='date').mean()
+    coregDFsm['Shift'] = np.sqrt(np.array(coregDFsm['dX'])**2 + np.array(coregDFsm['dY']**2))
+    coregDFsm.index = pd.to_datetime(coregDFsm.index)
+    coregDFsm['month'] = coregDFsm.index.month
+
+    coregMonth = coregDFsm[['Shift', 'dX','dY','Reliability', 'month']].groupby('month').mean()
+
+    outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
+    if os.path.isdir(outfilepath) is False:
+        os.mkdir(outfilepath)
+
+    mpl.rcParams.update({'font.size':7})
+
+    fig, ax = plt.subplots(1,1,figsize=(3.31,3.5)) # Create matplotlib axes
+    ax2 = ax.twinx() # Create another axes that shares the same x-axis as ax.
+
+    width = 0.4
+    coregMonth['Shift'].plot(kind='bar', color='#5499DE', ax=ax, width=width, position=1)
+    coregMonth['Reliability'].plot(kind='bar', color='#C51B2F', ax=ax2, width=width, position=0)
+
+    ax.set_xlim(-0.5,11.5)
+    ax.set_xlabel(None)
+    ax.set_ylabel(r'Mean Image Shift $\sqrt{dX^{2} + dY^{2}}$ (m)')
+    ax2.set_ylabel('Mean Reliability (%)')
+    ax.set_xticklabels(list(calendar.month_abbr[1:]), rotation=0)
+
+    plt.tight_layout()
+
+    figname = os.path.join(outfilepath,sitename + '_CoregBar.png')
+    plt.savefig(figname, bbox_inches='tight', dpi=300)
+    print('Plot saved under '+figname)
+
+    plt.show()
+    
 
 def muHist(sitename, muDF_path, Titles=None):
     
