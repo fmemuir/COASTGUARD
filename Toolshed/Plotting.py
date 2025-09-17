@@ -4020,6 +4020,11 @@ def CoregQuiver(sitename, coregstats):
     coregDF = pd.DataFrame(coregstats)
     coregDF['date'] = pd.to_datetime(coregDF['datetime'], format='%Y-%m-%d %H:%M:%S.%f').dt.date
     coregDFsm = coregDF[['dX','dY','Reliability', 'date']].groupby(by='date').mean()
+    coregDFsm['Shift'] = np.sqrt(np.array(coregDFsm['dX'])**2 + np.array(coregDFsm['dY']**2))
+    coregDFsm.index = pd.to_datetime(coregDFsm.index)
+    coregDFsm['month'] = coregDFsm.index.month
+
+    coregMonth = coregDFsm[['Shift', 'dX','dY','Reliability', 'month']].groupby('month').mean()
 
     outfilepath = os.path.join(os.getcwd(), 'Data', sitename, 'plots')
     if os.path.isdir(outfilepath) is False:
@@ -4043,8 +4048,9 @@ def CoregQuiver(sitename, coregstats):
     )
 
     # Add inset axis (position relative to parent axis: [x0, y0, width, height])
-    axins = inset_axes(ax, width="40%", height="40%", loc="lower left")
-    axins2 = inset_axes(ax, width="40%", height="40%", loc="upper right")
+    axins = inset_axes(ax, width="42%", height="42%", loc="lower left")
+    axins2 = inset_axes(ax, width="40%", height="25%", loc="upper right")
+    axbar = inset_axes(ax, width="100%", height="100%", borderpad=0, bbox_to_anchor=(0.08,0.6,0.35,0.35), bbox_transform=ax.transAxes)
 
     # Inset 1 (centre)
     axins.quiver(
@@ -4076,12 +4082,10 @@ def CoregQuiver(sitename, coregstats):
         color=cmap(norm(date_nums)),
         angles='xy', scale_units='xy', scale=1, width=0.01, alpha=0.8
     )
-
     axins2.axhline(0, color='k', linewidth=0.5)
     axins2.axvline(0, color='k', linewidth=0.5)
-
-    axins2.set_xlim(45, 65)
-    axins2.set_ylim(-10, 10)
+    axins2.set_xlim(35, 65)
+    axins2.set_ylim(-5, 5)
     axins2.set_xlabel("dX (m)")
     axins2.set_ylabel("dY (m)")
     axins2.set_aspect('equal')
@@ -4090,10 +4094,8 @@ def CoregQuiver(sitename, coregstats):
     # Add crosshairs at origin
     ax.axhline(0, color='k', linewidth=0.8)
     ax.axvline(0, color='k', linewidth=0.8)
-
     ax.set_xlabel("dX (m)")
     ax.set_ylabel("dY (m)")
-
     ax.set_xlim(-65,65)
     ax.set_ylim(-65,65)
 
@@ -4105,17 +4107,26 @@ def CoregQuiver(sitename, coregstats):
     cbar = plt.colorbar(sm, cax=cax, orientation='horizontal', label="Acquisition Date")
     years = np.arange(coregDFsm.index.min().year, coregDFsm.index.max().year + 1)
     year_ticks = [mdates.date2num(np.datetime64(f"{y}-01-01")) for y in years]
-
     cbar.set_ticks(year_ticks)
     cbar.set_ticklabels(years)  # show just year
 
+    # Bar chart inset
+    axbar2 = axbar.twinx() # Create another axes that shares the same x-axis as ax.
+    width = 0.4
+    coregMonth['Shift'].plot(kind='bar', color='#5499DE', ax=axbar, width=width, position=1)
+    coregMonth['Reliability'].plot(kind='bar', color='#C51B2F', ax=axbar2, width=width, position=0)
+    axbar.set_xlim(-0.5,11.5)
+    axbar.set_xlabel(None)
+    axbar.set_ylabel(r'Mean Image Shift $\sqrt{dX^{2} + dY^{2}}$ (m)', color='#5499DE')
+    axbar2.set_ylabel('Mean Reliability (%)', color='#C51B2F')
+    axbar.set_xticklabels(list(calendar.month_abbr[1:]), rotation=0)
+
     ax.set_aspect('equal')
-    #plt.tight_layout()
+    plt.tight_layout()
 
     figname = os.path.join(outfilepath,sitename + '_CoregQuiver.png')
     plt.savefig(figname, bbox_inches='tight', dpi=300)
     print('Plot saved under '+figname)
-
 
     plt.show()
  
