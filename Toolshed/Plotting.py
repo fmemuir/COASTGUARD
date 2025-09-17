@@ -29,6 +29,7 @@ from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 import matplotlib.patheffects as PathEffects
 import matplotlib.font_manager as mplfm
 import matplotlib.colors as mcolors
+from matplotlib.offsetbox import AnchoredText
 
 plt.ion()
 
@@ -4048,9 +4049,9 @@ def CoregQuiver(sitename, coregstats):
     )
 
     # Add inset axis (position relative to parent axis: [x0, y0, width, height])
-    axins = inset_axes(ax, width="42%", height="42%", borderpad=0.9, loc="lower left")
-    axins2 = inset_axes(ax, width="40%", height="25%", loc="upper right")
-    axbar = inset_axes(ax, width="100%", height="100%", borderpad=0, bbox_to_anchor=(0.08,0.6,0.35,0.35), bbox_transform=ax.transAxes)
+    axins = inset_axes(ax, width="35%", height="35%", borderpad=4.5, loc="lower left")#borderpad=0.9
+    axins2 = inset_axes(ax, width="100%", height="100%", borderpad=0, bbox_to_anchor=(0.58,0.575,0.35,0.25), bbox_transform=ax.transAxes)
+    axbar = inset_axes(ax, width="100%", height="100%", borderpad=0, bbox_to_anchor=(0.58,0.075,0.35,0.35), bbox_transform=ax.transAxes)
 
     # Inset 1 (centre)
     axins.quiver(
@@ -4067,10 +4068,10 @@ def CoregQuiver(sitename, coregstats):
     axins.set_ylim(-6, 6)
     axins.set_xlabel("dX (m)")
     axins.set_ylabel("dY (m)")
-    axins.tick_params(bottom=False,top=True,left=False,right=True)
-    axins.tick_params(labelbottom=False,labeltop=True,labelleft=False,labelright=True)
-    axins.yaxis.set_label_position("right")
-    axins.xaxis.set_label_position("top")
+    #axins.tick_params(bottom=False,top=True,left=False,right=True)
+    #axins.tick_params(labelbottom=False,labeltop=True,labelleft=False,labelright=True)
+    #axins.yaxis.set_label_position("right")
+    #axins.xaxis.set_label_position("top")
     axins.set_aspect('equal')
 
     axins.tick_params(axis='both', which='both', labelsize=6)
@@ -4123,6 +4124,18 @@ def CoregQuiver(sitename, coregstats):
 
     ax.set_aspect('equal')
     plt.tight_layout()
+
+    ax_labels = list(string.ascii_lowercase[:4])
+    for axlab, lab, labloc in zip([ax,axins,axins2,axbar], ax_labels, ['upper left','upper left','upper right','upper right']):
+        at = AnchoredText(f"({lab})",
+                          prop=dict(size=6),
+                          frameon=True,
+                          loc=labloc,
+                          pad=0.2,    # distance to the axes
+                          borderpad=0.06)  # padding inside the box
+        at.patch.set_facecolor('w')
+        at.patch.set_edgecolor('k')
+        axlab.add_artist(at)
 
     figname = os.path.join(outfilepath,sitename + '_CoregQuiver.png')
     plt.savefig(figname, bbox_inches='tight', dpi=300)
