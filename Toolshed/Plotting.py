@@ -4048,7 +4048,7 @@ def CoregQuiver(sitename, coregstats):
     )
 
     # Add inset axis (position relative to parent axis: [x0, y0, width, height])
-    axins = inset_axes(ax, width="42%", height="42%", loc="lower left")
+    axins = inset_axes(ax, width="42%", height="42%", borderpad=0.9, loc="lower left")
     axins2 = inset_axes(ax, width="40%", height="25%", loc="upper right")
     axbar = inset_axes(ax, width="100%", height="100%", borderpad=0, bbox_to_anchor=(0.08,0.6,0.35,0.35), bbox_transform=ax.transAxes)
 
