@@ -406,6 +406,71 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
     return output, output_latlon, output_proj
 
 
+
+def CoregStats(metadata, settings, polygon, dates):
+    # use full metadata for satnames
+    satnames = metadata.keys()
+    sitename = settings['inputs']['sitename']
+    filepath_data = settings['inputs']['filepath']
+    filepath_out = os.path.join(filepath_data, sitename)
+    # Initialise counter for run success rates
+    skipped = {
+        'empty_poor': [],
+        'missing_mask':[],
+        'cloudy': [],
+        'no_classes': [],
+        'no_contours': []}
+    
+    imgcount = 0
+    coreg_counter = 0 # counter for images coregistered
+    coreg_stats_full = {'datetime': [],'dX': [], 'dY': [], 'Reliability': []}
+    # loop through satellite list
+    for satname in satnames:
+        
+        imgcount += len(metadata[satname]['filenames'])
+        # get images
+        #filepath = Toolbox.get_filepath(settings['inputs'],satname)
+        filenames = metadata[satname]['filenames']
+        datelist = metadata[satname]['dates']
+        # Collate filenames of images per platform
+        imgs = []
+        for i in range(len(filenames)):
+            imgs.append(ee.Image(filenames[i]))
+        
+        
+        pixel_size, clf_model, ImgColl, init_georef = Image_Processing.InitialiseImgs(metadata, settings, satname, imgs)
+    
+        # loop through the images
+        for fn in range(len(filenames)):
+            acqdate = metadata[satname]['dates'][fn]
+            print('\r%s:   %0.3f %% ' % (satname,((fn+1)/len(filenames))*100), end='')
+            # preprocess image (cloud mask + pansharpening/downsampling)
+            im_ms, georef, cloud_mask, im_extra, im_QA, im_nodata, acqtime = Image_Processing.preprocess_single(ImgColl, init_georef, fn, datelist, filenames, satname, settings, polygon, dates, skipped)
+    
+            if im_ms is None:
+                continue
+            
+            if cloud_mask is None:
+                continue
+            
+            im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
+            
+            if settings['reference_coreg_im'] is not None:                
+                georef, newbuff, coreg_stats = Image_Processing.Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef)
+                if newbuff is True:
+                    # Update coregistration counter and stats dict
+                    print('Coreg date: '+acqdate+' '+acqtime)
+                    coreg_counter += 1
+                    for key in list(coreg_stats_full.keys())[1:]:
+                        coreg_stats_full[key].append(coreg_stats[key])
+                    coreg_stats_full['datetime'].append(acqdate+' '+acqtime)
+                    
+    
+    with open(os.path.join(filepath_out, sitename + '_coreg_stats.pkl'), 'wb') as f:
+        pickle.dump(coreg_stats_full, f)
+    return coreg_stats_full
+                
+                    
 ###################################################################################################
 # IMAGE CLASSIFICATION FUNCTIONS
 ###################################################################################################
