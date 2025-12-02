@@ -15,6 +15,7 @@ from shapely import geometry
 from shapely.geometry import Point, LineString, Polygon
 import geopandas as gpd
 from rasterio import features
+import rasterio as rio
 
 # machine learning modules
 import sklearn
@@ -166,6 +167,7 @@ def extract_veglines(metadata, settings, polygon, dates, savetifs=True):
 
             # calculate a buffer around the reference shoreline
             im_ref_buffer = BufferShoreline(settings,settings['reference_shoreline'],georef,cloud_mask)
+            assert im_ref_buffer.sum() > 0
 
             # TO DO: figure out way to update refline ONLY if no gaps in previous line exist (length-based? based on number of coords?)
             # elif output_shoreline[-1].length < im_ref_buffer_og: 
@@ -1344,13 +1346,16 @@ def BufferShoreline(settings,refline,georef,cloud_mask):
     """
     if type(refline) == np.ndarray:
         refGS = Toolbox.ArrtoGS(refline, georef)
+        buffDist = settings['max_dist_ref']/georef[1] # convert from metres to pixels using georef cell size
+        refLSBuffer = refGS.buffer(buffDist)
+        refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
+        im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
     else: # if refline is read in as shapefile
-        refGS = gpd.GeoSeries(refline['geometry'])
+        refline = refline.to_crs(epsg=settings['output_epsg'])
+        refLSBuffer = refline.buffer(settings['max_dist_ref'])
+        refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
+        im_buffer_float = features.rasterize(refShapes, out_shape=cloud_mask.shape, transform=rio.Affine.from_gdal(*georef))
     
-    buffDist = settings['max_dist_ref']/georef[1] # convert from metres to pixels using georef cell size
-    refLSBuffer = refGS.buffer(buffDist)
-    refShapes = ((geom,value) for geom, value in zip(refLSBuffer.geometry, np.ones(len(refLSBuffer))))
-    im_buffer_float = features.rasterize(refShapes,out_shape=cloud_mask.shape)
     # convert to bool
     im_buffer = im_buffer_float > 0 
     
