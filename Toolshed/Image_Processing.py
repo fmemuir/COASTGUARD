@@ -447,20 +447,133 @@ def preprocess_single(ImgColl, georef, fn, datelist, filenames, satname, setting
     # S2 images
     #=============================================================================================#
     elif satname == 'S2':
-        
-        img = ee.Image(ImgColl.getInfo().get('features')[fn]['id'])
-        
+
+        img_id = ImgColl.getInfo().get('features')[fn]['id']
+        img = ee.Image(img_id)
+
         acqtime = datetime.utcfromtimestamp(img.getInfo()['properties']['system:time_start']/1000).strftime('%H:%M:%S.%f')
         acqdate = datelist[fn]
-        
-        cloud_scoree = img.getInfo()['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
-        
-        if cloud_scoree > settings['cloud_thresh']:
-            print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
-            skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
-            return None, None, None, None, None, None, acqtime
 
-        # read 10m bands (R,G,B,NIR)        
+        # ---------------------------------------------------------------------------------------#
+        # Cloud screening: s2cloudless over the AOI, replacing scene-level QA60 screening.
+        #
+        # WHY AOI-level, not scene-level: CLOUDY_PIXEL_PERCENTAGE describes cloud cover over the
+        # entire ~110x110 km MGRS granule. The AOI in this study is ~5 km across (~0.2% of the
+        # granule), so that figure is a poor proxy for the site itself - images were being
+        # rejected for cloud tens of kilometres away, and accepted despite cloud sitting directly
+        # over the AOI. It is kept below only as a loose, cheap pre-screen
+        # (settings['scene_prescreen']) to avoid downloading rasters for scenes that are almost
+        # entirely cloud; it no longer makes the accept/reject call by itself.
+        # settings['cloud_thresh'] keeps its name and role but now means the fraction of the AOI
+        # classified as cloud, not scene-level cloud.
+        #
+        # WHY s2cloudless, not QA60: Google stopped producing rasterised QA60 cloud polygons on
+        # 2022-01-25, and only began reconstructing a legacy-consistent QA60 band (from the
+        # MSK_CLASSI bands) on 2024-02-28. Images acquired inside that window have a QA60 band
+        # that fetches successfully and has the right dimensions, but is all zeros, so
+        # create_cloud_mask()'s np.isin(im_QA, [1024, 2048]) masks nothing and cloud reaches the
+        # classifier unmasked. The try/except further down only guards the *fetch* of QA60, not
+        # its content, so it never catches this case (QA60 exists and the fetch succeeds).
+        # s2cloudless (COPERNICUS/S2_CLOUD_PROBABILITY) is a model-derived, per-pixel cloud
+        # probability that covers the full Sentinel-2 archive regardless of the QA60 gap, and is
+        # the approach CoastSat upstream has adopted.
+        #
+        # Fallback chain: if use_s2cloudless is False, no s2cloudless image matches this S2 scene,
+        # or ee_to_numpy() returns None for the probability band, processing drops back to the
+        # original QA60 path (fetch QA60, create_cloud_mask(), resize) and the original scene-level
+        # CLOUDY_PIXEL_PERCENTAGE check, unchanged.
+        # ---------------------------------------------------------------------------------------#
+        use_s2cloudless = settings.get('use_s2cloudless', True)
+        s2cloudless_prob = settings.get('s2cloudless_prob', 60)
+        scene_prescreen = settings.get('scene_prescreen', 0.95)
+
+        cloud_scoree = img.getInfo()['properties']['CLOUDY_PIXEL_PERCENTAGE']/100
+
+        # Populated only when the s2cloudless path is actually used; otherwise stay None/'none'
+        # so the CSV audit row always has a consistent set of columns.
+        aoi_frac_p40, aoi_frac_p50, aoi_frac_p60 = None, None, None
+        prob_thresh_used = None
+        mask_source = 'none'
+        im_prob = None
+
+        if not use_s2cloudless:
+            # Master switch off: behave exactly as before, scene-level value decides outright.
+            mask_source = 'QA60'
+            print(' - s2cloudless disabled via settings; using QA60 scene-level check')
+            if cloud_scoree > settings['cloud_thresh']:
+                print(' - Skipped: cloud threshold exceeded (%0.1f%%)' % (cloud_scoree*100))
+                skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+                LogCloudAudit(settings, filenames[fn], satname, acqdate, acqtime, cloud_scoree,
+                              aoi_frac_p40, aoi_frac_p50, aoi_frac_p60, prob_thresh_used,
+                              mask_source, 'reject_scene')
+                return None, None, None, None, None, None, acqtime
+        else:
+            # Cheap scene-level pre-screen only: avoids downloading rasters for near-total
+            # write-offs. Not used to judge image quality - see comment block above.
+            if cloud_scoree > scene_prescreen:
+                print(' - Skipped: scene-level pre-screen exceeded (%0.1f%%)' % (cloud_scoree*100))
+                skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+                LogCloudAudit(settings, filenames[fn], satname, acqdate, acqtime, cloud_scoree,
+                              aoi_frac_p40, aoi_frac_p50, aoi_frac_p60, prob_thresh_used,
+                              mask_source, 'reject_scene_prescreen')
+                return None, None, None, None, None, None, acqtime
+
+            # COPERNICUS/S2_CLOUD_PROBABILITY is a separate collection (not a band on img, unlike
+            # QA60), sharing system:index with the S2 collections, which is how the two are
+            # matched. img_id already has the form '.../S2_HARMONIZED/<system:index>', so the
+            # index is taken straight from the id string already in hand, rather than adding a
+            # round trip through img.get('system:index').getInfo() to re-derive it.
+            s2_index = img_id.split('/')[-1]
+            s2c_filtered = ee.ImageCollection('COPERNICUS/S2_CLOUD_PROBABILITY').filter(
+                ee.Filter.eq('system:index', s2_index))
+
+            # Check non-emptiness via size().getInfo() rather than calling .getInfo() on a
+            # possibly-null image.
+            if s2c_filtered.size().getInfo() > 0:
+                im_prob = geemap.ee_to_numpy(s2c_filtered.first(),
+                                              bands=['probability'],
+                                              region=ee.Geometry.Polygon(polygon),
+                                              scale=60)
+
+            if im_prob is not None:
+                prob_arr = im_prob[:,:,0]
+                # AOI cloud fraction at 40/50/60 costs nothing extra (the array is already in
+                # memory) and lets the operating threshold be chosen from this site's own data
+                # later; only prob_thresh_used (s2cloudless_prob) drives the decision below.
+                aoi_frac_p40 = np.sum(prob_arr > 40) / prob_arr.size
+                aoi_frac_p50 = np.sum(prob_arr > 50) / prob_arr.size
+                aoi_frac_p60 = np.sum(prob_arr > 60) / prob_arr.size
+
+                # s2cloudless returns cloud PROBABILITY, so higher means MORE cloud - the
+                # opposite sense to a QA60-style clear score. Getting this backwards produces a
+                # superficially plausible result that systematically rejects the clearest images.
+                cloud_mask_s2c = prob_arr > s2cloudless_prob
+                cloud_scoree_aoi = cloud_mask_s2c.sum() / cloud_mask_s2c.size
+                prob_thresh_used = s2cloudless_prob
+                mask_source = 's2cloudless'
+                print(' - s2cloudless AOI cloud fraction: %0.1f%% (scene-level: %0.1f%%)' %
+                      (cloud_scoree_aoi*100, cloud_scoree*100))
+
+                if cloud_scoree_aoi > settings['cloud_thresh']:
+                    print(' - Skipped: AOI cloud threshold exceeded (%0.1f%%)' % (cloud_scoree_aoi*100))
+                    skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+                    LogCloudAudit(settings, filenames[fn], satname, acqdate, acqtime, cloud_scoree,
+                                  aoi_frac_p40, aoi_frac_p50, aoi_frac_p60, prob_thresh_used,
+                                  mask_source, 'reject_aoi_cloud')
+                    return None, None, None, None, None, None, acqtime
+            else:
+                # No matching s2cloudless image, or ee_to_numpy returned None: drop back to QA60.
+                mask_source = 'QA60_fallback'
+                print(' - s2cloudless unavailable for this image; falling back to QA60 scene-level check')
+                if cloud_scoree > settings['cloud_thresh']:
+                    print(' - Skipped: cloud threshold exceeded, QA60 fallback (%0.1f%%)' % (cloud_scoree*100))
+                    skipped['cloudy'].append([filenames[fn], satname, acqdate+' '+acqtime])
+                    LogCloudAudit(settings, filenames[fn], satname, acqdate, acqtime, cloud_scoree,
+                                  aoi_frac_p40, aoi_frac_p50, aoi_frac_p60, prob_thresh_used,
+                                  mask_source, 'reject_scene_fallback')
+                    return None, None, None, None, None, None, acqtime
+
+        # read 10m bands (R,G,B,NIR)
         im10 = geemap.ee_to_numpy(img, 
                                   bands = ['B2','B3','B4','B8'], 
                                   region=ee.Geometry.Polygon(polygon),
@@ -508,35 +621,52 @@ def preprocess_single(ImgColl, georef, fn, datelist, filenames, satname, setting
         # append down-sampled SWIR1 band to the other 10m bands
         im_ms = np.append(im10, im_swir, axis=2)
         
-        # create cloud mask using 60m QA band (not as good as Landsat cloud cover)
-        # 2024 rename of QA bands to MSK_CLASSI; implemented additional option
-        try:
-            im60 = geemap.ee_to_numpy(img, 
-                                      bands = ['QA60'], 
-                                      region=ee.Geometry.Polygon(polygon),
-                                      scale=60)
-        except:
-            im60 = geemap.ee_to_numpy(img, 
-                                      bands = ['MSK_CLASSI_OPAQUE'], 
-                                      region=ee.Geometry.Polygon(polygon),
-                                      scale=60)
-        
-        if im60 is None:
-            print(' - Skipped: empty raster')
-            skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
-            return None, None, None, None, None, None, acqtime
-        
-        im_QA = im60[:,:,0]
-        cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
-        # resize the cloud mask using nearest neighbour interpolation (order 0)
-        cloud_mask = transform.resize(cloud_mask,(nrows, ncols), order=0, preserve_range=True,
-                                      mode='constant')
-        
-        if cloud_mask is None:
-            print(" - Skipped: no cloud mask available")
-            skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
-            return None, None, None, None, None, None, acqtime
-        
+        if mask_source == 's2cloudless':
+            # Resize the AOI cloud mask from its native 60 m grid to the 10 m image grid.
+            # order=0 (nearest neighbour) is essential: the mask is boolean and must not be
+            # interpolated (same reasoning as the QA60 resize in the else branch below).
+            im_QA = prob_arr
+            cloud_mask = transform.resize(cloud_mask_s2c, (nrows, ncols), order=0,
+                                          preserve_range=True, mode='constant').astype(bool)
+            # OPEN DECISION (not applied): create_cloud_mask() runs
+            # morphology.remove_small_objects(min_size=10) on the QA60 mask to drop thin,
+            # spuriously-classified slivers (e.g. bright swash/sand mistaken for cloud). Whether
+            # the s2cloudless mask should get the same de-speckling is left open and deliberately
+            # NOT applied here, to keep this change scoped to the masking source rather than its
+            # post-processing.
+        else:
+            # QA60 path, unchanged - reached when use_s2cloudless is False (mask_source ==
+            # 'QA60') or s2cloudless had no matching image / returned no data for this image
+            # (mask_source == 'QA60_fallback').
+            # create cloud mask using 60m QA band (not as good as Landsat cloud cover)
+            # 2024 rename of QA bands to MSK_CLASSI; implemented additional option
+            try:
+                im60 = geemap.ee_to_numpy(img,
+                                          bands = ['QA60'],
+                                          region=ee.Geometry.Polygon(polygon),
+                                          scale=60)
+            except:
+                im60 = geemap.ee_to_numpy(img,
+                                          bands = ['MSK_CLASSI_OPAQUE'],
+                                          region=ee.Geometry.Polygon(polygon),
+                                          scale=60)
+
+            if im60 is None:
+                print(' - Skipped: empty raster')
+                skipped['empty_poor'].append([filenames[fn], satname, acqdate+' '+acqtime])
+                return None, None, None, None, None, None, acqtime
+
+            im_QA = im60[:,:,0]
+            cloud_mask = create_cloud_mask(im_QA, satname, cloud_mask_issue)
+            # resize the cloud mask using nearest neighbour interpolation (order 0)
+            cloud_mask = transform.resize(cloud_mask,(nrows, ncols), order=0, preserve_range=True,
+                                          mode='constant')
+
+            if cloud_mask is None:
+                print(" - Skipped: no cloud mask available")
+                skipped['missing_mask'].append([filenames[fn], satname, acqdate+' '+acqtime])
+                return None, None, None, None, None, None, acqtime
+
         # check if -inf or nan values on any band and create nodata image
         im_nodata = np.zeros(cloud_mask.shape).astype(bool)
         for k in range(im_ms.shape[2]):
@@ -562,7 +692,12 @@ def preprocess_single(ImgColl, georef, fn, datelist, filenames, satname, setting
 
         # the extra image is the 20m SWIR band
         im_extra = im20
-        
+
+        # log AOI vs scene cloud metrics for later analysis; must never be able to abort a run
+        LogCloudAudit(settings, filenames[fn], satname, acqdate, acqtime, cloud_scoree,
+                      aoi_frac_p40, aoi_frac_p50, aoi_frac_p60, prob_thresh_used,
+                      mask_source, 'accept')
+
     #=============================================================================================#
     # Local images i.e. PlanetScope
     #=============================================================================================#
@@ -734,7 +869,66 @@ def InitialiseImgs(metadata, settings, satname, imgs):
         init_georef = [] # georef gets set by each local image
         
     return pixel_size, clf_model, ImgColl, init_georef
-        
+
+
+def LogCloudAudit(settings, filename, satname, acqdate, acqtime, scene_pct,
+                   aoi_frac_p40, aoi_frac_p50, aoi_frac_p60, prob_thresh_used,
+                   mask_source, decision):
+    """
+    Append one row of S2 cloud-screening metrics (scene-level CLOUDY_PIXEL_PERCENTAGE
+    vs AOI-level s2cloudless fraction) to a per-site audit CSV, so the numbers survive
+    for later analysis without changing preprocess_single()'s 7-value return signature.
+
+    Parameters
+    ----------
+    settings : dict
+        Settings for running the veg edge/waterline extraction tool.
+    filename : str
+        Sat image filename.
+    satname : str
+        Name of satellite platform (always 'S2' here).
+    acqdate : str
+        Acquisition date (YYYY-MM-DD).
+    acqtime : str
+        Acquisition time (HH:MM:SS.ffffff).
+    scene_pct : float
+        Scene-level CLOUDY_PIXEL_PERCENTAGE, as a fraction (0-1).
+    aoi_frac_p40 : float or None
+        AOI cloud fraction from s2cloudless at a probability cutoff of 40. None when
+        s2cloudless wasn't evaluated (pre-screen reject or QA60 fallback).
+    aoi_frac_p50 : float or None
+        As aoi_frac_p40, at a probability cutoff of 50.
+    aoi_frac_p60 : float or None
+        As aoi_frac_p40, at a probability cutoff of 60.
+    prob_thresh_used : float or None
+        s2cloudless probability cutoff that actually drove the accept/reject decision
+        (None when the QA60 fallback path was used instead).
+    mask_source : str
+        Which path produced the mask/decision: 's2cloudless', 'QA60', 'QA60_fallback'
+        or 'none' (pre-screen reject, before any raster was read).
+    decision : str
+        Outcome of the cloud check, e.g. 'accept', 'reject_scene_prescreen',
+        'reject_aoi_cloud', 'reject_scene_fallback', 'reject_scene'.
+
+    """
+    try:
+        auditpath = os.path.join(settings['inputs']['filepath'], settings['inputs']['sitename'], 'cloud_audit.csv')
+        row = pd.DataFrame([{
+            'filename': filename,
+            'satname': satname,
+            'date': acqdate,
+            'time': acqtime,
+            'scene_pct': scene_pct,
+            'aoi_cloud_frac_p40': aoi_frac_p40,
+            'aoi_cloud_frac_p50': aoi_frac_p50,
+            'aoi_cloud_frac_p60': aoi_frac_p60,
+            'prob_thresh_used': prob_thresh_used,
+            'mask_source': mask_source,
+            'decision': decision}])
+        row.to_csv(auditpath, mode='a', header=not os.path.isfile(auditpath), index=False)
+    except Exception:
+        # logging must never be able to abort a run
+        pass
 
 
 def Coreg(settings, im_ref_buffer, im_ms, cloud_mask, georef):
